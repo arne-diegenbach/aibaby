@@ -228,9 +228,11 @@ const Spec kSpecs[] = {
      "  evidence is CORRELATIONAL: the derived arm has a wrong-write rate AND\n"
      "  everything else that differs about deriving an index from a retina. This\n"
      "  makes the rate the ONLY manipulated variable: pin_mode 3 is a PERFECT\n"
-     "  index whose WRITE slot is corrupted at a known rate, per TRIAL (§53\n"
-     "  measured the index stable within a trial, and run length is exactly what\n"
-     "  separates an overwriting store from an averaging one), on TEACHING\n"
+     "  index whose WRITE slot is corrupted at a known rate, per TRIAL (run\n"
+     "  length is exactly what separates an overwriting store from an averaging\n"
+     "  one, and §55 is the section that MEASURES it -- §53's `present 1.0000`\n"
+     "  was cited here as if it did, and it is liveness, not constancy), on\n"
+     "  TEACHING\n"
      "  windows only so the probe still reads where the lesson was written.\n"
      "  AVERAGING predicts (1-2w) of ceiling with w_half = 0.25, PARAMETER-FREE;\n"
      "  OVERWRITE predicts ~1/(wN), gone once w exceeds 1/N. At the derived arm's\n"
@@ -240,6 +242,27 @@ const Spec kSpecs[] = {
      "  dose MEASUREMENT: the mixture column must return mix_A ~ w, so the knob\n"
      "  verifies itself and a mismatch VOIDS the log. 900k only -- §53's 450k\n"
      "  positive control cleared just 1.4 SE. kRead: every branch prints"},
+    {"switchrate", 450000, Expect::kRead, Tier::kLong,
+     "derived: §55. §54 imposed wrong writes in TRIAL-LENGTH blocks and found\n"
+     "  AVERAGING, leaving SHORT RUNS as the one candidate for the derived\n"
+     "  index's 3.3-4.0 SE deficit. `ctx_hist` is accumulated per window and both\n"
+     "  consumers take only its ARGMAX, so the histogram's CONCENTRATION -- the\n"
+     "  only within-window stability measure the session already produces -- has\n"
+     "  been discarded every time since §49. This reads it before imposing\n"
+     "  anything. PRIMARY: runlen = sum(live)/(sum(switches)+windows) in ticks,\n"
+     "  pooled as a ratio of sums; `pure1` and `purity` are reported and bear on\n"
+     "  no verdict, because purity cannot separate a fast flicker from two long\n"
+     "  blocks (both read 0.5). Verdict three ways on the 95% CI against the\n"
+     "  PROTOCOL's own timescales: >= 450 (half the 900-tick window, so at most\n"
+     "  one switch) REFUTES short runs; <= 150 (kFeedbackPeriodTicks, where\n"
+     "  reward and slot decouple inside one window) and it SURVIVES; a\n"
+     "  straddling CI is NO VERDICT and gets said. CLAUSE 0 is liveness, because\n"
+     "  §53's T-A printed PASS twice on an EMPTY SET. Two arms are EXACT\n"
+     "  self-tests (pin_mode 1 and 3 pin once per window: 0 switches, runlen\n"
+     "  900.0) and three are CALIBRATIONS -- pin_mode 4 re-draws over two slots\n"
+     "  every f ticks, and a fair coin leaves the slot alone half the time, so\n"
+     "  the estimator must read 2f truncated by the window (19.78 / 94.74 /\n"
+     "  225.00) and NOT f. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1504,6 +1527,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "wordruler") ok = run_wordruler(dna_blob, ticks, verbose);
   else if (name == "slotdose") ok = run_slotdose(dna_blob, ticks, verbose);
   else if (name == "writerate") ok = run_writerate(dna_blob, ticks, verbose);
+  else if (name == "switchrate") ok = run_switchrate(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

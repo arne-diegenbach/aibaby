@@ -1,0 +1,97 @@
+experiment: switchrate
+  the question      §55. §54 imposed wrong writes in TRIAL-LENGTH blocks (the pin
+                    is set once per window) and found AVERAGING. Short runs are
+                    the one candidate left for the derived index's 3.3-4.0 SE
+                    deficit, and its run length has NEVER been measured.
+  the quantity      runlen = sum(live) / (sum(switches) + windows), in ticks. A
+                    SWITCH is a live tick whose slot differs from the previous
+                    LIVE tick's. Pooled as a ratio of sums, not a mean of
+                    per-window ratios (`mean-of-ratios`).
+  the boundaries    A: CI lower >= 450 (<=1 switch/window) -- short runs REFUTED.
+                    B: CI upper <= 150 (the feedback period) -- SURVIVES.
+                    C: anything else, including a straddling CI. The estimator's
+                    ceiling is 900 ticks by construction.
+  session           450.0 s of simulated life x 84 sessions, 6 arms
+  instrument        switchrate   trial seed 0000000001357269   84 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  THE WINDOWS. Teaching 900 ticks, probe 900 -- each the ceiling on its own
+  column. `runlen` in TICKS, and one tick is 1.0 ms of simulated life.
+    arm        crt    windows   runlen  pure1  purity |  runlen  pure1  purity
+                      teach/probe   -- TEACHING WINDOW --  |  -- PROBE WINDOW --
+    DERIVED    24/24   4944/1632   394.57 0.7805  0.9547 |  522.52 0.9326  0.9882
+    PINNED     12/12   2472/816    900.00 1.0000  1.0000 |  900.00 1.0000  1.0000
+    W171       12/12   2472/816    900.00 1.0000  1.0000 |  900.00 1.0000  1.0000
+    FLICK.150  12/12   2472/816    225.94 0.0150  0.6557 |  222.55 0.0110  0.6542
+    FLICK.50   12/12   2472/816     94.87 0.0000  0.5919 |   94.76 0.0000  0.5923
+    FLICK.10   12/12   2472/816     19.79 0.0000  0.5423 |   19.79 0.0000  0.5431
+    DERIVED    THE MEASUREMENT -- the retina's own index
+    PINNED     EXACT self-test: 0 switches, runlen = the window
+    W171       §54's OWN ARM -- the evidence for its scope claim
+    FLICK.150  calibration
+    FLICK.50   calibration
+    FLICK.10   calibration -- the short-run end
+
+  THE SHAPE OF THE DISTRIBUTION, teaching windows. `sw/sww` is switches per
+  SWITCHING window and `live%` the share of live ticks living in them.
+    arm         windows switching   sw/sww   live%   runlen within them
+    DERIVED       1085/4944        5.84  0.2195     131.64
+    PINNED           0/2472        0.00  0.0000       0.00
+    W171             0/2472        0.00  0.0000       0.00
+    FLICK.150     2435/2472        3.03  0.9850     223.39
+    FLICK.50      2472/2472        8.49  1.0000      94.87
+    FLICK.10      2472/2472       44.47  1.0000      19.79
+
+  AND WHETHER IT SETTLES. The session's SECOND HALF alone, teaching windows,
+  which asks the stabilisation question inside one run rather than across two.
+    arm         windows   runlen    pure1   vs whole-session runlen
+    DERIVED        2592   324.95   0.6651                -69.63
+    PINNED         1296   900.00   1.0000                 +0.00
+    W171           1296   900.00   1.0000                 +0.00
+    FLICK.150      1296   225.39   0.0147                 -0.55
+    FLICK.50       1296    94.67   0.0000                 -0.20
+    FLICK.10       1296    19.75   0.0000                 -0.05
+
+  CLAUSE 0 (FIRST) -- LIVENESS. An arm with no scored window, or an index the
+  genome could not run (ctx_slots 0), is VOID and no test below reads it.
+    DERIVED    ok     creatures 24/24 live  teach windows 4944  ctx_slots 2  present 1.0000
+    PINNED     ok     creatures 12/12 live  teach windows 2472  ctx_slots 2  present 1.0000
+    W171       ok     creatures 12/12 live  teach windows 2472  ctx_slots 2  present 1.0000
+    FLICK.150  ok     creatures 12/12 live  teach windows 2472  ctx_slots 2  present 1.0000
+    FLICK.50   ok     creatures 12/12 live  teach windows 2472  ctx_slots 2  present 1.0000
+    FLICK.10   ok     creatures 12/12 live  teach windows 2472  ctx_slots 2  present 1.0000
+
+  CLAUSE 1 -- THE EXACT SELF-TESTS. pin_mode 1 and 3 set the pin once per
+  window, so switches must be EXACTLY 0 and runlen EXACTLY 900.0.
+    PINNED     switches teach 0  probe 0   runlen 900.0000   PASS
+    W171       switches teach 0  probe 0   runlen 900.0000   PASS
+    => and W171 is the EVIDENCE for §54's scope: §54 imposed wrong writes in
+       runs of 900 ticks, one whole window, MEASURED and not argued.
+
+  CLAUSE 2 -- THE CALIBRATION. pin_mode 4 re-draws over TWO slots every f
+  ticks, so runs are 2f truncated by the window, NOT f. Tolerance 15%.
+    f=150  teach predicted  225.00 measured  225.94 (  +0.4%)  probe predicted  225.00 measured  222.55 (  -1.1%)  PASS
+            (counting REDRAWS instead of changes would read 150.00 here;
+             pure1 predicted 0.0156 = 0.5^6, measured 0.0150 -- disclosed,
+             not gated)
+    f=50   teach predicted   94.74 measured   94.87 (  +0.1%)  probe predicted   94.74 measured   94.76 (  +0.0%)  PASS
+            (counting REDRAWS instead of changes would read 50.00 here;
+             pure1 predicted 0.0000 = 0.5^17, measured 0.0000 -- disclosed,
+             not gated)
+    f=10   teach predicted   19.78 measured   19.79 (  +0.1%)  probe predicted   19.78 measured   19.79 (  +0.0%)  PASS
+            (counting REDRAWS instead of changes would read 10.00 here;
+             pure1 predicted 0.0000 = 0.5^89, measured 0.0000 -- disclosed,
+             not gated)
+
+  CLAUSE 3 -- THE VERDICT, on DERIVED's TEACHING-window runlen across
+  creatures. Pre-registered three ways in ROADMAP §55 before any number.
+    across creatures  runlen 417.34 +- 19.58 ticks (n = 24), 95% CI [378.95, 455.73]
+    pooled over all   runlen 394.57 ticks over 4944 windows -- a mean of per-
+                      creature ratios and a ratio of sums, both printed
+    probe window      runlen 602.64 +- 42.16 ticks   SECONDARY, no verdict
+    switches/window   1.281 teach, 0.722 probe   pure1 0.7805 teach
+
+    *** VERDICT C -- NO VERDICT. runlen 95% CI [379.0, 455.7] straddles a
+    boundary (150 / 450). Said rather than rounded to whichever side is
+    nearer -- `verdict-fitted-to-data`.

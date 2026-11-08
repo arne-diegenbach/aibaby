@@ -9500,3 +9500,298 @@ is two interleaved runs *duplicating* every marker, not a marker going missing. 
 The pinned hash is unmoved because §54's only shared-code change is one extra `else if` arm on the
 experiment-only context pin, plus a new RNG stream drawn from **only** when `pin_mode == 3` — and that
 was verified by re-running §53 and diffing, not by reasoning about it.
+
+## §55 (2026-11-08) — HOW LONG IS A RUN? THE PRE-REGISTRATION
+
+§54 closed pure overwrite and left one candidate standing for the derived index's **3.3–4.0 SE
+deficit**: wrong writes delivered in **short runs** rather than the trial-length blocks §54 imposed.
+This section measures the run length before imposing anything, because the data is already collected
+and has been thrown away every time since §49.
+
+### THE QUANTITY, AND WHY IT HAS NEVER BEEN READ
+
+`ctx_hist[kMaxContextSlots]` is zeroed per `observe` call and incremented on every scored tick the
+index is live. Both consumers — `teach_slot` at the teaching window and `ctx_slot` at the probe —
+take only its **argmax**. The histogram's *concentration* is discarded, and with it the only
+within-window stability measure the session already produces.
+
+Three columns per window kind, pooled as a **ratio of sums** across windows and creatures (not a mean
+of per-window ratios — `mean-of-ratios`):
+
+* **`runlen` = Σlive / (Σswitches + Nwindows)**, in ticks. **THE PRIMARY.** A switch is a live tick
+  whose slot differs from the previous live tick's, so a dark gap that returns to the same slot is not
+  a switch. Per creature this is a ratio of sums over that creature's windows; **across creatures the
+  verdict quantity is the mean of those per-creature ratios with its SE**, because a CI needs an error
+  bar and a figure pooled over every window of every creature has none. Both are printed — if they
+  disagree that is creature heterogeneity, which is worth seeing rather than hiding.
+* `pure1` = fraction of windows with **zero** switches. Secondary, reported, not verdict-bearing —
+  it is the directly interpretable companion ("§54's manipulation was faithful for this fraction of
+  writes").
+* `purity` = Σmodal / Σlive, the modal slot's share. Secondary. Note it **cannot** separate a fast
+  flicker from two long blocks: both read 0.5. That is why `runlen` is primary and not this.
+
+Both window kinds are scored over exactly **900 ticks** — teaching is `kM3TrialTicks − kM3SettleTicks`
+= 1400 − 500 and the probe is `kM3ProbeTicks − kM3ProbeSettleTicks` = 2000 − 1100. One ceiling, 900,
+for both. **The estimator is bounded above by 900 by construction and the log prints that bound beside
+every reading.**
+
+### THE DECISION BOUNDARIES, IN CLAIM UNITS, BEFORE ANY NUMBER EXISTS
+
+§54 imposed a run length of **900 ticks — one whole teaching window, by construction**: the pin is set
+once per `observe` call, above the tick loop. So the question is whether the derived index does the
+same.
+
+The boundaries are the protocol's own timescales, not round numbers. `kFeedbackPeriodTicks = 150` is
+the interval over which a reward delivery integrates, and `plasticity_interval_ticks = 10` is how
+often the write lands. A run much longer than 150 means every reward delivery sees one stable slot; a
+run at or below 150 means reward and slot **decouple inside a single window**, which is a credit
+misattribution and a different mechanism from a wrong-write *rate*.
+
+Verdict on the **95% CI** of `runlen` across creatures on the teaching windows (mean ± 1.96 SE), three
+ways:
+
+* **(A) lower bound ≥ 450** (half the window; at most one switch per window): the derived index writes
+  in trial-length runs, **§54's manipulation was faithful in run length, and short runs are REFUTED as
+  the explanation for the deficit.** The log prints `VERDICT A -- REFUTED: runlen 95%% CI [%.1f, %.1f]
+  ticks, lower bound >= 450`.
+* **(B) upper bound ≤ 150** (at or below the feedback period): **the hypothesis SURVIVES**, §54
+  imposed runs at least 6x too long, and §56's manipulation is defined by the measured value. The log
+  prints `VERDICT B -- SURVIVES: runlen 95%% CI [%.1f, %.1f] ticks, upper bound <= 150`.
+* **(C) anything else** — a CI straddling either boundary, a calibration arm off its derived
+  prediction by more than 15%, or an exact self-test failing: **NO VERDICT**, and the log names which
+  of the three fired. A CI that straddles is case C and gets said, not rounded to whichever side is
+  closer.
+
+`pure1` and `purity` are reported in every arm and bear on no verdict. Pre-registering one primary is
+the point.
+
+### THE SELF-TESTS, AND THEY CAN ALL FAIL
+
+**Two are exact.** `PINNED` (pin_mode 1) and `W171` (pin_mode 3 at the derived rate) both set the pin
+once per call, so both must read **switches exactly 0, `pure1` exactly 1.0000, `purity` exactly
+1.0000, `runlen` exactly 900.0**. Anything else means the counter does not count what this section
+says it counts. `W171`'s reading is also the evidence for §54's scope claim — that §54 imposed
+trial-length runs — which until now has been an argument from reading the code rather than a
+measurement.
+
+**Three are calibrations with derived predictions**, and this is the part that makes the instrument's
+units falsifiable rather than asserted (`calibrate-the-estimator-in-claim-units`). `pin_mode = 4`
+re-draws the pinned slot from two slots every `flicker` ticks, counted from `t = 0` of the call. Over a
+scored window `[s, e)` the number of internal block boundaries is `floor((e-1)/f) - floor(s/f)`, each
+changes the slot with probability 1/2, so `E[nruns] = boundaries/2 + 1` and
+
+**`runlen_expected = 900 / (boundaries/2 + 1)`**
+
+which for `f` = 10, 50, 150 is **19.78, 94.74 and 225.00 ticks** — identical on the teaching and probe
+windows, since both hold 89, 17 and 6 boundaries respectively. The code computes these from the
+protocol constants rather than carrying them as literals (`derive-the-constant`).
+
+Two things this discriminates, which is why it is worth running:
+
+* An estimator that counted **redraws** instead of **changes** would read 10, 50 and 150 — a clean 2x
+  miss at every point. The factor of two is the whole content of "a fair coin over two slots leaves the
+  slot alone half the time", and `fifty-fifty-does-not-pull-to-the-midpoint` is the note that says
+  derive that rather than assume it.
+* An estimator that mishandled the window edge would miss at `f = 150` (6 boundaries, so the
+  truncation term is 4/3) and hit at `f = 10` (89 boundaries, truncation 1.011). The three points are
+  spread deliberately so one bad edge case cannot pass.
+
+### THE LIVENESS GATE RUNS FIRST
+
+§53's T-A **passed on an empty set**: at 60k ticks no creature scored a probe, every column read
+0.0000 and the identity self-test printed PASS twice because the identity is trivially zero when no
+cell was filled. So before any test here: if an arm's `Nwindows` is zero, or the index never went live
+(`ctx_slots == 0`, the missing-source-module case `areax` and `ctxself` check rather than trust), the
+log prints **VOID** for that arm and no test reads it. A test that cannot fail is not a test
+(`vacuity-gate-cannot-guard-a-rejection`).
+
+### WHAT IS DELIBERATELY NOT IN HERE
+
+**The auditory index as a natural positive control** (`context_source = 4`, which `ctxsrc` measured at
+1.000 while the word plays and 0.533 by the reward window, so it should switch a great deal). It needs
+a different genome, and `ctx-genome-somato` records that context genomes fail `calibrate` — a failure
+mode that would arrive mixed in with the result. The flicker arms give a positive control with a
+*derived* prediction instead of a plausible one, which is strictly stronger, so the natural arm buys
+nothing it does not already have.
+
+### BIT-IDENTITY, PROVED NOT ASSERTED
+
+Every change is additive and gated: a new `flicker` argument defaulting to 0, a new `pin_mode == 4`
+arm, a new RNG stream seeded unconditionally but **drawn from only inside that arm**, and accumulation
+into new struct fields. So §53's `slotdose` at 450k must reproduce its archived log on the §55 binary,
+**compared on content lines** — the raw diff has twice now printed DIVERGED over one blank line before
+the stripped timing block. That re-run is part of this section, not an afterthought.
+
+**Arms, 84 sessions, every argument held at §52/§53/§54's values except `pin_mode` and `flicker`:**
+
+| arm | `pin_mode` | `flicker` | reps | role |
+|---|---|---|---|---|
+| `DERIVED` | 0 | — | 24 | **THE MEASUREMENT** — the retina's own index |
+| `PINNED` | 1 | — | 12 | exact self-test: 0 switches, `runlen` 900.0 |
+| `W171` | 3, `w` = 0.1712 | — | 12 | **§54's OWN ARM** — the evidence for §54's scope claim |
+| `FLICK.150` | 4 | 150 | 12 | calibration, predicted **225.00** |
+| `FLICK.50` | 4 | 50 | 12 | calibration, predicted **94.74** |
+| `FLICK.10` | 4 | 10 | 12 | calibration, predicted **19.78** — the short-run end, where the open hypothesis lives |
+
+Run at **450k and 900k**, as §53 did, because a drift in the index's own stability as it trains is
+worth seeing and costs one more launch.
+
+### §55's RESULT — NO VERDICT, AND THE PRE-REGISTERED PRIMARY WAS THE WRONG ESTIMATOR
+
+`results/n55-switchrate-900k.log`, 84 sessions, exit 0. **The pre-registered test returns VERDICT C at
+both budgets**, and it returns it for a reason worth more than either of the verdicts it was designed
+to pick between.
+
+| | 150k (smoke) | 450k | 900k |
+|---|---|---|---|
+| `runlen` across creatures | 668.38 ± 29.86 | 417.34 ± 19.58 | **455.81 ± 14.43** |
+| 95% CI | [609.9, 726.9] | [379.0, 455.7] | **[427.5, 484.1]** |
+| verdict | *would have been A* | **C** | **C** |
+| `pure1`, teaching | 0.9583 | 0.7805 | 0.7432 |
+| switches per window | 0.413 | 1.281 | 1.025 |
+
+The CI straddles the 450-tick boundary at both registered budgets, so the log says C and names the
+straddle rather than rounding to the nearer side.
+
+#### THE INSTRUMENT IS SOUND, WHICH IS WHAT MAKES THE C INFORMATIVE
+
+Everything that could have failed, did not:
+
+* **The two EXACT self-tests pass at both budgets.** `PINNED` and `W171` read **0 switches, `pure1`
+  1.0000, `runlen` 900.0000** on teaching and probe windows alike. So **§54's scope claim is now
+  measured rather than argued: §54 imposed its wrong writes in runs of 900 ticks, one whole window.**
+* **The three CALIBRATIONS land within 0.4% at 450k and 0.3% at 900k**, against predictions of 19.78,
+  94.74 and 225.00 derived from the protocol constants. An estimator counting *redraws* rather than
+  *changes* would have read 10, 50 and 150 — a clean 2x miss at every point, and it did not.
+* **`pure1` calibrates too**, on a prediction it was not gated on: `0.5^6 = 0.0156` expected for
+  `f = 150`, **0.0163 measured** at 900k. And `sw/sww` reads 3.04 against `3/(1 - 1/64) = 3.048`.
+* **Bit-identity proved:** §53's `slotdose` at 450k on the §55 binary reproduces its archived log,
+  **127 of 127 content lines**. (The first diff printed DIVERGED because I compared against
+  `n53-slotdose-450k.log`, which *predates* the §53b block — my archive-selection error, not a
+  divergence. The correct baseline is `n53b-450k.log`, and the older archive's first 90 content lines
+  match too.)
+
+#### THE SUBSTANTIVE ANSWER IS A MIXTURE, AND A MEAN CANNOT CARRY IT
+
+At 900k, on the teaching windows:
+
+* **74.3% of windows are perfectly single-slot** — 900-tick runs, exactly what §54 imposed.
+* **25.7% switch at least once.** They hold **25.7% of all live teaching ticks**, carry **3.99
+  switches each**, and the run length *inside them* is **180.26 ticks** — just above
+  `kFeedbackPeriodTicks = 150`, which is the interval a reward delivery integrates over.
+
+So neither pre-registered boundary describes the index. It is not "at most one switch per window"
+(1.025) and it is not "runs at or below the feedback period" (456). **It is two populations: three
+quarters of writes delivered in trial-length blocks and a quarter delivered in ~180-tick runs across
+which reward and slot decouple inside a single window.**
+
+**And this is a defect in my pre-registration, not in the creature.** A mean tested against a
+threshold cannot represent a mixture, and the diagnostic is that *more power would make it worse*:
+the mean sits essentially ON the 450 boundary, so shrinking the SE from 14.4 to 3 would deliver
+**VERDICT A — "the derived index writes in trial-length runs"** for a quantity where a quarter of
+writes demonstrably do not. A better-powered run would have produced a cleaner and more misleading
+answer. The right primary was the **fraction of writes delivered in short runs** — `live%`, which
+reads **0.2568** directly — and I would have pre-registered that had I known the shape. **I am not
+switching to it now.** The pre-registered verdict stands at C and the fraction is reported as the
+descriptive answer, because `verdict-fitted-to-data` is about exactly this temptation.
+
+#### THE SMOKE WOULD HAVE DELIVERED A FALSE VERDICT
+
+The 150k smoke read **668.38 ± 29.86 and VERDICT A — REFUTED**. The registered budgets read 417 and
+456. The 150k-to-450k drop is **251 ± 35.7, seven SE**, and it is not noise: `pure1` falls 0.9583 →
+0.7805 → 0.7432, so the index **destabilises substantially over the first 450k ticks** and is flat
+between 450k and 900k (417.3 ± 19.6 against 455.8 ± 14.4, and those two runs share seeds so even that
+contrast's SE is not the right one).
+
+`verify-command` already records that **a smoke is never good for sign**. §55 extends it: the smoke
+was *perfectly* good for the instrument — every self-test and all three calibrations landed at 150k
+exactly as they did at 900k — and worthless for the measurement, because at 150k the minority
+population was only 4.2% of windows instead of 25.7%. **A smoke validates the instrument and measures
+nothing.** I stated the smoke's verdict as the result before the budgets returned, which was wrong.
+
+#### WHAT THIS DOES TO THE DEFICIT, BY ARITHMETIC AND NOT BY MEASUREMENT
+
+Granting the hypothesis the most generous possible reading — that every write in a switching window
+loses its credit assignment entirely — scales §54's measured expression by 0.743:
+
+* §54 at `w` = 0.171 with 900-tick runs: **+0.1046 ± 0.0241** (0.59 of a +0.1772 ceiling)
+* scaled by the 74.3% of writes that are trial-length: **+0.0777 ± 0.0179**
+* §53's derived index, raw: **+0.0081 ± 0.0170**
+* **remaining deficit +0.0696 ± 0.0247, 2.8 SE**
+
+So short runs on a quarter of the writes can buy **at most about a quarter** of the 3.3 SE deficit,
+and roughly 2.8 SE of it survives the most generous accounting available. **This is arithmetic on two
+measured arms, not a measurement**, and the generous assumption is doing the work — the honest
+statement is that short runs are now a *partial, bounded* contributor rather than the explanation.
+
+#### THE READ IS STABLE AND THE WRITE IS NOT
+
+The probe window is far steadier than the teaching window in the same sessions: **`runlen` 690.38 ±
+34.24 against 455.81 ± 14.43, `pure1` 0.9572 against 0.7432, 0.411 switches per window against
+1.025.** That asymmetry matters for how §53 should be read — **§53's 100% registration was measured on
+the probe, the stable window, while the lesson is written in the unstable one.**
+
+Three things differ between those windows and this run cannot separate them: position in the trial
+(1100–2000 of 2000 versus 500–1400 of 1400), the caregiver speaking versus silence, and reward and
+plasticity running versus not. Named as confounds rather than resolved.
+
+#### WHAT §56 IS, AND WHY IT IS BETTER MOTIVATED NOW
+
+**These arms run with `hold_nuisance = true`, so the scene rendered for a given object is identical on
+every trial** — and that was checked rather than assumed. `m3_toy_fixed` takes **no RNG argument at
+all** (fixed centre 0.5/0.5, fixed half-width 0.105, shapes area-matched by `kAreaMatch` so brightness
+cannot give the answer away), and the session **never calls `look_at` and never drives
+`gaze_command`**, so the fovea does not move either. The retinal feature vector presented for a given
+object is therefore identical on every trial of the session.
+
+And the index still switches within a quarter of windows, and still writes to the wrong slot 17% of
+the time. **It cannot be failing on appearance ambiguity, because there is none** — so the partition
+is moving for internal reasons: prototype adaptation, or network state, or both.
+
+That makes the next question sharp and cheap. `teach_label` and `teach_slot` are already returned per
+window, so the **modal assignment's drift across the session** is measurable without new machinery: cut
+the session into blocks, score the slot-to-object assignment per block, and ask whether it flips.
+A session-scale flip is the one timescale neither §54 nor §55 has touched, and it is precisely where
+`retention` measured **erasure** (0.22) rather than averaging — so if the derived index's errors arrive
+in session-scale blocks, `retention` and §54 bound one mechanism at two timescales and the deficit
+lands at the erasing end. **§55 does not test that and makes no claim about it.**
+
+### §55's VERIFY GATE — AND THE KEYS ARE NOW A SCRIPT, BECAUSE I GOT ONE WRONG AGAIN
+
+`results/n55-verify.log`, exit 0: `verify PASS`, `pinned hash PASS`, `experiments 24 as expected, 0
+not`, and the determinism hash **`ad96f882becbee92` as recorded**, with `final hash A == final hash B`.
+The count stays 24 because `switchrate` is `Tier::kLong` / `Expect::kRead` and `verify` runs the fast
+tier only.
+
+The pinned hash is unmoved because every §55 change is additive and gated — a `flicker` argument
+defaulting to 0, a new `pin_mode == 4` arm, a new RNG stream drawn from only inside it, and
+accumulation into new struct fields — and that was **proved** by re-running §53's `slotdose` at 450k
+and diffing, 127 of 127 content lines, not by reasoning about it.
+
+**But my hash key reported a passing line as missing.** I wrote `grep -oE "hash [0-9a-f]{16} as
+recorded"` and the log reads `hash              ad96f882becbee92  as recorded` — several spaces, not
+one — so the pattern matched nothing and the gate printed three keys instead of four.
+`smoke-the-exact-command` already records this exact defect and its exact fix (*"use `\s+` for column
+padding, and write gate keys against a pasted line from a real log"*). **Recording it was not enough:
+this is the second occurrence, in the session where that note is in the index.**
+
+A rule that has now failed twice at the same spot is not a knowledge problem, so the fix is mechanical
+rather than another note. **`tools/verify_gate.sh` holds all four keys, typed once**, with the two
+preliminary assertions that must come first — a negative exact-match result is the absence of
+evidence, not evidence of failure, and a usage error, a crash, an empty file and a real determinism
+regression are indistinguishable without them.
+
+**And it was exercised on all four branches before being committed**, because
+`deferral-note-is-untested-code` says a gate's command is untested code until it has run and *real rows
+cannot test a branch they never take*:
+
+| input | result |
+|---|---|
+| the real `n55-verify.log` | **PASS**, exit 0 |
+| the log concatenated with itself — §51's interleaving defect | **FAILED**, exit 1: all three counts read 2, and `final hash A == B` reports four hashes |
+| the real log with a wrong expected hash | **FAILED**, exit 1, and it *prints the hashes it actually found* |
+| a one-line file containing `error: unknown argument` | **FAILED**, exit 1 on every check including both preliminaries |
+
+The second row is the one that matters: it is the defect the `wc -l` key was invented for and could
+never catch, since a clean log and a doubled log were both 936 lines. A count of exactly one catches
+it, and now catches it without anyone retyping the pattern.

@@ -1016,11 +1016,54 @@ struct G3Probe {
   // in a drawn arm and ~pure in a paired one.
   //
   // Disclosed: counted at the caregiver's firing, while the kernel's
-  // perturbation write consumes that reward one plasticity interval later. The
-  // live slot is constant within a trial (§52 read `present 1.0000`), so the lag
-  // mis-attributes only writes straddling an episode boundary.
+  // perturbation write consumes that reward one plasticity interval later. How
+  // much that lag mis-attributes depends on how long the live slot HOLDS, which
+  // the fields below finally measure -- `present 1.0000` was cited here and in
+  // §54's pre-registration as if it settled the question, and it does not:
+  // `ctx_present_frac` is LIVENESS, not CONSTANCY.
   double dose_slot[aibaby::kMaxContextSlots] = {};
   double dose_word[2][aibaby::kMaxContextSlots] = {};
+  // §55. THE CONCENTRATION OF `ctx_hist`, which every section since §49 has
+  // thrown away by taking only its argmax.
+  //
+  // `teach_slot` and `ctx_slot` answer "which slot was modal over this window".
+  // Nothing has ever asked "and for how long did it hold" -- so the one
+  // dimension on which an overwriting store and an averaging one differ (run
+  // length) has been invisible, which is exactly the hole §54 found in its own
+  // pre-registration.
+  //
+  // A SWITCH is a live tick whose slot differs from the PREVIOUS LIVE tick's, so
+  // a dark gap that returns to the same slot is not a switch. Accumulated over
+  // whole windows and pooled as a RATIO OF SUMS by the scorer rather than a mean
+  // of per-window ratios (`mean-of-ratios`).
+  //
+  //   `*_n`      windows that contributed (an index that never went live does
+  //              not, by the same drop rule `ctx_slot` uses)
+  //   `*_live`   live scored ticks summed over them
+  //   `*_modal`  ticks in that window's modal slot
+  //   `*_sw`     switches
+  //   `*_pure`   windows with ZERO switches
+  //
+  // `tw_` is the TEACHING window -- where the bias table is written and the only
+  // one that bears on §54's scope. `pw_` is the PROBE window, where the lesson
+  // is read back; §53 measured the read's registration at 100% BETWEEN windows
+  // and this is the same question WITHIN one.
+  uint64_t tw_n = 0, tw_live = 0, tw_modal = 0, tw_sw = 0, tw_pure = 0;
+  uint64_t pw_n = 0, pw_live = 0, pw_modal = 0, pw_sw = 0, pw_pure = 0;
+  // §55, ADDED AFTER THE SMOKE AND SAID SO. The smoke read `pure1` 0.9583 beside
+  // 0.413 switches per window, which can only mean the distribution is BIMODAL:
+  // ~4% of windows carry ~10 switches each and the rest carry none. A mean run
+  // length conflates "every window flickers a little" with "a few windows
+  // flicker a lot", and those are different mechanisms. The PRE-REGISTERED
+  // primary and its boundaries are untouched; these are descriptive.
+  //
+  //   `*_live_sw`  live ticks in windows with AT LEAST ONE switch
+  //   `*_late_*`   the same quantities over the session's SECOND HALF, which
+  //                asks whether the index stabilises as its prototypes settle --
+  //                a sharper question than comparing two budgets, and answered
+  //                inside one run
+  uint64_t tw_live_sw = 0, pw_live_sw = 0;
+  uint64_t tw_late_n = 0, tw_late_live = 0, tw_late_sw = 0, tw_late_pure = 0;
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -1089,7 +1132,7 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                             bool consistent, uint64_t seed_shift, int mode,
                             bool hold_nuisance = false, bool shuffle_order = false,
                             int pin_mode = 0, int teacher = 0, int pairing = 0,
-                            double write_noise = 0.0) {
+                            double write_noise = 0.0, int flicker = 0) {
   G3Probe out;
   std::string error;
   Session s;
@@ -1133,6 +1176,11 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // §53's arms -- make no draw here and stay bit-identical to their logs.
   aibaby::Rng wn_rng;
   wn_rng.seed((s.dna.header().seed ^ seed_shift) + 0x54C0u);
+  // §55. THE FLICKER STREAM, same reasoning again, and touched only when
+  // `pin_mode == 4` AND `flicker > 0`. Seeding is unconditional because seeding
+  // a generator nobody draws from shifts nothing; it is the DRAW that would.
+  aibaby::Rng fl_rng;
+  fl_rng.seed((s.dna.header().seed ^ seed_shift) + 0x55C0u);
   // §51. M1c's reward baseline, PER WORD. `vocallearn`'s design-trap note is the
   // reason: against one global mean the creature is rewarded for saying whichever
   // word is easier for its larynx, and the easy word is not the taught one.
@@ -1250,6 +1298,12 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   uint32_t ctx_hist[aibaby::kMaxContextSlots] = {};
   uint64_t ctx_win_ticks = 0, ctx_on_ticks = 0;
   uint64_t ctx_win_total = 0, ctx_on_total = 0;
+  // §55. Per-call like `ctx_hist`, and read by the two argmax blocks right after
+  // the call returns. `ctx_last_slot` is -1 at window entry so the FIRST live
+  // tick cannot score a switch against a slot from the previous window -- the
+  // same stale-histogram trap `ctx_hist`'s memset avoids.
+  uint64_t ctx_sw = 0;
+  int ctx_last_slot = -1;
   // §51. The formants the creature actually produced over a PROBE's scored
   // window, so the result can be read in T1's own currency as well as on the
   // shared ruler. Per-call like `ctx_hist`, and voiced frames only, because
@@ -1277,6 +1331,8 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     std::memset(ctx_hist, 0, sizeof(ctx_hist));
     ctx_win_ticks = 0;
     ctx_on_ticks = 0;
+    ctx_sw = 0;
+    ctx_last_slot = -1;
     probe_f1 = 0;
     probe_f2 = 0;
     probe_fn = 0;
@@ -1342,12 +1398,29 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           slot = 1u - slot;
         }
         s.brain.network().pin_context_oracle(slot);
+      } else if (pin_mode == 4) {
+        // §55. Split out from pin_mode 2 rather than sharing its `else`, so
+        // §50's drawn arm keeps `pin_rng`'s exact stream and stays bit-identical
+        // to its archived log.
+        s.brain.network().pin_context_oracle(uint32_t(fl_rng.next() & 1u));
       } else {
         s.brain.network().pin_context_oracle(uint32_t(pin_rng.next() & 1u));
       }
     }
 
     for (uint64_t t = 0; t < length; ++t, ++now) {
+      // §55. THE CALIBRATION ARM. pin_mode 4 re-draws the pin every `flicker`
+      // ticks, counted from `t = 0` of THIS call so every window is aligned
+      // identically and the expected run length is exact rather than an average
+      // over phases. Boundaries inside a scored window [s, e) are the multiples
+      // of `flicker` in (s, e), each changes the slot with probability 1/2, and
+      // the estimator must therefore read 900 / (boundaries/2 + 1) -- NOT the
+      // flicker period itself, which is what it would read if it counted
+      // redraws rather than changes.
+      if (pin_mode == 4 && flicker > 0 && show && t > 0 &&
+          (t % uint64_t(flicker)) == 0) {
+        s.brain.network().pin_context_oracle(uint32_t(fl_rng.next() & 1u));
+      }
       if (show && t % frame_ticks == 0) {
         scene.render(toy.shape, toy.cx, toy.cy, toy.radius, 0.85f, 0.02f, frame.data());
         retina.present(frame.data());
@@ -1523,6 +1596,11 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         ++ctx_on_total;
         const uint32_t c = s.brain.network().active_context();
         if (c < aibaby::kMaxContextSlots) ++ctx_hist[c];
+        // §55. A CHANGE, not a redraw: counted against the previous LIVE tick's
+        // slot, which is what makes the calibration arms read 2x their flicker
+        // period rather than the period itself.
+        if (ctx_last_slot >= 0 && int(c) != ctx_last_slot) ++ctx_sw;
+        ctx_last_slot = int(c);
       }
       if (s.brain.vocal_frame() == last_frame) continue;
       last_frame = s.brain.vocal_frame();
@@ -1708,6 +1786,27 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       out.teach_label.push_back(mode == 1 ? 0 : object);
       out.teach_slot.push_back(any ? int(best) : -1);
+      // §55. The same window's CONCENTRATION, which the argmax above discards.
+      // Gated on `any` -- a window whose index never went live contributes
+      // nothing, the same drop rule the slot column uses, because a window with
+      // no live tick has no run length rather than a run length of zero.
+      if (any) {
+        ++out.tw_n;
+        out.tw_live += ctx_on_ticks;
+        out.tw_modal += ctx_hist[best];
+        out.tw_sw += ctx_sw;
+        if (ctx_sw == 0) ++out.tw_pure;
+        if (ctx_sw > 0) out.tw_live_sw += ctx_on_ticks;
+        // `now` is the global tick at this window's END, so the split is by
+        // where the window sat in the session rather than by trial index -- the
+        // two differ because a probe trial consumes ticks too.
+        if (now * 2 >= ticks) {
+          ++out.tw_late_n;
+          out.tw_late_live += ctx_on_ticks;
+          out.tw_late_sw += ctx_sw;
+          if (ctx_sw == 0) ++out.tw_late_pure;
+        }
+      }
     }
 
     if (++since_probe < kM3TrainPerProbe) continue;
@@ -1783,6 +1882,20 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       if (any && have_g && probe_object >= 0 && probe_object < 2) {
         out.cell_g[probe_object][best] += g_probe;
         ++out.cell_n[probe_object][best];
+      }
+      // §55, on the READ window. Gated on `any` alone and NOT on `have_g`: a
+      // silent probe still has an index with a run length, and dropping it would
+      // measure the index's stability only on windows the creature happened to
+      // vocalise in -- an index measured on a subset selected by the creature's
+      // own output, which is the confound the sampling site above was placed
+      // above the vocal-frame guard to avoid.
+      if (any) {
+        ++out.pw_n;
+        out.pw_live += ctx_on_ticks;
+        out.pw_modal += ctx_hist[best];
+        out.pw_sw += ctx_sw;
+        if (ctx_sw == 0) ++out.pw_pure;
+        if (ctx_sw > 0) out.pw_live_sw += ctx_on_ticks;
       }
     }
     central_x.push_back(last_central);
@@ -12633,6 +12746,389 @@ bool run_writerate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 w_half >= 0.0 ? (std::string("~ ") + std::to_string(w_half)).c_str()
                               : "not bracketed",
                 op, se_op, avg_pred);
+  }
+  return true;
+}
+
+// --- §55: HOW LONG DOES THE INDEX HOLD? --------------------------------------
+//
+// §54 closed pure overwrite and left ONE candidate standing for the derived
+// index's 3.3-4.0 SE deficit: wrong writes delivered in SHORT RUNS rather than
+// the trial-length blocks §54 imposed. The hole was in §54's own
+// pre-registration -- it justified corrupting per TRIAL by citing §53's
+// `present 1.0000` as "stable within a trial", and `ctx_present_frac` is
+// LIVENESS, not CONSTANCY.
+//
+// `ctx_hist` is accumulated per window and both consumers take only its ARGMAX,
+// so the concentration has been discarded every time since §49. This reads it.
+// `runlen` is the primary; `pure1` and `purity` are reported and bear on no
+// verdict, because `purity` cannot separate a fast flicker from two long blocks
+// (both read 0.5) and pre-registering one primary is the point.
+//
+// The three `FLICK` arms are what make the estimator's units falsifiable rather
+// than asserted. A fair coin over two slots leaves the slot ALONE half the time,
+// so a flicker period f produces runs of 2f ticks, truncated by the window --
+// an estimator counting redraws instead of changes would miss by exactly 2x at
+// all three points.
+bool run_switchrate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  // Derived from the protocol constants, never carried as literals
+  // (`derive-the-constant`). Both scored windows are 900 ticks -- the teaching
+  // one is kM3TrialTicks - kM3SettleTicks and the probe's is
+  // kM3ProbeTicks - kM3ProbeSettleTicks -- and the estimator is bounded ABOVE by
+  // that length by construction, which the log prints beside every reading.
+  const double kWinT = double(kM3TrialTicks - kM3SettleTicks);
+  const double kWinP = double(kM3ProbeTicks - kM3ProbeSettleTicks);
+  // Boundaries of a flicker period f inside a scored window [s, e): the
+  // multiples of f in (s, e), each of which changes the slot with probability
+  // 1/2, so E[nruns] = b/2 + 1 and the expected pooled run length is
+  // (e - s) / (b/2 + 1).
+  auto predicted = [](uint64_t s, uint64_t e, uint64_t f) -> double {
+    if (f == 0) return 0.0;
+    const double b = double((e - 1) / f - s / f);
+    return double(e - s) / (b * 0.5 + 1.0);
+  };
+  // THE DECISION BOUNDARIES, pre-registered in ROADMAP §55 before any number
+  // existed, and they are the protocol's own timescales rather than round
+  // numbers: kFeedbackPeriodTicks is the interval a reward delivery integrates
+  // over, so a run at or below it means reward and slot DECOUPLE inside a single
+  // window, and half the window is at most one switch per window.
+  const double kHiBound = 0.5 * kWinT;                      // 450
+  const double kLoBound = double(kFeedbackPeriodTicks);      // 150
+  constexpr double kCalTol = 0.15;
+
+  struct Arm {
+    const char* name;
+    int pin;
+    double w;
+    int flicker;
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 6;
+  const Arm arms[kArms] = {
+      {"DERIVED", 0, 0.0, 0, 24u, "THE MEASUREMENT -- the retina's own index"},
+      {"PINNED", 1, 0.0, 0, 12u, "EXACT self-test: 0 switches, runlen = the window"},
+      {"W171", 3, 0.1712, 0, 12u, "§54's OWN ARM -- the evidence for its scope claim"},
+      {"FLICK.150", 4, 0.0, 150, 12u, "calibration"},
+      {"FLICK.50", 4, 0.0, 50, 12u, "calibration"},
+      {"FLICK.10", 4, 0.0, 10, 12u, "calibration -- the short-run end"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §55. §54 imposed wrong writes in TRIAL-LENGTH blocks (the pin\n"
+              "                    is set once per window) and found AVERAGING. Short runs are\n"
+              "                    the one candidate left for the derived index's 3.3-4.0 SE\n"
+              "                    deficit, and its run length has NEVER been measured.\n");
+  std::printf("  the quantity      runlen = sum(live) / (sum(switches) + windows), in ticks. A\n"
+              "                    SWITCH is a live tick whose slot differs from the previous\n"
+              "                    LIVE tick's. Pooled as a ratio of sums, not a mean of\n"
+              "                    per-window ratios (`mean-of-ratios`).\n");
+  std::printf("  the boundaries    A: CI lower >= %.0f (<=1 switch/window) -- short runs REFUTED.\n"
+              "                    B: CI upper <= %.0f (the feedback period) -- SURVIVES.\n"
+              "                    C: anything else, including a straddling CI. The estimator's\n"
+              "                    ceiling is %.0f ticks by construction.\n",
+              kHiBound, kLoBound, kWinT);
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms);
+  if (ticks < 450000ull) {
+    std::printf("  *** BELOW THE REGISTERED MINIMUM (%llu < 450000). A smoke resolves the\n"
+                "      EXACT self-tests and the calibration, which are properties of the\n"
+                "      instrument and not of the budget. It does NOT resolve the verdict.\n",
+                (unsigned long long)ticks);
+  }
+  instrument("switchrate", dna.header().seed ^ 0x55A0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false;
+    uint64_t tn = 0, tlive = 0, tmodal = 0, tsw = 0, tpure = 0;
+    uint64_t pn = 0, plive = 0, pmodal = 0, psw = 0, ppure = 0;
+    uint64_t tlive_sw = 0, plive_sw = 0;
+    uint64_t ln = 0, llive = 0, lsw = 0, lpure = 0;
+    double present = 0;
+    uint32_t slots = 0, probes = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // EVERY ARGUMENT IS §52's, §53's AND §54's EXCEPT `pin_mode`, `write_noise`
+    // and `flicker`. `control-on-a-different-code-path`: an arm selector must
+    // pin the whole dose vector.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, /*pairing=*/0, arms[a].w,
+                            arms[a].flicker);
+    if (!run.ok) return c;
+    c.ok = true;
+    c.present = run.ctx_present_frac;
+    c.slots = run.ctx_slots;
+    c.probes = run.probes;
+    c.tn = run.tw_n; c.tlive = run.tw_live; c.tmodal = run.tw_modal;
+    c.tsw = run.tw_sw; c.tpure = run.tw_pure;
+    c.pn = run.pw_n; c.plive = run.pw_live; c.pmodal = run.pw_modal;
+    c.psw = run.pw_sw; c.ppure = run.pw_pure;
+    c.tlive_sw = run.tw_live_sw; c.plive_sw = run.pw_live_sw;
+    c.ln = run.tw_late_n; c.llive = run.tw_late_live;
+    c.lsw = run.tw_late_sw; c.lpure = run.tw_late_pure;
+    return c;
+  });
+
+  // Per creature the three quantities are RATIOS OF SUMS over that creature's
+  // windows; across creatures they are a mean with an SE, because the verdict is
+  // a CI and a pooled figure has no error bar. Both are printed: if they differ
+  // by much, that is creature heterogeneity and worth seeing rather than hiding.
+  struct Row {
+    uint32_t n = 0, ok = 0, live = 0;
+    uint64_t tn = 0, tlive = 0, tmodal = 0, tsw = 0, tpure = 0;
+    uint64_t pn = 0, plive = 0, pmodal = 0, psw = 0, ppure = 0;
+    uint64_t tlive_sw = 0, plive_sw = 0;
+    uint64_t ln = 0, llive = 0, lsw = 0, lpure = 0;
+    double present = 0;
+    uint32_t slots = 0;
+    std::vector<double> rt, rp;
+  };
+  std::vector<Row> rows(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    Row& R = rows[job_arm[i]];
+    ++R.n;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++R.ok;
+    R.present += c.present;
+    R.slots = c.slots;
+    R.tn += c.tn; R.tlive += c.tlive; R.tmodal += c.tmodal;
+    R.tsw += c.tsw; R.tpure += c.tpure;
+    R.pn += c.pn; R.plive += c.plive; R.pmodal += c.pmodal;
+    R.psw += c.psw; R.ppure += c.ppure;
+    R.tlive_sw += c.tlive_sw; R.plive_sw += c.plive_sw;
+    R.ln += c.ln; R.llive += c.llive; R.lsw += c.lsw; R.lpure += c.lpure;
+    if (c.tn == 0) continue;
+    ++R.live;
+    R.rt.push_back(double(c.tlive) / double(c.tsw + c.tn));
+    if (c.pn > 0) R.rp.push_back(double(c.plive) / double(c.psw + c.pn));
+  }
+  auto mean_se = [](const std::vector<double>& v, double* se) {
+    if (v.empty()) { *se = 0.0; return 0.0; }
+    double m = 0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    if (v.size() < 2) { *se = 0.0; return m; }
+    double s2 = 0;
+    for (double x : v) s2 += (x - m) * (x - m);
+    s2 /= double(v.size() - 1);
+    *se = std::sqrt(s2 / double(v.size()));
+    return m;
+  };
+
+  // Both lengths printed rather than one asserted: they are equal today (900 and
+  // 900) and the estimator's ceiling is per-window, so if the protocol constants
+  // ever diverge the log says so instead of quietly comparing two rulers.
+  std::printf("\n  THE WINDOWS. Teaching %.0f ticks, probe %.0f -- each the ceiling on its own\n"
+              "  column. `runlen` in TICKS, and one tick is %.1f ms of simulated life.\n",
+              kWinT, kWinP, dt);
+  std::printf("    %-10s crt    windows   runlen  pure1  purity |  runlen  pure1  purity\n",
+              "arm");
+  std::printf("    %-10s        teach/probe   -- TEACHING WINDOW --  |  -- PROBE WINDOW --\n", "");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const double rt = R.tn ? double(R.tlive) / double(R.tsw + R.tn) : 0.0;
+    const double rp = R.pn ? double(R.plive) / double(R.psw + R.pn) : 0.0;
+    std::printf("    %-10s %2u/%2u %6llu/%-5llu %7.2f %6.4f %7.4f | %7.2f %6.4f %7.4f\n",
+                arms[a].name, R.live, R.n, (unsigned long long)R.tn,
+                (unsigned long long)R.pn, rt,
+                R.tn ? double(R.tpure) / double(R.tn) : 0.0,
+                R.tlive ? double(R.tmodal) / double(R.tlive) : 0.0, rp,
+                R.pn ? double(R.ppure) / double(R.pn) : 0.0,
+                R.plive ? double(R.pmodal) / double(R.plive) : 0.0);
+  }
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-10s %s\n", arms[a].name, arms[a].what);
+  }
+
+  // ADDED AFTER THE SMOKE, WHICH READ pure1 0.9583 BESIDE 0.413 SWITCHES PER
+  // WINDOW -- a combination that can only mean a FEW windows flicker a lot while
+  // the rest hold perfectly. A mean run length cannot tell that apart from every
+  // window flickering a little, and the two are different mechanisms, so the
+  // structure gets printed instead of being left inside the mean. The
+  // pre-registered primary and its boundaries are untouched.
+  std::printf("\n  THE SHAPE OF THE DISTRIBUTION, teaching windows. `sw/sww` is switches per\n"
+              "  SWITCHING window and `live%%` the share of live ticks living in them.\n");
+  std::printf("    %-10s  windows switching   sw/sww   live%%   runlen within them\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (R.tn == 0) { std::printf("    %-10s  VOID\n", arms[a].name); continue; }
+    const uint64_t nsw = R.tn - R.tpure;
+    std::printf("    %-10s %7llu/%-7llu %8.2f %7.4f %10.2f\n", arms[a].name,
+                (unsigned long long)nsw, (unsigned long long)R.tn,
+                nsw ? double(R.tsw) / double(nsw) : 0.0,
+                R.tlive ? double(R.tlive_sw) / double(R.tlive) : 0.0,
+                nsw ? double(R.tlive_sw) / double(R.tsw + nsw) : 0.0);
+  }
+  std::printf("\n  AND WHETHER IT SETTLES. The session's SECOND HALF alone, teaching windows,\n"
+              "  which asks the stabilisation question inside one run rather than across two.\n");
+  std::printf("    %-10s  windows   runlen    pure1   vs whole-session runlen\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (R.ln == 0) { std::printf("    %-10s  VOID\n", arms[a].name); continue; }
+    const double rl = double(R.llive) / double(R.lsw + R.ln);
+    const double rw = R.tn ? double(R.tlive) / double(R.tsw + R.tn) : 0.0;
+    std::printf("    %-10s %8llu %8.2f %8.4f %+21.2f\n", arms[a].name,
+                (unsigned long long)R.ln, rl,
+                double(R.lpure) / double(R.ln), rl - rw);
+  }
+
+  // CLAUSE 0 FIRST, ALWAYS. §53's T-A printed PASS twice on an EMPTY SET -- at
+  // 60k no creature scored a probe, every column read 0.0000 and the identity
+  // self-test is trivially satisfied when no cell was filled. A test that cannot
+  // fail is not a test, so liveness is established before anything reads a
+  // column.
+  std::printf("\n  CLAUSE 0 (FIRST) -- LIVENESS. An arm with no scored window, or an index the\n"
+              "  genome could not run (ctx_slots 0), is VOID and no test below reads it.\n");
+  bool any_void = false;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const bool bad = R.live == 0 || R.tn == 0 || R.slots == 0;
+    if (bad) any_void = true;
+    std::printf("    %-10s %-5s  creatures %2u/%2u live  teach windows %llu  ctx_slots %u  "
+                "present %.4f\n",
+                arms[a].name, bad ? "VOID" : "ok", R.live, R.n,
+                (unsigned long long)R.tn, R.slots,
+                R.ok ? R.present / double(R.ok) : 0.0);
+  }
+
+  // CLAUSE 1. Two arms set the pin ONCE per window, above the tick loop, so both
+  // must read zero switches EXACTLY. This is the bookkeeping self-test, and
+  // W171's reading is also the measurement behind §54's scope claim -- until now
+  // an argument from reading the code rather than a number.
+  std::printf("\n  CLAUSE 1 -- THE EXACT SELF-TESTS. pin_mode 1 and 3 set the pin once per\n"
+              "  window, so switches must be EXACTLY 0 and runlen EXACTLY %.1f.\n", kWinT);
+  bool exact_ok = true;
+  for (uint32_t a = 1; a <= 2; ++a) {
+    const Row& R = rows[a];
+    if (R.live == 0 || R.tn == 0) {
+      std::printf("    %-10s VOID -- not read\n", arms[a].name);
+      exact_ok = false;
+      continue;
+    }
+    const double rt = double(R.tlive) / double(R.tsw + R.tn);
+    const bool pass = R.tsw == 0 && R.psw == 0 && R.tpure == R.tn && R.ppure == R.pn;
+    if (!pass) exact_ok = false;
+    std::printf("    %-10s switches teach %llu  probe %llu   runlen %.4f   %s\n",
+                arms[a].name, (unsigned long long)R.tsw, (unsigned long long)R.psw, rt,
+                pass ? "PASS" : "*** FAIL ***");
+  }
+  if (exact_ok) {
+    std::printf("    => and W171 is the EVIDENCE for §54's scope: §54 imposed wrong writes in\n"
+                "       runs of %.0f ticks, one whole window, MEASURED and not argued.\n", kWinT);
+  }
+
+  // CLAUSE 2. The calibration, with predictions derived above from the protocol
+  // constants. Spread deliberately: at f = 10 the window holds 89 boundaries and
+  // the truncation term is 1.011, at f = 150 it holds 6 and the term is 4/3, so
+  // one mishandled edge case cannot pass all three.
+  std::printf("\n  CLAUSE 2 -- THE CALIBRATION. pin_mode 4 re-draws over TWO slots every f\n"
+              "  ticks, so runs are 2f truncated by the window, NOT f. Tolerance %.0f%%.\n",
+              kCalTol * 100.0);
+  bool cal_ok = true;
+  for (uint32_t a = 3; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const uint64_t f = uint64_t(arms[a].flicker);
+    const double pt = predicted(kM3SettleTicks, kM3TrialTicks, f);
+    const double pp = predicted(kM3ProbeSettleTicks, kM3ProbeTicks, f);
+    if (R.live == 0 || R.tn == 0) {
+      std::printf("    %-10s VOID -- not read\n", arms[a].name);
+      cal_ok = false;
+      continue;
+    }
+    const double rt = double(R.tlive) / double(R.tsw + R.tn);
+    const double rp = R.pn ? double(R.plive) / double(R.psw + R.pn) : 0.0;
+    const double et = pt > 0.0 ? (rt - pt) / pt : 0.0;
+    const double ep = pp > 0.0 ? (rp - pp) / pp : 0.0;
+    const bool pass = std::fabs(et) <= kCalTol && std::fabs(ep) <= kCalTol;
+    if (!pass) cal_ok = false;
+    std::printf("    f=%-4llu teach predicted %7.2f measured %7.2f (%+6.1f%%)  probe predicted"
+                " %7.2f measured %7.2f (%+6.1f%%)  %s\n",
+                (unsigned long long)f, pt, rt, et * 100.0, pp, rp, ep * 100.0,
+                pass ? "PASS" : "*** FAIL ***");
+    // `pure1` gets its own derived prediction, disclosed and not gated: with b
+    // boundaries each changing the slot with probability 1/2, a window survives
+    // switch-free with probability 0.5^b. It calibrates the SECONDARY estimator
+    // for free, and one tolerance gate on the primary is still the rule.
+    const double bt = double((kM3TrialTicks - 1) / f - kM3SettleTicks / f);
+    std::printf("            (counting REDRAWS instead of changes would read %.2f here;\n"
+                "             pure1 predicted %.4f = 0.5^%.0f, measured %.4f -- disclosed,\n"
+                "             not gated)\n",
+                double(f), std::pow(0.5, bt), bt,
+                R.tn ? double(R.tpure) / double(R.tn) : 0.0);
+  }
+
+  // CLAUSE 3. The verdict, three ways, on the pre-registered CI.
+  std::printf("\n  CLAUSE 3 -- THE VERDICT, on DERIVED's TEACHING-window runlen across\n"
+              "  creatures. Pre-registered three ways in ROADMAP §55 before any number.\n");
+  const Row& D = rows[0];
+  double se_t = 0.0, se_p = 0.0;
+  const double mt = mean_se(D.rt, &se_t);
+  const double mp = mean_se(D.rp, &se_p);
+  const double lo = mt - 1.96 * se_t, hi = mt + 1.96 * se_t;
+  const double pooled_t = D.tn ? double(D.tlive) / double(D.tsw + D.tn) : 0.0;
+  std::printf("    across creatures  runlen %.2f +- %.2f ticks (n = %u), 95%% CI [%.2f, %.2f]\n",
+              mt, se_t, uint32_t(D.rt.size()), lo, hi);
+  std::printf("    pooled over all   runlen %.2f ticks over %llu windows -- a mean of per-\n"
+              "                      creature ratios and a ratio of sums, both printed\n",
+              pooled_t, (unsigned long long)D.tn);
+  std::printf("    probe window      runlen %.2f +- %.2f ticks   SECONDARY, no verdict\n",
+              mp, se_p);
+  std::printf("    switches/window   %.3f teach, %.3f probe   pure1 %.4f teach\n",
+              D.tn ? double(D.tsw) / double(D.tn) : 0.0,
+              D.pn ? double(D.psw) / double(D.pn) : 0.0,
+              D.tn ? double(D.tpure) / double(D.tn) : 0.0);
+
+  if (any_void || !exact_ok || !cal_ok || D.live == 0 || D.rt.size() < 2) {
+    std::printf("\n    *** VERDICT C -- NO VERDICT. %s%s%s%s\n",
+                any_void ? "an arm is VOID. " : "",
+                !exact_ok ? "an EXACT self-test failed. " : "",
+                !cal_ok ? "the CALIBRATION missed its derived prediction. " : "",
+                (D.live == 0 || D.rt.size() < 2) ? "DERIVED has no usable creature. " : "");
+    std::printf("    The instrument is not trustworthy here, so the run length is not read.\n");
+  } else if (lo >= kHiBound) {
+    std::printf("\n    *** VERDICT A -- REFUTED: runlen 95%% CI [%.1f, %.1f] ticks, lower bound\n"
+                "    >= %.0f. The derived index writes in TRIAL-LENGTH runs, so §54's\n"
+                "    manipulation was faithful in run length and SHORT RUNS DO NOT EXPLAIN the\n"
+                "    3.3-4.0 SE deficit. The deficit needs a different candidate.\n",
+                lo, hi, kHiBound);
+  } else if (hi <= kLoBound) {
+    std::printf("\n    *** VERDICT B -- SURVIVES: runlen 95%% CI [%.1f, %.1f] ticks, upper bound\n"
+                "    <= %.0f, the feedback period. §54 imposed runs at least %.1fx too long,\n"
+                "    reward and slot DECOUPLE inside a window, and §56's manipulation is\n"
+                "    defined by this number rather than guessed.\n",
+                lo, hi, kLoBound, kWinT / std::max(hi, 1.0));
+  } else {
+    std::printf("\n    *** VERDICT C -- NO VERDICT. runlen 95%% CI [%.1f, %.1f] straddles a\n"
+                "    boundary (%.0f / %.0f). Said rather than rounded to whichever side is\n"
+                "    nearer -- `verdict-fitted-to-data`.\n",
+                lo, hi, kLoBound, kHiBound);
   }
   return true;
 }

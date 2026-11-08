@@ -1,0 +1,124 @@
+experiment: switchrate
+  SHORT RUN — 150000 ticks against a minimum of 450000. derived: §55. §54 imposed wrong writes in TRIAL-LENGTH blocks and found
+  AVERAGING, leaving SHORT RUNS as the one candidate for the derived
+  index's 3.3-4.0 SE deficit. `ctx_hist` is accumulated per window and both
+  consumers take only its ARGMAX, so the histogram's CONCENTRATION -- the
+  only within-window stability measure the session already produces -- has
+  been discarded every time since §49. This reads it before imposing
+  anything. PRIMARY: runlen = sum(live)/(sum(switches)+windows) in ticks,
+  pooled as a ratio of sums; `pure1` and `purity` are reported and bear on
+  no verdict, because purity cannot separate a fast flicker from two long
+  blocks (both read 0.5). Verdict three ways on the 95% CI against the
+  PROTOCOL's own timescales: >= 450 (half the 900-tick window, so at most
+  one switch) REFUTES short runs; <= 150 (kFeedbackPeriodTicks, where
+  reward and slot decouple inside one window) and it SURVIVES; a
+  straddling CI is NO VERDICT and gets said. CLAUSE 0 is liveness, because
+  §53's T-A printed PASS twice on an EMPTY SET. Two arms are EXACT
+  self-tests (pin_mode 1 and 3 pin once per window: 0 switches, runlen
+  900.0) and three are CALIBRATIONS -- pin_mode 4 re-draws over two slots
+  every f ticks, and a fair coin leaves the slot alone half the time, so
+  the estimator must read 2f truncated by the window (19.78 / 94.74 /
+  225.00) and NOT f. kRead: every branch prints
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §55. §54 imposed wrong writes in TRIAL-LENGTH blocks (the pin
+                    is set once per window) and found AVERAGING. Short runs are
+                    the one candidate left for the derived index's 3.3-4.0 SE
+                    deficit, and its run length has NEVER been measured.
+  the quantity      runlen = sum(live) / (sum(switches) + windows), in ticks. A
+                    SWITCH is a live tick whose slot differs from the previous
+                    LIVE tick's. Pooled as a ratio of sums, not a mean of
+                    per-window ratios (`mean-of-ratios`).
+  the boundaries    A: CI lower >= 450 (<=1 switch/window) -- short runs REFUTED.
+                    B: CI upper <= 150 (the feedback period) -- SURVIVES.
+                    C: anything else, including a straddling CI. The estimator's
+                    ceiling is 900 ticks by construction.
+  session           150.0 s of simulated life x 84 sessions, 6 arms
+  *** BELOW THE REGISTERED MINIMUM (150000 < 450000). A smoke resolves the
+      EXACT self-tests and the calibration, which are properties of the
+      instrument and not of the budget. It does NOT resolve the verdict.
+  instrument        switchrate   trial seed 0000000001357269   84 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  THE WINDOWS. Teaching 900 ticks, probe 900 -- each the ceiling on its own
+  column. `runlen` in TICKS, and one tick is 1.0 ms of simulated life.
+    arm        crt    windows   runlen  pure1  purity |  runlen  pure1  purity
+                      teach/probe   -- TEACHING WINDOW --  |  -- PROBE WINDOW --
+    DERIVED    24/24   1464/480    636.83 0.9583  0.9936 |  601.67 0.9604  0.9938
+    PINNED     12/12    732/240    900.00 1.0000  1.0000 |  900.00 1.0000  1.0000
+    W171       12/12    732/240    900.00 1.0000  1.0000 |  900.00 1.0000  1.0000
+    FLICK.150  12/12    732/240    229.63 0.0191  0.6579 |  222.68 0.0083  0.6546
+    FLICK.50   12/12    732/240     95.24 0.0000  0.5901 |   94.41 0.0000  0.5935
+    FLICK.10   12/12    732/240     19.88 0.0000  0.5418 |   19.70 0.0000  0.5436
+    DERIVED    THE MEASUREMENT -- the retina's own index
+    PINNED     EXACT self-test: 0 switches, runlen = the window
+    W171       §54's OWN ARM -- the evidence for its scope claim
+    FLICK.150  calibration
+    FLICK.50   calibration
+    FLICK.10   calibration -- the short-run end
+
+  THE SHAPE OF THE DISTRIBUTION, teaching windows. `sw/sww` is switches per
+  SWITCHING window and `live%` the share of live ticks living in them.
+    arm         windows switching   sw/sww   live%   runlen within them
+    DERIVED         61/1464        9.92  0.0417      82.43
+    PINNED           0/732         0.00  0.0000       0.00
+    W171             0/732         0.00  0.0000       0.00
+    FLICK.150      718/732         2.98  0.9809     226.34
+    FLICK.50       732/732         8.45  1.0000      95.24
+    FLICK.10       732/732        44.27  1.0000      19.88
+
+  AND WHETHER IT SETTLES. The session's SECOND HALF alone, teaching windows,
+  which asks the stabilisation question inside one run rather than across two.
+    arm         windows   runlen    pure1   vs whole-session runlen
+    DERIVED         840   532.77   0.9286               -104.06
+    PINNED          420   900.00   1.0000                 +0.00
+    W171            420   900.00   1.0000                 +0.00
+    FLICK.150       420   227.44   0.0143                 -2.19
+    FLICK.50        420    95.31   0.0000                 +0.07
+    FLICK.10        420    19.93   0.0000                 +0.05
+
+  CLAUSE 0 (FIRST) -- LIVENESS. An arm with no scored window, or an index the
+  genome could not run (ctx_slots 0), is VOID and no test below reads it.
+    DERIVED    ok     creatures 24/24 live  teach windows 1464  ctx_slots 2  present 1.0000
+    PINNED     ok     creatures 12/12 live  teach windows 732  ctx_slots 2  present 1.0000
+    W171       ok     creatures 12/12 live  teach windows 732  ctx_slots 2  present 1.0000
+    FLICK.150  ok     creatures 12/12 live  teach windows 732  ctx_slots 2  present 1.0000
+    FLICK.50   ok     creatures 12/12 live  teach windows 732  ctx_slots 2  present 1.0000
+    FLICK.10   ok     creatures 12/12 live  teach windows 732  ctx_slots 2  present 1.0000
+
+  CLAUSE 1 -- THE EXACT SELF-TESTS. pin_mode 1 and 3 set the pin once per
+  window, so switches must be EXACTLY 0 and runlen EXACTLY 900.0.
+    PINNED     switches teach 0  probe 0   runlen 900.0000   PASS
+    W171       switches teach 0  probe 0   runlen 900.0000   PASS
+    => and W171 is the EVIDENCE for §54's scope: §54 imposed wrong writes in
+       runs of 900 ticks, one whole window, MEASURED and not argued.
+
+  CLAUSE 2 -- THE CALIBRATION. pin_mode 4 re-draws over TWO slots every f
+  ticks, so runs are 2f truncated by the window, NOT f. Tolerance 15%.
+    f=150  teach predicted  225.00 measured  229.63 (  +2.1%)  probe predicted  225.00 measured  222.68 (  -1.0%)  PASS
+            (counting REDRAWS instead of changes would read 150.00 here;
+             pure1 predicted 0.0156 = 0.5^6, measured 0.0191 -- disclosed,
+             not gated)
+    f=50   teach predicted   94.74 measured   95.24 (  +0.5%)  probe predicted   94.74 measured   94.41 (  -0.3%)  PASS
+            (counting REDRAWS instead of changes would read 50.00 here;
+             pure1 predicted 0.0000 = 0.5^17, measured 0.0000 -- disclosed,
+             not gated)
+    f=10   teach predicted   19.78 measured   19.88 (  +0.5%)  probe predicted   19.78 measured   19.70 (  -0.4%)  PASS
+            (counting REDRAWS instead of changes would read 10.00 here;
+             pure1 predicted 0.0000 = 0.5^89, measured 0.0000 -- disclosed,
+             not gated)
+
+  CLAUSE 3 -- THE VERDICT, on DERIVED's TEACHING-window runlen across
+  creatures. Pre-registered three ways in ROADMAP §55 before any number.
+    across creatures  runlen 668.38 +- 29.86 ticks (n = 24), 95% CI [609.85, 726.91]
+    pooled over all   runlen 636.83 ticks over 1464 windows -- a mean of per-
+                      creature ratios and a ratio of sums, both printed
+    probe window      runlen 679.26 +- 45.59 ticks   SECONDARY, no verdict
+    switches/window   0.413 teach, 0.496 probe   pure1 0.9583 teach
+
+    *** VERDICT A -- REFUTED: runlen 95% CI [609.9, 726.9] ticks, lower bound
+    >= 450. The derived index writes in TRIAL-LENGTH runs, so §54's
+    manipulation was faithful in run length and SHORT RUNS DO NOT EXPLAIN the
+    3.3-4.0 SE deficit. The deficit needs a different candidate.
