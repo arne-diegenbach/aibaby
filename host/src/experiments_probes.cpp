@@ -11529,6 +11529,8 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     bool g_ok = false;
     double dose_a = 0, dose_b = 0, dimb = 0;
     double mix_a = 0, mix_b = 0;  // fraction of word-1 lessons, per slot
+    double oimb = 0;              // OCCUPANCY imbalance, which is not the firing one
+    int reg = 0;                  // +1 aligned, -1 SWAPPED, 0 degenerate
     double min_share = 0;         // smallest of the four cells, for identification
     double echo_g = 0;
     double present = 0, occ = 0;
@@ -11652,6 +11654,56 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     c.dimb = dt_ > 0.0 ? (c.dose_a - c.dose_b) / dt_ : 0.0;
     c.mix_a = c.dose_a > 0.0 ? run.dose_word[1][sa] / c.dose_a : 0.0;
     c.mix_b = c.dose_b > 0.0 ? run.dose_word[1][sb] / c.dose_b : 0.0;
+    // OCCUPANCY, which is NOT the firing dose. The 450k run refused H on the
+    // firing column and `T1.ORACLE.D` refused it outright -- the same median
+    // |d dose| of 0.12 as `T1.RET`, and no offset at all. So the firing counter
+    // does not separate the arms and cannot be the quantity that matters
+    // (`guard-measures-the-wrong-quantity`). The pinned arms have occ EXACTLY
+    // 0.5000 by construction and the derived ones do not, so occupancy is the
+    // column that distinguishes them.
+    c.oimb = (ns[sa] + ns[sb]) > 0.0 ? (ns[sa] - ns[sb]) / (ns[sa] + ns[sb]) : 0.0;
+
+    // --- REGISTRATION: IS THE LESSON READ BACK FROM THE SLOT IT WAS WRITTEN TO?
+    //
+    // NOTHING IN §49-§52 CAN SEE THIS. `vis_ctx_match` maximises over slot
+    // PERMUTATIONS, so a perfectly swapped index scores exactly what a
+    // perfectly aligned one does -- every `excess` column ever published is
+    // registration-blind by construction, including §50's "probe +0.3165,
+    // teaching +0.3200", which is why that agreement proved less than it looked.
+    //
+    // The teaching window is NOT silent (`teach heard 0.4444`) and the probe IS
+    // (`probe heard 0.0000`), and source 5 shares source 4's sound-gated episode
+    // latch. So the slot live while the lesson is written need not be the slot
+    // live while it is read -- and if it is systematically the OTHER one, a
+    // creature that learned the mapping correctly reads NEGATIVE on this
+    // primary. The pinned arms must come out 100% aligned, which is a third
+    // self-test rather than a result.
+    {
+      auto modal = [](const std::vector<int>& lab, const std::vector<int>& sl, int o) -> int {
+        uint32_t h[aibaby::kMaxContextSlots] = {};
+        const size_t n = std::min(lab.size(), sl.size());
+        for (size_t k = 0; k < n; ++k) {
+          if (lab[k] != o || sl[k] < 0 || sl[k] >= int(aibaby::kMaxContextSlots)) continue;
+          ++h[sl[k]];
+        }
+        int best = -1;
+        uint32_t bn = 0;
+        for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+          if (h[s] > bn) { bn = h[s]; best = int(s); }
+        }
+        return best;
+      };
+      const int t0 = modal(run.teach_label, run.teach_slot, 0);
+      const int t1 = modal(run.teach_label, run.teach_slot, 1);
+      const int p0 = modal(run.ctx_label, run.ctx_slot, 0);
+      const int p1 = modal(run.ctx_label, run.ctx_slot, 1);
+      // A creature whose teaching index or probe index collapsed onto ONE slot
+      // is degenerate, not aligned: there is no permutation to speak of. Counted
+      // separately rather than folded into either side.
+      if (t0 >= 0 && t1 >= 0 && p0 >= 0 && p1 >= 0 && t0 != t1 && p0 != p1) {
+        c.reg = (t0 == p0 && t1 == p1) ? 1 : -1;
+      }
+    }
     return c;
   });
 
@@ -11662,7 +11714,9 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double g_a = 0, g_b = 0, g_mean = 0, echo_g = 0;
     double dimb_abs_med = 0, mix_a = 0, mix_b = 0, present = 0, occ = 0;
     uint32_t oppose = 0, agree = 0, tied = 0;
-    std::vector<double> gaps, slots_, dimbs, dgs;
+    uint32_t aligned = 0, swapped = 0, degen = 0;
+    std::vector<double> gaps, slots_, dimbs, dgs, oimbs;
+    std::vector<double> dg_al, dg_sw, gap_al, gap_sw;
     // THE REPRODUCTION COLUMN. The cell columns drop a creature with != 2 live
     // slots, so their mean is over a SUBSET and cannot be compared with §52's
     // directly. This vector keeps every scored creature under §52's own drop
@@ -11686,6 +11740,18 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     R.slots_.push_back(c.slot_term);
     R.dimbs.push_back(c.dimb);
     R.dgs.push_back(c.g_a - c.g_b);
+    R.oimbs.push_back(c.oimb);
+    if (c.reg > 0) {
+      ++R.aligned;
+      R.dg_al.push_back(c.g_a - c.g_b);
+      R.gap_al.push_back(c.gap);
+    } else if (c.reg < 0) {
+      ++R.swapped;
+      R.dg_sw.push_back(c.g_a - c.g_b);
+      R.gap_sw.push_back(c.gap);
+    } else {
+      ++R.degen;
+    }
     R.pe += c.pe;
     R.gap += c.gap;
     R.slot += c.slot_term;
@@ -11775,29 +11841,33 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 uint32_t(rows[a].gaps_all.size()));
   }
 
-  // --- T-A: the bookkeeping self-test ---------------------------------------
+  // --- LIVENESS, BEFORE ANY TEST READS A COLUMN -----------------------------
   //
-  // LIVENESS FIRST, BECAUSE THE SMOKE CAUGHT THIS GATE PASSING ON NOTHING. At
-  // 60k ticks no creature scored 12 probes, every column read 0.0000, and T-A
-  // printed PASS twice -- `worst_id` is zero when there is no arithmetic to
-  // check and `ora.resid` is zero when no cell was ever filled. A self-test that
-  // cannot fail is not a self-test (`open-is-unfalsifiable-on-an-instrument`),
-  // and a vacuity gate has to be asked of the load-bearing arm too
-  // (`vacuity-gate-cannot-guard-a-rejection`). So the identity is only read once
-  // there is something to read it on.
+  // THE SMOKE CAUGHT THIS GATE PASSING ON NOTHING. At 60k ticks no creature
+  // scored 12 probes, every column read 0.0000, and T-A printed PASS twice --
+  // `worst_id` is zero when there is no arithmetic to check and `ora.resid` is
+  // zero when no cell was ever filled. A self-test that cannot fail is not a
+  // self-test (`open-is-unfalsifiable-on-an-instrument`), and a vacuity gate has
+  // to be asked of the load-bearing arm too
+  // (`vacuity-gate-cannot-guard-a-rejection`). It runs FIRST, ahead of every
+  // test, because T-E would print on the same empty set.
+  {
+    uint32_t thin0 = 0;
+    for (uint32_t a = 0; a < kArms; ++a) {
+      if (rows[a].gaps.size() * 2 < rows[a].n) ++thin0;
+    }
+    if (thin0 > 0 || rows[3].gaps.empty()) {
+      std::printf("\n  *** §53 VOID -- NOT ENOUGH SCORED CREATURES. %u of %u arms scored under\n"
+                  "  half their sessions (a creature needs 12 probes and 2 live slots). Every\n"
+                  "  column above reads from an empty set, and T-A's identity check would PASS\n"
+                  "  VACUOUSLY on it: there is no arithmetic to disagree with. Raise the\n"
+                  "  budget; do not read a single number in this log.\n", thin0, kArms);
+      return true;
+    }
+  }
+
+  // --- T-A: the bookkeeping self-test, ahead of every reading --------------
   const Row& ora = rows[3];
-  uint32_t thin = 0;
-  for (uint32_t a = 0; a < kArms; ++a) {
-    if (rows[a].gaps.size() * 2 < rows[a].n) ++thin;
-  }
-  if (thin > 0 || ora.gaps.empty()) {
-    std::printf("\n  *** §53 VOID -- NOT ENOUGH SCORED CREATURES. %u of %u arms scored under\n"
-                "  half their sessions (a creature needs 12 probes and 2 live slots). Every\n"
-                "  column above reads from an empty set, and T-A's identity check would PASS\n"
-                "  VACUOUSLY on it: there is no arithmetic to disagree with. Raise the budget;\n"
-                "  do not read a single number in this log.\n", thin, kArms);
-    return true;
-  }
   const bool ta_ident = worst_id < 1e-9;
   const bool ta_diag = std::fabs(ora.resid) < 1e-9;
   std::printf("\n  T-A -- THE BOOKKEEPING SELF-TEST. A PINNED index makes the cells exactly\n"
@@ -11811,6 +11881,39 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    identity and a disagreement is my error, not the creature's. NOTHING\n"
                 "    ELSE IN THIS LOG MAY BE QUOTED, whatever it says.\n");
     return true;
+  }
+
+  // --- T-E: REGISTRATION, and the pinned arms are a third self-test ---------
+  std::printf("\n  T-E -- REGISTRATION. Is the lesson read back from the slot it was WRITTEN\n"
+              "  to? The modal slot per object over the TEACHING windows against the modal\n"
+              "  slot per object over the PROBES. NOTHING IN §49-§52 CAN SEE THIS:\n"
+              "  `vis_ctx_match` maximises over slot permutations, so a perfectly SWAPPED\n"
+              "  index scores exactly what an aligned one does. The pinned arms must read\n"
+              "  100%% aligned -- that is a self-test, not a result.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const uint32_t tot = R.aligned + R.swapped + R.degen;
+    std::printf("    %-12s aligned %2u  SWAPPED %2u  degenerate %2u   (%.0f%% aligned)\n",
+                arms[a].name, R.aligned, R.swapped, R.degen,
+                tot > 0 ? 100.0 * double(R.aligned) / double(tot) : 0.0);
+  }
+  const bool te_pinned_ok = rows[2].swapped == 0 && rows[3].swapped == 0;
+  std::printf("    pinned arms 0%% swapped   %s\n",
+              te_pinned_ok ? "PASS" : "*** FAIL -- the registration scorer is wrong ***");
+  std::printf("\n  AND THE SPLIT, PRE-REGISTERED WITH ITS DIRECTION BEFORE IT WAS READ: if a\n"
+              "  swap is reading the lesson out of the wrong slot, then within the PAIRED\n"
+              "  derived arm the ALIGNED creatures read POSITIVE and the SWAPPED ones\n"
+              "  NEGATIVE. Registration is scored off the slot histograms and never off G,\n"
+              "  so conditioning on it is not fitting the verdict to the data.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    double se_al = 0, se_sw = 0, se_gal = 0, se_gsw = 0;
+    const double m_al = mean_se(R.dg_al, &se_al), m_sw = mean_se(R.dg_sw, &se_sw);
+    const double g_al = mean_se(R.gap_al, &se_gal), g_sw = mean_se(R.gap_sw, &se_gsw);
+    std::printf("    %-12s ALIGNED G_A-G_B %+.4f +- %.4f gap %+.4f (n %2u)   "
+                "SWAPPED G_A-G_B %+.4f +- %.4f gap %+.4f (n %2u)\n",
+                arms[a].name, m_al, se_al, g_al, uint32_t(R.dg_al.size()), m_sw, se_sw, g_sw,
+                uint32_t(R.dg_sw.size()));
   }
 
   // --- the power pre-flight, read BEFORE the sign test ----------------------
@@ -11854,15 +11957,70 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       (sxx > 1e-12 && retd.dimbs.size() > 2)
           ? std::sqrt(sres / double(retd.dimbs.size() - 2) / sxx) : 0.0;
   const double share = std::fabs(mg) > 1e-9 ? ms / mg : 0.0;
+  // THE SAME REGRESSION ON OCCUPANCY RATHER THAN FIRINGS. Added because the
+  // firing column refused H while `T1.ORACLE.D` carried the same firing
+  // imbalance and NO offset -- so firings cannot be the quantity that separates
+  // the arms, and occupancy (exactly 0.5000 on the pinned arms, not on the
+  // derived ones) is the candidate that can.
+  double osxy = 0.0, osxx = 0.0, omx = 0.0;
+  for (double d : retd.oimbs) omx += d;
+  if (!retd.oimbs.empty()) omx /= double(retd.oimbs.size());
+  for (size_t i = 0; i < retd.oimbs.size(); ++i) {
+    osxy += (retd.oimbs[i] - omx) * (retd.gaps[i] - my);
+    osxx += (retd.oimbs[i] - omx) * (retd.oimbs[i] - omx);
+  }
+  const double oslope = osxx > 1e-12 ? osxy / osxx : 0.0;
+  double osres = 0.0;
+  for (size_t i = 0; i < retd.oimbs.size(); ++i) {
+    const double e = (retd.gaps[i] - my) - oslope * (retd.oimbs[i] - omx);
+    osres += e * e;
+  }
+  const double ose =
+      (osxx > 1e-12 && retd.oimbs.size() > 2)
+          ? std::sqrt(osres / double(retd.oimbs.size() - 2) / osxx) : 0.0;
   std::printf("\n  T-C -- THE SHARE. How much of T1.RET.D's displacement the slot route\n"
-              "  accounts for, and the per-creature regression of gap on signed dose.\n"
+              "  accounts for, and the per-creature regressions of gap on the two\n"
+              "  imbalances. H predicts NEGATIVE on both.\n"
               "    slot term %+.4f of gap %+.4f = %.0f%% of it\n"
-              "    slope d gap / d dose %+.4f +- %.4f (%.1f SE)   H predicts NEGATIVE\n",
+              "    slope d gap / d FIRING dose %+.4f +- %.4f (%.1f SE)\n"
+              "    slope d gap / d OCCUPANCY   %+.4f +- %.4f (%.1f SE)\n",
               ms, mg, 100.0 * share, slope, se_slope,
-              se_slope > 0 ? slope / se_slope : 0.0);
+              se_slope > 0 ? slope / se_slope : 0.0, oslope, ose,
+              ose > 0 ? oslope / ose : 0.0);
 
   // --- the verdict ---------------------------------------------------------
+  //
+  // READ T-E FIRST. A swap reads the lesson out of the wrong slot, so it can
+  // turn a creature that learned the mapping into a NEGATIVE reading on this
+  // primary -- and it would do that to the CLAIM arm, not only to the control.
+  // That outranks H either way, so it is checked before H's branches.
+  const Row& ret = rows[0];
+  double se_ral = 0, se_rsw = 0;
+  const double r_al = mean_se(ret.dg_al, &se_ral), r_sw = mean_se(ret.dg_sw, &se_rsw);
+  const bool split_fires = ret.dg_al.size() >= 6 && ret.dg_sw.size() >= 6 &&
+                           se_ral > 0 && se_rsw > 0 && r_al > 2.0 * se_ral &&
+                           r_sw < -2.0 * se_rsw;
   std::printf("\n  THE VERDICT.\n");
+  if (!te_pinned_ok) {
+    std::printf("\n    (0) §53's REGISTRATION SCORER IS WRONG. A PINNED index cannot be\n"
+                "    swapped -- the pin re-asserts the slot after every source has had its\n"
+                "    say -- so a swapped pinned creature is a bug in the scorer and T-E may\n"
+                "    not be quoted. H's branches below are unaffected and stand.\n");
+  } else if (split_fires) {
+    std::printf("\n    (5) THE DERIVED INDEX LEARNS THE MAPPING AND IS READ OUT OF THE WRONG\n"
+                "    SLOT. Within T1.RET, aligned creatures read G_A-G_B %+.4f +- %.4f\n"
+                "    (n %u) and SWAPPED ones %+.4f +- %.4f (n %u) -- opposite signs, both\n"
+                "    past 2 SE, on a split scored off the slot histograms and never off G.\n"
+                "    The lesson IS reaching the bias table; the probe reads it back from the\n"
+                "    other slot. THIS OUTRANKS H AND REFRAMES §52: the derived arm's weakness\n"
+                "    is a REGISTRATION failure, not an absence of learning, and %.0f%% of\n"
+                "    T1.RET's creatures are swapped. The teaching window is NOT silent and\n"
+                "    the probe IS, and source 5 shares source 4's sound-gated latch -- which\n"
+                "    is a mechanism, is named here, and is NOT yet tested.\n",
+                r_al, se_ral, uint32_t(ret.dg_al.size()), r_sw, se_rsw,
+                uint32_t(ret.dg_sw.size()),
+                100.0 * double(ret.swapped) / double(ret.aligned + ret.swapped + ret.degen));
+  }
   if (tb_support && share >= 0.5) {
     std::printf("\n    (2) THE CONTROL'S DRIFT IS AN UNEQUAL-DOSE ARTEFACT, EXPLAINED.\n"
                 "    %u of %u creatures oppose, and the slot route carries %.0f%% of the\n"
