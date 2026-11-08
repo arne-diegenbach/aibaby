@@ -229,6 +229,31 @@ refusal list can both be long.
 > with a drawn word, absent from the perfect-index control, and **unexplained**. So: **a perfect index
 > plus a sound-only teacher names. The creature's own index plus a sound-only teacher is unproven**,
 > and the obstacle is now an artefact in a control rather than anything about the teacher.
+>
+> #### §53 (2026-11-08, LATER THE SAME DAY) — ANSWERED, AND THE ANSWER IS NO
+>
+> §52's caveat has been settled by measurement rather than by another arm, because the primary
+> **decomposes exactly** into the part a per-context bias table can produce and the part it cannot.
+> **The creature's own retinal index does not drive the lesson into the voice.** Its bias-table route
+> reads **−0.0053 ± 0.0135** at 900k once a replicated occupancy confound is removed, while the
+> *pinned* route reads **+0.1118 ± 0.0400 (2.8 SE)** under the identical correction — so the null is
+> informative and not a blunt shrink. §52's +0.1101 contrast was its control's displacement, **40% of
+> which is now a measured confound** (slope ≈ +0.5, arm-independent across eight estimates) with
+> −0.055 still open. Along the way the drift's budget dependence dissolved: `G_A − G_B` is **flat**
+> across budgets and only the index's ability to *reveal* it grows.
+>
+> **So the division of labour above stands, and its boundary is now drawn where it belongs:** reward
+> reaches the vowel, conditionally, **when the condition is supplied from outside.** When the creature
+> must supply the condition itself, this architecture stores it and does not speak it.
+>
+> **And that phrasing is exact, which is what makes the remaining puzzle sharp.** The conditional
+> information *does* reach the right slot: write purity is **0.658** of the available signal and
+> registration is **100% aligned** — every creature reads back from the slot it wrote to, measured for
+> the first time here, because `vis_ctx_match` maximises over slot permutations and so every index
+> score published since §49 was blind to a swap. Information arrives in the correct slot and the voice
+> does not express it. That is `storage-vs-expression`, and `retention`'s **pure overwrite** — not
+> averaging — is the mechanism that would explain it: under averaging a 19% wrong-slot rate dilutes by
+> 19%, under overwrite it *erases*. **Named as the next question, not as a finding.**
 
 *Where the conditioning variable is supplied, conditional production works.* The shipped context
 mechanism computes an index from the ear's own rate EMA — no gate, no episode, no latch, and no

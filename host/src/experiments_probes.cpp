@@ -12069,13 +12069,45 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     }
   }
   {
+    // WHETHER PREDICTION 1 IS A TEST AT ALL IS A MEASURED QUESTION, AND THE
+    // FIRST VERSION OF THIS BLOCK ASSERTED THE ANSWER. It printed "the regressor
+    // does not vary" unconditionally, which was true of the 150k smoke (pinned
+    // SD 0.0126, because a degenerate index splits occupancy trivially) and
+    // FALSE at 450k and 900k, where the pinned arms carry SD 0.15-0.25 from
+    // dropped probes alone. So the log claimed its own self-test was void while
+    // printing the number that showed it was not -- a plausible-looking false
+    // statement of exactly the kind `plausible-wrong-number` is about. The
+    // branch now reads the SD and says which case it is in.
     const double sd_od = sd_of(rows[2].oimbs);
-    std::printf("\n    PREDICTION 1 IS VOID BY CONSTRUCTION, AND THAT IS MY ERROR, NOT A\n"
-                "    RESULT. I nominated T1.ORACLE.D as the adjustment's self-test, but a\n"
-                "    PINNED arm has occupancy imbalance SD %.4f -- the regressor does not\n"
-                "    vary, so its intercept is just its raw mean and the test cannot fail.\n"
-                "    The self-test role moves to the LINEARITY check below, which runs on an\n"
-                "    arm that does vary.\n", sd_od);
+    double sl0 = 0, se0 = 0, ic_od0 = 0, se_od0 = 0;
+    ols(rows[2].oimbs, rows[2].slots_, &sl0, &se0, &ic_od0, &se_od0);
+    if (sd_od < kRegSd) {
+      std::printf("\n    PREDICTION 1 IS VOID BY CONSTRUCTION AT THIS BUDGET, AND THAT IS MY\n"
+                  "    ERROR, NOT A RESULT. I nominated T1.ORACLE.D as the adjustment's\n"
+                  "    self-test, but here its occupancy imbalance SD is %.4f -- the regressor\n"
+                  "    does not vary, so its intercept is just its raw mean and the test\n"
+                  "    cannot fail. The self-test role moves to the LINEARITY check below.\n",
+                  sd_od);
+    } else {
+      const bool p1 = se_od0 > 0 && std::fabs(ic_od0) <= 2.0 * se_od0;
+      std::printf("\n    PREDICTION 1 (SELF-TEST): T1.ORACLE.D's adjusted term within 2 SE of\n"
+                  "    zero -- %s (%+.4f +- %.4f, %.1f SE), on a regressor with SD %.4f so the\n"
+                  "    test is IDENTIFIED and could have failed. A pinned label-destroyed arm\n"
+                  "    has nothing to express at equal occupancy; a non-zero value would mean\n"
+                  "    the adjustment is MIS-SPECIFIED and nothing in §53b could be quoted.\n"
+                  "    (DISCLOSED: at 150k this same arm reads SD 0.0126 and the test is void\n"
+                  "    by construction there, which is why the branch measures rather than\n"
+                  "    asserts.)\n",
+                  p1 ? "PASS" : "*** FAIL ***", ic_od0, se_od0,
+                  se_od0 > 0 ? ic_od0 / se_od0 : 0.0, sd_od);
+      if (!p1) {
+        std::printf("\n    (6) §53b VOID -- THE ADJUSTMENT IS MIS-SPECIFIED. A pinned,\n"
+                    "    label-destroyed arm must express nothing at equal occupancy and this\n"
+                    "    one does not. The RAW columns above stand; every ADJUSTED number is\n"
+                    "    withdrawn.\n");
+        return true;
+      }
+    }
     // THE MIS-SPECIFICATION TEST THAT CAN ACTUALLY FAIL: split the arm under test
     // at its median regressor value and fit both halves. A linear confound gives
     // the same slope in both; a curved one does not, and then reading an
@@ -12125,16 +12157,40 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   rd_zero ? "WITHIN 2 SE OF ZERO: the control's drift IS the occupancy confound"
                           : "STILL NON-ZERO: the confound is PARTIAL and this is the size of"
                             " what survives");
-      // The pinned ceiling is also unidentified under adjustment, so it is quoted
-      // RAW and said to be raw. Dividing an adjusted number by an unadjusted one
-      // is a ratio of two different quantities and the label has to say so.
+      // The ceiling is quoted on the SAME footing as the arm whenever its own
+      // regressor is identified, because a ratio of an adjusted number to a raw
+      // one is a ratio of two different quantities. When it is not identified
+      // the raw value is used and the label says so.
       double raw_o_se = 0;
       const double raw_o = mean_se(rows[3].slots_, &raw_o_se);
+      const bool o_ident = sd_of(rows[3].oimbs) >= kRegSd;
+      const double ceil_use = o_ident ? ic_o : raw_o;
       std::printf("    PREDICTION 3: T1.RET's lesson estimate %+.4f +- %.4f, against §53's\n"
                   "    bracket of +0.046 (21%% of the ceiling) and +0.114 (66%%, write purity).\n"
-                  "    The pinned ceiling is UNADJUSTED (its regressor is constant) at %+.4f,\n"
-                  "    so this is %.0f%% of it -- an ADJUSTED number over a RAW one.\n",
-                  ic_r, se_r, raw_o, std::fabs(raw_o) > 1e-9 ? 100.0 * ic_r / raw_o : 0.0);
+                  "    The pinned ceiling on the SAME footing is %+.4f +- %.4f (%s), so this\n"
+                  "    is %.0f%% of it.\n",
+                  ic_r, se_r, ceil_use, o_ident ? se_o : raw_o_se,
+                  o_ident ? "adjusted, its regressor identified" : "RAW, its regressor constant",
+                  std::fabs(ceil_use) > 1e-9 ? 100.0 * ic_r / ceil_use : 0.0);
+      // THE ADJUSTMENT'S OWN POSITIVE CONTROL, and without it a null here says
+      // nothing. An adjustment that shrinks every arm toward zero would produce
+      // exactly this reading on the derived arm whether or not a lesson was
+      // there. What rules that out is the ceiling SURVIVING the same correction.
+      if (o_ident) {
+        const double keep = std::fabs(raw_o) > 1e-9 ? 100.0 * ic_o / raw_o : 0.0;
+        std::printf("\n    AND THE ADJUSTMENT'S POSITIVE CONTROL: the same correction applied to\n"
+                    "    the PINNED arm leaves %+.4f of its raw %+.4f -- %.0f%% retained, %.1f SE\n"
+                    "    above zero. So the correction is NOT a blunt shrink toward zero: it\n"
+                    "    keeps a real lesson where there is one and removes the derived arm's.\n"
+                    "    %s\n",
+                    ic_o, raw_o, keep, se_o > 0 ? ic_o / se_o : 0.0,
+                    (se_o > 0 && ic_o > 2.0 * se_o)
+                        ? "The ceiling clears 2 SE after adjustment, so the null above is "
+                          "INFORMATIVE."
+                        : "*** THE CEILING DOES NOT CLEAR 2 SE AFTER ADJUSTMENT, so this run "
+                          "cannot tell a removed confound from a removed effect and the "
+                          "derived arm's null is UNINFORMATIVE.");
+      }
     }
   }
 

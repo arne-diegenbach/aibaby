@@ -9193,3 +9193,87 @@ against zero, **+0.0081 ± 0.0170**, which needs no model at all.
 **Also disclosed:** the need for this column was established *by* §53's regression, so §53b is a
 second look at the same data. The predictions above are fixed before the run, and the arms, budgets,
 seeds and drop rules are unchanged — but it is a second look, and a reader should weigh it as one.
+
+### §53b RESULT: THE DERIVED INDEX DOES NOT DRIVE THE LESSON INTO THE VOICE, AND BOTH OF MY BRACKETS WERE WRONG
+
+`results/n53b-450k.log`, `results/n53b-900k.log`. Every pre-registered prediction returned, the
+self-test passed where it was identified, and **the answer is below both ends of the bracket §53
+offered** — which is the most useful thing a pre-registered bracket can do.
+
+#### THE CONFOUND IS ARM-INDEPENDENT, WHICH IS WHAT MAKES IT A CONFOUND
+
+Slope of the per-creature slot term on signed occupancy imbalance:
+
+| arm | 450k | 900k |
+|---|---|---|
+| `T1.RET` | +0.3327 ± 0.1104 | +0.4465 ± 0.0908 |
+| `T1.RET.D` | +0.3292 ± 0.1235 | +0.5223 ± 0.0925 |
+| `T1.ORACLE.D` | +0.6247 ± 0.1717 | +0.5113 ± 0.1057 |
+| `T1.ORACLE` | +0.7928 ± 0.5355 | +0.5566 ± 0.2230 |
+
+**Eight estimates, all positive, clustering at 900k around +0.5 regardless of arm.** A quantity that
+takes the same value in the claim arm, the label-destroyed arm and both pinned arms is a property of
+the *measurement*, not of any lesson. Linearity holds: splitting `T1.RET.D` at its median gives
+half-slopes differing by **0.8 SE** (450k) and **0.1 SE** (900k).
+
+#### THE THREE PREDICTIONS
+
+| | 450k | 900k | |
+|---|---|---|---|
+| **1. `T1.ORACLE.D` at zero imbalance** | +0.0006 ± 0.0249 (0.0 SE) | +0.0198 ± 0.0255 (0.8 SE) | **PASS** |
+| **2. `T1.RET.D` at zero imbalance** | −0.0540 ± 0.0243 (−2.2 SE) | −0.0559 ± 0.0234 (−2.4 SE) | **survives** |
+| **3. `T1.RET` at zero imbalance** | −0.0176 ± 0.0128 (−1.4 SE) | **−0.0053 ± 0.0135 (−0.4 SE)** | **zero** |
+
+**Prediction 1 passed as a real test**, on a regressor with SD 0.146 and 0.245 — it could have failed.
+*(Disclosed: the first version of this block asserted this test was void by construction, because the
+150k smoke read SD 0.0126 on that arm. At the real budgets the pinned arms carry genuine occupancy
+variation from dropped probes alone, so the log was printing "the regressor does not vary" next to an
+SD of 0.2450. The branch now measures instead of asserting, and both budgets were re-run.)*
+
+**Prediction 2: the confound is PARTIAL.** It accounts for 33% of the control's displacement at 450k
+(−0.0802 → −0.0540) and 41% at 900k (−0.0947 → −0.0559), and **what survives is −0.055 at both
+budgets** — stable across a 2× budget, so it is a real second term and not noise. §52's unexplained
+control is now 40% explained and 60% open.
+
+**Prediction 3, and it is the section's answer: ZERO.** −0.0053 ± 0.0135 at 900k. §53 bracketed this
+between +0.046 (21% of the ceiling) and +0.114 (66%, matching write purity). **The measurement is
+below both.** So:
+
+> **THE CREATURE'S OWN RETINAL INDEX DOES NOT DRIVE THE SOUND-ONLY CAREGIVER'S LESSON INTO THE
+> VOICE.** The bias-table route in the derived arm reads zero at both budgets, raw and adjusted,
+> while the pinned route reads +0.1118 ± 0.0400 on the identical correction.
+
+#### THE ADJUSTMENT'S POSITIVE CONTROL, WITHOUT WHICH THE NULL SAYS NOTHING
+
+An adjustment that shrinks every arm toward zero would produce Prediction 3's reading whether or not
+a lesson was there. What rules that out is the ceiling **surviving** the same correction:
+
+* **900k: the pinned arm retains +0.1118 of its raw +0.1293 — 86%, at 2.8 SE above zero.** The
+  correction keeps a real lesson where there is one and removes the derived arm's. **The null is
+  informative.**
+* **450k: +0.0683 of +0.0827 — 83% retained, but only 1.4 SE.** It does **not** clear 2 SE, so at
+  that budget the run cannot separate a removed confound from a removed effect, and the instrument
+  says so itself rather than leaving me to notice.
+
+**So this conclusion rests on the 900k budget, and 450k corroborates its direction without licensing
+it.** That is stated here because the guard is in the code and fired.
+
+#### THE PUZZLE THIS LEAVES IS SHARPER THAN THE ONE IT CLOSED
+
+Three measurements that should not sit together:
+
+1. **write purity 0.658** — the derived index delivers two thirds of the available conditional signal
+   into the correct slot (`mix` 0.154 / 0.811 against a pinned 0.000 / 1.000);
+2. **registration 100% aligned** — every creature reads back from the slot it wrote to;
+3. **expressed lesson 0.000** — and the pinned arm, given the same teacher, expresses +0.112.
+
+**The conditional information arrives in the right slot and the voice does not express it.** That is
+`storage-vs-expression` exactly, and the archive already holds a mechanism that would do it:
+**`retention` measured conflicting lessons in one slot as PURE OVERWRITE, not averaging.** Under
+averaging, a 19% wrong-slot rate dilutes an accumulation by 19%. **Under overwrite it erases it** —
+each wrong lesson resets what the right ones built, so 0.658 purity is ample for an averaging store
+and may be worth nothing in an overwriting one. That predicts expression collapses non-linearly in
+the wrong-write rate, which is a quantitative claim about a mechanism already in the archive.
+
+**NAMED AS THE NEXT QUESTION, NOT AS A FINDING.** §53 has refuted two of my own hypotheses by their
+signs and found both ends of its own bracket wrong; this one gets measured before it gets believed.
