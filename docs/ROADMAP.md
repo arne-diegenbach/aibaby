@@ -8711,3 +8711,114 @@ shipped genome. The count stays 24 because `objword` and `wordruler` are both `T
 so they interleaved. **The interleaved log still ended in `verify PASS` and looked entirely clean**,
 which is why it was discarded rather than read — `smoke-the-exact-command` is about the invocation,
 and this is the same lesson for the output file.
+
+### §52 RESULT: THE SOUND-ONLY CAREGIVER TEACHES — AT THE CEILING. THE RETINA'S INDEX DOES NOT CARRY IT
+
+Two budgets, 168 sessions each, **17m49s + 37m22s** (`results/n52-wordruler-450k.log`,
+`results/n52-wordruler-900k.log`). Clause 5 fired branch **(4)** at *both* budgets. **The branch's
+printed text is too generous, and the arm-by-arm decomposition is why.**
+
+Every gate passed at both budgets: the rung (T0 on `axis_sep` at 2.5 and 3.9 SE), the index (+0.20
+bar), the probe silent to 0.0000, dose 0.71–0.80× T0, praise fractions 0.51–0.56. And clause 3, which
+prints the ruler *first* this time, flagged **every arm** as `NOT A FORMANT RULER` — `echo gap` 0.05%
+to 1.39% of the gap available — so `axis_sep` was demoted to a secondary before any verdict, which is
+§51's correction applied in advance instead of an hour late.
+
+#### THE PRIMARY AND THE CEILING, BOTH REPLICATED
+
+| contrast | 450k | 900k |
+|---|---|---|
+| `T1.RET − T1.RET.D` (**pre-registered primary**) | +0.0627 ± 0.0282, **2.2 SE** | +0.1101 ± 0.0375, **2.9 SE** |
+| `T1.ORACLE − T1.ORACLE.D` (**ceiling**) | +0.1675 ± 0.0408, **4.1 SE** | +0.1613 ± 0.0493, **3.3 SE** |
+
+Both clear 2 SE at both budgets, which is what the pre-registered dose axis was for. But a paired
+contrast says only that the *pairing* matters; it does not say which arm moved. **It must be
+decomposed, and the two pairs behave completely differently.**
+
+#### ARM BY ARM, AGAINST ZERO — THE WHOLE RESULT IS HERE
+
+| budget | `T1.RET` | `T1.RET.D` | **`T1.ORACLE`** | `T1.ORACLE.D` |
+|---|---|---|---|---|
+| 150k | −0.0002 ± 0.0073 | −0.0064 ± 0.0052 | **+0.0819 ± 0.0177 (4.6 SE)** | −0.0220 ± 0.0203 |
+| 450k | −0.0064 ± 0.0175 | −0.0691 ± 0.0242 | **+0.1572 ± 0.0263 (6.0 SE)** | −0.0103 ± 0.0288 |
+| 900k | +0.0233 ± 0.0193 (1.2 SE) | −0.0868 ± 0.0304 | **+0.1824 ± 0.0328 (5.6 SE)** | +0.0211 ± 0.0327 |
+
+**THE CEILING IS CLEAN, STRONG AND MONOTONE.** `T1.ORACLE` rises +0.082 → +0.157 → +0.182 across a
+6× budget range at **4.6, 6.0 and 5.6 SE above zero**, 30 of 36 creatures positive at the two larger
+budgets, while its decorrelated twin sits at zero throughout (−0.022, −0.010, +0.021). The effect is
+**in the claim arm** and the control is where a control should be.
+
+> **So this is established: a caregiver that only ever compares two sounds, and never looks at the
+> toy, CAN teach this creature a conditional mapping from what it sees to the vowel it produces.**
+> The reward never contained the object. The target was `{320, 2500}` in the world's units, not a
+> direction fitted in the creature's motor space. The binding came from **co-occurrence**, and
+> destroying the co-occurrence while keeping the rule, the clock, the dose and the index removes it.
+>
+> **§51's headline was a ruler artefact and is now overturned by measurement, not by argument.**
+> `vocallearn`'s wall — *"reward cannot reshape the conditional route"* — does fall once the
+> condition has somewhere to live, exactly as §50's correction to `g3probe` suggested it might. It
+> just could not be seen on `axis_sep`.
+
+#### AND THE PART THAT IS **NOT** ESTABLISHED, WHICH BRANCH (4) OVERSTATES
+
+**`T1.RET` — the creature's own index — is not significantly above zero at any budget.** Its best
+reading is +0.0233 ± 0.0193, **1.2 SE**. The pre-registered primary clears 2 SE almost entirely
+because its *control* goes negative: at 900k, **+0.0233 of the +0.1101 contrast comes from the claim
+arm and +0.0868 — 79% — from `T1.RET.D` being below zero.**
+
+That is a materially different claim from "the voice moved toward the word", and the instrument's own
+branch text does not make the distinction. **Corrected here: §52 does not show that the creature's
+self-derived visual index drives a sound-only teacher.** It shows that a *perfect* index does.
+
+#### THE UNEXPLAINED NUMBER, NOW SHARPENED INTO A SPECIFIC QUESTION
+
+`T1.RET.D` drifts negative and the drift **grows with budget** — −0.0064, −0.0691, −0.0868 here, plus
+§51's −0.0678 at 1.8M, across four budgets. A label-destroyed arm should sit at zero: each slot
+receives both words' targets, and averaged over the two objects a uniform drift cancels by symmetry.
+
+**The pre-registration named `T1.ORACLE.D` as the arm that would say whether this is general. It
+answered, and the answer is no** — ORACLE.D reads −0.022, −0.010, +0.021, i.e. zero, at the same three
+budgets. So the drift is specific to the **derived** index paired with a **drawn** word, and it is not
+a property of drawn-word arms as such.
+
+**I cannot derive its sign and am not going to invent one.** `retention` says conflicting lessons in
+one slot are pure overwrite, which predicts a random-per-slot residue averaging to zero, not a
+consistent negative. What this means practically: **the pre-registered primary is inflated by an
+artefact in its control**, which is `control-blind-to-its-artefact` turned inside out — there the
+control was blind to the arm's artefact, here the control *carries* one. **This is the next question,
+and it is a cheap one**: it needs a `RET` arm with the index derived but the slot-to-object
+correspondence broken downstream, not another hour of the same six arms.
+
+#### TWO REPRODUCTIONS WORTH RECORDING
+
+1. **`T0.RET` on `axis_sep` at 900k reads +0.5875 ± 0.1500 — §50's published number to four
+   decimals**, from a *different driver* (`wordruler` rather than `objname`). Same genome, same
+   `seed + r·7919`, same budget, same held toy. A cross-instrument reproduction of a headline figure.
+2. **T0's formant prediction held.** §51 measured T0 at −0.0059 on the formant gap and §52
+   pre-registered it as null-or-negative; it reads +0.0099 and +0.0235, both inside 1 SE of zero.
+   **The teacher that moves `axis_sep` by +0.59 moves the audible quantity by nothing**, and the
+   teacher that moves the audible quantity by +0.18 moves `axis_sep` by +0.04. **The dissociation is
+   now established at 3–6 SE from both directions**, on three budgets, which is far past where §51
+   could only flag it.
+3. `T1.BASE` is null at both budgets (−0.0046, −0.0069), so the **association route stays shut** and
+   `g2cond`/`pairprobe` are re-confirmed a second time.
+
+#### WHAT IS LEFT
+
+* **The `RET.D` artefact**, above — the only thing standing between §52 and a clean claim about the
+  creature's own index.
+* **The baseline-memory constant**, still deferred from §51 and now less urgent: the teacher
+  demonstrably works at the ceiling under the derived rate, so that rate is no longer a candidate
+  explanation for a null.
+* **The echo route still does not move the vowel** — the two echo postures remain 2 Hz apart on F1,
+  and nothing here changes that. §52 reframes it: **reward reaches the vowel where the innate reflex
+  does not.** That is a cleaner statement of this architecture's division of labour than either
+  section had on its own, and it belongs beside `CONCLUSION.md`'s finding rather than inside §52.
+
+### §52's VERIFY GATE, ALL FOUR KEYS
+
+`results/n52-verify.log`: `verify PASS`, `hash ad96f882becbee92 as recorded`, `pinned hash PASS`,
+`experiments 24 as expected, 0 not`. The count stays 24 because `wordruler` is `Tier::kLong` /
+`Expect::kRead` like `objword`, `objname` and `visprobe` before it, and the pinned hash is unmoved
+because §52 added **no shared code at all** — `pin_mode` and `pairing` already composed into the one
+arm it needed.
