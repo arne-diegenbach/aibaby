@@ -222,6 +222,24 @@ const Spec kSpecs[] = {
      "  cells are diagonal and whose residual must be EXACTLY zero, and a T-A\n"
      "  failure VOIDS the log. Same seed, shift, nuisance and order as wordruler,\n"
      "  so the gap column must reproduce §52's. kRead: every branch prints"},
+    {"writerate", 900000, Expect::kRead, Tier::kLong,
+     "derived: §53 found the lesson REACHING the correct slot -- write purity\n"
+     "  0.658, registration 100% aligned -- and the voice not expressing it. That\n"
+     "  evidence is CORRELATIONAL: the derived arm has a wrong-write rate AND\n"
+     "  everything else that differs about deriving an index from a retina. This\n"
+     "  makes the rate the ONLY manipulated variable: pin_mode 3 is a PERFECT\n"
+     "  index whose WRITE slot is corrupted at a known rate, per TRIAL (§53\n"
+     "  measured the index stable within a trial, and run length is exactly what\n"
+     "  separates an overwriting store from an averaging one), on TEACHING\n"
+     "  windows only so the probe still reads where the lesson was written.\n"
+     "  AVERAGING predicts (1-2w) of ceiling with w_half = 0.25, PARAMETER-FREE;\n"
+     "  OVERWRITE predicts ~1/(wN), gone once w exceeds 1/N. At the derived arm's\n"
+     "  MEASURED w = 0.1712 that is 0.657 of ceiling against ~0.00. The primary\n"
+     "  is w_half over six levels rather than any one contrast, because the\n"
+     "  single-point test runs at only 2.6-3.7 SE. CLAUSE 2 RUNS FIRST and is a\n"
+     "  dose MEASUREMENT: the mixture column must return mix_A ~ w, so the knob\n"
+     "  verifies itself and a mismatch VOIDS the log. 900k only -- §53's 450k\n"
+     "  positive control cleared just 1.4 SE. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1485,6 +1503,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "objword") ok = run_objword(dna_blob, ticks, verbose);
   else if (name == "wordruler") ok = run_wordruler(dna_blob, ticks, verbose);
   else if (name == "slotdose") ok = run_slotdose(dna_blob, ticks, verbose);
+  else if (name == "writerate") ok = run_writerate(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

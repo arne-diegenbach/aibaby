@@ -2599,6 +2599,7 @@ bool run_objname(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_objword(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_wordruler(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_slotdose(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_writerate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_stpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_burstprobe(const std::vector<uint8_t>&, uint64_t, bool);

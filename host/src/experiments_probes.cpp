@@ -1088,7 +1088,8 @@ struct G3Probe {
 G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                             bool consistent, uint64_t seed_shift, int mode,
                             bool hold_nuisance = false, bool shuffle_order = false,
-                            int pin_mode = 0, int teacher = 0, int pairing = 0) {
+                            int pin_mode = 0, int teacher = 0, int pairing = 0,
+                            double write_noise = 0.0) {
   G3Probe out;
   std::string error;
   Session s;
@@ -1124,6 +1125,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // trial, so pairing 1 reuses a number this session was going to spend anyway.
   aibaby::Rng yoke_rng;
   yoke_rng.seed((s.dna.header().seed ^ seed_shift) + 0x51C0u);
+  // §54. THE WRONG-WRITE STREAM, its own generator for the same reason
+  // `pin_rng` and `yoke_rng` have theirs: a draw taken from a shared stream
+  // would shift every later random number and confound "the write slot was
+  // corrupted" with "a different session". Touched only when `pin_mode == 3`
+  // AND `write_noise > 0`, so `pin_mode` 1 and 2 -- §50's, §51's, §52's and
+  // §53's arms -- make no draw here and stay bit-identical to their logs.
+  aibaby::Rng wn_rng;
+  wn_rng.seed((s.dna.header().seed ^ seed_shift) + 0x54C0u);
   // §51. M1c's reward baseline, PER WORD. `vocallearn`'s design-trap note is the
   // reason: against one global mean the creature is rewarded for saying whichever
   // word is easier for its larynx, and the easy word is not the taught one.
@@ -1305,11 +1314,34 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     // The whole block is gated on `pin_mode != 0` so that every pre-existing
     // caller -- `g3probe`, `condprobe`, `pairprobe`, §49's `visprobe` -- makes
     // no call here at all and stays bit-identical to its archived log.
+    //
+    // §54. pin_mode 3 is pin_mode 1 with the WRITE SLOT CORRUPTED AT A KNOWN
+    // RATE, and it exists because §53's evidence for overwrite is
+    // correlational: the derived arm has a wrong-write rate AND everything else
+    // that differs about deriving an index from a retina. This makes the rate
+    // the only manipulated variable, on an index that is otherwise perfect.
+    //
+    // PER TRIAL, NOT PER INTERVAL. §53 measured the derived index stable within
+    // a trial (`present 1.0000`), so a per-interval coin flip would be a
+    // different noise process delivering isolated wrong lessons where the real
+    // one delivers them in whole-trial runs -- and run length is exactly what
+    // separates an overwriting store from an averaging one.
+    //
+    // TEACHING WINDOWS ONLY (`shape_target != nullptr`). The probe is never
+    // corrupted, which reproduces the derived arm's MEASURED 100% registration:
+    // the lesson is read back from where it was written, and only the writing is
+    // wrong. Corrupting the probe too would test a different and already
+    // refuted hypothesis ([[aibaby-index-match-is-permutation-blind]]).
     if (pin_mode != 0) {
       if (!show) {
         s.brain.network().clear_context_pin();
-      } else if (pin_mode == 1) {
-        s.brain.network().pin_context_oracle(uint32_t(object));
+      } else if (pin_mode == 1 || pin_mode == 3) {
+        uint32_t slot = uint32_t(object);
+        if (pin_mode == 3 && shape_target != nullptr && write_noise > 0.0 &&
+            wn_rng.chance(aibaby::Scalar(write_noise))) {
+          slot = 1u - slot;
+        }
+        s.brain.network().pin_context_oracle(slot);
       } else {
         s.brain.network().pin_context_oracle(uint32_t(pin_rng.next() & 1u));
       }
@@ -12262,6 +12294,345 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    only per-context store, so the same slot cannot produce two postures.\n"
                 "    That redirects the line and outranks everything above it.\n",
                 retd.resid, ms);
+  }
+  return true;
+}
+
+// --- §54: WHAT WRONG-WRITE RATE CAN THIS ARCHITECTURE TOLERATE? --------------
+//
+// §53 closed the derived index as an expression route and left one mechanism
+// named: the conditional information REACHES THE CORRECT SLOT -- write purity
+// 0.658, registration 100% aligned -- and the voice does not express it.
+// `retention` holds the candidate: conflicting lessons in one slot are PURE
+// OVERWRITE, not averaging.
+//
+// §53's EVIDENCE FOR THAT IS CORRELATIONAL AND THAT IS ITS LIMIT. The derived
+// arm has a wrong-write rate *and* everything else that differs about deriving
+// an index from a retina. This makes the rate the ONLY manipulated variable, on
+// an index that is otherwise perfect.
+//
+//   AVERAGING  increments sum, so the net is (1-2w) of full: LINEAR in w,
+//              reaching zero at w = 0.5, half-collapse at w = 0.25.
+//   OVERWRITE  only the run since the last switch survives, of expected length
+//              1/w against the N lessons a session delivers: collapse as
+//              ~1/(wN), so gone once w exceeds 1/N, and N is in the thousands.
+//
+// The derived arm's MEASURED rate is w = 0.1712 (mix 0.1538 and 1 - 0.8113).
+// There averaging predicts 0.657 of the ceiling -- which IS §53's write-purity
+// figure, the same arithmetic -- and overwrite predicts ~0.00.
+//
+// So the useful number is not a p-value: it is **the wrong-write rate at which
+// this architecture stops being able to speak**. `w_half` is the primary and
+// averaging's value for it, 0.25, is parameter-free.
+bool run_writerate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  struct Arm {
+    double w;
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 6;
+  const Arm arms[kArms] = {
+      {0.000, 48u, "THE CEILING and the SELF-TEST -- must reproduce §52/§53's pinned arm"},
+      {0.020, 24u, "resolves a FAST collapse: overwrite's w_half should be near here"},
+      {0.050, 24u, "the same"},
+      {0.085, 24u, "half the operating point -- the CONVEXITY probe"},
+      {0.171, 48u, "THE DERIVED INDEX'S MEASURED RATE -- match-at-the-operating-point"},
+      {0.340, 24u, "twice it; averaging predicts 0.32 of ceiling, still clearly non-zero"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §54. §53 found the lesson REACHING the right slot (purity\n"
+              "                    0.658, registration 100%%) and the voice not expressing it.\n"
+              "                    That evidence is CORRELATIONAL: the derived arm has a\n"
+              "                    wrong-write rate AND everything else about a retina.\n");
+  std::printf("  the manipulation  pin_mode 3 -- a PERFECT index whose WRITE slot is corrupted\n"
+              "                    at a known rate, per TRIAL (§53 measured the index stable\n"
+              "                    within a trial), on TEACHING windows only so the probe\n"
+              "                    still reads where the lesson was written.\n");
+  std::printf("  the two models    AVERAGING: (1-2w) of ceiling, w_half = 0.25, PARAMETER-FREE.\n"
+              "                    OVERWRITE: ~1/(wN), gone once w exceeds 1/N. At the derived\n"
+              "                    arm's MEASURED w = 0.1712 that is 0.657 vs ~0.00.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u levels of w\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms);
+  instrument("writerate", dna.header().seed ^ 0x54A0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false;
+    double gap = 0, slot_term = 0, dga = 0;
+    bool g_ok = false;
+    double mix_a = 0, mix_b = 0, oimb = 0;
+    double present = 0;
+    uint32_t probes = 0;
+    int reg = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // EVERY ARGUMENT IS §52's AND §53's EXCEPT `pin_mode` AND `write_noise`.
+    // `control-on-a-different-code-path`: an arm selector must pin the whole
+    // dose vector, so the seed, the shift, the nuisance, the order, the teacher
+    // and the pairing are all held and only the knob under test moves.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            /*pin_mode=*/3, /*teacher=*/1, /*pairing=*/0, arms[a].w);
+    if (!run.ok || run.probes < 12) return c;
+    c.ok = true;
+    c.present = run.ctx_present_frac;
+    c.probes = run.probes;
+    if (run.perr_n > 0) c.gap = (run.perr_other - run.perr_own) / double(run.perr_n);
+
+    double ns[aibaby::kMaxContextSlots] = {}, gs[aibaby::kMaxContextSlots] = {};
+    double total = 0.0;
+    uint32_t live = 0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      for (uint32_t o = 0; o < 2; ++o) {
+        ns[s] += double(run.cell_n[o][s]);
+        gs[s] += run.cell_g[o][s];
+      }
+      if (ns[s] > 0.0) ++live;
+      total += ns[s];
+    }
+    if (total < 12.0 || live != 2) return c;
+    uint32_t sa = aibaby::kMaxContextSlots, sb = aibaby::kMaxContextSlots;
+    double best = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      if (ns[s] <= 0.0) continue;
+      const double d = double(run.cell_n[0][s]) - double(run.cell_n[1][s]);
+      if (sa == aibaby::kMaxContextSlots || d > best) {
+        if (sa != aibaby::kMaxContextSlots) sb = sa;
+        sa = s; best = d;
+      } else {
+        sb = s;
+      }
+    }
+    if (sb == aibaby::kMaxContextSlots) return c;
+    c.slot_term = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      if (ns[s] <= 0.0) continue;
+      c.slot_term +=
+          (double(run.cell_n[0][s]) - double(run.cell_n[1][s])) * (gs[s] / ns[s]);
+    }
+    c.slot_term /= total;
+    c.dga = gs[sa] / ns[sa] - gs[sb] / ns[sb];
+    c.g_ok = true;
+    c.oimb = (ns[sa] - ns[sb]) / (ns[sa] + ns[sb]);
+    const double da = run.dose_slot[sa], db = run.dose_slot[sb];
+    c.mix_a = da > 0.0 ? run.dose_word[1][sa] / da : 0.0;
+    c.mix_b = db > 0.0 ? run.dose_word[1][sb] / db : 0.0;
+    return c;
+  });
+
+  struct Row {
+    uint32_t n = 0, ok = 0, scored = 0;
+    double mix_a = 0, mix_b = 0, present = 0;
+    std::vector<double> gaps, slots_, dgas;
+  };
+  std::vector<Row> rows(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    Row& R = rows[job_arm[i]];
+    ++R.n;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++R.ok;
+    R.present += c.present;
+    if (!c.g_ok) continue;
+    ++R.scored;
+    R.mix_a += c.mix_a;
+    R.mix_b += c.mix_b;
+    R.gaps.push_back(c.gap);
+    R.slots_.push_back(c.slot_term);
+    R.dgas.push_back(c.dga);
+  }
+  auto mean_se = [](const std::vector<double>& v, double* se) {
+    if (v.empty()) { *se = 0.0; return 0.0; }
+    double m = 0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    double s = 0;
+    for (double x : v) s += (x - m) * (x - m);
+    *se = v.size() > 1 ? std::sqrt(s / double(v.size() - 1) / double(v.size())) : 0.0;
+    return m;
+  };
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& R = rows[a];
+    const double k = R.scored > 0 ? double(R.scored) : 1.0;
+    R.mix_a /= k; R.mix_b /= k;
+    if (R.ok > 0) R.present /= double(R.ok);
+  }
+
+  // --- liveness, ahead of every reading -------------------------------------
+  uint32_t thin = 0;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    if (rows[a].scored * 2 < rows[a].n) ++thin;
+  }
+  if (thin > 0) {
+    std::printf("\n  *** §54 VOID -- NOT ENOUGH SCORED CREATURES. %u of %u levels scored under\n"
+                "  half their sessions. Every column would read from a near-empty set and the\n"
+                "  dose check below would pass vacuously on it. Raise the budget; read nothing.\n",
+                thin, kArms);
+    return true;
+  }
+
+  // --- CLAUSE 2 FIRST: DOES THE KNOB DO WHAT IT CLAIMS? --------------------
+  std::printf("\n  CLAUSE 2 (FIRST) -- THE DOSE VERIFIES ITSELF. At pin_mode 3 with the word\n"
+              "  PAIRED, a corrupted trial sends the object's own word into the OTHER slot, so\n"
+              "  the realised mixture must come back mix_A ~ w and mix_B ~ 1-w. This is a dose\n"
+              "  MEASUREMENT, not an assumption, and it is read before any expression number.\n");
+  bool dose_ok = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const double ea = std::fabs(R.mix_a - arms[a].w);
+    const double eb = std::fabs((1.0 - R.mix_b) - arms[a].w);
+    const bool ok = ea <= 0.03 && eb <= 0.03;
+    if (!ok) dose_ok = false;
+    std::printf("    w %.3f  n %2u/%2u  present %.4f  mix_A %.4f (want %.3f, err %.4f)  "
+                "1-mix_B %.4f (err %.4f)  %s\n",
+                arms[a].w, R.scored, R.n, R.present, R.mix_a, arms[a].w, ea, 1.0 - R.mix_b, eb,
+                ok ? "OK" : "*** OFF ***");
+  }
+  if (!dose_ok) {
+    std::printf("\n    (2) §54 VOID ON THE KNOB. A realised rate that misses its nominal rate\n"
+                "    by more than 0.03 means `pin_mode = 3` does not do what this experiment\n"
+                "    claims, and NO expression column below may be read. Fix the knob first.\n");
+    return true;
+  }
+
+  // --- the curve -----------------------------------------------------------
+  std::printf("\n  THE TOLERANCE CURVE. `slot term` is §53's decomposition -- all a per-context\n"
+              "  bias table can express -- and `G_A-G_B` is the same quantity before the index\n"
+              "  attenuation. AVERAGING predicts the `(1-2w)` column; OVERWRITE predicts ~0\n"
+              "  everywhere but w = 0.\n");
+  double se0 = 0;
+  const double ceil_ = mean_se(rows[0].slots_, &se0);
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    double se_s = 0, se_g = 0, se_d = 0;
+    const double ms = mean_se(R.slots_, &se_s);
+    const double mg = mean_se(R.gaps, &se_g);
+    const double md = mean_se(R.dgas, &se_d);
+    const double pred = ceil_ * (1.0 - 2.0 * arms[a].w);
+    std::printf("    w %.3f  slot %+.4f +- %.4f (%.1f SE)   averaging wants %+.4f   "
+                "gap %+.4f +- %.4f   G_A-G_B %+.4f +- %.4f\n",
+                arms[a].w, ms, se_s, se_s > 0 ? ms / se_s : 0.0, pred, mg, se_g, md, se_d);
+  }
+
+  // --- CLAUSE 1: the ceiling self-test -------------------------------------
+  const bool ceil_ok = std::fabs(ceil_ - 0.1824) <= 2.0 * std::sqrt(se0 * se0 + 0.0263 * 0.0263) ||
+                       std::fabs(ceil_ - 0.1293) <= 2.0 * std::sqrt(se0 * se0 + 0.0478 * 0.0478);
+  // THE REFERENCES ARE 900k VALUES AND THE CEILING IS BUDGET-DEPENDENT -- §52
+  // measured the pinned arm at +0.0819, +0.1572 and +0.1824 at 150k, 450k and
+  // 900k. So this gate is only meaningful at the registry minimum, and a
+  // `--allow-short` run will pass it for the wrong reason (a 150k ceiling near
+  // +0.082 sits inside 2 SE of §53's +0.1293 purely because both SEs are wide).
+  // Said out loud rather than left for a reader to work out.
+  std::printf("\n  CLAUSE 1 -- THE CEILING SELF-TEST. w = 0 is pin_mode 1 by construction, so it\n"
+              "  must reproduce §52's +0.1824 +- 0.0263 or §53's +0.1293 +- 0.0478. Reads\n"
+              "  %+.4f +- %.4f -- %s%s\n",
+              ceil_, se0, ceil_ok ? "CONSISTENT" : "*** INCONSISTENT ***",
+              ticks < 900000
+                  ? "\n  *** BUT THIS RUN IS BELOW THE 900k MINIMUM AND THE CEILING IS\n"
+                    "  BUDGET-DEPENDENT (§52: +0.0819 / +0.1572 / +0.1824 at 150k / 450k /\n"
+                    "  900k), so clause 1 is NOT a real test here and neither is the curve."
+                  : "");
+  if (!ceil_ok) {
+    std::printf("\n    (1) §54 VOID. The w = 0 arm does not reproduce the pinned ceiling those\n"
+                "    sections measured, so this harness is not theirs and the curve below\n"
+                "    cannot be compared with anything. Nothing may be quoted.\n");
+    return true;
+  }
+
+  // --- the primary: the half-collapse point --------------------------------
+  // Linear interpolation on the measured curve, which assumes nothing about the
+  // functional form -- the point is to locate where expression halves, not to
+  // fit a model to it.
+  double w_half = -1.0;
+  for (uint32_t a = 1; a < kArms; ++a) {
+    double sp = 0, sc = 0;
+    const double yp = mean_se(rows[a - 1].slots_, &sp);
+    const double yc = mean_se(rows[a].slots_, &sc);
+    const double half = 0.5 * ceil_;
+    if (yp >= half && yc < half && yp > yc) {
+      w_half = arms[a - 1].w + (arms[a].w - arms[a - 1].w) * (yp - half) / (yp - yc);
+      break;
+    }
+  }
+  double se_op = 0;
+  const double op = mean_se(rows[4].slots_, &se_op);
+  const double avg_pred = 0.657 * ceil_;
+  const double d_avg = std::sqrt(se_op * se_op + se0 * se0 * 0.657 * 0.657);
+  const bool like_avg = d_avg > 0 && std::fabs(op - avg_pred) <= 2.0 * d_avg;
+  const bool like_zero = se_op > 0 && std::fabs(op) <= 2.0 * se_op;
+  std::printf("\n  THE PRIMARY -- w_half, THE WRONG-WRITE RATE AT WHICH EXPRESSION HALVES.\n"
+              "  Averaging's value is 0.25 and is PARAMETER-FREE; overwrite's is near 1/N.\n"
+              "    w_half %s\n"
+              "    at the measured operating point w = 0.171: %+.4f +- %.4f\n"
+              "      averaging wants %+.4f  -> %s\n"
+              "      overwrite wants  0.0000  -> %s\n",
+              w_half >= 0.0 ? (std::string("~ ") + std::to_string(w_half)).c_str()
+                            : "NOT BRACKETED by this grid (expression never halves, or never "
+                              "rises above half)",
+              op, se_op, avg_pred, like_avg ? "CONSISTENT" : "inconsistent",
+              like_zero ? "CONSISTENT" : "inconsistent");
+
+  // --- the verdict ---------------------------------------------------------
+  std::printf("\n  THE VERDICT.\n");
+  double flat_lo = 0, flat_hi = 0;
+  const double y_last = mean_se(rows[kArms - 1].slots_, &flat_hi);
+  (void)flat_lo;
+  const bool flat = se0 > 0 && std::fabs(y_last - ceil_) <= 2.0 * std::sqrt(se0 * se0 + flat_hi * flat_hi);
+  if (flat) {
+    std::printf("\n    (5) EXPRESSION IS FLAT IN w: %+.4f at w = 0.340 against %+.4f at w = 0.\n"
+                "    The WRITE SLOT DOES NOT MATTER, which contradicts §49-§53 wholesale --\n"
+                "    those sections rest on the bias table being indexed. SUSPECT THE HARNESS\n"
+                "    FIRST: clause 2 passed, so the knob moves the mixture, which makes a flat\n"
+                "    expression column the more suspicious of the two readings.\n",
+                y_last, ceil_);
+  } else if (w_half >= 0.0 && w_half <= 0.05 && like_zero) {
+    std::printf("\n    (4) OVERWRITE, AND §53's NULL IS EXPLAINED BY THE WRONG-WRITE RATE ALONE.\n"
+                "    w_half ~ %.3f, far below averaging's 0.25, and the measured operating\n"
+                "    point reads %+.4f +- %.4f -- within 2 SE of ZERO while averaging wanted\n"
+                "    %+.4f. So the derived index has exactly ONE defect, it is quantified, and\n"
+                "    WHAT TO BUILD IS A BETTER INDEX RATHER THAN A DIFFERENT ARCHITECTURE.\n"
+                "    The curve above says how much better: expression needs w below ~%.3f.\n",
+                w_half, op, se_op, avg_pred, w_half);
+  } else if (w_half >= 0.20 && like_avg) {
+    std::printf("\n    (3) AVERAGING HOLDS, AND THE LEAD IS REFUTED. w_half ~ %.3f and the\n"
+                "    operating point reads %+.4f +- %.4f, within 2 SE of averaging's %+.4f.\n"
+                "    WRONG WRITES ARE NOT SUFFICIENT to explain §53's null, so the derived\n"
+                "    index carries a SECOND defect that §53 did not isolate -- and `retention`'s\n"
+                "    pure overwrite does not reach this quantity. Do not pursue the index.\n",
+                w_half, op, se_op, avg_pred);
+  } else {
+    std::printf("\n    (6) AN INTERMEDIATE STORE: w_half %s, between the two models' values, or\n"
+                "    the operating point consistent with both/neither (%+.4f +- %.4f against\n"
+                "    averaging's %+.4f and zero). Report w_half with its interval and DO NOT\n"
+                "    NAME A MECHANISM. The useful output is still the tolerance curve.\n",
+                w_half >= 0.0 ? (std::string("~ ") + std::to_string(w_half)).c_str()
+                              : "not bracketed",
+                op, se_op, avg_pred);
   }
   return true;
 }

@@ -9294,3 +9294,97 @@ it was the line count, and **this clean log is also 936 lines**, exactly like th
 count is not the check. **The check is that each key appears exactly once**, which is what was run
 here: `verify PASS` 1, `pinned hash PASS` 1, `as expected, 0 not` 1. A second interleaved run doubles
 every marker and cannot hide in a count of one.
+
+### §54 PRE-REGISTRATION: WHAT WRONG-WRITE RATE CAN THIS ARCHITECTURE TOLERATE?
+
+§53 closed the derived index as an expression route and left one mechanism named: **the conditional
+information reaches the correct slot — write purity 0.658, registration 100% aligned — and the voice
+does not express it.** `retention` holds the candidate: conflicting lessons in one slot are **PURE
+OVERWRITE, not averaging.**
+
+**§53's evidence for this is correlational and that is its limit.** The derived arm has a wrong-write
+rate *and* everything else that differs about deriving an index from a retina. §54 makes the
+wrong-write rate the **only** manipulated variable: it takes the **pinned** index — a perfect index,
+whose ceiling §52 and §53 both measured — and corrupts the slot the lesson is written to **at a known
+rate**, leaving the read, the teacher, the clock, the dose and the probe untouched.
+
+#### THE TWO MECHANISMS, DERIVED BEFORE ANYTHING IS BUILT
+
+Let `w` be the fraction of a slot's lessons that teach the *other* slot's word.
+
+* **AVERAGING** (`bias_ctx_` as an accumulator): increments sum, so the net is
+  `(1−w)·(+Δ) + w·(−Δ) = (1−2w)` of full. **Expression is linear in `w` and reaches zero at
+  `w = 0.5`.**
+* **OVERWRITE** (a conflicting lesson *replaces* rather than subtracts): what survives is only the
+  run of same-direction lessons since the last switch, of expected length `1/w`, against the `N`
+  lessons a session delivers. **Expression collapses as roughly `1/(wN)` — i.e. it is gone as soon as
+  `w` exceeds `1/N`, and `N` is in the thousands.**
+
+**The derived arm's measured rate is `w = 0.1712`** (`mix` 0.1538 and 1 − 0.8113, averaged over the
+two slots). There, averaging predicts **0.657 of the ceiling** — which is *exactly* §53's write-purity
+figure of 0.658, because they are the same arithmetic — and overwrite predicts **~0.00**.
+
+> **So the single most useful number here is not a p-value: it is the wrong-write rate at which this
+> architecture stops being able to speak.** Averaging puts that half-collapse point at `w½ = 0.25`.
+> Overwrite puts it near `1/N`. **`w½` is the primary and averaging's value for it is parameter-free.**
+
+#### THE SWEEP, AND IT PASSES THROUGH THE MEASURED OPERATING POINT
+
+`pin_mode = 3`: pin the true object, but on each **teaching** trial, with probability `w`, pin the
+other slot instead. Per *trial* and not per interval, because §53 measured the derived index stable
+within a trial (`present 1.0000`), so a per-interval coin flip would be a different noise process.
+**The probe is never corrupted**, which reproduces the derived arm's measured 100% registration — the
+lesson is read back from where it was written, and only the writing is wrong.
+
+| `w` | n | why this level |
+|---|---|---|
+| 0.000 | 48 | **the ceiling, and the self-test**: must reproduce §52/§53's pinned arm |
+| 0.020 | 24 | resolves a fast collapse — overwrite's `w½` should be near here |
+| 0.050 | 24 | " |
+| 0.085 | 24 | half the operating point: the convexity probe |
+| **0.171** | **48** | **the derived index's MEASURED rate — `match-at-the-operating-point`** |
+| 0.340 | 24 | twice it; averaging predicts 0.32 of ceiling and still clearly non-zero |
+
+**192 sessions at 900k**, the budget where §53's ceiling is informative (its 450k positive control
+cleared only 1.4 SE, so 450k is not run).
+
+#### THE DOSE VERIFIES ITSELF, WHICH IS WHY THIS KNOB IS CHECKABLE
+
+The mixture column already measures the **realised** wrong-write rate. At `pin_mode = 3` with the word
+paired, a corrupted trial sends the object's own word into the other slot, so **`mix_A` must come back
+≈ `w` and `mix_B` ≈ `1 − w`.** That is a dose measurement, not a dose assumption
+(`liveness-is-not-dose`), and it is read **before** any expression number. A knob whose realised rate
+does not match its nominal rate is a broken knob, and §53's own history —
+`control-on-a-different-code-path`, "an arm selector must pin the whole dose vector" — says to check.
+
+#### REFUSAL CLAUSES
+
+1. **`w = 0` fails to reproduce the pinned ceiling** (outside 2 SE of §52's +0.1824 ± 0.0263 and
+   §53's +0.1293 ± 0.0478) → **§54 VOID.** The harness differs from the one those sections ran and
+   nothing may be quoted.
+2. **Realised `mix` departs from nominal `w` by more than 0.03 at any level** → **§54 VOID on the
+   knob**, whatever the expression column says.
+3. **`w½ ≥ 0.20`, and expression at `w = 0.171` within 2 SE of `0.657 × ceiling`** → **AVERAGING
+   HOLDS. Wrong writes are NOT sufficient to explain §53's null**, and the derived index must carry a
+   second defect that §53 did not isolate. This is the branch that refutes the lead.
+4. **`w½ ≤ 0.05`, and expression at `w = 0.171` within 2 SE of zero** → **OVERWRITE, AND §53's NULL IS
+   FULLY EXPLAINED BY THE WRONG-WRITE RATE ALONE.** Then the derived index has exactly one defect, it
+   is quantified, and **what to build is a better index rather than a different architecture** — with
+   the tolerance curve saying how much better.
+5. **Expression is flat in `w`** → the write slot does not matter, which contradicts §49–§53
+   wholesale. **Suspect the harness first** and re-run clause 2 before reading anything else.
+6. **`w½` between 0.05 and 0.20** → an intermediate store, neither pure accumulator nor pure
+   overwrite. Report `w½` with its interval and do not name a mechanism.
+
+#### POWER, STATED HONESTLY, AND IT IS THE WEAK POINT
+
+Using §52's measured spread (SD 0.158 at 900k), an arm at n = 48 has SE 0.023, so the decisive
+single-point contrast — `0.657 × ceiling` against zero — runs at **2.6 SE if the ceiling is §53's
++0.129 and 3.7 SE if it is §52's +0.182.** That is adequate but not generous, and **it is why `w½`
+across six levels is the primary rather than any one contrast**: the curve uses all 192 creatures
+where a single comparison uses 96. A result resting only on the `w = 0.171` point is to be reported
+as 2–3 SE and not more.
+
+**Disclosed:** pairing by creature is *not* assumed to help. §52's paired SE for the pinned contrast
+(0.0493) was larger than its per-arm SE (0.0328), so these arms are not positively correlated across
+seeds; both the paired and unpaired contrasts are printed and the unpaired one is the primary.
