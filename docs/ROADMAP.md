@@ -9043,3 +9043,153 @@ together:
 So the mixture reading and H are **not** rival explanations of the same number: H is about the
 control, purity is about the claim arm, and a log can support both, one, or neither. The verdict must
 say which, and the instrument prints all four columns needed to tell.
+
+### §53 RESULT: THE DECOMPOSITION WORKS, THE REGISTRATION IS PERFECT, AND MY DERIVED SIGN WAS WRONG
+
+Two budgets, 120 sessions each, **12m + 26m36s** (`results/n53-slotdose-450k.log`,
+`results/n53-slotdose-900k.log`). The pre-registered verdict clause fired **(4b) NO VERDICT ON H** at
+both budgets. That is the honest reading of the test I nominated as primary, and it understates what
+the log contains in one direction and overstates it in another. Both are set out below.
+
+#### T-A AND THE REPRODUCTION COLUMN, BEFORE ANY RESULT
+
+The identity holds to floating point at every creature (worst **1.1e-16** over 120), `T1.ORACLE`'s
+object residual is **exactly 0.0000**, and both pinned arms' slot term equals their gap to the last
+digit. The decomposition is arithmetic and the arithmetic is right.
+
+And §52's primary reproduces **exactly, SEs included, at both budgets** — `T1.RET` −0.0064 ± 0.0175
+and +0.0233 ± 0.0193, `T1.RET.D` −0.0691 ± 0.0242 and −0.0868 ± 0.0304, `T1.ORACLE.D` −0.0103 ±
+0.0288 and +0.0211 ± 0.0327. §53 added only unprinted accumulators and the session did not move.
+
+#### THE REGISTRATION HYPOTHESIS IS REFUTED, AND IT IS THE FIRST TIME ANYTHING MEASURED IT
+
+| arm | aligned | **swapped** | degenerate |
+|---|---|---|---|
+| `T1.RET` | 36 | **0** | 0 |
+| `T1.RET.D` | 36 | **0** | 0 |
+| `T1.ORACLE.D` | 36 | **0** | 0 |
+| `T1.ORACLE` | 12 | **0** | 0 |
+
+**At 900k the lesson is read back from exactly the slot it was written to, in every creature of every
+arm.** The pinned arms at 100% aligned are the self-test; the derived arms at 100% aligned are the
+result. So the sound-gated-latch story — teaching window not silent, probe silent, source 5 sharing
+source 4's latch — **is dead**, and `T1.RET`'s negative word-preference difference is not a readout
+swap.
+
+This is worth recording as a method point regardless: **`vis_ctx_match` maximises over slot
+permutations, so every index `excess` published since §49 is registration-blind by construction.**
+§50's reassuring "probe +0.3165, teaching +0.3200" could not have detected a total swap. It now has
+an answer, and the answer is favourable — but it was an assumption for four sections.
+
+At 150k the same column reads **85–97% DEGENERATE** (both objects sharing one modal slot), which is a
+far starker statement of the low-budget index failure than `excess −0.0409` was.
+
+#### H: THE MECHANISM IS CONFIRMED AND THE SIGN I DERIVED IS WRONG
+
+The pre-registered primary T-B, a paired sign test, reads **14 oppose / 22 agree** at 450k and **15 /
+21** at 900k — neither side reaching the bar of 26, hence clause (4b). **But the secondary carries an
+SE and the primary does not, and the secondary is unambiguous:**
+
+| regression of gap on … | 450k | 900k |
+|---|---|---|
+| signed **firing** dose imbalance | +0.2374 ± 0.1061 (**+2.2 SE**) | +0.3534 ± 0.0848 (**+4.2 SE**) |
+| signed **occupancy** imbalance | — | +0.4934 ± 0.0956 (**+5.2 SE**) |
+
+**H's mechanism is right — unequal dose does drive the slot term — and H's direction is backwards, at
+4.2 and 5.2 SE, replicated across two budgets.** The busier slot sits *nearer* /a/, not further.
+
+The error is locatable and it was in the derivation, not the code. I assumed a 50/50 lesson mixture
+pulls a slot toward the *midpoint* of the two words, which lowers `G` from the untaught +0.4950. The
+run says otherwise: **`mean G` exceeds `echo G` in every arm** — +0.5192 and +0.5555 against +0.5021
+in the derived arms, +0.5892 in `T1.ORACLE`. **Teaching moves this voice toward /a/ on average, even
+under a 50/50 mixture**, because /a/ = {780, 1180} is reachable and /i/ = {320, 2500} is not, so a
+baseline-EMA teacher banks progress on the reachable word and not on the other. More dose therefore
+means *higher* `G`, which is the measured sign. **Asymmetric reachability, not a symmetric
+compromise** — and `vowel-space` already said this creature has one vowel.
+
+**DISCLOSED, AND IT IS THE DISCIPLINE POINT OF THIS SECTION.** Had I pre-registered the regression as
+the primary, H would read REFUTED-WITH-SIGN at 4.2 SE. I pre-registered the sign test, which discards
+magnitude and does not reach its bar. **The pre-registered verdict therefore stands at NO VERDICT ON
+H, and I am not promoting the secondary after seeing which way it read** — `verdict-fitted-to-data`
+is exactly this move. What the log supports is stated here and the clause is left as it fired.
+
+#### THE BUDGET TREND IS EXPLAINED, AND T-D DISSOLVES
+
+The §53 addendum worried that H needed a ~40× growth in the pull across a 6× budget, outside what a
+clamped accumulator affords. It needs none:
+
+> **`G_A − G_B` IS FLAT ACROSS BUDGETS — −0.1367 at 450k and −0.1358 at 900k — WHILE THE GAP GROWS
+> FROM −0.0691 TO −0.0868.** The underlying slot asymmetry does not grow at all. What grows is how
+> much of it the probe can *see*: §52's index excess goes 0.2286 → 0.3201 over the same budgets.
+> **The drift grows with budget because the index gets better at revealing a fixed artefact.**
+
+#### WHAT §52's PRIMARY ACTUALLY DECOMPOSES INTO
+
+| budget | §52 primary | **slot route** | residual route |
+|---|---|---|---|
+| 450k | +0.0627 | **+0.0629** | −0.0002 |
+| 900k | +0.1101 | **+0.1028** | +0.0073 |
+
+**93–100% of §52's contrast travels through the per-context bias table**, so the route is the one §50
+and §52 claimed. The object residual is small, and most of what there is appears **with the label
+destroyed** (+0.0079 in `T1.RET.D` against +0.0152 in `T1.RET`), so it is not a lesson.
+
+And the write-purity number nothing had measured: the derived index delivers **0.084 / 0.490 / 0.658**
+of the available conditional signal to the bias table at 150k / 450k / 900k, against a pinned index's
+1.000. The parameter-free prediction `purity × pinned contrast` gives **+0.1212 against a measured
++0.1138 at 900k — 6%** — and **+0.0753 against +0.0435 at 450k, off by 1.7×.** It holds at one budget
+and not the other, and is reported as that rather than as a law.
+
+#### THE ONE THING STILL OPEN, NOW A SINGLE NUMBER
+
+`T1.RET`'s **slot term is +0.0081 ± 0.0170 at 900k — zero.** But its dose imbalance is 0.1324 where
+`T1.RET.D`'s is 0.2863, **so the two arms carry different amounts of the confound and it does not
+cancel in their difference.** That confirms §52's correction rather than overturning it: the
+pre-registered contrast is not a clean estimate of the lesson in the derived arm.
+
+Two readings of `T1.RET` are now consistent with the same data and they differ by 3×, which is
+exactly why the next step is arithmetic and not another arm:
+
+* if the artefact in `T1.RET` is the **same** as in `T1.RET.D` (−0.136), the lesson is +0.114 — **66%
+  of the pinned ceiling, matching write purity**;
+* if it scales with dose imbalance (half of `T1.RET.D`'s, −0.068), the lesson is +0.046 — **21%**.
+
+**The regression already in hand settles it**: with slope +0.4934 ± 0.0956 measured, the artefact can
+be regressed out *within* each arm and the slot term read at zero imbalance. That column was not in
+this run because the confound's sign was not known when it was built. §53b adds it.
+
+### §53b PRE-REGISTRATION: READ THE SLOT TERM AT ZERO IMBALANCE
+
+§53 measured the confound's slope (+0.4934 ± 0.0956 on signed occupancy, **+5.2 SE**) and established
+that the two derived arms carry **different amounts of it** (median |Δdose| 0.1324 against 0.2863), so
+it does not cancel in their difference. With the slope in hand the correction is arithmetic: regress
+each arm's per-creature slot term on its signed occupancy imbalance and **read the intercept at zero
+imbalance** — the slot term a creature with evenly-occupied slots would show.
+
+**Added columns**, all from data the session already returns: the **signed mean** of both imbalances
+(§53 printed only the median of the absolute value, which is why its sign had to be inferred from a
+regression rather than read off), the per-arm slope, and the intercept with its SE.
+
+**PRE-REGISTERED PREDICTIONS, EACH WITH A DIRECTION:**
+
+1. **`T1.ORACLE.D`'s intercept is within 2 SE of zero.** A pinned, label-destroyed arm has nothing to
+   express at equal occupancy. **This is a self-test, not a result** — a non-zero value means the
+   adjustment is mis-specified and §53b may not be quoted.
+2. **`T1.RET.D`'s intercept is within 2 SE of zero** *if* the control's whole −0.0947 displacement is
+   the occupancy confound. **A surviving negative means the confound is partial** and a second term is
+   needed; the magnitude that survives is the size of that second term and is reported as such.
+3. **`T1.RET`'s adjusted intercept is the lesson estimate**, and §53 already bracketed it between
+   **+0.046 (21% of the pinned ceiling)** and **+0.114 (66%, matching write purity)**. The two
+   readings differ by 3× and this number chooses between them. A value near 0.00 says the derived
+   index's bias-table route carries nothing; a value near +0.11 says it carries the lesson at the
+   strength its write purity predicts and a near-equal artefact was masking it.
+
+**DISCLOSED BEFORE THE RUN, AND IT BOUNDS WHAT THIS CAN CLAIM:** the imbalance is a **measured
+covariate, not a randomised one**. This is a covariate adjustment, so it removes a confound under a
+linearity assumption it cannot itself verify, and it is not a causal estimate. It is reported as an
+adjusted reading beside the raw one, never instead of it. The raw primary stays `T1.RET`'s slot term
+against zero, **+0.0081 ± 0.0170**, which needs no model at all.
+
+**Also disclosed:** the need for this column was established *by* §53's regression, so §53b is a
+second look at the same data. The predictions above are fixed before the run, and the arms, budgets,
+seeds and drop rules are unchanged — but it is a second look, and a reader should weigh it as one.

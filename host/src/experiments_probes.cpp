@@ -11765,6 +11765,40 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     else if ((dg > 0.0) != (c.dimb > 0.0)) ++R.oppose;
     else ++R.agree;
   }
+  // §53b. ORDINARY LEAST SQUARES, returning the INTERCEPT AT x = 0 and its SE
+  // alongside the slope. §53 measured the confound's slope at +5.2 SE and found
+  // the two derived arms carrying different amounts of it, so it does not cancel
+  // in their difference and has to be removed within each arm instead.
+  //
+  // DISCLOSED: the regressor is a MEASURED covariate, not a randomised one, so
+  // this is a covariate adjustment under a linearity assumption it cannot check.
+  // It is printed beside the raw slot term, never instead of it.
+  auto ols = [](const std::vector<double>& x, const std::vector<double>& y, double* slope,
+                double* se_slope, double* icept, double* se_icept) {
+    *slope = *se_slope = *icept = *se_icept = 0.0;
+    const size_t n = std::min(x.size(), y.size());
+    if (n < 4) return;
+    double mx = 0, my = 0;
+    for (size_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+    mx /= double(n); my /= double(n);
+    double sxx = 0, sxy = 0;
+    for (size_t i = 0; i < n; ++i) {
+      sxx += (x[i] - mx) * (x[i] - mx);
+      sxy += (x[i] - mx) * (y[i] - my);
+    }
+    if (sxx < 1e-12) return;
+    *slope = sxy / sxx;
+    *icept = my - *slope * mx;
+    double sres = 0;
+    for (size_t i = 0; i < n; ++i) {
+      const double e = y[i] - (*icept + *slope * x[i]);
+      sres += e * e;
+    }
+    const double s2 = sres / double(n - 2);
+    *se_slope = std::sqrt(s2 / sxx);
+    // SE of the fitted value at x = 0, which is what the intercept IS here.
+    *se_icept = std::sqrt(s2 * (1.0 / double(n) + mx * mx / sxx));
+  };
   auto mean_se = [](const std::vector<double>& v, double* se) {
     if (v.empty()) { *se = 0.0; return 0.0; }
     double m = 0.0;
@@ -11987,6 +12021,122 @@ bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               ms, mg, 100.0 * share, slope, se_slope,
               se_slope > 0 ? slope / se_slope : 0.0, oslope, ose,
               ose > 0 ? oslope / ose : 0.0);
+
+  // --- §53b: the slot term read at ZERO imbalance ---------------------------
+  std::printf("\n  §53b -- THE SLOT TERM AT ZERO IMBALANCE. §53 measured the confound's slope\n"
+              "  at +5.2 SE and the two derived arms carrying DIFFERENT amounts of it, so it\n"
+              "  does not cancel in their difference. Each arm's per-creature slot term is\n"
+              "  regressed on its SIGNED occupancy imbalance and read at zero. The signed\n"
+              "  means are printed because §53 printed only medians of |.| and had to infer\n"
+              "  the sign from a regression instead of reading it off.\n"
+              "  DISCLOSED: a MEASURED covariate, not a randomised one -- an adjustment under\n"
+              "  a linearity assumption it cannot verify, printed BESIDE the raw term.\n");
+  auto sd_of = [](const std::vector<double>& v) {
+    if (v.size() < 2) return 0.0;
+    double m = 0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    double s = 0;
+    for (double x : v) s += (x - m) * (x - m);
+    return std::sqrt(s / double(v.size() - 1));
+  };
+  // AN ADJUSTMENT NEEDS THE REGRESSOR TO VARY, AND ON A PINNED ARM IT DOES NOT.
+  // The smoke read T1.ORACLE.D's occupancy imbalance as a CONSTANT 0.0000, which
+  // makes its slope meaningless (+3.94 +- 1.51) and collapses its intercept onto
+  // the raw mean -- so the self-test I pre-registered on that arm CANNOT FAIL.
+  // Same defect as T-A on an empty set, caught the same way. The identification
+  // floor is printed and an unidentified arm prints no slope at all.
+  constexpr double kRegSd = 0.02;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    double mo = 0, md = 0;
+    for (double v : R.oimbs) mo += v;
+    for (double v : R.dimbs) md += v;
+    if (!R.oimbs.empty()) { mo /= double(R.oimbs.size()); md /= double(R.dimbs.size()); }
+    double sl = 0, sesl = 0, ic = 0, seic = 0, raw_se = 0;
+    ols(R.oimbs, R.slots_, &sl, &sesl, &ic, &seic);
+    const double raw = mean_se(R.slots_, &raw_se);
+    const double rsd = sd_of(R.oimbs);
+    if (rsd < kRegSd) {
+      std::printf("    %-12s mean occ imb %+.4f (SD %.4f)  mean dose imb %+.4f | RAW slot "
+                  "%+.4f +- %.4f | *** ADJUSTMENT NOT IDENTIFIED: the regressor is constant\n",
+                  arms[a].name, mo, rsd, md, raw, raw_se);
+    } else {
+      std::printf("    %-12s mean occ imb %+.4f (SD %.4f)  mean dose imb %+.4f | RAW slot "
+                  "%+.4f +- %.4f | slope %+.4f +- %.4f  ADJUSTED %+.4f +- %.4f (%.1f SE)\n",
+                  arms[a].name, mo, rsd, md, raw, raw_se, sl, sesl, ic, seic,
+                  seic > 0 ? ic / seic : 0.0);
+    }
+  }
+  {
+    const double sd_od = sd_of(rows[2].oimbs);
+    std::printf("\n    PREDICTION 1 IS VOID BY CONSTRUCTION, AND THAT IS MY ERROR, NOT A\n"
+                "    RESULT. I nominated T1.ORACLE.D as the adjustment's self-test, but a\n"
+                "    PINNED arm has occupancy imbalance SD %.4f -- the regressor does not\n"
+                "    vary, so its intercept is just its raw mean and the test cannot fail.\n"
+                "    The self-test role moves to the LINEARITY check below, which runs on an\n"
+                "    arm that does vary.\n", sd_od);
+    // THE MIS-SPECIFICATION TEST THAT CAN ACTUALLY FAIL: split the arm under test
+    // at its median regressor value and fit both halves. A linear confound gives
+    // the same slope in both; a curved one does not, and then reading an
+    // intercept 0.3 units outside the data is not supported.
+    const Row& RD = rows[1];
+    std::vector<double> xs = RD.oimbs;
+    std::sort(xs.begin(), xs.end());
+    bool lin_ok = false, lin_run = false;
+    double s_lo = 0, e_lo = 0, s_hi = 0, e_hi = 0;
+    if (xs.size() >= 10 && sd_of(RD.oimbs) >= kRegSd) {
+      const double med = xs[xs.size() / 2];
+      std::vector<double> xlo, ylo, xhi, yhi;
+      for (size_t i = 0; i < RD.oimbs.size(); ++i) {
+        if (RD.oimbs[i] <= med) { xlo.push_back(RD.oimbs[i]); ylo.push_back(RD.slots_[i]); }
+        else { xhi.push_back(RD.oimbs[i]); yhi.push_back(RD.slots_[i]); }
+      }
+      double ic = 0, se = 0;
+      ols(xlo, ylo, &s_lo, &e_lo, &ic, &se);
+      ols(xhi, yhi, &s_hi, &e_hi, &ic, &se);
+      if (e_lo > 0 && e_hi > 0) {
+        lin_run = true;
+        const double d = std::fabs(s_lo - s_hi), sd = std::sqrt(e_lo * e_lo + e_hi * e_hi);
+        lin_ok = d <= 2.0 * sd;
+        std::printf("\n    THE LINEARITY CHECK, WHICH CAN FAIL: T1.RET.D split at its median\n"
+                    "    imbalance gives slopes %+.4f +- %.4f (low) and %+.4f +- %.4f (high),\n"
+                    "    differing by %.1f SE -- %s\n",
+                    s_lo, e_lo, s_hi, e_hi, sd > 0 ? d / sd : 0.0,
+                    lin_ok ? "CONSISTENT: a linear adjustment is supported"
+                           : "*** INCONSISTENT: the confound is CURVED and an intercept read "
+                             "outside the data is NOT supported. §53b stops here.");
+      }
+    }
+    if (!lin_run) {
+      std::printf("\n    THE LINEARITY CHECK DID NOT RUN (too few creatures or no variation),\n"
+                  "    so §53b has NO working self-test and its two readings below are\n"
+                  "    UNGUARDED. Treat them as suggestive only.\n");
+    }
+    if (!lin_run || lin_ok) {
+      double sl = 0, sesl = 0, ic_rd = 0, se_rd = 0, ic_r = 0, se_r = 0, ic_o = 0, se_o = 0;
+      ols(rows[1].oimbs, rows[1].slots_, &sl, &sesl, &ic_rd, &se_rd);
+      ols(rows[0].oimbs, rows[0].slots_, &sl, &sesl, &ic_r, &se_r);
+      ols(rows[3].oimbs, rows[3].slots_, &sl, &sesl, &ic_o, &se_o);
+      const bool rd_zero = se_rd > 0 && std::fabs(ic_rd) <= 2.0 * se_rd;
+      std::printf("\n    PREDICTION 2: T1.RET.D's displacement at zero imbalance %+.4f +- %.4f"
+                  " -- %s\n",
+                  ic_rd, se_rd,
+                  rd_zero ? "WITHIN 2 SE OF ZERO: the control's drift IS the occupancy confound"
+                          : "STILL NON-ZERO: the confound is PARTIAL and this is the size of"
+                            " what survives");
+      // The pinned ceiling is also unidentified under adjustment, so it is quoted
+      // RAW and said to be raw. Dividing an adjusted number by an unadjusted one
+      // is a ratio of two different quantities and the label has to say so.
+      double raw_o_se = 0;
+      const double raw_o = mean_se(rows[3].slots_, &raw_o_se);
+      std::printf("    PREDICTION 3: T1.RET's lesson estimate %+.4f +- %.4f, against §53's\n"
+                  "    bracket of +0.046 (21%% of the ceiling) and +0.114 (66%%, write purity).\n"
+                  "    The pinned ceiling is UNADJUSTED (its regressor is constant) at %+.4f,\n"
+                  "    so this is %.0f%% of it -- an ADJUSTED number over a RAW one.\n",
+                  ic_r, se_r, raw_o, std::fabs(raw_o) > 1e-9 ? 100.0 * ic_r / raw_o : 0.0);
+    }
+  }
 
   // --- the verdict ---------------------------------------------------------
   //
