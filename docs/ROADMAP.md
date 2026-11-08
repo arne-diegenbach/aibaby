@@ -9388,3 +9388,115 @@ as 2–3 SE and not more.
 **Disclosed:** pairing by creature is *not* assumed to help. §52's paired SE for the pinned contrast
 (0.0493) was larger than its per-arm SE (0.0328), so these arms are not positively correlated across
 seeds; both the paired and unpaired contrasts are printed and the unpaired one is the primary.
+
+### §54 RESULT: AVERAGING HOLDS, THE OVERWRITE LEAD IS REFUTED — AND THE DERIVED INDEX HAS A SECOND DEFECT, NOW QUANTIFIED
+
+`results/n54-writerate-900k.log`, 192 sessions, **40m8s**. Clause 5 fired branch **(3) AVERAGING
+HOLDS, AND THE LEAD IS REFUTED** — the branch pre-registered as the one that kills it.
+
+#### THE SELF-TESTS, BOTH BEFORE ANY READING
+
+**Clause 2, the dose.** The realised wrong-write rate matches its nominal value to within **0.0005 to
+0.0072** at all six levels. The knob does exactly what it claims.
+
+**Clause 1, the ceiling.** `w = 0` reads **+0.1772 ± 0.0292** against §52's **+0.1824 ± 0.0263** — a
+cross-driver reproduction of the pinned ceiling from a third instrument.
+
+**And bit-identity, proved not asserted:** re-running `slotdose` at 450k on the §54 binary reproduces
+`results/n53b-450k.log` with **127 of 127 content lines identical** (`results/n54-bitid-450k.log`).
+`pin_mode = 3` left §53's arms untouched. *(The first diff printed `*** DIVERGED ***` over a single
+blank line — the one preceding the `real/user/sys` block my filter stripped from one side only. The
+same capture artefact as §51's. The check is the content lines, not the raw diff.)*
+
+#### THE TOLERANCE CURVE
+
+| `w` | expressed slot term | averaging wants `(1−2w)·ceiling` |
+|---|---|---|
+| 0.000 | **+0.1772 ± 0.0292** (6.1 SE) | +0.1772 |
+| 0.020 | +0.1101 ± 0.0337 | +0.1701 |
+| 0.050 | +0.1309 ± 0.0226 | +0.1595 |
+| 0.085 | +0.1049 ± 0.0321 | +0.1471 |
+| **0.171** | **+0.1046 ± 0.0241** (4.3 SE) | **+0.1166** |
+| 0.340 | +0.0695 ± 0.0408 | +0.0567 |
+
+> **`w½ ≈ 0.248` against averaging's parameter-free 0.250.** And at the derived index's *measured*
+> rate, expression is **4.3 SE above zero** and **0.5 SE from the averaging line**. Overwrite wanted
+> ~0.00 and is inconsistent.
+
+**`w½`'s precision should not be oversold.** The interior points are separated by less than their
+SEs and the curve is not monotone (+0.1101 at w = 0.020 sits below +0.1309 at w = 0.050), so `w½` is
+bracketed only between 0.171 and 0.340. **The load-bearing number is the operating point, which needs
+no interpolation**: 4.3 SE above zero.
+
+**So `bias_ctx_` integrates conflicting trial-length lessons like an accumulator, not like an
+overwriting store.** And **§54 does not contradict `retention`**, which is worth stating precisely
+because it could easily be read that way: `retain` measured a **sequential** conflict — teach one
+sound to criterion, then teach a conflicting one, and the first is erased (0.22 mean, 0.03 and 0.06 on
+two seeds). §54 measured **interleaved** conflicts, alternating within a single session. **A clamped
+accumulator does both without contradiction**: interleaved opposite increments average out, while a
+long second block walks the same store to the opposite clamp. The two results bound the same mechanism
+at two timescales, and only the interleaved one bears on §53's null.
+
+**Wrong writes at the derived index's own rate are NOT sufficient to explain §53's null.**
+
+#### THE SECOND DEFECT, AND IT IS THE WHOLE EFFECT
+
+Same budget, same ceiling, same teacher, same wrong-write rate — one with a perfect index corrupted to
+`w = 0.171`, the other the retina's own index measured at `w = 0.171`:
+
+| | expressed |
+|---|---|
+| perfect index, corrupted to `w = 0.171` | **+0.1046 ± 0.0241** |
+| §53's derived index, raw | +0.0081 ± 0.0170 |
+| §53's derived index, adjusted | −0.0053 ± 0.0135 |
+
+> **The deficit is +0.0965 ± 0.0295 (3.3 SE) against the raw figure and +0.1099 ± 0.0276 (4.0 SE)
+> against the adjusted one.** The derived index performs significantly *worse* than its own
+> wrong-write rate accounts for. §53 said its route expresses nothing; §54 says that is **not**
+> because of how often it writes to the wrong slot.
+
+#### AND A HOLE IN MY OWN PRE-REGISTRATION, WHICH IS WHERE THE NEXT MEASUREMENT COMES FROM
+
+I justified corrupting **per trial** rather than per interval by citing §53's `present 1.0000` as
+evidence the derived index is "stable within a trial". **`ctx_present_frac` measures LIVENESS — is any
+slice driven this tick — and says nothing about whether the slot is the SAME one tick to tick.** That
+is `liveness-is-not-dose` applied to the wrong quantity, in my own pre-registration, after writing
+that rule into memory.
+
+It matters precisely here, because **run length is the one dimension the two models differ on** — I
+wrote that sentence in the pre-registration and then chose the run length from a number that does not
+measure it:
+
+* **trial-length runs** (~90 consecutive wrong lessons, what §54 imposed) → averaging-like, **which is
+  what §54 measured**;
+* **interval-length runs** (isolated wrong lessons) → a different regime entirely, and untested.
+
+`mix_A = 0.1538` is computed over *lessons*, so a within-trial flicker and per-trial blocks produce
+**identical mixture columns with completely different run lengths.** The derived index's switch rate
+within a window has never been measured.
+
+**So §54's scope is exact: wrong writes delivered in trial-length blocks, at the derived rate, do not
+explain §53's null. Wrong writes delivered in short runs remain open**, and they are the leading
+candidate for the 3.3 SE deficit above.
+
+**The measurement is nearly free and the data is already collected.** `ctx_hist` is accumulated per
+window and both `ctx_slot` and `teach_slot` take only its **argmax** — the histogram's *concentration*
+has been discarded every time. The modal slot's share of live ticks per window is a direct
+within-window stability measure, available from the session as it stands. **§55 reads it before
+imposing anything.**
+
+### §54's VERIFY GATE, ALL FOUR KEYS — CHECKED THE NEW WAY
+
+`results/n54-verify.log`, exit 0: `verify PASS`, `hash ad96f882becbee92 as recorded`, `pinned hash
+PASS`, `experiments 24 as expected, 0 not`. The count stays **24** because `writerate` is
+`Tier::kLong` / `Expect::kRead` and `verify` runs the fast tier only — the same reason `slotdose`,
+`wordruler`, `objword`, `objname` and `visprobe` never appeared in it.
+
+**And this is the first gate run with §53's correction**: each key was counted with `grep -c` against
+an expected value of **one** rather than tested with `grep -q`, because the defect this guards against
+is two interleaved runs *duplicating* every marker, not a marker going missing. `verify PASS` 1,
+`pinned hash PASS` 1, `as expected, 0 not` 1.
+
+The pinned hash is unmoved because §54's only shared-code change is one extra `else if` arm on the
+experiment-only context pin, plus a new RNG stream drawn from **only** when `pin_mode == 3` — and that
+was verified by re-running §53 and diffing, not by reasoning about it.
