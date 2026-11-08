@@ -8822,3 +8822,196 @@ correspondence broken downstream, not another hour of the same six arms.
 `Expect::kRead` like `objword`, `objname` and `visprobe` before it, and the pinned hash is unmoved
 because §52 added **no shared code at all** — `pin_mode` and `pairing` already composed into the one
 arm it needed.
+
+### §53 PRE-REGISTRATION: WHY THE CONTROL MOVED — THE PRIMARY IS ALGEBRAICALLY DECOMPOSABLE
+
+§52 established the ceiling and left exactly one thing in the way of a clean claim about the
+creature's own index: **`T1.RET.D` drifts negative and the drift grows with budget** — −0.0064,
+−0.0691, −0.0868 at 150k/450k/900k, plus §51's −0.0678 at 1.8M. **Four budgets, and 25 of 36
+creatures negative at 900k** (binomial p = 0.0057 against a coin), so it is a consistent
+displacement and not a spread. A label-destroyed arm should sit at zero, and `T1.ORACLE.D` — the
+same destroyed label with the index *pinned* — does: −0.022, −0.010, +0.021.
+
+The obvious next move is another arm. **It is the wrong move, and the reason is §51's lesson at full
+cost: the estimator was never calibrated.** This primary is not an opaque score. It decomposes
+exactly, into one term the bias table can explain and one it cannot, and the decomposition is
+measurable on the arms already built. **§53 measures the estimator. The arm, if one is still needed,
+is designed afterwards from what it says.**
+
+#### THE ALGEBRA, WRITTEN DOWN BEFORE ANYTHING IS BUILT
+
+Per probe, the creature is shown object `o` ∈ {0,1} and produces a posture `p`. Define the posture's
+**word preference**
+
+> `G(p) = perr(p, kWords[1]) − perr(p, kWords[0])`, positive meaning the posture sits nearer /a/ "ball".
+
+`G` is a property of the posture alone and does not mention the object. The primary's per-probe
+quantity `perr(other) − perr(own)` is `+G` when object 0 is shown and `−G` when object 1 is, so with
+`σ₀ = +1`, `σ₁ = −1` the measured gap over `N` probes is
+
+> `gap = (1/N) · Σ_{o,s} n_{o,s} · σ_o · Ḡ_{o,s}`
+
+where `n_{o,s}` is the probe count in cell (object `o`, modal slot `s`) and `Ḡ_{o,s}` that cell's
+mean `G`. Writing `Ḡ_s` for slot `s`'s mean over all its probes, this splits **exactly**:
+
+> `gap = SLOT TERM + OBJECT RESIDUAL`
+> `SLOT TERM      = (1/N) · Σ_s (n_{0,s} − n_{1,s}) · Ḡ_s`
+> `OBJECT RESIDUAL = (1/N) · Σ_{o,s} n_{o,s} · σ_o · (Ḡ_{o,s} − Ḡ_s)`
+
+This is an identity, not a model. What it buys:
+
+* **The SLOT TERM is the only part a per-context bias table can produce.** It is non-zero only when
+  the slot counts differ between the objects — only when the index carries the object — and it is
+  then proportional to the **difference in word preference between the two slots**.
+* **The OBJECT RESIDUAL is the same slot producing a different posture depending on what is in
+  view.** `bias_ctx_` is the only per-context store in the kernel, so a two-slot table predicts this
+  is zero. If it is large, the lesson is living somewhere other than the bias table —
+  `storage-vs-expression` is the archive's name for that distinction, and it would be a finding
+  rather than a nuisance.
+* **With a pinned index the cells are exactly diagonal, so `OBJECT RESIDUAL` must be EXACTLY 0.000
+  and `SLOT TERM` must equal the measured gap to the last digit.** That is a self-test of the
+  bookkeeping, not a result, and it is the reason `T1.ORACLE` is in the arm table at all
+  (`plausible-wrong-number`: the dangerous defect is the number that looks right).
+
+#### THE HYPOTHESIS, AND ITS SIGN IS DERIVED
+
+Label slot **A** = the slot object 0 most often occupies, **B** the other. Then `n_{0,A} − n_{1,A} >
+0` and `n_{0,B} − n_{1,B} < 0`, so `sign(SLOT TERM) = sign(Ḡ_A − Ḡ_B)`. **The negative drift
+therefore says: the slot object 0 occupies sits nearer /i/ than the slot object 1 occupies.** In the
+arm where the taught word is a coin. That needs explaining and the symmetry argument does not supply
+it, so here is one that makes a signed, falsifiable prediction.
+
+**H — THE UNEQUAL-DOSE ARTEFACT.** Under a drawn word each slot receives a 50/50 mixture of both
+words' lessons, so both are pulled from the untaught posture toward the *same* compromise. The two
+slots are exchangeable — and therefore `E[Ḡ_A − Ḡ_B] = 0` — **only if they are written equally
+often.** They are not: §52 measured probe occupancy at **0.5347** against 0.5000 for balance, a
+~53/47 split, because MacQueen clustering under a conscience does not partition a stimulus set
+evenly. A slot written more often is pulled **further**.
+
+And the pull has a known direction, because **this creature does not start out between the two
+words.** At the echo postures §51 measured (630/1691 Hz), `perr` to "ball" is 0.5734 and to "cube"
+1.0684, so
+
+> **`G(untaught) = +0.4950` out of an available 1.6417 — the untaught voice already sits 30% of the
+> way toward /a/ "ball".**
+
+This asymmetry has been in every section since §49 and has never been quoted. Being pulled toward a
+50/50 compromise therefore **lowers** `G`. Hence H's prediction:
+
+> **`sign(Ḡ_A − Ḡ_B) = −sign(dose_A − dose_B)`**, i.e. the more-written slot has the lower word
+> preference, giving a negative `SLOT TERM` whose magnitude grows with the number of lessons — which
+> is the budget dependence. **`T1.ORACLE.D` is immune because the pin makes the two doses exactly
+> equal and the cells exactly diagonal**, which is the dissociation §52 measured and could not
+> explain.
+
+#### WHAT IS MEASURED — AND THE ORDER IS PART OF THE PRE-REGISTRATION
+
+Instrumentation only; no new mechanism, no new genome field, no core change (`active_context()` and
+`context_present()` already exist). Per creature:
+
+1. the four cells `n_{o,s}` and `Ḡ_{o,s}` at the silent probes, hence `gap`, `SLOT TERM`,
+   `OBJECT RESIDUAL`, `Ḡ_A`, `Ḡ_B`;
+2. **the teaching dose per slot** — the live slot at each firing of the caregiver, so `dose_A` and
+   `dose_B` are counted where the credit is actually delivered rather than inferred from the probes;
+3. **the taught word per slot**, which tests H's premise directly: the mixture must read 50/50 per
+   slot in the drawn arms and ~pure in the paired arms;
+4. `Ḡ` at the untaught reference, so the +0.4950 above is re-measured in the run rather than carried
+   in from §51.
+
+**The three tests, in this order:**
+
+* **T-A, the bookkeeping self-test.** `T1.ORACLE`'s `OBJECT RESIDUAL` is 0.000 and its `SLOT TERM`
+  equals its measured gap. **If this fails nothing else in §53 may be quoted**, whatever it says.
+* **T-B, the primary: the paired sign test.** In `T1.RET.D`, per creature, does `sign(Ḡ_A − Ḡ_B)`
+  oppose `sign(dose_A − dose_B)`? Bar **≥26 of 36 opposing** (one-sided binomial p = 0.0057); **≥26
+  agreeing refutes H with its own sign**; anything between is undecided. No SD is assumed and the
+  test is within-arm, so no between-arm confound reaches it.
+* **T-C, the share.** Does the dose route account for **≥50%** of the mean gap? Reported as the mean
+  `SLOT TERM` against the mean measured gap, plus the per-creature regression slope of `gap` on
+  `(dose_A − dose_B)`.
+
+#### REFUSAL CLAUSES — FOUR-WAY, BECAUSE THE SIGN IS CONSTRAINED BUT THE SHARE IS NOT
+
+1. **T-A fails** → `§53 VOID — THE BOOKKEEPING IS WRONG.` Nothing is quoted; the identity is
+   arithmetic and a disagreement is my error, not the creature's.
+2. **T-B ≥26 opposing and T-C ≥50%** → `THE CONTROL'S DRIFT IS AN UNEQUAL-DOSE ARTEFACT, EXPLAINED.`
+   §52's pre-registered primary is inflated by it; the honest statement of the derived arm is its own
+   gap against zero, and the dose term's size says how much of `T1.RET`'s +0.0233 was *suppressed*
+   by the same term. **That cuts against §52's correction, which is the point of deriving the sign
+   before looking.**
+3. **T-B ≥26 opposing but T-C <50%** → `THE DOSE ROUTE IS REAL AND PARTIAL.` Half the displacement is
+   still unaccounted for and the next suspect is named, not invented: the caregiver's **shared**
+   per-word baseline `t1_base[word]`, which couples the two slots through one EMA.
+4. **T-B ≥26 agreeing, or undecided** → `H REFUTED` / `NO VERDICT ON H.` In either case the
+   decomposition still stands on its own: the split of §52's primary into a slot-mediated term and an
+   object residual is reported, and **if the OBJECT RESIDUAL is large the finding is that the lesson
+   is not in the bias table**, which redirects the whole line.
+
+#### VACUITY, AND THE GUARD IS ASKED OF EVERY ARM
+
+* A creature using ≠2 live slots is dropped from the cell columns and the count is **disclosed**;
+  §52 read `slots 2 (ask 2)` and `present 1.0000` on every derived arm, so this should drop none.
+* **The `OBJECT RESIDUAL` is unidentified unless the off-diagonal cells are populated.** Each of the
+  four cells must hold ≥5% of a creature's probes or that creature is dropped from the residual
+  column only. §52's derived index excess was +0.3201 against a pinned +0.4660, so off-diagonal
+  probes exist by construction — but it is measured, not assumed.
+* Clause 0's dose, index-excess and probe-silence gates are carried over unchanged, and
+  `vacuity-gate-cannot-guard-a-rejection` applies: **every gate is read on `T1.ORACLE.D` too**, the
+  arm whose null is load-bearing.
+
+#### BUDGET, POWER AND WHAT WOULD MAKE THIS UNDERPOWERED
+
+`slotdose`, a **new driver**, so §51's and §52's logs stay byte-reproducible. Arms: `T1.RET` (36),
+`T1.RET.D` (36), `T1.ORACLE.D` (36), `T1.ORACLE` (12, the self-test) = **120 sessions**, at **450k and
+900k** — the two budgets where the drift is −0.0691 and −0.0868, so the effect under test is at its
+largest and the budget axis doubles as a dose axis for H's "the pull grows" clause.
+
+**The primary needs no variance estimate**: T-B is a sign test on 36 paired comparisons. What *could*
+make it underpowered is a dose imbalance too small to resolve — if `|dose_A − dose_B|` is under a few
+percent for most creatures the signs are coin flips whatever the mechanism. **That is a measured
+quantity and it is read before T-B**, with the median `|dose_A − dose_B|` printed; under 2% on more
+than half the creatures the arm is declared **UNDERPOWERED, NOT NULL** (`liveness-is-not-dose`).
+
+**Disclosed before the run:** the dose is counted at the caregiver's firing, while the kernel's
+perturbation write consumes that reward one plasticity interval (10 ticks) later. Within a trial the
+live slot is constant — §52 read `present 1.0000` — so the lag mis-attributes only writes that
+straddle an episode boundary. It is a known, bounded, one-interval error in the dose column and not
+in the probe cells.
+
+### §53 ADDENDUM, WRITTEN FROM THE SMOKE AND BEFORE EITHER REAL BUDGET RETURNED
+
+The 150k smoke (`results/n53-smoke-150k.log`) passed T-A for real — identity 8.3e-17, `T1.ORACLE`'s
+residual **exactly** 0.0000, and both pinned arms' `SLOT` equal to their `gap` to the last digit —
+and it reproduced §52's archive on four independent columns **including the standard errors**:
+`T1.RET` −0.0002 ± 0.0073, `T1.ORACLE` +0.1049 ± 0.0312, `T1.ORACLE.D` −0.0220, occupancy 0.6875 and
+0.6847. The instrument adds only unprinted accumulators and the session did not move. A
+`REPRODUCTION COLUMN` was then added so the log carries that proof itself rather than my checking it
+against the archive by hand.
+
+It also raised a quantitative problem with H, and the honest place to put it is **before** the
+result:
+
+> **THE DOSE IMBALANCE SHRINKS WITH BUDGET WHILE THE DRIFT GROWS.** The smoke measures `T1.RET.D`'s
+> median `|Δdose|` at **0.383** with probe occupancy **0.6847** at 150k, where §52 measured occupancy
+> **0.5347** at 900k — the conscience equalises the partition as the budget grows. But the drift runs
+> the other way: −0.0064 at 150k, −0.0868 at 900k. **H's sign can pass while H's magnitude fails.**
+
+So a fifth clause, pre-registered now:
+
+* **T-D, THE COEFFICIENT.** H says `slot term ≈ k · Δdose · pull`. Fitting `k` at each budget, the two
+  must agree. The smoke gives slot term −0.0116 at `Δdose` 0.383. **If the implied `pull` has to grow
+  by more than ~10× across a 6× budget to reconcile 450k and 900k, H is quantitatively inadequate
+  even with its sign test passing**, and the verdict must say so rather than claiming the artefact is
+  explained. `bias_ctx_` is a clamped accumulator, so a random walk affords √t ≈ 2.4× and a drift
+  affords 6×; the smoke's arithmetic projects a requirement near 40×, which is outside both.
+
+And the smoke measured something no earlier section had, which may matter more than H:
+
+> **THE DERIVED INDEX BARELY SEPARATES THE LESSONS.** In the paired arm `T1.RET`, slot A receives
+> **46.9%** of its lessons teaching /i/ and slot B **55.3%** — against a pinned index's 0% and 100%.
+> The condition is almost absent *at the moment the bias table is written*, which is a different and
+> earlier failure than a noisy index at probe time. §52 could not see this: it measured the index on
+> the probes, where `excess` read +0.3201. **If the mixture is still near 50/50 at 900k, `T1.RET`'s
+> weak +0.0233 is explained without H at all** — the lessons never got sorted into slots, so there
+> was nothing for the probe to read back. The mixture column is printed for every arm and this
+> reading is now pre-registered as a finding in its own right.

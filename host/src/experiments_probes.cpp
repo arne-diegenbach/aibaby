@@ -985,6 +985,42 @@ struct G3Probe {
   double echo_f1[2] = {0.0, 0.0}, echo_f2[2] = {0.0, 0.0};
   double echo_perr_gap = 0.0, axis_f12 = 0.0;
   bool echo_perr_ok = false;
+  // §53. THE PRIMARY, DECOMPOSED. The formant gap is not an opaque score: it
+  // splits EXACTLY into the part a per-context bias table can produce and the
+  // part it cannot, and §52's unexplained control needs that split.
+  //
+  // Per probe define the posture's WORD PREFERENCE, a property of the posture
+  // alone that does not mention the object:
+  //
+  //   G(p) = perr(p, kWords[1]) - perr(p, kWords[0])      positive = nearer /a/
+  //
+  // The primary's per-probe quantity perr(other) - perr(own) is +G when object 0
+  // is shown and -G when object 1 is, so with sigma_0 = +1, sigma_1 = -1 the gap
+  // over N probes is (1/N) sum n_os sigma_o Gbar_os, and with Gbar_s the slot's
+  // mean over all its probes that is identically
+  //
+  //   gap = SLOT TERM            (1/N) sum_s (n_0s - n_1s) Gbar_s
+  //       + OBJECT RESIDUAL      (1/N) sum_os n_os sigma_o (Gbar_os - Gbar_s)
+  //
+  // The slot term is non-zero only when the index carries the object, and is
+  // then proportional to the DIFFERENCE IN WORD PREFERENCE BETWEEN THE SLOTS.
+  // The residual is the same slot producing a different posture depending on
+  // what is in view -- which `bias_ctx_`, the kernel's only per-context store,
+  // cannot do. WITH A PINNED INDEX THE CELLS ARE DIAGONAL AND THE RESIDUAL MUST
+  // BE EXACTLY ZERO: that is the bookkeeping self-test, not a result.
+  double cell_g[2][aibaby::kMaxContextSlots] = {};
+  uint32_t cell_n[2][aibaby::kMaxContextSlots] = {};
+  // THE TEACHING DOSE PER SLOT, counted where the credit is actually delivered
+  // rather than inferred from the probes, and split by the word taught so H's
+  // premise is tested instead of assumed: the mixture must read 50/50 per slot
+  // in a drawn arm and ~pure in a paired one.
+  //
+  // Disclosed: counted at the caregiver's firing, while the kernel's
+  // perturbation write consumes that reward one plasticity interval later. The
+  // live slot is constant within a trial (§52 read `present 1.0000`), so the lag
+  // mis-attributes only writes straddling an episode boundary.
+  double dose_slot[aibaby::kMaxContextSlots] = {};
+  double dose_word[2][aibaby::kMaxContextSlots] = {};
   // And at the larynx, which is the module G3 is ultimately about. Missing
   // from this table until 2026-08-15: `m3probe` can say whether the object
   // reaches vocal with learning *off*, and nothing said whether it survives a
@@ -1371,6 +1407,17 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
             s.brain.praise(value);
             out.t_fired += 1.0;
             if (value > 0.0f) out.t_praise += 1.0;
+            // §53. WHERE THE CREDIT LANDS. Read before `praise` can matter, from
+            // the same accessors §49's index columns use. An unprinted
+            // accumulator touching no random stream, so §51's and §52's logs
+            // cannot move by it.
+            if (s.brain.network().context_present()) {
+              const uint32_t cs = s.brain.network().active_context();
+              if (cs < aibaby::kMaxContextSlots) {
+                out.dose_slot[cs] += 1.0;
+                out.dose_word[word & 1][cs] += 1.0;
+              }
+            }
             // Folded into the SAME dose accumulator T0 uses, so clause 0 can put
             // the two teachers in one column. |value| rather than value, because
             // what this measures is how hard the reward channel is being driven
@@ -1664,6 +1711,12 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     // creature should be moving toward and "other" is the one it should not.
     // A probe with no voiced frame contributes to neither rather than counting
     // as a failure, for `vocallearn`'s reason.
+    // §53. Hoisted out of the block below so the SAME probe's word preference
+    // and modal slot can be paired into one cell. `probe_object == 0` makes
+    // perr(other) - perr(own) read +G and object 1 makes it -G, which is the
+    // sigma_o of the decomposition.
+    double g_probe = 0.0;
+    bool have_g = false;
     if (probe_fn > 0) {
       const double f1 = probe_f1 / double(probe_fn), f2 = probe_f2 / double(probe_fn);
       const double e_own = formant_error(f1, f2, kWords[probe_object]);
@@ -1672,6 +1725,8 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         out.perr_own += e_own;
         out.perr_other += e_oth;
         ++out.perr_n;
+        g_probe = probe_object == 0 ? e_oth - e_own : e_own - e_oth;
+        have_g = true;
       }
     }
     // §49: the modal slice over this probe's scored window, paired with the
@@ -1689,6 +1744,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       out.ctx_label.push_back(probe_object);
       out.ctx_slot.push_back(any ? int(best) : -1);
+      // §53's cells. A probe whose index never went live, or that produced no
+      // voiced frame, enters NEITHER -- the same drop rule the columns above
+      // use, for `vocallearn`'s reason: a silent probe is missing data and not a
+      // posture at maximum error.
+      if (any && have_g && probe_object >= 0 && probe_object < 2) {
+        out.cell_g[probe_object][best] += g_probe;
+        ++out.cell_n[probe_object][best];
+      }
     }
     central_x.push_back(last_central);
     vision_x.push_back(last_vision);
@@ -11366,6 +11429,475 @@ bool run_wordruler(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   }
   if (!dose_ok) {
     std::printf("\n  *** CLAUSE 0 REFUSED AN ARM's DOSE. Read every branch above against it.\n");
+  }
+  return true;
+}
+
+// --- §53: WHY THE CONTROL MOVED -- THE PRIMARY, DECOMPOSED --------------------
+//
+// §52 left exactly one thing in the way of a clean claim: `T1.RET.D` drifts
+// negative and the drift grows with budget (-0.0064, -0.0691, -0.0868, plus
+// §51's -0.0678 at 1.8M -- FOUR budgets, 25 of 36 creatures negative at 900k,
+// binomial p = 0.0057). A label-destroyed arm should sit at zero, and
+// `T1.ORACLE.D` -- the same destroyed label with the index PINNED -- does.
+//
+// THE OBVIOUS NEXT MOVE IS ANOTHER ARM, AND IT IS THE WRONG MOVE. §51 spent a
+// whole budget before anyone asked what its estimator was worth. This primary is
+// not opaque: it decomposes EXACTLY (see `G3Probe::cell_g`), into the part a
+// per-context bias table can produce and the part it cannot. So §53 measures the
+// estimator on arms already built, and the new arm -- if one is still needed --
+// is designed from what the decomposition says.
+//
+// H -- THE UNEQUAL-DOSE ARTEFACT, with a DERIVED sign. Under a drawn word each
+// slot receives a 50/50 mixture of both words' lessons, so both are pulled from
+// the untaught posture toward the SAME compromise. The two slots are
+// exchangeable only if written equally often -- and §52 measured occupancy at
+// 0.5347 against 0.5000 for balance, because MacQueen clustering under a
+// conscience does not partition a stimulus set evenly. The more-written slot is
+// pulled FURTHER. And the pull has a known direction, because this creature does
+// not start between the two words: at §51's echo postures (630/1691 Hz) perr is
+// 0.5734 to "ball" and 1.0684 to "cube", so
+//
+//   G(untaught) = +0.4950 of an available 1.6417 -- THE UNTAUGHT VOICE ALREADY
+//   SITS 30% OF THE WAY TOWARD /a/.
+//
+// An asymmetry present since §49 and never once quoted. Being pulled toward a
+// 50/50 compromise therefore LOWERS G, so H predicts
+//
+//   sign(Gbar_A - Gbar_B) = -sign(dose_A - dose_B)
+//
+// giving a negative slot term whose magnitude grows with the lesson count, and
+// `T1.ORACLE.D` is immune because the pin makes the doses equal and the cells
+// diagonal. That is §52's dissociation, explained rather than described.
+bool run_slotdose(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  struct Arm {
+    const char* name;
+    int pin, pairing;
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"T1.RET", 0, 0, 36u, "THE CLAIM -- carries the lesson AND, under H, the same dose term"},
+      {"T1.RET.D", 0, 1, 36u, "THE ARM UNDER TEST -- the control that moved"},
+      // THE SMOKE CORRECTED THIS ARM'S OWN DESCRIPTION. It was written as "doses
+      // EQUAL by construction" and that is false: the pin equalises TRIALS, not
+      // FIRINGS, because this caregiver can only fire on a voiced frame and the
+      // creature is not voiced equally often in the two slots. Measured median
+      // |d dose| 0.0915 at 150k against 0.38-0.46 on the derived arms -- 4-5x
+      // smaller, which still makes it the right comparison, but a NEAR-equal
+      // one rather than an exact one. Disclosed instead of quietly carried.
+      {"T1.ORACLE.D", 1, 1, 36u, "pinned + drawn -- doses NEAR-equal (measured, not assumed)"},
+      {"T1.ORACLE", 1, 0, 12u, "pinned + paired -- THE BOOKKEEPING SELF-TEST, residual == 0"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §53. §52's pre-registered primary cleared 2 SE mostly\n"
+              "                    because its CONTROL went negative (79%% of it at 900k).\n"
+              "                    Why did the control move? Measured, not re-run.\n");
+  std::printf("  the method        the formant gap splits EXACTLY into a SLOT TERM -- all a\n"
+              "                    per-context bias table can produce -- and an OBJECT\n"
+              "                    RESIDUAL, which it cannot. No new mechanism, no new genome\n"
+              "                    field, no core change: instrumentation only.\n");
+  std::printf("  the hypothesis    UNEQUAL DOSE. The untaught voice already sits 30%% of the\n"
+              "                    way toward /a/ (G = +0.4950 of 1.6417), so a 50/50\n"
+              "                    compromise LOWERS G -- and the more-written slot is pulled\n"
+              "                    further. Predicts sign(dG) = -sign(d dose). SIGN DERIVED.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms);
+  instrument("slotdose", dna.header().seed ^ 0x53A0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false;
+    uint32_t live = 0;           // live slots at the probes
+    double pe = 0;               // the published primary, for cross-check
+    bool pe_ok = false;
+    double gap = 0;              // the same gap rebuilt from the cells
+    double slot_term = 0, residual = 0, ident = 0;
+    double g_a = 0, g_b = 0, g_mean = 0;
+    bool g_ok = false;
+    double dose_a = 0, dose_b = 0, dimb = 0;
+    double mix_a = 0, mix_b = 0;  // fraction of word-1 lessons, per slot
+    double min_share = 0;         // smallest of the four cells, for identification
+    double echo_g = 0;
+    double present = 0, occ = 0;
+    uint32_t slots = 0, probes = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // IDENTICAL to §52's call but for `pin` and `pairing`, deliberately: the
+    // seed, the shift, the held nuisance and the order are all §52's, so these
+    // creatures ARE §52's creatures and the gap column must reproduce.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return c;
+    c.ok = true;
+    c.present = run.ctx_present_frac;
+    c.occ = vis_occupancy(run.ctx_slot, kObjects);
+    c.slots = run.ctx_slots;
+    c.probes = run.probes;
+    if (run.perr_n > 0) {
+      c.pe = (run.perr_other - run.perr_own) / double(run.perr_n);
+      c.pe_ok = true;
+    }
+    if (run.echo_perr_ok) {
+      // The untaught reference, re-measured in THIS run rather than carried in
+      // from §51: G at the echo postures, averaged over the two heard words.
+      double acc = 0.0;
+      uint32_t n = 0;
+      for (int w = 0; w < 2; ++w) {
+        if (run.echo_f1[w] <= 1.0 || run.echo_f2[w] <= 1.0) continue;
+        const double e0 = formant_error(run.echo_f1[w], run.echo_f2[w], kWords[0]);
+        const double e1 = formant_error(run.echo_f1[w], run.echo_f2[w], kWords[1]);
+        if (e0 < 0.0 || e1 < 0.0) continue;
+        acc += e1 - e0;
+        ++n;
+      }
+      if (n > 0) c.echo_g = acc / double(n);
+    }
+
+    // --- the cells -----------------------------------------------------------
+    double ns[aibaby::kMaxContextSlots] = {}, gs[aibaby::kMaxContextSlots] = {};
+    double total = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      for (uint32_t o = 0; o < 2; ++o) {
+        ns[s] += double(run.cell_n[o][s]);
+        gs[s] += run.cell_g[o][s];
+      }
+      if (ns[s] > 0.0) ++c.live;
+      total += ns[s];
+    }
+    if (total < 12.0 || c.live != 2) return c;  // the ≠2 drop, counted and disclosed
+
+    uint32_t sa = aibaby::kMaxContextSlots, sb = aibaby::kMaxContextSlots;
+    double best = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      if (ns[s] <= 0.0) continue;
+      const double d = double(run.cell_n[0][s]) - double(run.cell_n[1][s]);
+      if (sa == aibaby::kMaxContextSlots || d > best) {
+        if (sa != aibaby::kMaxContextSlots) sb = sa;
+        sa = s; best = d;
+      } else {
+        sb = s;
+      }
+    }
+    if (sb == aibaby::kMaxContextSlots) return c;
+    // Slot A is the one object 0 OVER-OCCUPIES, so (n_0A - n_1A) >= 0 by
+    // construction and sign(slot term) = sign(Gbar_A - Gbar_B). That is the
+    // whole reason the labelling is done this way and not by slot index.
+
+    c.gap = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      c.gap += run.cell_g[0][s] - run.cell_g[1][s];
+    }
+    c.gap /= total;
+    c.slot_term = 0.0;
+    c.residual = 0.0;
+    for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+      if (ns[s] <= 0.0) continue;
+      const double gbar_s = gs[s] / ns[s];
+      c.slot_term += (double(run.cell_n[0][s]) - double(run.cell_n[1][s])) * gbar_s;
+      for (uint32_t o = 0; o < 2; ++o) {
+        if (run.cell_n[o][s] == 0) continue;
+        const double gbar_os = run.cell_g[o][s] / double(run.cell_n[o][s]);
+        c.residual += (o == 0 ? 1.0 : -1.0) * double(run.cell_n[o][s]) * (gbar_os - gbar_s);
+      }
+    }
+    c.slot_term /= total;
+    c.residual /= total;
+    // THE IDENTITY. Computed as a residual of the two independently-summed
+    // terms against the gap, so a bookkeeping error cannot hide inside a
+    // subtraction. `plausible-wrong-number`: the dangerous defect is the one
+    // that looks right.
+    c.ident = c.gap - (c.slot_term + c.residual);
+    c.g_a = ns[sa] > 0.0 ? gs[sa] / ns[sa] : 0.0;
+    c.g_b = ns[sb] > 0.0 ? gs[sb] / ns[sb] : 0.0;
+    c.g_mean = (gs[sa] + gs[sb]) / (ns[sa] + ns[sb]);
+    c.g_ok = true;
+    double mn = 1.0;
+    for (uint32_t o = 0; o < 2; ++o) {
+      for (uint32_t s : {sa, sb}) mn = std::min(mn, double(run.cell_n[o][s]) / total);
+    }
+    c.min_share = mn;
+
+    // --- the dose, where the credit actually landed --------------------------
+    c.dose_a = run.dose_slot[sa];
+    c.dose_b = run.dose_slot[sb];
+    const double dt_ = c.dose_a + c.dose_b;
+    c.dimb = dt_ > 0.0 ? (c.dose_a - c.dose_b) / dt_ : 0.0;
+    c.mix_a = c.dose_a > 0.0 ? run.dose_word[1][sa] / c.dose_a : 0.0;
+    c.mix_b = c.dose_b > 0.0 ? run.dose_word[1][sb] / c.dose_b : 0.0;
+    return c;
+  });
+
+  // --- per-arm aggregation ---------------------------------------------------
+  struct Row {
+    uint32_t n = 0, ok = 0, dropped = 0, resid_ok = 0;
+    double pe = 0, gap = 0, slot = 0, resid = 0, worst_ident = 0;
+    double g_a = 0, g_b = 0, g_mean = 0, echo_g = 0;
+    double dimb_abs_med = 0, mix_a = 0, mix_b = 0, present = 0, occ = 0;
+    uint32_t oppose = 0, agree = 0, tied = 0;
+    std::vector<double> gaps, slots_, dimbs, dgs;
+    // THE REPRODUCTION COLUMN. The cell columns drop a creature with != 2 live
+    // slots, so their mean is over a SUBSET and cannot be compared with §52's
+    // directly. This vector keeps every scored creature under §52's own drop
+    // rule, so the log carries its own proof that this instrument did not move
+    // the session -- rather than my checking it by hand against the archive.
+    std::vector<double> gaps_all;
+  };
+  std::vector<Row> rows(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    const uint32_t a = job_arm[i];
+    Row& R = rows[a];
+    ++R.n;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++R.ok;
+    R.present += c.present;
+    R.occ += c.occ;
+    if (c.pe_ok) R.gaps_all.push_back(c.pe);
+    if (!c.g_ok) { ++R.dropped; continue; }
+    R.gaps.push_back(c.gap);
+    R.slots_.push_back(c.slot_term);
+    R.dimbs.push_back(c.dimb);
+    R.dgs.push_back(c.g_a - c.g_b);
+    R.pe += c.pe;
+    R.gap += c.gap;
+    R.slot += c.slot_term;
+    R.resid += c.residual;
+    R.g_a += c.g_a; R.g_b += c.g_b; R.g_mean += c.g_mean; R.echo_g += c.echo_g;
+    R.mix_a += c.mix_a; R.mix_b += c.mix_b;
+    if (std::fabs(c.ident) > std::fabs(R.worst_ident)) R.worst_ident = c.ident;
+    if (c.min_share >= 0.05) ++R.resid_ok;
+    const double dg = c.g_a - c.g_b;
+    if (dg == 0.0 || c.dimb == 0.0) ++R.tied;
+    else if ((dg > 0.0) != (c.dimb > 0.0)) ++R.oppose;
+    else ++R.agree;
+  }
+  auto mean_se = [](const std::vector<double>& v, double* se) {
+    if (v.empty()) { *se = 0.0; return 0.0; }
+    double m = 0.0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    double s = 0.0;
+    for (double x : v) s += (x - m) * (x - m);
+    *se = v.size() > 1 ? std::sqrt(s / double(v.size() - 1) / double(v.size())) : 0.0;
+    return m;
+  };
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& R = rows[a];
+    const double k = R.gaps.empty() ? 1.0 : double(R.gaps.size());
+    R.pe /= k; R.gap /= k; R.slot /= k; R.resid /= k;
+    R.g_a /= k; R.g_b /= k; R.g_mean /= k; R.echo_g /= k;
+    R.mix_a /= k; R.mix_b /= k;
+    if (R.ok > 0) { R.present /= double(R.ok); R.occ /= double(R.ok); }
+    std::vector<double> ad;
+    for (double d : R.dimbs) ad.push_back(std::fabs(d));
+    std::sort(ad.begin(), ad.end());
+    R.dimb_abs_med = ad.empty() ? 0.0 : ad[ad.size() / 2];
+  }
+
+  std::printf("\n  CLAUSE 0 -- LIVENESS AND IDENTIFICATION, read on EVERY arm including the\n"
+              "  one whose null is load-bearing. A creature with != 2 live slots is DROPPED\n"
+              "  from the cell columns; the residual needs all four cells populated.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-12s n %2u/%2u  dropped %u  present %.4f  occ %.4f  4-cell %u/%u  "
+                "median |d dose| %.4f\n",
+                arms[a].name, uint32_t(R.gaps.size()), R.n, R.dropped, R.present, R.occ,
+                R.resid_ok, uint32_t(R.gaps.size()), R.dimb_abs_med);
+  }
+
+  std::printf("\n  THE MIXTURE -- H's PREMISE, TESTED RATHER THAN ASSUMED. Fraction of each\n"
+              "  slot's lessons that taught kWords[1] /i/. A DRAWN arm must read ~0.50 in\n"
+              "  BOTH slots (that is what makes it label-destroyed); a PAIRED arm must not.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-12s slot A %.4f   slot B %.4f   %s\n", arms[a].name, rows[a].mix_a,
+                rows[a].mix_b, arms[a].pairing == 1 ? "(drawn: both -> 0.50)" : "(paired)");
+  }
+
+  std::printf("\n  THE WORD PREFERENCE, G = perr(cube) - perr(ball), POSITIVE = NEARER /a/.\n"
+              "  `echo G` is the untaught reference measured in this run. Slot A is the one\n"
+              "  object 0 over-occupies, so sign(slot term) = sign(G_A - G_B) by construction.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-12s G_A %+.4f  G_B %+.4f  G_A-G_B %+.4f  mean G %+.4f  echo G %+.4f\n",
+                arms[a].name, R.g_a, R.g_b, R.g_a - R.g_b, R.g_mean, R.echo_g);
+  }
+
+  std::printf("\n  THE DECOMPOSITION. `gap` is §52's primary rebuilt from the cells and must\n"
+              "  reproduce the `pe` column beside it. `identity` is gap - (slot + residual)\n"
+              "  and is ARITHMETIC: anything but zero is a bookkeeping error of mine.\n");
+  double worst_id = 0.0;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    double se_g = 0, se_s = 0;
+    const double mg = mean_se(R.gaps, &se_g), ms = mean_se(R.slots_, &se_s);
+    if (std::fabs(R.worst_ident) > worst_id) worst_id = std::fabs(R.worst_ident);
+    std::printf("    %-12s gap %+.4f +- %.4f  (pe %+.4f)   SLOT %+.4f +- %.4f   "
+                "RESIDUAL %+.4f   identity %+.2e\n",
+                arms[a].name, mg, se_g, R.pe, ms, se_s, R.resid, R.worst_ident);
+  }
+  std::printf("\n  THE REPRODUCTION COLUMN -- this log's own proof that the instrument did\n"
+              "  not move the session. §52's drop rule, every scored creature, so these\n"
+              "  must equal §52's formant-gap column at the same budget TO FOUR DECIMALS\n"
+              "  INCLUDING THE SE. (The cell columns above drop != 2-live-slot creatures and\n"
+              "  so run on a subset; this one does not.)\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    double se_a = 0;
+    const double ma = mean_se(rows[a].gaps_all, &se_a);
+    std::printf("    %-12s formant gap %+.4f +- %.4f  (n %2u)\n", arms[a].name, ma, se_a,
+                uint32_t(rows[a].gaps_all.size()));
+  }
+
+  // --- T-A: the bookkeeping self-test ---------------------------------------
+  //
+  // LIVENESS FIRST, BECAUSE THE SMOKE CAUGHT THIS GATE PASSING ON NOTHING. At
+  // 60k ticks no creature scored 12 probes, every column read 0.0000, and T-A
+  // printed PASS twice -- `worst_id` is zero when there is no arithmetic to
+  // check and `ora.resid` is zero when no cell was ever filled. A self-test that
+  // cannot fail is not a self-test (`open-is-unfalsifiable-on-an-instrument`),
+  // and a vacuity gate has to be asked of the load-bearing arm too
+  // (`vacuity-gate-cannot-guard-a-rejection`). So the identity is only read once
+  // there is something to read it on.
+  const Row& ora = rows[3];
+  uint32_t thin = 0;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    if (rows[a].gaps.size() * 2 < rows[a].n) ++thin;
+  }
+  if (thin > 0 || ora.gaps.empty()) {
+    std::printf("\n  *** §53 VOID -- NOT ENOUGH SCORED CREATURES. %u of %u arms scored under\n"
+                "  half their sessions (a creature needs 12 probes and 2 live slots). Every\n"
+                "  column above reads from an empty set, and T-A's identity check would PASS\n"
+                "  VACUOUSLY on it: there is no arithmetic to disagree with. Raise the budget;\n"
+                "  do not read a single number in this log.\n", thin, kArms);
+    return true;
+  }
+  const bool ta_ident = worst_id < 1e-9;
+  const bool ta_diag = std::fabs(ora.resid) < 1e-9;
+  std::printf("\n  T-A -- THE BOOKKEEPING SELF-TEST. A PINNED index makes the cells exactly\n"
+              "  diagonal, so T1.ORACLE's residual must be EXACTLY zero and its slot term\n"
+              "  must equal its gap. Worst identity over all %u creatures %+.2e.\n"
+              "    identity zero everywhere  %s\n    ORACLE residual zero      %s (%+.2e)\n",
+              kJobs, worst_id, ta_ident ? "PASS" : "*** FAIL ***",
+              ta_diag ? "PASS" : "*** FAIL ***", ora.resid);
+  if (!ta_ident || !ta_diag) {
+    std::printf("\n    (1) §53 VOID -- THE BOOKKEEPING IS WRONG. The decomposition is an\n"
+                "    identity and a disagreement is my error, not the creature's. NOTHING\n"
+                "    ELSE IN THIS LOG MAY BE QUOTED, whatever it says.\n");
+    return true;
+  }
+
+  // --- the power pre-flight, read BEFORE the sign test ----------------------
+  const Row& retd = rows[1];
+  const uint32_t nd = uint32_t(retd.gaps.size());
+  if (retd.dimb_abs_med < 0.02) {
+    std::printf("\n  *** UNDERPOWERED, NOT NULL: T1.RET.D's median |d dose| is %.4f, under the\n"
+                "  pre-registered 2%%. With the two slots dosed that evenly the signs are coin\n"
+                "  flips whatever the mechanism, and T-B below cannot be read as a refusal.\n",
+                retd.dimb_abs_med);
+  }
+
+  // --- T-B: the paired sign test -------------------------------------------
+  std::printf("\n  T-B -- THE PRIMARY, A PAIRED SIGN TEST ON T1.RET.D. Per creature, does\n"
+              "  sign(G_A - G_B) OPPOSE sign(dose_A - dose_B)? Bar >=26 of 36 (p = 0.0057).\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-12s oppose %2u  agree %2u  tied %2u\n", arms[a].name, rows[a].oppose,
+                rows[a].agree, rows[a].tied);
+  }
+  const uint32_t bar = nd >= 36 ? 26u : uint32_t(0.5 * double(nd) + 2.33 * 0.5 * std::sqrt(double(nd)) + 1.0);
+  const bool tb_support = retd.oppose >= bar;
+  const bool tb_refute = retd.agree >= bar;
+
+  // --- T-C: the share ------------------------------------------------------
+  double se_g = 0, se_s = 0;
+  const double mg = mean_se(retd.gaps, &se_g), ms = mean_se(retd.slots_, &se_s);
+  double sxy = 0.0, sxx = 0.0, mx = 0.0, my = 0.0;
+  for (size_t i = 0; i < retd.dimbs.size(); ++i) { mx += retd.dimbs[i]; my += retd.gaps[i]; }
+  if (!retd.dimbs.empty()) { mx /= double(retd.dimbs.size()); my /= double(retd.gaps.size()); }
+  for (size_t i = 0; i < retd.dimbs.size(); ++i) {
+    sxy += (retd.dimbs[i] - mx) * (retd.gaps[i] - my);
+    sxx += (retd.dimbs[i] - mx) * (retd.dimbs[i] - mx);
+  }
+  const double slope = sxx > 1e-12 ? sxy / sxx : 0.0;
+  double sres = 0.0;
+  for (size_t i = 0; i < retd.dimbs.size(); ++i) {
+    const double e = (retd.gaps[i] - my) - slope * (retd.dimbs[i] - mx);
+    sres += e * e;
+  }
+  const double se_slope =
+      (sxx > 1e-12 && retd.dimbs.size() > 2)
+          ? std::sqrt(sres / double(retd.dimbs.size() - 2) / sxx) : 0.0;
+  const double share = std::fabs(mg) > 1e-9 ? ms / mg : 0.0;
+  std::printf("\n  T-C -- THE SHARE. How much of T1.RET.D's displacement the slot route\n"
+              "  accounts for, and the per-creature regression of gap on signed dose.\n"
+              "    slot term %+.4f of gap %+.4f = %.0f%% of it\n"
+              "    slope d gap / d dose %+.4f +- %.4f (%.1f SE)   H predicts NEGATIVE\n",
+              ms, mg, 100.0 * share, slope, se_slope,
+              se_slope > 0 ? slope / se_slope : 0.0);
+
+  // --- the verdict ---------------------------------------------------------
+  std::printf("\n  THE VERDICT.\n");
+  if (tb_support && share >= 0.5) {
+    std::printf("\n    (2) THE CONTROL'S DRIFT IS AN UNEQUAL-DOSE ARTEFACT, EXPLAINED.\n"
+                "    %u of %u creatures oppose, and the slot route carries %.0f%% of the\n"
+                "    displacement. §52's pre-registered primary is inflated by it, so the\n"
+                "    honest statement of the derived arm is its own gap against zero.\n"
+                "    AND IT CUTS THE OTHER WAY TOO: T1.RET carries the SAME dose term, so\n"
+                "    %.0f%% of a %+.4f displacement was SUPPRESSING the claim arm. T1.RET's\n"
+                "    dose term reads %+.4f here against its gap %+.4f -- quote that as a\n"
+                "    MODEL-BASED adjustment, never as the primary.\n",
+                retd.oppose, nd, 100.0 * share, 100.0 * share, mg, rows[0].slot, rows[0].gap);
+  } else if (tb_support) {
+    std::printf("\n    (3) THE DOSE ROUTE IS REAL AND PARTIAL. %u of %u creatures oppose, but\n"
+                "    the slot route carries only %.0f%% of the displacement. Half of it is\n"
+                "    still unaccounted for, and the next suspect is NAMED, not invented: the\n"
+                "    caregiver's SHARED per-word baseline t1_base[word], which couples the two\n"
+                "    slots through one EMA and so can transfer a lesson between them.\n",
+                retd.oppose, nd, 100.0 * share);
+  } else if (tb_refute) {
+    std::printf("\n    (4a) H REFUTED WITH ITS OWN SIGN. %u of %u creatures AGREE where H\n"
+                "    predicted opposition, so the more-written slot has the HIGHER word\n"
+                "    preference and 'pulled toward the compromise' is wrong. The\n"
+                "    decomposition still stands: slot %+.4f, residual %+.4f.\n",
+                retd.agree, nd, ms, retd.resid);
+  } else {
+    std::printf("\n    (4b) NO VERDICT ON H: oppose %u, agree %u of %u, neither at the bar of\n"
+                "    %u. The decomposition still stands on its own and is the result:\n"
+                "    slot %+.4f +- %.4f, residual %+.4f.\n",
+                retd.oppose, retd.agree, nd, bar, ms, se_s, retd.resid);
+  }
+  if (std::fabs(retd.resid) > std::fabs(ms)) {
+    std::printf("\n    *** AND THE RESIDUAL IS THE LARGER TERM (%+.4f vs slot %+.4f). The\n"
+                "    lesson is NOT living in the bias table -- `bias_ctx_` is the kernel's\n"
+                "    only per-context store, so the same slot cannot produce two postures.\n"
+                "    That redirects the line and outranks everything above it.\n",
+                retd.resid, ms);
   }
   return true;
 }

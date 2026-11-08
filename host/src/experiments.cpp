@@ -206,6 +206,22 @@ const Spec kSpecs[] = {
      "  without which ORACLE's gap cannot be told from what a pinned two-slot\n"
      "  table does alone. Clause 3 prints the RULER FIRST. kRead: every branch,\n"
      "  the four VOIDs included, prints a reading rather than returning false"},
+    {"slotdose", 450000, Expect::kRead, Tier::kLong,
+     "derived: §52's primary cleared 2 SE mostly because its CONTROL drifted\n"
+     "  negative -- 79% of the contrast at 900k -- and a label-destroyed arm\n"
+     "  should sit at zero. THE NEXT MOVE IS NOT ANOTHER ARM. The formant gap\n"
+     "  decomposes EXACTLY into a SLOT TERM (all a per-context bias table can\n"
+     "  produce) and an OBJECT RESIDUAL (which it cannot), so this measures the\n"
+     "  estimator on arms already built: instrumentation only, no new mechanism,\n"
+     "  no genome field, no core change. H is the UNEQUAL-DOSE ARTEFACT and its\n"
+     "  SIGN IS DERIVED: the untaught voice already sits 30% of the way toward\n"
+     "  /a/ (G = +0.4950 of 1.6417), so a 50/50 compromise LOWERS G and the\n"
+     "  more-written slot is pulled further -- predicting sign(dG) = -sign(d\n"
+     "  dose). The primary T-B is a PAIRED SIGN TEST, 26 of 36 (p = 0.0057), so\n"
+     "  it assumes no SD; T-A is a bookkeeping self-test on the PINNED arm, whose\n"
+     "  cells are diagonal and whose residual must be EXACTLY zero, and a T-A\n"
+     "  failure VOIDS the log. Same seed, shift, nuisance and order as wordruler,\n"
+     "  so the gap column must reproduce §52's. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1468,6 +1484,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "objname") ok = run_objname(dna_blob, ticks, verbose);
   else if (name == "objword") ok = run_objword(dna_blob, ticks, verbose);
   else if (name == "wordruler") ok = run_wordruler(dna_blob, ticks, verbose);
+  else if (name == "slotdose") ok = run_slotdose(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);
