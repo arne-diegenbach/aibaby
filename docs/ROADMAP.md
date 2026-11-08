@@ -9015,3 +9015,31 @@ And the smoke measured something no earlier section had, which may matter more t
 > weak +0.0233 is explained without H at all** — the lessons never got sorted into slots, so there
 > was nothing for the probe to read back. The mixture column is printed for every arm and this
 > reading is now pre-registered as a finding in its own right.
+
+### §53's THIRD READING, PRE-REGISTERED WHILE THE 450k RUN WAS STILL EXECUTING
+
+The mixture column does not merely diagnose the derived index — it **predicts the claim arm's
+magnitude with no free parameter.** `mix_s` is the fraction of slot `s`'s lessons that taught /i/, so
+`mix_B − mix_A` is the share of the available conditional signal that actually reaches the bias
+table, on a scale where a pinned index scores 1.000 (measured: 0.000 and 1.000 in `T1.ORACLE`). If
+the only thing wrong with the derived arm is that its lessons arrive mixed, then
+
+> **predicted `T1.RET` gap = (mix_B − mix_A) × `T1.ORACLE` gap**
+
+a pure transfer with nothing fitted. At 150k the smoke gives `mix_B − mix_A` = 0.553 − 0.469 =
+**0.084** and `T1.ORACLE` = +0.1049, predicting **+0.0088** against a measured −0.0002 ± 0.0073 —
+consistent, though at 150k every term is small. **The 450k and 900k budgets are where this is worth
+anything**, and the prediction is recorded here before either returned.
+
+The three accounts now make *different* predictions, which is the point of writing them down
+together:
+
+| | predicts `T1.RET.D` < 0 | predicts `T1.RET` weak | predicts the budget trend |
+|---|---|---|---|
+| **H, unequal dose** | yes, sign derived | no — it is a control effect | **wrong way** (imbalance shrinks) |
+| **impure write-time index** | **no** | yes, with a magnitude | yes, if purity improves slowly |
+| **both** | yes | yes | needs T-D to adjudicate |
+
+So the mixture reading and H are **not** rival explanations of the same number: H is about the
+control, purity is about the claim arm, and a log can support both, one, or neither. The verdict must
+say which, and the instrument prints all four columns needed to tell.
