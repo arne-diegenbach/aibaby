@@ -9277,3 +9277,20 @@ the wrong-write rate, which is a quantitative claim about a mechanism already in
 
 **NAMED AS THE NEXT QUESTION, NOT AS A FINDING.** §53 has refuted two of my own hypotheses by their
 signs and found both ends of its own bracket wrong; this one gets measured before it gets believed.
+
+### §53's VERIFY GATE, ALL FOUR KEYS
+
+`results/n53-verify.log`, exit 0: `verify PASS`, `hash ad96f882becbee92 as recorded`, `pinned hash
+PASS`, `experiments 24 as expected, 0 not`. The count stays **24** because `slotdose` is `Tier::kLong`
+/ `Expect::kRead` like `wordruler`, `objword`, `objname` and `visprobe` before it, and the pinned hash
+is unmoved because §53 touched **no shared code and no core file at all** — the session gained two
+unprinted accumulators (`cell_*`, `dose_*`) and everything else is driver-side arithmetic over data
+`run_g3probe_session` already returned.
+
+**And a correction to how this gate gets checked.** §51 was fooled by two verify runs redirected to
+the same path: the interleaved log still ended in `verify PASS` and read entirely clean. The lesson
+was recorded as "smoke the exact command, including the output file" — but the *check* recorded with
+it was the line count, and **this clean log is also 936 lines**, exactly like the corrupted one. Line
+count is not the check. **The check is that each key appears exactly once**, which is what was run
+here: `verify PASS` 1, `pinned hash PASS` 1, `as expected, 0 not` 1. A second interleaved run doubles
+every marker and cannot hide in a count of one.
