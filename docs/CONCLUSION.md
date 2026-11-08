@@ -195,6 +195,40 @@ refusal list can both be long.
 > before spending the budget.** The calibration is ~20 lines, runs in Phase A with no teaching at all,
 > and is a function of the creature seed — it was available before §49. Three sections were scored on
 > a ruler whose full-scale reading had never been converted into the units the milestone is written in.
+>
+> ---
+>
+> #### §52 (2026-11-08) — REWARD REACHES THE VOWEL WHERE THE INNATE REFLEX DOES NOT
+>
+> §51's own headline was the ruler artefact, and §52 overturned it on the audible quantity. **A
+> caregiver that only ever compares two sounds, and never looks at the toy, can teach this creature a
+> conditional mapping from what it sees to the vowel it produces** — given a supplied index:
+>
+> | arm | 150k | 450k | 900k |
+> |---|---|---|---|
+> | **perfect index, word paired** | **+0.0819 (4.6 SE)** | **+0.1572 (6.0 SE)** | **+0.1824 (5.6 SE)** |
+> | perfect index, word **drawn** | −0.0220 | −0.0103 | +0.0211 |
+>
+> Monotone across a 6× budget range, 30 of 36 creatures positive, control at zero throughout. The
+> reward never contained the object; its target was `{320, 2500}` **in the world's units**, not a
+> direction fitted in the creature's own motor space; the binding came from **co-occurrence** alone.
+> So `vocallearn`'s wall — *"reward cannot reshape the conditional route"* — **does fall once the
+> condition has somewhere to live.** It was invisible on `axis_sep` because `axis_sep` cannot see
+> formants.
+>
+> **This is the division of labour the two sections establish together, and it is the cleanest
+> statement either of them supports:** the innate ear→larynx reflex carries a word in f0 and the
+> bandwidths and leaves the vowel alone (the two echo postures are 2 Hz apart on F1), while **reward
+> moves the vowel** — M1c unconditionally at d' 5.57, and §52 *conditionally* on what is in view.
+> Reward reaches where the reflex does not.
+>
+> **What is NOT shown, and the distinction is the whole caveat.** The arm driven by the creature's
+> **own** retinal index is not significantly above zero at any budget (best +0.0233 ± 0.0193, 1.2 SE).
+> Its pre-registered contrast clears 2 SE mostly because its *control* drifts negative — 79% of the
+> contrast at 900k — and that drift is replicated across four budgets, specific to the derived index
+> with a drawn word, absent from the perfect-index control, and **unexplained**. So: **a perfect index
+> plus a sound-only teacher names. The creature's own index plus a sound-only teacher is unproven**,
+> and the obstacle is now an artefact in a control rather than anything about the teacher.
 
 *Where the conditioning variable is supplied, conditional production works.* The shipped context
 mechanism computes an index from the ear's own rate EMA — no gate, no episode, no latch, and no
