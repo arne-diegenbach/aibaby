@@ -1783,6 +1783,13 @@ void Network::step() {
         const Scalar cdscale = ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero;
         Scalar best_d = kZero, best_raw = kZero;
         uint32_t winner = 0;
+        // §57 INSTRUMENT ONLY. Initialised, not left to the `c == 0` branch: that
+        // branch reads `ctx57_raw_lo` before writing it, which is defined behaviour
+        // only if the value exists. The pair is correct from `c == 1` onward and is
+        // read only when `ctx_live >= 2`, so the initial values never reach a column.
+        Scalar ctx57_raw_lo = kZero, ctx57_raw_lo2 = kZero;
+        Scalar ctx57_pen_lo = kZero, ctx57_pen_hi = kZero;
+        bool ctx57_pen_seen = false;
         for (uint32_t c = 0; c < ctx_live; ++c) {
           const Scalar* proto = ctx_proto_ + size_t(c) * sms.capacity;
           Scalar d = kZero;
@@ -1794,10 +1801,36 @@ void Network::step() {
           if (ctx_conscience && total_wins > kZero) {
             // DNA v70 scales the penalty. Gain 1 is the shipped strength and multiplying
             // by exactly 1.0 is exact in IEEE 754, so the default stays bit-identical.
-            d += (Scalar(ctx_live) * (ctx_wins_[c] / total_wins) - kOne) * cdscale *
-                 ctx_conscience_gain_;
+            const Scalar pen = (Scalar(ctx_live) * (ctx_wins_[c] / total_wins) - kOne) *
+                               cdscale * ctx_conscience_gain_;
+            d += pen;
+            // §57 INSTRUMENT ONLY. The SPREAD of the penalty across slots, not its
+            // value: a constant added to every slot cannot change an argmin, so the
+            // quantity that competes with the object signal is max-min.
+            if (c == 0 || pen < ctx57_pen_lo) ctx57_pen_lo = pen;
+            if (c == 0 || pen > ctx57_pen_hi) ctx57_pen_hi = pen;
+            ctx57_pen_seen = true;
+          }
+          // §57 INSTRUMENT ONLY. The two smallest RAW distances, so the host can read
+          // the object signal |d_best - d_second| without the conscience folded in.
+          if (c == 0 || raw < ctx57_raw_lo) {
+            ctx57_raw_lo2 = ctx57_raw_lo;
+            ctx57_raw_lo = raw;
+          } else if (c == 1 || raw < ctx57_raw_lo2) {
+            ctx57_raw_lo2 = raw;
           }
           if (c == 0 || d < best_d) { best_d = d; best_raw = raw; winner = c; }
+        }
+        // §57. Recorded only when there is a SECOND slot to compare against: with one
+        // live slot there is no margin to measure and a zero would read as "the object
+        // signal vanished" when it means "the question does not apply".
+        if (ctx_live >= 2u) {
+          ctx_margin_sum_ += double(ctx57_raw_lo2 - ctx57_raw_lo);
+          ctx_pen_sum_ += ctx57_pen_seen ? double(ctx57_pen_hi - ctx57_pen_lo) : 0.0;
+          // On the SAME ticks as the two sums above, so the printed cdscale is a
+          // mean across the eighth rather than a sample at its edge.
+          ctx_cd_sum_ += double(cdscale);
+          ++ctx_margin_n_;
         }
         // THE VIGILANCE TEST. Carpenter & Grossberg: an input far enough from every
         // committed prototype gets a NEW unit rather than dragging an old one, so
@@ -1900,8 +1933,31 @@ void Network::step() {
           if (ctx_proto_lr_floor_ > kZero && lr < ctx_proto_lr_floor_)
             lr = ctx_proto_lr_floor_;
           Scalar* proto = ctx_proto_ + size_t(winner) * sms.capacity;
+          // §57 INSTRUMENT ONLY. The step actually APPLIED and the share of
+          // components that did not move at all.
+          //
+          // `before` is compared against the stored value AFTER the write, so this
+          // measures float32 stagnation as it really happens rather than predicting
+          // it from eps and an assumed residual -- which is what
+          // aibaby-match-at-the-operating-point requires, since |x - proto| at this
+          // operating point is exactly what is unknown. An increment that rounds to
+          // zero leaves `proto[n]` bit-identical, and that is the test.
+          double step2 = 0.0;
           for (uint32_t n = 0; n < sms.count; ++n) {
+            const Scalar before = proto[n];
             proto[n] += lr * (rate_ema_[sms.begin + n] - proto[n]);
+            const double dstep = double(proto[n]) - double(before);
+            step2 += dstep * dstep;
+            if (proto[n] == before) ++ctx_uf_lost_;
+            ++ctx_uf_n_;
+          }
+          // The SUM OF SQUARES, with the root left to the host: this file's own
+          // header says the tick loop stays free of sqrtf, and an RMS step is the
+          // better estimator anyway. The host reports sqrt(sum / n) and labels it
+          // RMS, because sqrt(mean of squares) is not the mean of norms.
+          if (winner < aibaby::kMaxContextSlots) {
+            ctx_proto_step_sum_[winner] += step2;
+            ++ctx_proto_step_n_[winner];
           }
         }
       }

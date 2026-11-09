@@ -921,6 +921,24 @@ struct G3Probe {
   // does not stop -- and a prediction gets measured.
   std::vector<int> teach_label;
   std::vector<int> teach_slot;
+  // §57. THE CONTEXT MODULE'S OWN STATE, snapshotted once per teaching window and
+  // pushed beside `teach_slot` UNCONDITIONALLY, so these vectors stay the same
+  // length as it and the host can slice them into the SAME eighths §56 used
+  // rather than inventing a second definition of an eighth.
+  //
+  // Every value is CUMULATIVE over the session and the host differences
+  // consecutive eighth boundaries. `double` throughout, including the counts:
+  // the mechanism under test is float32 counter decay, and a count that shares
+  // the type of the thing it measures is not an instrument.
+  std::vector<double> c57_margin;   // sum |d_best - d_second|, RAW distances
+  std::vector<double> c57_pen;      // sum of the conscience penalty's SPREAD
+  std::vector<double> c57_mn;       // ticks behind both sums
+  std::vector<double> c57_step[2];  // sum of SQUARED prototype steps, per slot
+  std::vector<double> c57_stepn[2]; // updates behind each
+  std::vector<double> c57_uflost;   // components whose increment rounded to zero
+  std::vector<double> c57_ufn;      // components attempted
+  std::vector<double> c57_wins[2];  // per-slot win counts, the conscience's state
+  std::vector<double> c57_cd;       // cumulative SUM of cdscale, tick by tick
   // §50. THE TAUGHT DIRECTION, which is a different question from decodability
   // and the one that actually asks whether the creature learned what it was
   // taught.
@@ -1822,6 +1840,26 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       out.teach_label.push_back(mode == 1 ? 0 : object);
       out.teach_slot.push_back(any ? int(best) : -1);
+      // §57. The kernel's context state at this window. A PURE READ -- no RNG, no
+      // kernel state touched -- which is why it cannot move an archived log, the
+      // same argument §55's late-half accumulator above rests on. Pushed
+      // unconditionally, NOT under `if (any)`, so these stay index-aligned with
+      // `teach_slot`; a window with no live index still has a win count and a
+      // cdscale, and dropping it would silently shift every later eighth.
+      {
+        const auto& nw = s.brain.network();
+        out.c57_margin.push_back(nw.ctx_margin_sum());
+        out.c57_pen.push_back(nw.ctx_pen_sum());
+        out.c57_mn.push_back(double(nw.ctx_margin_n()));
+        out.c57_uflost.push_back(double(nw.ctx_uf_lost()));
+        out.c57_ufn.push_back(double(nw.ctx_uf_n()));
+        out.c57_cd.push_back(nw.ctx_cd_sum());
+        for (uint32_t c = 0; c < 2u; ++c) {
+          out.c57_step[c].push_back(nw.ctx_proto_step_sum(c));
+          out.c57_stepn[c].push_back(double(nw.ctx_proto_step_n(c)));
+          out.c57_wins[c].push_back(double(nw.ctx_wins(c)));
+        }
+      }
       // §55. The same window's CONCENTRATION, which the argmax above discards.
       // Gated on `any` -- a window whose index never went live contributes
       // nothing, the same drop rule the slot column uses, because a window with
@@ -14046,6 +14084,497 @@ bool run_slotdrift(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
               "    conflicting PHASE of thousands of trials, which bounds nothing at the scale\n"
               "    of tens. No threshold on the 8+ bucket is pre-registered, because inventing\n"
               "    one here is how a verdict gets fitted to data.\n");
+  return true;
+}
+
+// §57. WHY A DIFFERENTIATED INDEX RE-COLLAPSES, AND WHICH OF TWO DERIVED
+// MECHANISMS DOES IT. Both are read off the kernel, not guessed:
+//
+//   M1  lr = 1/ctx_wins_[winner] with ctx_proto_tau_ms = 0, so the prototype
+//       update decays to ~2e-6 by 900k and vanishes into float32. A frozen
+//       prototype is harmless while the features are stationary and fatal once
+//       they drift. Lever: ctx_proto_tau_ms, which floors lr at dt_ms/tau.
+//
+//   M2  cdscale = ctx_dsum_/ctx_dn_ is a LIFETIME mean with no decay, so as the
+//       prototypes converge the real distances shrink while the scale does not.
+//       The conscience penalty scales with cdscale, so it eventually outranks
+//       the object signal and the index is chosen by win balance rather than by
+//       what is on the retina. Lever: ctx_conscience_gain.
+//
+// The discriminator prints the two sides of the ratio SEPARATELY, so the run
+// says WHICH of them moved rather than only that their ratio did.
+bool run_ctxfreeze(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kE = 8;              // eighths, §56's own slicing
+  constexpr uint64_t kVerdictTicks = 900000ull;
+  // §56's reading on the arm this experiment's SHIPPED arm reproduces. Clause 0
+  // is an identity check against it, not a tolerance: same session, same
+  // estimator, a different enclosing experiment.
+  constexpr uint32_t k56Deg8 = 16, k56Crt = 24;
+
+  struct Arm {
+    const char* name;
+    uint32_t tau;        // ctx_proto_tau_ms, 0 = shipped (no floor)
+    float gain;          // ctx_conscience_gain, 0 => kernel maps to 1.0
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"SHIPPED", 0u, 0.0f, 24u, "§56's EXACT arm -- must reproduce deg 16/24 in e8"},
+      {"TAU300K", 300000u, 0.0f, 24u, "floor 3.3e-6, binds only after ~300k wins:"
+                                      " WIRING + VACUITY arm"},
+      {"TAU30K", 30000u, 0.0f, 24u, "floor 3.3e-5, ~15x the unfloored rate: M1's lever"},
+      {"GAINOFF", 0u, 1e-6f, 24u, "conscience neutered on gate 2's OWN path: M2's lever"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a)
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("experiment: ctxfreeze\n");
+  std::printf(
+      "  the question      §57. §56 found the derived index COLLAPSING TWICE and never\n"
+      "                    inverting: deg 22/24 in e1, 0/24 in e4-e7, 16/24 in e8, with\n"
+      "                    the rate stepping 0.0181 -> 0.3121. The first collapse is\n"
+      "                    understood (prototypes at the origin while rate_ema_ climbs).\n"
+      "                    THE SECOND IS NOT, and it is keyed to ABSOLUTE ticks: the 450k\n"
+      "                    run's own e8 (394k-450k) reads deg 1/24 and the 900k run's e4\n"
+      "                    (337k-450k) reads 0/24 -- the same stretch of life, uncollapsed,\n"
+      "                    scored two ways.\n");
+  std::printf(
+      "  not sleep         SETTLED FROM SOURCE, not measured: the creature does not fall\n"
+      "                    asleep until ~1.04M ticks, so in a 900k session it NEVER sleeps.\n"
+      "                    Consolidation cannot be involved.\n");
+  std::printf(
+      "  the two suspects  M1 THE PROTOTYPES FREEZE. lr = 1/wins with tau 0 and no floor;\n"
+      "                    wins is a monotone float32 counter nothing decays or resets\n"
+      "                    (only gate 7 clears it, this is gate 2) and the context path\n"
+      "                    runs EVERY TICK in Network::step(), so by 900k lr ~ 2e-6 and\n"
+      "                    proto += lr*(x-proto) rounds to zero.\n"
+      "                    M2 THE SCALE OUTGROWS THE SIGNAL. cdscale is a lifetime mean\n"
+      "                    with no decay, the penalty scales with it, and gate 2 feeds the\n"
+      "                    ADJUSTED distance back into ctx_dsum_ -- a positive feedback,\n"
+      "                    which is why a threshold crossing would look like a STEP.\n");
+  std::printf(
+      "  the discriminator R = margin / pen, per eighth, with the two sides summed\n"
+      "                    SEPARATELY and never pre-divided so the run says which moved.\n"
+      "                    margin = mean |d_best - d_second| over RAW distances, the object\n"
+      "                    signal. pen = mean SPREAD (max-min) of the conscience term,\n"
+      "                    because a constant added to every slot cannot change an argmin.\n"
+      "                    M2 if R crosses 1 at e8 by the DENOMINATOR rising; M1 if the\n"
+      "                    NUMERATOR falls with uf ~ 1 already early; NEITHER otherwise,\n"
+      "                    which is a real outcome and not a failed run.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms\n",
+              double(ticks) / 1000.0, kJobs, kArms);
+  for (uint32_t a = 0; a < kArms; ++a)
+    std::printf("    %-8s %s\n", arms[a].name, arms[a].what);
+
+  struct Cell {
+    bool ok = false;
+    double margin[kE] = {}, pen[kE] = {}, R[kE] = {};
+    double step[kE] = {}, uf[kE] = {}, cd[kE] = {}, wshare[kE] = {};
+    double wlife[kE] = {};
+    double mn[kE] = {};
+    int8_t eflip[kE] = {};     // +1 agrees with the session assignment, -1 inverted, 0 degenerate
+    uint32_t wins = 0;
+    bool margin_live = false;  // did the margin column ever move at all?
+  };
+
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      // §56's THREE fields, unchanged, plus §57's two. SHIPPED sets neither of
+      // the new ones, which is why it must come out bit-identical to §56.
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      h.exploration.ctx_proto_tau_ms = arms[a].tau;
+      h.exploration.ctx_conscience_gain = arms[a].gain;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // EVERY ARGUMENT IS §52-§56's, and pin_mode is 0 because this arm IS the
+    // derived index. aibaby-control-on-a-different-code-path: the whole dose
+    // vector is pinned here, not just the field under test.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            /*pin_mode=*/0, /*teacher=*/1, /*pairing=*/0,
+                            /*write_noise=*/0.0, /*flicker=*/0);
+    if (!run.ok) return c;
+    const size_t n = run.teach_slot.size();
+    if (n < kE * 2 || run.c57_mn.size() != n) return c;
+    c.ok = true;
+    c.wins = uint32_t(n);
+
+    // §56's `modal`, unchanged, so the collapse column is the same estimator.
+    auto modal = [](const std::vector<int>& lab, const std::vector<int>& sl, int o,
+                    size_t lo, size_t hi) -> int {
+      uint32_t h[aibaby::kMaxContextSlots] = {};
+      for (size_t k = lo; k < hi && k < lab.size() && k < sl.size(); ++k) {
+        if (lab[k] == o && sl[k] >= 0 && sl[k] < int(aibaby::kMaxContextSlots))
+          ++h[sl[k]];
+      }
+      int best = -1;
+      uint32_t bv = 0;
+      for (uint32_t t = 0; t < aibaby::kMaxContextSlots; ++t)
+        if (h[t] > bv) { bv = h[t]; best = int(t); }
+      return best;
+    };
+    const int s0 = modal(run.teach_label, run.teach_slot, 0, 0, n);
+    const int s1 = modal(run.teach_label, run.teach_slot, 1, 0, n);
+
+    for (uint32_t e = 0; e < kE; ++e) {
+      const size_t lo = size_t(uint64_t(n) * e / kE);
+      const size_t hi = size_t(uint64_t(n) * (e + 1) / kE);
+      if (hi <= lo) continue;
+      // DIFFERENCES of cumulative counters. `lo == 0` has no earlier sample, so
+      // the eighth's own first window is its base -- it loses one window rather
+      // than silently charging the whole session's history to e1.
+      const size_t base = lo == 0 ? 0 : lo - 1;
+      const size_t last = hi - 1;
+      const double dmn = run.c57_mn[last] - run.c57_mn[base];
+      c.mn[e] = dmn;
+      if (dmn > 0.0) {
+        c.margin[e] = (run.c57_margin[last] - run.c57_margin[base]) / dmn;
+        c.pen[e] = (run.c57_pen[last] - run.c57_pen[base]) / dmn;
+        // R is a ratio of SUMS within the creature-eighth, never a mean of
+        // per-tick ratios (aibaby-mean-of-ratios). A pen of exactly 0 is the
+        // GAINOFF arm's expected state and is reported as a sentinel, not as an
+        // infinity that would average into every pooled figure.
+        c.R[e] = c.pen[e] > 0.0 ? c.margin[e] / c.pen[e] : -1.0;
+        if (c.margin[e] > 0.0) c.margin_live = true;
+      } else {
+        c.R[e] = -1.0;
+      }
+      double s2 = 0.0, sn = 0.0;
+      for (uint32_t k = 0; k < 2u; ++k) {
+        s2 += run.c57_step[k][last] - run.c57_step[k][base];
+        sn += run.c57_stepn[k][last] - run.c57_stepn[k][base];
+      }
+      // RMS, because the kernel banks SQUARED steps and sqrt(mean of squares)
+      // is not the mean of norms -- the column is labelled for what it is.
+      c.step[e] = sn > 0.0 ? std::sqrt(s2 / sn) : 0.0;
+      const double dufn = run.c57_ufn[last] - run.c57_ufn[base];
+      c.uf[e] = dufn > 0.0 ? (run.c57_uflost[last] - run.c57_uflost[base]) / dufn : -1.0;
+      // A tick-MEAN over the eighth, on exactly the ticks `pen` is meaned over,
+      // so the two are comparable. See the kernel's note: the endpoint sample
+      // this replaced disagreed with `pen` by three orders of magnitude.
+      c.cd[e] = dmn > 0.0 ? (run.c57_cd[last] - run.c57_cd[base]) / dmn : 0.0;
+      // The win share GAINED in this eighth, not the lifetime share: the
+      // lifetime figure is dominated by history and cannot show a late turn.
+      const double dw0 = run.c57_wins[0][last] - run.c57_wins[0][base];
+      const double dw1 = run.c57_wins[1][last] - run.c57_wins[1][base];
+      const double dwt = dw0 + dw1;
+      c.wshare[e] = dwt > 0.0 ? std::max(dw0, dw1) / dwt : -1.0;
+      // AND THE LIFETIME SHARE, which is the imbalance the CONSCIENCE ACTUALLY
+      // USES: the penalty is (k*w_c/W - 1)*cdscale*gain on the running totals,
+      // not on this eighth's increment. The two diverge sharply -- the smoke read
+      // `wsh` 1.0000 in e1 while the implied lifetime imbalance was ~0.29,
+      // because both slots win early and only then does one take over. Without
+      // this column M2's "the penalty grew" cannot be split into "the imbalance
+      // grew" and "the distance scale grew", which are different mechanisms.
+      const double w0 = run.c57_wins[0][last], w1 = run.c57_wins[1][last];
+      c.wlife[e] = (w0 + w1) > 0.0 ? std::max(w0, w1) / (w0 + w1) : -1.0;
+      // §56's eighth-wise assignment, same lambda, same three outcomes.
+      const int e0 = modal(run.teach_label, run.teach_slot, 0, lo, hi);
+      const int e1 = modal(run.teach_label, run.teach_slot, 1, lo, hi);
+      if (e0 < 0 || e1 < 0 || e0 == e1) c.eflip[e] = 0;
+      else if (s0 >= 0 && s1 >= 0 && e0 == s1 && e1 == s0) c.eflip[e] = -1;
+      else c.eflip[e] = 1;
+    }
+    return c;
+  });
+
+  // ---- aggregate -------------------------------------------------------
+  struct Row {
+    uint32_t crt = 0;
+    double margin[kE] = {}, pen[kE] = {}, step[kE] = {}, uf[kE] = {}, cd[kE] = {};
+    double wshare[kE] = {}, wlife[kE] = {};
+    double mnsum[kE] = {};                // ticks behind margin/pen, to un-weight them
+    double Rp[kE] = {};                   // POOLED: sum(margin)/sum(pen), no mean of ratios
+    double Rm[kE] = {}, Rse[kE] = {};     // per-creature mean and SE, printed beside it
+    uint32_t Rn[kE] = {};
+    uint32_t deg[kE] = {}, inv[kE] = {}, okc[kE] = {};
+    uint32_t margin_live = 0;
+  };
+  std::vector<Row> rows(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    Row& R = rows[job_arm[i]];
+    ++R.crt;
+    if (c.margin_live) ++R.margin_live;
+    for (uint32_t e = 0; e < kE; ++e) {
+      // TICK-WEIGHTED sums, and `mnsum` is kept so they can be turned back into
+      // means. Dividing these by the CREATURE COUNT instead -- which the first
+      // build did -- leaves both columns multiplied by ~18750 ticks and so
+      // inconsistent with every unweighted column beside them: `pen` printed
+      // 6.9e6 against a `cd` of 9.6e2 when the spread cannot exceed 2*cd. The
+      // pooled ratio was right either way, because both sides carried the same
+      // factor; the two columns the pre-registration says to read SEPARATELY
+      // were not.
+      R.margin[e] += c.margin[e] * c.mn[e];
+      R.pen[e] += c.pen[e] * c.mn[e];
+      R.mnsum[e] += c.mn[e];
+      R.cd[e] += c.cd[e];
+      R.step[e] += c.step[e];
+      if (c.uf[e] >= 0.0) R.uf[e] += c.uf[e];
+      if (c.wshare[e] >= 0.0) R.wshare[e] += c.wshare[e];
+      if (c.wlife[e] >= 0.0) R.wlife[e] += c.wlife[e];
+      if (c.R[e] >= 0.0) { R.Rm[e] += c.R[e]; R.Rse[e] += c.R[e] * c.R[e]; ++R.Rn[e]; }
+      if (c.eflip[e] == 0) ++R.deg[e];
+      else if (c.eflip[e] < 0) ++R.inv[e];
+      else ++R.okc[e];
+    }
+  }
+  for (uint32_t a = 0; a < kArms; ++a) {
+    Row& R = rows[a];
+    const double k = double(R.crt ? R.crt : 1);
+    for (uint32_t e = 0; e < kE; ++e) {
+      // Rp first, from the tick-weighted sums: that is the pooled ratio and it is
+      // unaffected by the normalisation below, since both sides carry the same
+      // factor. Then margin and pen become TICK-MEANS, which is what makes them
+      // comparable with `cd` and with each other across eighths of unequal length.
+      R.Rp[e] = R.pen[e] > 0.0 ? R.margin[e] / R.pen[e] : -1.0;
+      const double w = R.mnsum[e] > 0.0 ? R.mnsum[e] : 1.0;
+      R.margin[e] /= w; R.pen[e] /= w;
+      R.cd[e] /= k; R.step[e] /= k; R.uf[e] /= k; R.wshare[e] /= k; R.wlife[e] /= k;
+      if (R.Rn[e] > 1) {
+        const double m = R.Rm[e] / R.Rn[e];
+        const double v = R.Rse[e] / R.Rn[e] - m * m;
+        R.Rse[e] = std::sqrt(std::max(0.0, v) / double(R.Rn[e]));
+        R.Rm[e] = m;
+      } else if (R.Rn[e] == 1) {
+        R.Rm[e] = R.Rm[e]; R.Rse[e] = 0.0;
+      } else { R.Rm[e] = -1.0; R.Rse[e] = 0.0; }
+    }
+  }
+
+  auto band = [&](const char* title, const char* note) { std::printf("\n  %s\n%s", title, note); };
+
+  band("THE COLLAPSE ITSELF, §56's ESTIMATOR ON §57's RUN.",
+       "    `deg` is creatures with no distinguishable assignment in that eighth.\n"
+       "    SHIPPED must read 16 of 24 in e8 or clause 0 fails.\n");
+  std::printf("    arm              e1   e2   e3   e4   e5   e6   e7   e8\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s deg  ", arms[a].name);
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%4u ", R.deg[e]);
+    std::printf("   (crt %u)\n             inv  ", R.crt);
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%4u ", R.inv[e]);
+    std::printf("\n             ok   ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%4u ", R.okc[e]);
+    std::printf("\n");
+  }
+
+  band("THE TWO SIDES OF R, SEPARATELY -- THIS IS THE DISCRIMINATOR.",
+       "    `margin` is the object signal (mean |d_best - d_second|, RAW).\n"
+       "    `pen` is the conscience spread competing with it. M1 moves the FIRST,\n"
+       "    M2 moves the SECOND. `Rp` is pooled sum/sum; `Rm` is the per-creature\n"
+       "    mean with its SE, printed beside it because they are different\n"
+       "    estimators and a disagreement is a finding, not a rounding.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s margin ", arms[a].name);
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3e ", R.margin[e]);
+    std::printf("\n             pen    ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3e ", R.pen[e]);
+    std::printf("\n             Rp     ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3f ", R.Rp[e]);
+    std::printf("\n             Rm     ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3f ", R.Rm[e]);
+    std::printf("\n             +-SE   ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3f ", R.Rse[e]);
+    std::printf("\n");
+  }
+
+  band("M1's OWN COLUMNS: THE PROTOTYPE STEP AND THE FLOAT32 UNDERFLOW.",
+       "    `step` is the RMS applied step per update, `uf` the share of\n"
+       "    components whose increment ROUNDED TO ZERO -- measured against the\n"
+       "    stored value after the write, never predicted from eps, because\n"
+       "    |x-proto| at this operating point is exactly what is unknown.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s step   ", arms[a].name);
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3e ", R.step[e]);
+    std::printf("\n             uf     ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.4f ", R.uf[e]);
+    std::printf("\n");
+  }
+
+  band("M2's OWN COLUMNS: THE LIFETIME DISTANCE SCALE AND THE WIN SHARE.",
+       "    `cd` is cdscale, tick-meaned over the SAME ticks as `pen` so the two\n"
+       "    are comparable -- the penalty spread cannot exceed 2*cd*gain, and that\n"
+       "    bound is the arithmetic check on this whole band. `wsh` is the share of\n"
+       "    wins GAINED in that eighth by the dominant slot; `wlife` is the LIFETIME\n"
+       "    share, which is the imbalance the conscience actually multiplies by.\n"
+       "    They diverge -- wsh saturates at 1.0 long before wlife does -- and\n"
+       "    pen ~ wlife * 2 * cd * gain is what splits 'the penalty grew' into\n"
+       "    'the imbalance grew' and 'the scale grew'. Different mechanisms.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s cd     ", arms[a].name);
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.3e ", R.cd[e]);
+    std::printf("\n             wsh    ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.4f ", R.wshare[e]);
+    std::printf("\n             wlife  ");
+    for (uint32_t e = 0; e < kE; ++e) std::printf("%9.4f ", R.wlife[e]);
+    std::printf("\n");
+  }
+
+  // ---- clauses ---------------------------------------------------------
+  const Row& SH = rows[0];
+  const Row& T3 = rows[1];
+  const Row& T30 = rows[2];
+  const Row& GO = rows[3];
+  bool fatal = false;
+
+  // READ ONLY AT THE VERDICT BUDGET, and that is not a loosened gate. §56's
+  // 16 of 24 is a figure about ticks 787k-900k; a 150k session has no such
+  // window, so the comparison is undefined rather than failed. Gating it also
+  // keeps the smoke flowing into clauses 3 and 4 -- a fatal clause 0 at a short
+  // budget would leave the discriminator's branches as untested code, which is
+  // aibaby-deferral-note-is-untested-code in the one place it would hurt most.
+  const bool c0_read = ticks >= kVerdictTicks;
+  std::printf("\n  CLAUSE 0 -- IDENTITY. SHIPPED is §56's arm under a different enclosing\n"
+              "  experiment, so it must reproduce deg %u of %u in e8.\n", k56Deg8, k56Crt);
+  if (!c0_read) {
+    std::printf("    NOT READ AT THIS BUDGET (%llu < %llu): §56's figure is about ticks\n"
+                "    787k-900k and this run has no such window. Undefined, not failed.\n",
+                (unsigned long long)ticks, (unsigned long long)kVerdictTicks);
+  } else {
+    const bool c0 = SH.crt == k56Crt && SH.deg[kE - 1] == k56Deg8;
+    std::printf("    SHIPPED  crt %u deg[e8] %u  %s\n", SH.crt, SH.deg[kE - 1],
+                c0 ? "PASS" : "*** FAIL -- the instrument, not the finding ***");
+    if (!c0) fatal = true;
+  }
+
+  std::printf("\n  CLAUSE 1 -- WIRING. A DNA SCALAR MUST NOT RE-ROLL THE WIRING. TAU300K's\n"
+              "  floor (3.3e-6) binds only after ~300k wins, so its EARLY eighths must\n"
+              "  match SHIPPED. If they do not, every between-arm contrast below is VOID.\n");
+  {
+    uint32_t mismatch = 0;
+    for (uint32_t e = 0; e < 5u; ++e)
+      if (T3.deg[e] != SH.deg[e] || T3.okc[e] != SH.okc[e]) ++mismatch;
+    const bool c1 = T3.crt == SH.crt && mismatch == 0;
+    std::printf("    TAU300K  e1-e5 deg/ok mismatches %u of 5  %s\n", mismatch,
+                c1 ? "PASS" : "*** FAIL -- STOP, THE SWEEP IS VOID ***");
+    if (!c1) fatal = true;
+  }
+
+  std::printf("\n  CLAUSE 2 -- VACUITY. A column that cannot move cannot discriminate.\n"
+              "  `uf` must be strictly inside (0,1) somewhere, `step` non-zero in e1,\n"
+              "  and the margin must be live on every creature of every arm.\n");
+  {
+    bool uf_mid = false, step_e1 = true, mlive = true;
+    uint32_t checked = 0;
+    for (uint32_t a = 0; a < kArms; ++a) {
+      if (rows[a].crt == 0) continue;
+      ++checked;
+      for (uint32_t e = 0; e < kE; ++e)
+        if (rows[a].uf[e] > 1e-9 && rows[a].uf[e] < 1.0 - 1e-9) uf_mid = true;
+      if (!(rows[a].step[0] > 0.0)) step_e1 = false;
+      if (rows[a].margin_live != rows[a].crt) mlive = false;
+    }
+    // aibaby-vacuity-gate-cannot-guard-a-rejection: zero arms checked is a
+    // FAILURE, not a vacuous pass.
+    const bool c2 = checked == kArms && uf_mid && step_e1 && mlive;
+    std::printf("    arms checked %u of %u, uf inside (0,1) %s, step[e1]>0 %s,"
+                " margin live %s  %s\n",
+                checked, kArms, uf_mid ? "yes" : "NO", step_e1 ? "yes" : "NO",
+                mlive ? "yes" : "NO",
+                c2 ? "PASS" : "*** FAIL -- a column cannot discriminate ***");
+    if (!c2) fatal = true;
+  }
+
+  if (fatal) {
+    std::printf("\n  NO VERDICT: a clause above failed, and clauses 3 and 4 are not read.\n"
+                "  Order is part of the pre-registration -- reading a discriminator\n"
+                "  through a void instrument is how a verdict gets fitted to data.\n");
+    return true;
+  }
+
+  // ADDED AFTER THE 150k SMOKE AND SAID SO. The pre-registered test asks whether
+  // R crosses 1 between e7 and e8, which is right at 900k because that is where
+  // `deg` jumps. The smoke showed R falling MONOTONICALLY and crossing 1 around
+  // e6 at 150k, where every eighth is inside §56's FIRST collapse -- so the
+  // crossing eighth and the collapse eighth are separate facts and printing only
+  // the registered pair would hide a disagreement between them. These two lines
+  // are REPORTED, not read by the verdict below.
+  {
+    uint32_t cross = kE, jump = kE;
+    int bestjump = 0;
+    for (uint32_t e = 0; e < kE; ++e)
+      if (cross == kE && SH.Rp[e] >= 0.0 && SH.Rp[e] < 1.0) cross = e;
+    for (uint32_t e = 1; e < kE; ++e) {
+      const int d = int(SH.deg[e]) - int(SH.deg[e - 1]);
+      if (d > bestjump) { bestjump = d; jump = e; }
+    }
+    std::printf("\n  WHERE THINGS HAPPEN (reported, not read by the verdict):\n"
+                "    R first falls below 1 at %s; `deg` jumps most at %s (+%d).\n",
+                cross < kE ? (std::string("e") + char('1' + cross)).c_str() : "never",
+                jump < kE ? (std::string("e") + char('1' + jump)).c_str() : "nowhere",
+                bestjump);
+  }
+
+  std::printf("\n  CLAUSE 3 -- THE DISCRIMINATOR, THREE WAYS.\n");
+  {
+    const double R7 = SH.Rp[kE - 2], R8 = SH.Rp[kE - 1];
+    const double m7 = SH.margin[kE - 2], m8 = SH.margin[kE - 1];
+    const double p7 = SH.pen[kE - 2], p8 = SH.pen[kE - 1];
+    const double uf4 = SH.uf[3];
+    const bool crossed = R7 > 1.0 && R8 > 0.0 && R8 < 1.0;
+    const double mfall = m7 > 0.0 ? m8 / m7 : -1.0;
+    const double prise = p7 > 0.0 ? p8 / p7 : -1.0;
+    std::printf("    SHIPPED  R(e7) %.3f -> R(e8) %.3f   margin x%.3f   pen x%.3f"
+                "   uf(e4) %.4f\n", R7, R8, mfall, prise, uf4);
+    if (crossed && prise > mfall && prise > 1.0)
+      std::printf("    VERDICT M2 -- R crosses 1 and the DENOMINATOR is what moved:\n"
+                  "    the conscience's lifetime scale outgrew the object signal.\n");
+    else if (crossed && mfall < 1.0 && mfall < prise)
+      std::printf("    VERDICT M1 -- R crosses 1 and the NUMERATOR is what moved:\n"
+                  "    the object signal itself collapsed, prototypes stale.\n");
+    else if (!crossed)
+      std::printf("    VERDICT NEITHER -- R did not cross 1 between e7 and e8, so the\n"
+                  "    collapse is not a re-ranking of these two terms. BOTH suspects\n"
+                  "    are refuted and §57's account is wrong, which is a result.\n");
+    else
+      std::printf("    VERDICT BOTH -- R crossed and neither side dominates the move.\n"
+                  "    The arithmetic predicted this is possible: a frozen prototype\n"
+                  "    keeps d small and a small d is what lets cdscale outrank it.\n");
+  }
+
+  std::printf("\n  CLAUSE 4 -- THE LEVER, reported as a SEPARATE claim. A knob that removes\n"
+              "  the collapse does not prove the mechanism; it shows the collapse is\n"
+              "  reachable through that parameter.\n");
+  std::printf("    arm       deg[e8]  of crt   vs SHIPPED\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s %6u   %6u   %+6d\n", arms[a].name, R.deg[kE - 1], R.crt,
+                int(R.deg[kE - 1]) - int(SH.deg[kE - 1]));
+  }
+  std::printf("    GAINOFF's FIRST eighth is its own positive control: removing the\n"
+              "    conscience must re-expose the EARLY monopoly partprobe measured at\n"
+              "    78%% of inits. deg[e1] SHIPPED %u, GAINOFF %u.\n",
+              SH.deg[0], GO.deg[0]);
+  (void)T30;
+
+  if (ticks < kVerdictTicks)
+    std::printf("\n  NOTE: %llu ticks is BELOW the %llu verdict budget. The collapse under\n"
+                "  test sits after ~787k ticks and does not exist in this run, so clause 3\n"
+                "  is reporting a window that cannot contain the phenomenon.\n",
+                (unsigned long long)ticks, (unsigned long long)kVerdictTicks);
   return true;
 }
 

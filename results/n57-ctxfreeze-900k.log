@@ -1,0 +1,150 @@
+experiment: ctxfreeze
+experiment: ctxfreeze
+  the question      §57. §56 found the derived index COLLAPSING TWICE and never
+                    inverting: deg 22/24 in e1, 0/24 in e4-e7, 16/24 in e8, with
+                    the rate stepping 0.0181 -> 0.3121. The first collapse is
+                    understood (prototypes at the origin while rate_ema_ climbs).
+                    THE SECOND IS NOT, and it is keyed to ABSOLUTE ticks: the 450k
+                    run's own e8 (394k-450k) reads deg 1/24 and the 900k run's e4
+                    (337k-450k) reads 0/24 -- the same stretch of life, uncollapsed,
+                    scored two ways.
+  not sleep         SETTLED FROM SOURCE, not measured: the creature does not fall
+                    asleep until ~1.04M ticks, so in a 900k session it NEVER sleeps.
+                    Consolidation cannot be involved.
+  the two suspects  M1 THE PROTOTYPES FREEZE. lr = 1/wins with tau 0 and no floor;
+                    wins is a monotone float32 counter nothing decays or resets
+                    (only gate 7 clears it, this is gate 2) and the context path
+                    runs EVERY TICK in Network::step(), so by 900k lr ~ 2e-6 and
+                    proto += lr*(x-proto) rounds to zero.
+                    M2 THE SCALE OUTGROWS THE SIGNAL. cdscale is a lifetime mean
+                    with no decay, the penalty scales with it, and gate 2 feeds the
+                    ADJUSTED distance back into ctx_dsum_ -- a positive feedback,
+                    which is why a threshold crossing would look like a STEP.
+  the discriminator R = margin / pen, per eighth, with the two sides summed
+                    SEPARATELY and never pre-divided so the run says which moved.
+                    margin = mean |d_best - d_second| over RAW distances, the object
+                    signal. pen = mean SPREAD (max-min) of the conscience term,
+                    because a constant added to every slot cannot change an argmin.
+                    M2 if R crosses 1 at e8 by the DENOMINATOR rising; M1 if the
+                    NUMERATOR falls with uf ~ 1 already early; NEITHER otherwise,
+                    which is a real outcome and not a failed run.
+  session           900.0 s of simulated life x 96 sessions, 4 arms
+    SHIPPED  §56's EXACT arm -- must reproduce deg 16/24 in e8
+    TAU300K  floor 3.3e-6, binds only after ~300k wins: WIRING + VACUITY arm
+    TAU30K   floor 3.3e-5, ~15x the unfloored rate: M1's lever
+    GAINOFF  conscience neutered on gate 2's OWN path: M2's lever
+
+  THE COLLAPSE ITSELF, §56's ESTIMATOR ON §57's RUN.
+    `deg` is creatures with no distinguishable assignment in that eighth.
+    SHIPPED must read 16 of 24 in e8 or clause 0 fails.
+    arm              e1   e2   e3   e4   e5   e6   e7   e8
+    SHIPPED  deg    22   18    2    0    0    0    0   16    (crt 24)
+             inv     0    0    0    0    0    0    0    0 
+             ok      2    6   22   24   24   24   24    8 
+    TAU300K  deg    22   18    2    0    0    0    0   17    (crt 24)
+             inv     0    0    0    0    0    0    0    0 
+             ok      2    6   22   24   24   24   24    7 
+    TAU30K   deg    23   15    1    0    0    0    0   14    (crt 24)
+             inv     0    0    0    0    0    0    0    0 
+             ok      1    9   23   24   24   24   24   10 
+    GAINOFF  deg    24   24   24   24   24   24   24   23    (crt 24)
+             inv     0    0    0    0    0    0    0    0 
+             ok      0    0    0    0    0    0    0    1 
+
+  THE TWO SIDES OF R, SEPARATELY -- THIS IS THE DISCRIMINATOR.
+    `margin` is the object signal (mean |d_best - d_second|, RAW).
+    `pen` is the conscience spread competing with it. M1 moves the FIRST,
+    M2 moves the SECOND. `Rp` is pooled sum/sum; `Rm` is the per-creature
+    mean with its SE, printed beside it because they are different
+    estimators and a disagreement is a finding, not a rounding.
+    SHIPPED  margin 3.395e+03 2.541e+02 3.237e+02 4.101e+02 4.433e+02 4.775e+02 4.614e+02 7.088e+02 
+             pen    2.049e+03 4.735e+02 9.334e+01 1.054e+02 1.067e+02 1.080e+02 1.070e+02 1.613e+02 
+             Rp         1.657     0.537     3.468     3.889     4.155     4.422     4.312     4.395 
+             Rm         1.658     0.909     5.440     7.402     7.246     8.370    11.011     5.830 
+             +-SE       0.029     0.214     0.854     1.363     1.224     1.419     2.939     0.647 
+    TAU300K  margin 3.395e+03 2.541e+02 3.237e+02 4.101e+02 4.438e+02 4.752e+02 4.683e+02 8.309e+02 
+             pen    2.049e+03 4.735e+02 9.334e+01 1.054e+02 1.068e+02 1.076e+02 1.097e+02 1.644e+02 
+             Rp         1.657     0.537     3.468     3.889     4.157     4.415     4.271     5.054 
+             Rm         1.658     0.909     5.440     7.402     7.247     8.341    10.561     6.314 
+             +-SE       0.029     0.214     0.854     1.363     1.223     1.418     2.665     0.560 
+    TAU30K   margin 3.509e+03 3.724e+02 5.914e+02 6.838e+02 6.696e+02 6.490e+02 5.723e+02 9.312e+02 
+             pen    2.032e+03 5.138e+02 6.297e+01 4.301e+01 2.978e+01 2.299e+01 1.960e+01 3.958e+01 
+             Rp         1.727     0.725     9.391    15.900    22.482    28.232    29.195    23.524 
+             Rm         1.726     1.119    14.884    27.063    30.933    38.923    42.564    28.506 
+             +-SE       0.033     0.183     2.173     4.056     3.268     4.450     4.999     2.377 
+    GAINOFF  margin 8.149e+03 7.530e+03 6.395e+03 5.163e+03 4.318e+03 3.699e+03 3.170e+03 2.851e+03 
+             pen    3.025e-03 2.461e-03 2.166e-03 2.032e-03 1.965e-03 1.931e-03 1.910e-03 1.762e-03 
+             Rp     2694170.385 3059497.294 2952503.473 2540816.194 2197602.302 1916014.105 1659100.125 1618077.480 
+             Rm     2695551.022 3062853.515 2963015.224 2552575.024 2206193.670 1926231.731 1668708.989 1621326.094 
+             +-SE   22799.011 29781.272 38585.666 35148.455 29571.202 31929.197 30313.676 18056.451 
+
+  M1's OWN COLUMNS: THE PROTOTYPE STEP AND THE FLOAT32 UNDERFLOW.
+    `step` is the RMS applied step per update, `uf` the share of
+    components whose increment ROUNDED TO ZERO -- measured against the
+    stored value after the write, never predicted from eps, because
+    |x-proto| at this operating point is exactly what is unknown.
+    SHIPPED  step   1.643e-03 5.018e-04 1.882e-04 1.371e-04 1.085e-04 9.032e-05 7.673e-05 9.636e-05 
+             uf        0.0037    0.0073    0.0133    0.0170    0.0202    0.0231    0.0263    0.0223 
+    TAU300K  step   1.643e-03 5.018e-04 1.882e-04 1.371e-04 1.086e-04 9.466e-05 9.232e-05 1.393e-04 
+             uf        0.0037    0.0073    0.0133    0.0170    0.0202    0.0218    0.0216    0.0156 
+    TAU30K   step   1.751e-03 9.945e-04 8.166e-04 7.628e-04 7.328e-04 7.072e-04 6.845e-04 7.577e-04 
+             uf        0.0020    0.0027    0.0029    0.0028    0.0029    0.0029    0.0030    0.0023 
+    GAINOFF  step   9.078e-04 1.665e-04 9.935e-05 7.276e-05 5.754e-05 4.819e-05 5.743e-03 1.094e-01 
+             uf        0.0055    0.0165    0.0259    0.0328    0.0385    0.0444    0.0504    0.0267 
+
+  M2's OWN COLUMNS: THE LIFETIME DISTANCE SCALE AND THE WIN SHARE.
+    `cd` is cdscale, tick-meaned over the SAME ticks as `pen` so the two
+    are comparable -- the penalty spread cannot exceed 2*cd*gain, and that
+    bound is the arithmetic check on this whole band. `wsh` is the share of
+    wins GAINED in that eighth by the dominant slot; `wlife` is the LIFETIME
+    share, which is the imbalance the conscience actually multiplies by.
+    They diverge -- wsh saturates at 1.0 long before wlife does -- and
+    pen ~ wlife * 2 * cd * gain is what splits 'the penalty grew' into
+    'the imbalance grew' and 'the scale grew'. Different mechanisms.
+    SHIPPED  cd     1.663e+03 1.432e+03 1.167e+03 1.052e+03 9.887e+02 9.515e+02 9.257e+02 9.628e+02 
+             wsh       0.7644    0.7714    0.5742    0.5513    0.5400    0.5532    0.5401    0.8318 
+             wlife     0.7241    0.5179    0.5232    0.5269    0.5267    0.5282    0.5276    0.5617 
+    TAU300K  cd     1.663e+03 1.432e+03 1.167e+03 1.052e+03 9.888e+02 9.512e+02 9.251e+02 9.541e+02 
+             wsh       0.7644    0.7714    0.5742    0.5513    0.5405    0.5551    0.5429    0.8238 
+             wlife     0.7241    0.5179    0.5232    0.5269    0.5268    0.5283    0.5288    0.5643 
+    TAU30K   cd     1.630e+03 1.390e+03 1.099e+03 9.511e+02 8.544e+02 7.859e+02 7.336e+02 6.994e+02 
+             wsh       0.7842    0.7930    0.5606    0.5318    0.5232    0.5386    0.5364    0.7694 
+             wlife     0.7402    0.5220    0.5126    0.5118    0.5078    0.5072    0.5063    0.5336 
+    GAINOFF  cd     1.512e+03 1.231e+03 1.083e+03 1.016e+03 9.824e+02 9.654e+02 9.552e+02 9.303e+02 
+             wsh       1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    0.9969    0.7862 
+             wlife     1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    0.9996    0.9322 
+
+  CLAUSE 0 -- IDENTITY. SHIPPED is §56's arm under a different enclosing
+  experiment, so it must reproduce deg 16 of 24 in e8.
+    SHIPPED  crt 24 deg[e8] 16  PASS
+
+  CLAUSE 1 -- WIRING. A DNA SCALAR MUST NOT RE-ROLL THE WIRING. TAU300K's
+  floor (3.3e-6) binds only after ~300k wins, so its EARLY eighths must
+  match SHIPPED. If they do not, every between-arm contrast below is VOID.
+    TAU300K  e1-e5 deg/ok mismatches 0 of 5  PASS
+
+  CLAUSE 2 -- VACUITY. A column that cannot move cannot discriminate.
+  `uf` must be strictly inside (0,1) somewhere, `step` non-zero in e1,
+  and the margin must be live on every creature of every arm.
+    arms checked 4 of 4, uf inside (0,1) yes, step[e1]>0 yes, margin live yes  PASS
+
+  WHERE THINGS HAPPEN (reported, not read by the verdict):
+    R first falls below 1 at e2; `deg` jumps most at e8 (+16).
+
+  CLAUSE 3 -- THE DISCRIMINATOR, THREE WAYS.
+    SHIPPED  R(e7) 4.312 -> R(e8) 4.395   margin x1.536   pen x1.507   uf(e4) 0.0170
+    VERDICT NEITHER -- R did not cross 1 between e7 and e8, so the
+    collapse is not a re-ranking of these two terms. BOTH suspects
+    are refuted and §57's account is wrong, which is a result.
+
+  CLAUSE 4 -- THE LEVER, reported as a SEPARATE claim. A knob that removes
+  the collapse does not prove the mechanism; it shows the collapse is
+  reachable through that parameter.
+    arm       deg[e8]  of crt   vs SHIPPED
+    SHIPPED      16       24       +0
+    TAU300K      17       24       +1
+    TAU30K       14       24       -2
+    GAINOFF      23       24       +7
+    GAINOFF's FIRST eighth is its own positive control: removing the
+    conscience must re-expose the EARLY monopoly partprobe measured at
+    78% of inits. deg[e1] SHIPPED 22, GAINOFF 24.

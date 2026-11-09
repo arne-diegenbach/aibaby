@@ -405,6 +405,27 @@ class Network {
     for (uint32_t c = 0; c < ctx_slots_; ++c) t += ctx_wins_[c];
     return t;
   }
+  // §57. The per-slot win count, which only the TOTAL was exposed for. The
+  // conscience's whole state is the IMBALANCE, and a total cannot carry it.
+  Scalar ctx_wins(uint32_t c) const {
+    return c < aibaby::kMaxContextSlots ? ctx_wins_[c] : kZero;
+  }
+  // The conscience's distance SCALE as the kernel computes it -- a lifetime mean
+  // with no decay, which is M2's suspect, so it is read and not reconstructed.
+  Scalar ctx_cdscale() const { return ctx_dn_ > kZero ? ctx_dsum_ / ctx_dn_ : kZero; }
+  // §57 instrument, all cumulative; the host differences them across eighths.
+  double ctx_margin_sum() const { return ctx_margin_sum_; }
+  double ctx_pen_sum() const { return ctx_pen_sum_; }
+  double ctx_cd_sum() const { return ctx_cd_sum_; }
+  uint64_t ctx_margin_n() const { return ctx_margin_n_; }
+  double ctx_proto_step_sum(uint32_t c) const {
+    return c < aibaby::kMaxContextSlots ? ctx_proto_step_sum_[c] : 0.0;
+  }
+  uint64_t ctx_proto_step_n(uint32_t c) const {
+    return c < aibaby::kMaxContextSlots ? ctx_proto_step_n_[c] : 0;
+  }
+  uint64_t ctx_uf_lost() const { return ctx_uf_lost_; }
+  uint64_t ctx_uf_n() const { return ctx_uf_n_; }
   bool context_present() const { return ctx_present_; }
   uint32_t context_slots() const { return ctx_slots_; }
   uint32_t context_source() const { return ctx_source_; }
@@ -1392,6 +1413,41 @@ class Network {
   double ctx_gap_sum_ = 0.0;
   uint64_t ctx_off_run_ = 0;      // ticks since the gate last closed
   uint64_t ctx_on_ticks_ = 0;     // total ticks the gate has been open
+  // §57. INSTRUMENT ONLY -- the five quantities that decide WHY a differentiated
+  // index re-collapses late. All CUMULATIVE: the host samples them at eighth
+  // boundaries and differences, so the kernel carries no notion of an eighth.
+  //
+  // `double` and `uint64_t`, NOT Scalar, and that is the point rather than a
+  // style choice. The mechanism under test is that `ctx_wins_`/`ctx_dn_` are
+  // float32 counters incremented by 1.0 per tick and so stop incrementing past
+  // 2^24; an instrument built from the same type would saturate alongside the
+  // thing it is measuring and report that nothing happened.
+  //
+  // THE MARGIN is the RAW squared-distance gap between the two best prototypes,
+  // which is the object signal, and THE PENALTY is the conscience term's
+  // magnitude at the same tick, which is what competes with it. They are summed
+  // SEPARATELY and never pre-divided: a ratio of per-tick ratios and a ratio of
+  // sums are different estimators (aibaby-mean-of-ratios), and only the
+  // separate sums let the host say WHICH side of R moved.
+  double ctx_margin_sum_ = 0.0;   // sum of |d_best - d_second|, RAW distances
+  double ctx_pen_sum_ = 0.0;      // sum of |(k*w_c/W - 1) * cdscale * gain|
+  uint64_t ctx_margin_n_ = 0;     // ticks contributing to both sums
+  // AND cdscale SUMMED OVER THE SAME TICKS, which the smoke proved is not
+  // optional. Sampling cdscale once at an eighth's last window and printing it
+  // beside a tick-MEAN penalty made the two disagree by three orders of
+  // magnitude -- the spread cannot exceed 2*cdscale*gain, yet `pen` read 6.9e6
+  // against a `cd` of 1.3e3. Nothing was wrong with either number: cdscale is a
+  // lifetime mean that falls steeply from ~1e7, so its value at the END of an
+  // eighth says nothing about its mean ACROSS it. Two quantities printed side by
+  // side have to be the same KIND of quantity or the table lies.
+  double ctx_cd_sum_ = 0.0;
+  // THE PROTOTYPE STEP, per slot, and the share of updates whose increment was
+  // LOST to float32. Sized by the cap and not by a literal, because that exact
+  // bug is recorded forty lines above this one.
+  double ctx_proto_step_sum_[aibaby::kMaxContextSlots] = {};
+  uint64_t ctx_proto_step_n_[aibaby::kMaxContextSlots] = {};
+  uint64_t ctx_uf_lost_ = 0;      // updates where proto[n] did not change at all
+  uint64_t ctx_uf_n_ = 0;         // component updates attempted
   // The cap lives in config.h: dna.cpp validates against it and must not depend on
   // the kernel. Kept as a member alias so existing references still read naturally.
   static constexpr uint32_t kMaxContextSlots = aibaby::kMaxContextSlots;

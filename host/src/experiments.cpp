@@ -289,6 +289,30 @@ const Spec kSpecs[] = {
      "  window count and the power pre-flight wants the budget that halves the SE.\n"
      "  Registered in that order before any number existed. kRead: every branch\n"
      "  prints"},
+    {"ctxfreeze", 900000, Expect::kRead, Tier::kLong,
+     "derived: §57. §56 found the derived visual index COLLAPSING TWICE and never\n"
+     "  inverting -- deg 22/24 in the first eighth, 0/24 through the fourth to\n"
+     "  seventh, 16/24 AGAIN in the eighth, with the rate stepping 0.0181 ->\n"
+     "  0.3121. The late collapse is keyed to ABSOLUTE ticks and not to the end of\n"
+     "  the run: the 450k session's own eighth 8 covers 394k-450k and reads deg\n"
+     "  1/24 while the 900k session's eighth 4 covers the same stretch and reads\n"
+     "  0/24. SLEEP IS RULED OUT FROM SOURCE -- the creature does not fall asleep\n"
+     "  until ~1.04M ticks. Two suspects remain, both read off the kernel: M1 the\n"
+     "  prototypes FREEZE, since lr = 1/ctx_wins_[winner] with ctx_proto_tau_ms 0\n"
+     "  has no floor, ctx_wins_ is a monotone float32 counter nothing decays or\n"
+     "  resets, the context path runs EVERY TICK in Network::step(), and by 900k\n"
+     "  the update rounds to zero in float32; M2 the conscience OUTGROWS the object\n"
+     "  signal, since cdscale = ctx_dsum_/ctx_dn_ is a lifetime mean with no decay\n"
+     "  and gate 2 feeds the conscience-ADJUSTED distance back into it, a positive\n"
+     "  feedback which is why a threshold crossing looks like a STEP. PRIMARY: the\n"
+     "  ratio R = margin/pen per eighth with the two sides summed SEPARATELY, so\n"
+     "  the run says WHICH side moved -- M2 if the denominator rose, M1 if the\n"
+     "  numerator fell, NEITHER if R never crosses 1, which refutes both and is a\n"
+     "  result. TAU300K's floor binds only after ~300k wins, so it doubles as the\n"
+     "  WIRING check (a DNA scalar must not re-roll the wiring) and the vacuity\n"
+     "  arm. The underflow share is MEASURED against the stored value after the\n"
+     "  write, never predicted from eps, because |x-proto| at this operating point\n"
+     "  is exactly what is unknown. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1555,6 +1579,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "writerate") ok = run_writerate(dna_blob, ticks, verbose);
   else if (name == "switchrate") ok = run_switchrate(dna_blob, ticks, verbose);
   else if (name == "slotdrift") ok = run_slotdrift(dna_blob, ticks, verbose);
+  else if (name == "ctxfreeze") ok = run_ctxfreeze(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

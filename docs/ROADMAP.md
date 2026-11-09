@@ -10179,3 +10179,279 @@ to push prototypes after the split is earned, homeostasis, or the bias table's o
 into the index. **And it bears directly on the deficit**, because a creature that cannot index for the
 last eighth of its life cannot express a conditional lesson there either — so §53's null was measured
 partly over a window in which the index had already collapsed.
+
+## §57 PRE-REGISTRATION — WHY A DIFFERENTIATED INDEX RE-COLLAPSES, AND THE SOURCE ALREADY NAMES TWO SUSPECTS (2026-11-09)
+
+§56 found the derived visual index **collapsing twice and never inverting**: 22 of 24 creatures have no
+distinguishable slot-to-object assignment in the first eighth of the session, 0 of 24 through the fourth
+to seventh, and **16 of 24 again in the final eighth**, with the error rate jumping 0.0181 → 0.3121. The
+first collapse is understood — the prototypes start at the origin while `rate_ema_` climbs, which is why
+`ctx_proto_gate` 3 exists. **The second is not, and it bears directly on the deficit**: a creature that
+cannot index for the last eighth of its life cannot express a conditional lesson there either, so §53's
+null was measured partly over a window in which the index had already gone.
+
+**IT IS AN ABSOLUTE TIME, NOT A FRACTION OF THE SESSION, AND THAT IS ALREADY MEASURED TWICE.** The
+collapse sits after ~787k ticks (eighth 8 of 900k). The 450k run's own eighth 8 covers ticks 394k–450k
+and reads `deg` **1 of 24**; the 900k run's eighth 4 covers 337k–450k and reads **0 of 24**. The same
+stretch of life, scored two ways at two budgets, is uncollapsed. So whatever happens is keyed to
+elapsed ticks — or to something monotone in them — and not to the end of the run.
+
+### WHAT THE SOURCE SETTLES BEFORE ANYTHING IS BUILT
+
+Four facts, each read off the kernel rather than measured, and the first kills a named candidate:
+
+- **SLEEP IS NOT IT.** The creature does not fall asleep until ~1.04M ticks, so in a 900k session it
+  never sleeps at all. `[[aibaby-sleep-myelination]]` and the consolidation route cannot be involved.
+- **The context path runs in `Network::step()`, every tick**, with no plasticity-interval gate. At 900k
+  ticks the winning slot therefore holds wins of order 10^5–10^6.
+- **`ctx_proto_tau_ms = 0` in the §56 variant**, so the prototype learning rate is pure MacQueen
+  `lr = 1/ctx_wins_[winner]` with **no floor**, and `ctx_wins_` is a monotone float32 accumulator that
+  **nothing decays and nothing resets** (only gate 7 clears it, and this is gate 2).
+- **`ctx_conscience_gain` reads 0.0 in the genome but the kernel maps 0 to 1.0**, so the conscience is
+  active at full strength. The archived `results/n56-genome.toml` shows every context field at 0 because
+  the variant is patched in code (`context_source = 5`, `context_slots = 2`, `ctx_proto_gate = 2`) —
+  worth stating plainly, because that file alone would mislead anyone reconstructing the run.
+
+### THE TWO SUSPECTS, BOTH DERIVED AND BOTH WITH AN EXISTING KNOB
+
+The winner is `argmin_c [ d_c + (2·w_c/W − 1)·cdscale·gain ]`, where `d_c` is the squared distance from
+`rate_ema_` to prototype `c`, `W` the total wins, and `cdscale = ctx_dsum_/ctx_dn_`.
+
+**M1 — THE PROTOTYPES FREEZE AND THE FEATURES WALK AWAY FROM THEM.** `lr = 1/wins` falls to ~2e-6 by
+900k, and the update `proto += lr·(x − proto)` vanishes into float32 whenever `lr·|x−proto|` drops below
+`eps·|proto|`, eps = 1.19e-7. The kernel's own comment records this as measured. A frozen prototype is
+harmless while the feature distribution is stationary and fatal once it drifts: both objects end up
+nearer the same stale prototype. Knob: **`ctx_proto_tau_ms`**, which floors `lr` at `dt_ms/tau` and so
+makes the prototype an EMA instead of a dying average.
+
+**M2 — THE DISTANCE SCALE IS A LIFETIME MEAN, SO THE CONSCIENCE OUTGROWS THE OBJECT SIGNAL.**
+`cdscale` is `ctx_dsum_/ctx_dn_` with **no decay**, so it is the mean achieved distance over the whole
+life. As the prototypes converge the *instantaneous* distances shrink while `cdscale` stays near its
+early, large value. The penalty term is proportional to `cdscale` and the object signal is
+`|d_0 − d_1|`, so the ratio moves steadily against the object until the index is chosen by **win
+balance rather than by what is on the retina** — which reads as degeneracy in the modal measure. Knob:
+**`ctx_conscience_gain`**, shipped by v70.
+
+**AND M2 HAS A POSITIVE FEEDBACK, WHICH IS WHY A THRESHOLD CROSSING WOULD LOOK SHARP.** Gate 2 is not
+vigilant, so `ctx_dsum_ += best_d` accumulates the **conscience-ADJUSTED** distance, not the raw one.
+Once one slot monopolises, the winner's own penalty is positive and is fed straight back into the scale
+that sets the penalty's strength. The observed jump is a step (0.0181 → 0.3121 between adjacent
+eighths), not a ramp, and a bounded negative feedback does not produce a step.
+
+### THE DISCRIMINATOR, AND IT IS ONE RUN
+
+PRIMARY: the **margin ratio** per eighth,
+
+    R = mean over scored windows of  |d_0 − d_1|_raw  /  ( cdscale · |2·w_0/W − 1| · gain )
+
+R > 1 means the object signal outranks the win-balance term; R < 1 means it does not. Under **M2** R
+crosses 1 between eighths 7 and 8. Under **M1** R stays above 1 and the collapse instead shows up as
+`underflow_frac` → 1 well before eighth 8 together with a feature drift from eighth 4 to eighth 8 that
+exceeds the between-class separation. Three-way by construction:
+
+- **M2** if R(e7) > 1 > R(e8) and `underflow_frac` is NOT already ~1 by e4.
+- **M1** if R(e8) > 1 and drift(e4→e8) > separation, with `underflow_frac` ~1 early.
+- **NEITHER** otherwise, which refutes both and is a real outcome, not a failure of the run.
+
+### WHAT THE INSTRUMENT MUST PRINT, AND WHY EACH COLUMN IS NOT ASSERTED
+
+Per eighth, per arm, meaned across creatures: `|d0−d1|`, `cdscale`, win share, **R**, `‖Δproto‖` per
+slot, `underflow_frac` (the share of updates whose increment was lost to float32 — **measured, not
+derived from eps, because `aibaby-match-at-the-operating-point` applies and I do not know `|x−proto|`
+in advance**), feature drift against eighth 4, and §56's `deg`/`ok`/`inv` so the collapse itself is
+visible in the same table.
+
+### THE ARMS
+
+| arm | genome | why |
+|---|---|---|
+| `SHIPPED` | tau 0, gain 1 | §56's exact configuration — must reproduce `deg` 16 of 24 in eighth 8 |
+| `TAU300K` | tau 300000 | floor 3.33e-6, which binds only after ~300k wins. **Doubles as the wiring check and the vacuity arm: its eighths 1–5 must be BIT-IDENTICAL to `SHIPPED`**, because a DNA scalar must not re-roll wiring, and if it does the whole sweep is void |
+| `TAU30K` | tau 30000 | floor 3.33e-5, ~15x the unfloored rate at 900k: M1's lever with real authority |
+| `GAIN0` | gain → off | M2's lever. Removes the conscience entirely, so it must also re-expose the FIRST collapse — a built-in positive control, since `partprobe` put conscience-free monopoly at 78% of inits |
+
+`GAIN0` re-collapsing early while fixing the late collapse is the single cleanest M2 signature, and it
+costs nothing extra to look for.
+
+### REFUSALS, IN ORDER — ORDER IS PART OF A PRE-REGISTRATION
+
+0. **IDENTITY.** `SHIPPED` must reproduce §56's eighth-8 `deg` at 16 of 24 and its rate profile. This
+   is a different code path reading the same session; a mismatch means the instrument, not the finding.
+1. **WIRING.** `TAU300K` eighths 1–5 bit-identical to `SHIPPED`. If a DNA scalar re-rolls the wiring,
+   **STOP** — every between-arm contrast below is void. `[[aibaby-nmax-rerolls-the-wiring]]`.
+2. **VACUITY.** `underflow_frac` must be strictly between 0 and 1 somewhere in the session, and
+   `‖Δproto‖` must be non-zero in eighth 1 on every arm. A column that cannot move cannot discriminate.
+3. **THE DISCRIMINATOR**, three ways, as above.
+4. **THE LEVER**, read only if 3 returns M1 or M2, and reported as a separate claim: does the matching
+   knob remove the eighth-8 collapse?
+
+**AND WHAT THIS CANNOT SETTLE, SAID BEFORE IT RUNS.** A knob that removes the collapse does not prove
+the mechanism — it shows the collapse is reachable through that parameter. M1 and M2 are not exclusive
+and the arithmetic says they interact, since a frozen prototype keeps `d_c` small and a small `d_c` is
+exactly what lets `cdscale` outrank it. If both levers work the honest answer is **both**, and §57 says
+so rather than picking the tidier one.
+
+**A LATENT BUG FOUND IN PASSING, NOT §57's SUBJECT.** `ctx_wins_`, `ctx_dsum_` and `ctx_dn_` are all
+float32 accumulators incremented by 1.0 per tick. Float32 represents integers exactly only to 2^24, so
+beyond **~16.7M ticks** `ctx_dn_` and `ctx_wins_` stop incrementing and both `lr` and the win balance
+freeze silently. No published result is near that budget and nothing here depends on it, but it is
+recorded so it is not rediscovered as a result.
+
+## §57 RESULT — BOTH DERIVED SUSPECTS ARE REFUTED BY THEIR OWN COLUMNS, AND THE PRIMARY MEASURED THE WRONG QUANTITY (2026-11-09)
+
+`--experiment ctxfreeze`, `Tier::kLong`, `Expect::kRead`, 96 sessions (4 arms x 24) at 900k, ~22
+minutes. Genome byte-identical to §53-§56's; `context_source = 5`, `context_slots = 2`,
+`ctx_proto_gate = 2` patched in code as before, plus §57's two fields.
+
+**THE VERDICT IS `NEITHER`, AND IT IS A CLEAN NEGATIVE.** M1 (the prototypes freeze into float32) and
+M2 (the conscience's lifetime distance scale outgrows the object signal) were both derived from the
+kernel before the run. Each is refuted by the column built to measure it. **And the primary itself was
+mis-specified in a way the pre-registration did not catch**, which is the more useful half of this
+section.
+
+### THE GATES, FIRST
+
+| clause | reading |
+|---|---|
+| 0 IDENTITY | `SHIPPED` reproduces §56 **exactly**: `deg 22 18 2 0 0 0 0 16`, `ok 2 6 22 24 24 24 24 8`, `inv` 0 throughout. PASS |
+| 1 WIRING | `TAU300K` matches `SHIPPED` on e1-e5, 0 mismatches of 5 — a DNA scalar does not re-roll the wiring. PASS |
+| 2 VACUITY | 4 of 4 arms checked, `uf` strictly inside (0,1), `step` non-zero in e1, margin live on every creature. PASS |
+
+Clause 0 matters more than a formality: it says this instrument reads §56's session through a different
+enclosing experiment and gets the same 24 creatures collapsing in the same eighths.
+
+### M1 IS REFUTED BY ITS OWN COLUMN
+
+    SHIPPED  step   1.643e-03 5.018e-04 1.882e-04 1.371e-04 1.085e-04 9.032e-05 7.673e-05 9.636e-05
+             uf        0.0037    0.0073    0.0133    0.0170    0.0202    0.0231    0.0263    0.0223
+
+**The underflow share never exceeds 2.6%.** Float32 stagnation is not happening at this operating
+point. The step does decay — 1.64e-3 to 7.7e-5, a factor of 21 — so the prototypes are **slow, not
+frozen**, and "the update rounds to zero" is simply false here.
+
+**I imported that claim from a measurement taken somewhere else.** The kernel's own comment records
+tau 30000 and tau 300000 as bit-identical to the floor being off at 600k ticks, and I quoted it as
+evidence the increment dies into eps. That measurement was taken on the **default genome, where the
+context module is switched off entirely** (`context_slots = 0`), so the branch it describes never ran.
+This is `[[aibaby-match-at-the-operating-point]]` committed inside a pre-registration — the third
+section in four to do it, after §54's `present 1.0000` and §56's firing-weighted clause 0.
+
+### M2 IS REFUTED BY ITS OWN COLUMN
+
+    SHIPPED  cd     1.663e+03 1.432e+03 1.167e+03 1.052e+03 9.887e+02 9.515e+02 9.257e+02 9.628e+02
+             wlife     0.7241    0.5179    0.5232    0.5269    0.5267    0.5282    0.5276    0.5617
+
+**`cdscale` DECLINES by 44%** (1663 to 926) instead of holding near its early value. The premise of M2
+was that a lifetime mean with no decay stays large while the real distances shrink; in fact `ctx_dn_`
+grows fast enough that the mean tracks the shrinking distances down. **And `wlife` settles at ~0.527
+and stays there** — the conscience holds the two slots very nearly balanced from e2 onward, so the
+imbalance factor is small too. Both factors of the penalty go the wrong way for M2.
+
+The predicted positive feedback does not appear either. It was real arithmetic — gate 2 does feed the
+conscience-adjusted distance back into `ctx_dsum_` — but it is dominated by the growth of the
+denominator, which I did not price.
+
+### AND THE PRIMARY MEASURED DECISION CONFIDENCE, NOT OBJECT-DEPENDENCE
+
+    SHIPPED  margin 3.395e+03 2.541e+02 3.237e+02 4.101e+02 4.433e+02 4.775e+02 4.614e+02 7.088e+02
+             pen    2.049e+03 4.735e+02 9.334e+01 1.054e+02 1.067e+02 1.080e+02 1.070e+02 1.613e+02
+             Rp         1.657     0.537     3.468     3.889     4.155     4.422     4.312     4.395
+
+R is **4.31 at e7 and 4.40 at e8** — it does not cross 1, it **rises**, and both sides rise by almost
+the same factor (margin x1.536, pen x1.507). The index collapses in e8 while the quantity I called the
+object signal outranks the conscience more than fourfold.
+
+**That is not a surprising result, it is a mis-specified estimator, and the error is conceptual rather
+than arithmetic.** `margin = d_second - d_best` is the gap between the best and second-best prototype
+distances. It is the **confidence** of the slot decision and says nothing whatever about whether that
+decision depends on which object is present. A confident decision that is the *same for both objects*
+produces a large margin and a degenerate index at the same time, which is exactly what e8 shows. R is
+"confidence versus conscience" and I registered it as "object signal versus conscience".
+
+**The quantity that was wanted is the object-CONDITIONED gap**: `mean(d_0 - d_1 | object A)` against
+`mean(d_0 - d_1 | object B)`, with the object-dependence being the **difference between those two
+means**. Degeneracy is that difference going to zero, and it can go to zero with the margin as large as
+you like. Nothing in this run measures it.
+
+### WHAT THE COLUMNS DO SHOW AT e8, AS A LEAD AND NOT A CONCLUSION
+
+    SHIPPED  wsh       0.7644    0.7714    0.5742    0.5513    0.5400    0.5532    0.5401    0.8318
+
+**The per-eighth win share jumps 0.540 to 0.832** while `wlife` barely moves (0.528 to 0.562), the
+margin rises 54%, and the prototype step turns upward after seven eighths of decay (7.67e-5 to
+9.64e-5). So in the final eighth one slot begins taking most of the ticks and the prototypes move
+*apart* and *faster*. Something is displacing the feature distribution late, and the index follows it
+into a single slot. The remaining named candidate is homeostasis acting on `rate_ema_` with a long time
+constant, and it is now the only one left standing of the three §56 named.
+
+### THE CONSCIENCE IS NECESSARY, WHICH IS A SIDE FINDING WORTH BANKING
+
+    GAINOFF  deg      24   24   24   24   24   24   24   23
+
+With the conscience neutered the index is degenerate in **every** eighth, where `SHIPPED` reads 0 of 24
+through e4-e7. `wlife` is 1.0000 to seven decimal places for most of the run: total permanent monopoly,
+which is `partprobe`'s 78%-of-inits failure in its strongest form. **The working index in e4-e7 exists
+because of the conscience and not merely alongside it.** That is a positive control doing its job, and
+it is the cleanest statement of the conscience's value in the archive.
+
+### THE LEVER, REPORTED SEPARATELY AS REGISTERED
+
+| arm | `deg[e8]` | vs SHIPPED | and what it did to the mechanism |
+|---|---|---|---|
+| `SHIPPED` | 16 of 24 | — | — |
+| `TAU300K` | 17 of 24 | +1 | floor binds too late to matter, as designed |
+| `TAU30K` | 14 of 24 | **-2** | `pen` cut 5.5x (107 to 19.6), `step` raised 9x — the floor works MECHANICALLY and barely moves the collapse |
+| `GAINOFF` | 23 of 24 | +7 | removes the index entirely, everywhere |
+
+`TAU30K` is the informative row: the knob does exactly what the arithmetic says to the quantities M1 is
+about, and the collapse hardly responds. **A lever that moves its mechanism's own columns by factors of
+5 to 9 and the outcome by 2 of 24 is evidence against that mechanism**, which is a stronger reading
+than clause 4 was registered to give.
+
+### ONE ESTIMATOR DISAGREEMENT, PRE-REGISTERED AS A FINDING
+
+At e7 the pooled ratio reads `Rp` 4.312 while the per-creature mean reads `Rm` 11.011 +- 2.939 — a
+factor of 2.5. The pre-registration said a disagreement between these two is a finding rather than a
+rounding, and it is: the per-creature distribution is heavily right-skewed, so the pooled figure is
+dominated by the creatures with the largest `pen`. Any future claim on this ratio must say which
+estimator it used. Both are printed for that reason.
+
+### THREE THINGS I GOT WRONG
+
+1. **I quoted a float32 measurement taken with the context module OFF** as evidence about a branch that
+   only runs with it on. Found by the column, which read 0.026 where the account needed ~1.
+2. **The primary measured confidence, not object-dependence.** No arithmetic error — a wrong quantity,
+   registered, built, and run. The correct quantity is named above and costs one extra accumulator.
+3. **I described the failure geometry from a buggy column.** Before the aggregation fix I read
+   `margin` ~3.5e7 against `d_best` ~1.6e3 and concluded one prototype was stranded far from the data
+   while the other tracked it. With the columns corrected the two distances are the same order
+   throughout and the prototypes converge *toward* each other. The written account of a stranded slot
+   was an artefact of my own normalisation bug.
+
+### AND TWO DEFECTS THE SMOKE CAUGHT BEFORE ANY VERDICT EXISTED
+
+- **The discriminator's two columns were printed tick-weighted but divided by the creature count**, so
+  both carried a factor of ~18750 and `pen` read 6.9e6 against a `cd` of 9.6e2 when the spread cannot
+  exceed `2*cd`. `Rp` and `Rm` were unaffected, because both sides carried the same factor — but the
+  two columns the pre-registration says to read *separately* were exactly the ones that were wrong.
+  **The instrument now states `pen <= 2*cd*gain` in its own table note as the arithmetic check on that
+  band**, which is what found the bug.
+- **`wlife` was missing**, so "the penalty grew" could not be split into "the imbalance grew" and "the
+  scale grew". Those are different mechanisms and only the second is M2. The smoke read `wsh` 1.0000
+  in e1 against an implied lifetime imbalance of ~0.29, which is what exposed the gap.
+
+I also mis-diagnosed the first of these as a tick-mean-versus-endpoint mismatch in `cd` and fixed that
+instead; the `cd` change was an improvement but not the bug. The per-tick inequality `spread <=
+2*cdscale` holds termwise, so the two printed numbers could not both have been right — that said
+"bug", not "different quantities", and I read it as the latter.
+
+### THE SUCCESSOR, AND IT IS NARROWER THAN §57's WAS
+
+**Measure the object-conditioned gap.** One accumulator pair, split by the object the window showed:
+`mean(d_0 - d_1 | A)` and `mean(d_0 - d_1 | B)`, differenced. If that difference collapses in e8 while
+the margin rises, the feature has stopped carrying the object by the time the index is read, and the
+question moves off the context module and onto whatever displaces `rate_ema_` late — homeostasis being
+the last of §56's three candidates still standing. If it does **not** collapse, the feature still
+carries the object, the prototypes are still positioned to separate it, and the fault is in the
+latching or the read-out rather than in the competition. **Those two outcomes point at different parts
+of the kernel, which is what §57's primary should have been able to do and could not.**

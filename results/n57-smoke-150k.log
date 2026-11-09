@@ -1,0 +1,170 @@
+experiment: ctxfreeze
+  SHORT RUN — 150000 ticks against a minimum of 900000. derived: §57. §56 found the derived visual index COLLAPSING TWICE and never
+  inverting -- deg 22/24 in the first eighth, 0/24 through the fourth to
+  seventh, 16/24 AGAIN in the eighth, with the rate stepping 0.0181 ->
+  0.3121. The late collapse is keyed to ABSOLUTE ticks and not to the end of
+  the run: the 450k session's own eighth 8 covers 394k-450k and reads deg
+  1/24 while the 900k session's eighth 4 covers the same stretch and reads
+  0/24. SLEEP IS RULED OUT FROM SOURCE -- the creature does not fall asleep
+  until ~1.04M ticks. Two suspects remain, both read off the kernel: M1 the
+  prototypes FREEZE, since lr = 1/ctx_wins_[winner] with ctx_proto_tau_ms 0
+  has no floor, ctx_wins_ is a monotone float32 counter nothing decays or
+  resets, the context path runs EVERY TICK in Network::step(), and by 900k
+  the update rounds to zero in float32; M2 the conscience OUTGROWS the object
+  signal, since cdscale = ctx_dsum_/ctx_dn_ is a lifetime mean with no decay
+  and gate 2 feeds the conscience-ADJUSTED distance back into it, a positive
+  feedback which is why a threshold crossing looks like a STEP. PRIMARY: the
+  ratio R = margin/pen per eighth with the two sides summed SEPARATELY, so
+  the run says WHICH side moved -- M2 if the denominator rose, M1 if the
+  numerator fell, NEITHER if R never crosses 1, which refutes both and is a
+  result. TAU300K's floor binds only after ~300k wins, so it doubles as the
+  WIRING check (a DNA scalar must not re-roll the wiring) and the vacuity
+  arm. The underflow share is MEASURED against the stored value after the
+  write, never predicted from eps, because |x-proto| at this operating point
+  is exactly what is unknown. kRead: every branch prints
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+experiment: ctxfreeze
+  the question      §57. §56 found the derived index COLLAPSING TWICE and never
+                    inverting: deg 22/24 in e1, 0/24 in e4-e7, 16/24 in e8, with
+                    the rate stepping 0.0181 -> 0.3121. The first collapse is
+                    understood (prototypes at the origin while rate_ema_ climbs).
+                    THE SECOND IS NOT, and it is keyed to ABSOLUTE ticks: the 450k
+                    run's own e8 (394k-450k) reads deg 1/24 and the 900k run's e4
+                    (337k-450k) reads 0/24 -- the same stretch of life, uncollapsed,
+                    scored two ways.
+  not sleep         SETTLED FROM SOURCE, not measured: the creature does not fall
+                    asleep until ~1.04M ticks, so in a 900k session it NEVER sleeps.
+                    Consolidation cannot be involved.
+  the two suspects  M1 THE PROTOTYPES FREEZE. lr = 1/wins with tau 0 and no floor;
+                    wins is a monotone float32 counter nothing decays or resets
+                    (only gate 7 clears it, this is gate 2) and the context path
+                    runs EVERY TICK in Network::step(), so by 900k lr ~ 2e-6 and
+                    proto += lr*(x-proto) rounds to zero.
+                    M2 THE SCALE OUTGROWS THE SIGNAL. cdscale is a lifetime mean
+                    with no decay, the penalty scales with it, and gate 2 feeds the
+                    ADJUSTED distance back into ctx_dsum_ -- a positive feedback,
+                    which is why a threshold crossing would look like a STEP.
+  the discriminator R = margin / pen, per eighth, with the two sides summed
+                    SEPARATELY and never pre-divided so the run says which moved.
+                    margin = mean |d_best - d_second| over RAW distances, the object
+                    signal. pen = mean SPREAD (max-min) of the conscience term,
+                    because a constant added to every slot cannot change an argmin.
+                    M2 if R crosses 1 at e8 by the DENOMINATOR rising; M1 if the
+                    NUMERATOR falls with uf ~ 1 already early; NEITHER otherwise,
+                    which is a real outcome and not a failed run.
+  session           150.0 s of simulated life x 96 sessions, 4 arms
+    SHIPPED  §56's EXACT arm -- must reproduce deg 16/24 in e8
+    TAU300K  floor 3.3e-6, binds only after ~300k wins: WIRING + VACUITY arm
+    TAU30K   floor 3.3e-5, ~15x the unfloored rate: M1's lever
+    GAINOFF  conscience neutered on gate 2's OWN path: M2's lever
+
+  THE COLLAPSE ITSELF, §56's ESTIMATOR ON §57's RUN.
+    `deg` is creatures with no distinguishable assignment in that eighth.
+    SHIPPED must read 16 of 24 in e8 or clause 0 fails.
+    arm              e1   e2   e3   e4   e5   e6   e7   e8
+    SHIPPED  deg    24   24   24   23   23   21   23   21    (crt 24)
+             inv     0    0    0    0    1    0    0    0 
+             ok      0    0    0    1    0    3    1    3 
+    TAU300K  deg    24   24   24   23   23   21   23   21    (crt 24)
+             inv     0    0    0    0    1    0    0    0 
+             ok      0    0    0    1    0    3    1    3 
+    TAU30K   deg    24   24   24   24   23   21   24   23    (crt 24)
+             inv     0    0    0    0    1    0    0    0 
+             ok      0    0    0    0    0    3    0    1 
+    GAINOFF  deg    24   24   24   24   24   24   24   24    (crt 24)
+             inv     0    0    0    0    0    0    0    0 
+             ok      0    0    0    0    0    0    0    0 
+
+  THE TWO SIDES OF R, SEPARATELY -- THIS IS THE DISCRIMINATOR.
+    `margin` is the object signal (mean |d_best - d_second|, RAW).
+    `pen` is the conscience spread competing with it. M1 moves the FIRST,
+    M2 moves the SECOND. `Rp` is pooled sum/sum; `Rm` is the per-creature
+    mean with its SE, printed beside it because they are different
+    estimators and a disagreement is a finding, not a rounding.
+    SHIPPED  margin 3.529e+07 6.716e+07 7.490e+07 6.691e+07 6.296e+07 3.436e+07 2.104e+07 8.551e+06 
+             pen    6.888e+06 2.256e+07 3.366e+07 3.880e+07 4.744e+07 3.549e+07 3.401e+07 2.241e+07 
+             Rp         5.124     2.977     2.226     1.724     1.327     0.968     0.619     0.381 
+             Rm         5.251     2.991     2.217     1.731     1.314     0.901     0.513     0.391 
+             +-SE       0.204     0.077     0.055     0.042     0.072     0.087     0.073     0.078 
+    TAU300K  margin 3.529e+07 6.716e+07 7.490e+07 6.691e+07 6.296e+07 3.436e+07 2.104e+07 8.551e+06 
+             pen    6.888e+06 2.256e+07 3.366e+07 3.880e+07 4.744e+07 3.549e+07 3.401e+07 2.241e+07 
+             Rp         5.124     2.977     2.226     1.724     1.327     0.968     0.619     0.381 
+             Rm         5.251     2.991     2.217     1.731     1.314     0.901     0.513     0.391 
+             +-SE       0.204     0.077     0.055     0.042     0.072     0.087     0.073     0.078 
+    TAU30K   margin 3.529e+07 6.744e+07 7.657e+07 6.859e+07 6.646e+07 3.628e+07 2.413e+07 1.075e+07 
+             pen    6.888e+06 2.254e+07 3.328e+07 3.788e+07 4.653e+07 3.514e+07 3.480e+07 2.372e+07 
+             Rp         5.124     2.993     2.301     1.811     1.428     1.032     0.693     0.453 
+             Rm         5.251     3.006     2.290     1.817     1.422     0.974     0.568     0.380 
+             +-SE       0.204     0.077     0.059     0.048     0.072     0.096     0.087     0.063 
+    GAINOFF  margin 8.367e+07 1.259e+08 1.365e+08 1.264e+08 1.433e+08 1.130e+08 1.416e+08 1.353e+08 
+             pen    2.679e+01 5.109e+01 5.427e+01 4.978e+01 5.289e+01 4.027e+01 4.797e+01 4.594e+01 
+             Rp     3122882.511 2465446.969 2514781.095 2539202.370 2708923.677 2806086.303 2951805.731 2944951.070 
+             Rm     3116703.558 2457792.028 2513390.158 2548720.663 2711913.295 2807914.963 2957414.588 2950575.441 
+             +-SE   24296.832 29617.795 31565.911 47457.645 47340.884 37883.943 56532.303 55896.013 
+
+  M1's OWN COLUMNS: THE PROTOTYPE STEP AND THE FLOAT32 UNDERFLOW.
+    `step` is the RMS applied step per update, `uf` the share of
+    components whose increment ROUNDED TO ZERO -- measured against the
+    stored value after the write, never predicted from eps, because
+    |x-proto| at this operating point is exactly what is unknown.
+    SHIPPED  step   3.026e-03 1.232e-03 7.247e-04 5.641e-04 1.119e-03 1.698e-03 1.491e-03 8.963e-04 
+             uf        0.0008    0.0019    0.0036    0.0054    0.0059    0.0046    0.0031    0.0038 
+    TAU300K  step   3.026e-03 1.232e-03 7.247e-04 5.641e-04 1.119e-03 1.698e-03 1.491e-03 8.963e-04 
+             uf        0.0008    0.0019    0.0036    0.0054    0.0059    0.0046    0.0031    0.0038 
+    TAU30K   step   3.026e-03 1.331e-03 1.097e-03 1.002e-03 1.444e-03 1.832e-03 1.635e-03 1.256e-03 
+             uf        0.0008    0.0017    0.0023    0.0028    0.0026    0.0020    0.0019    0.0022 
+    GAINOFF  step   2.107e-03 1.094e-03 6.686e-04 4.578e-04 3.530e-04 2.879e-04 2.532e-04 2.141e-04 
+             uf        0.0012    0.0020    0.0034    0.0051    0.0068    0.0086    0.0101    0.0119 
+
+  M2's OWN COLUMNS: THE LIFETIME DISTANCE SCALE AND THE WIN SHARE.
+    `cd` is cdscale as the kernel computes it. `wsh` is the share of wins
+    GAINED in that eighth by the dominant slot -- 0.5 is balanced, 1.0 is
+    a monopoly. The lifetime share cannot show a late turn, so it is not
+    the column.
+    SHIPPED  cd     1.319e+03 1.598e+03 1.756e+03 1.846e+03 1.892e+03 1.856e+03 1.733e+03 1.601e+03 
+             wsh       1.0000    1.0000    1.0000    0.9960    0.9234    0.8759    0.9486    0.9324 
+    TAU300K  cd     1.319e+03 1.598e+03 1.756e+03 1.846e+03 1.892e+03 1.856e+03 1.733e+03 1.601e+03 
+             wsh       1.0000    1.0000    1.0000    0.9960    0.9234    0.8759    0.9486    0.9324 
+    TAU30K   cd     1.319e+03 1.592e+03 1.724e+03 1.793e+03 1.837e+03 1.803e+03 1.692e+03 1.567e+03 
+             wsh       1.0000    1.0000    1.0000    0.9978    0.9271    0.8878    0.9283    0.9483 
+    GAINOFF  cd     1.543e+03 1.731e+03 1.685e+03 1.589e+03 1.493e+03 1.426e+03 1.364e+03 1.308e+03 
+             wsh       1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000    1.0000 
+
+  CLAUSE 0 -- IDENTITY. SHIPPED is §56's arm under a different enclosing
+  experiment, so it must reproduce deg 16 of 24 in e8.
+    NOT READ AT THIS BUDGET (150000 < 900000): §56's figure is about ticks
+    787k-900k and this run has no such window. Undefined, not failed.
+
+  CLAUSE 1 -- WIRING. A DNA SCALAR MUST NOT RE-ROLL THE WIRING. TAU300K's
+  floor (3.3e-6) binds only after ~300k wins, so its EARLY eighths must
+  match SHIPPED. If they do not, every between-arm contrast below is VOID.
+    TAU300K  e1-e5 deg/ok mismatches 0 of 5  PASS
+
+  CLAUSE 2 -- VACUITY. A column that cannot move cannot discriminate.
+  `uf` must be strictly inside (0,1) somewhere, `step` non-zero in e1,
+  and the margin must be live on every creature of every arm.
+    arms checked 4 of 4, uf inside (0,1) yes, step[e1]>0 yes, margin live yes  PASS
+
+  CLAUSE 3 -- THE DISCRIMINATOR, THREE WAYS.
+    SHIPPED  R(e7) 0.619 -> R(e8) 0.381   margin x0.406   pen x0.659   uf(e4) 0.0054
+    VERDICT NEITHER -- R did not cross 1 between e7 and e8, so the
+    collapse is not a re-ranking of these two terms. BOTH suspects
+    are refuted and §57's account is wrong, which is a result.
+
+  CLAUSE 4 -- THE LEVER, reported as a SEPARATE claim. A knob that removes
+  the collapse does not prove the mechanism; it shows the collapse is
+  reachable through that parameter.
+    arm       deg[e8]  of crt   vs SHIPPED
+    SHIPPED      21       24       +0
+    TAU300K      21       24       +0
+    TAU30K       23       24       +2
+    GAINOFF      24       24       +3
+    GAINOFF's FIRST eighth is its own positive control: removing the
+    conscience must re-expose the EARLY monopoly partprobe measured at
+    78% of inits. deg[e1] SHIPPED 24, GAINOFF 24.
+
+  NOTE: 150000 ticks is BELOW the 900000 verdict budget. The collapse under
+  test sits after ~787k ticks and does not exist in this run, so clause 3
+  is reporting a window that cannot contain the phenomenon.
