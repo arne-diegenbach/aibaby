@@ -1181,6 +1181,19 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // a generator nobody draws from shifts nothing; it is the DRAW that would.
   aibaby::Rng fl_rng;
   fl_rng.seed((s.dna.header().seed ^ seed_shift) + 0x55C0u);
+  // §56. THE BLOCK STATE for `pin_mode == 5`, which draws its corruption coin
+  // ONCE PER BLOCK of `flicker` consecutive teaching windows instead of once
+  // per trial. It draws from `wn_rng` -- the same stream §54's mode 3 uses --
+  // because the two modes are never both active in one session, so sharing it
+  // costs nothing and adding a sixth generator would say otherwise.
+  //
+  // `tw_idx` counts TEACHING windows, and is incremented only inside mode 5's
+  // own branch: modes 0-4 leave it at zero and make no draw, so every archived
+  // log stays bit-identical. -1 means "no block entered yet", which is a
+  // sentinel and not block zero -- block zero must still draw its coin.
+  uint64_t tw_idx = 0;
+  int64_t wn_blk_id = -1;
+  bool wn_blk_bad = false;
   // §51. M1c's reward baseline, PER WORD. `vocallearn`'s design-trap note is the
   // reason: against one global mean the creature is rewarded for saying whichever
   // word is easier for its larynx, and the easy word is not the taught one.
@@ -1391,11 +1404,34 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (pin_mode != 0) {
       if (!show) {
         s.brain.network().clear_context_pin();
-      } else if (pin_mode == 1 || pin_mode == 3) {
+      } else if (pin_mode == 1 || pin_mode == 3 || pin_mode == 5) {
         uint32_t slot = uint32_t(object);
         if (pin_mode == 3 && shape_target != nullptr && write_noise > 0.0 &&
             wn_rng.chance(aibaby::Scalar(write_noise))) {
           slot = 1u - slot;
+        }
+        // §56. THE BLOCK-STRUCTURED POSITIVE CONTROL. Mode 3 with the coin drawn
+        // once per block of `flicker` teaching windows rather than once per
+        // trial, so the marginal rate is the SAME w and only the ARRANGEMENT
+        // differs -- which is the whole point: §54's i.i.d. model and this one
+        // are indistinguishable in the rate column and are different mechanisms
+        // for a clamped store.
+        //
+        // Error runs are therefore `flicker x (consecutive corrupt blocks)`, so
+        // at flicker >= 2 EVERY error window has an error neighbour and the
+        // adjacency estimator must read 1.0000, bar one block truncated by the
+        // end of the session. At flicker 1 it degenerates to mode 3 exactly in
+        // distribution, which is why mode 3 serves as the i.i.d. end and this
+        // mode is not asked to reproduce it.
+        if (pin_mode == 5 && shape_target != nullptr && write_noise > 0.0) {
+          const int64_t blk =
+              flicker > 0 ? int64_t(tw_idx / uint64_t(flicker)) : int64_t(tw_idx);
+          if (blk != wn_blk_id) {
+            wn_blk_id = blk;
+            wn_blk_bad = wn_rng.chance(aibaby::Scalar(write_noise));
+          }
+          if (wn_blk_bad) slot = 1u - slot;
+          ++tw_idx;
         }
         s.brain.network().pin_context_oracle(slot);
       } else if (pin_mode == 4) {
@@ -13130,6 +13166,886 @@ bool run_switchrate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
                 "    nearer -- `verdict-fitted-to-data`.\n",
                 lo, hi, kLoBound, kHiBound);
   }
+  return true;
+}
+
+// --- §56: DO THE DERIVED INDEX'S ERRORS ARRIVE IN BLOCKS? --------------------
+//
+// §54 corrupted the write slot with an INDEPENDENT COIN PER TRIAL and found
+// averaging. §55 bounded short WITHIN-window runs at a quarter of the deficit.
+// Neither touched the one remaining dimension: the ARRANGEMENT of the errors
+// ACROSS windows. A marginal rate of 0.171 is equally consistent with i.i.d.
+// errors and with an index that is right for long stretches and wrong for
+// others -- the same measurement, two mechanisms -- and the archive already
+// separates them: `retention` found a conflicting BLOCK erases (0.22) while §54
+// found INTERLEAVED conflicts average (+0.1046). A clamped accumulator does
+// both without contradiction, so arrangement is a mechanism and not a nuisance.
+//
+// The sequence has been collected since §50 and thrown away every time: §53
+// reduced it to one session-wide modal assignment. This reads the order.
+//
+// THE NULL IS ANALYTIC AND EXACT, WHICH IS WHY IT IS NOT A SHUFFLE. Under a
+// uniformly random arrangement of m errors over n positions (z = n - m), the
+// expected number of runs of length exactly L is
+//
+//     E[R_L] = (z + 1) * C(m - L + z - 1, z - 1) / C(n, m)
+//
+// -- place a run of exactly L in one of the z+1 gaps and scatter the rest
+// freely -- so the expected share of error windows that are SINGLETONS is
+// E[R_1]/m, which closes in elementary form to
+//
+//     E[singletons]/m = (n - m)(n - m + 1) / (n(n - 1))
+//
+// and because m is FIXED under this null, dividing by m is exact rather than a
+// ratio of expectations (`mean-of-ratios` is about the other case). The two
+// forms are computed independently and printed against each other, and
+// sum_L L*E[R_L] must equal m EXACTLY -- a free bookkeeping identity over the
+// whole bucket null, printed rather than trusted.
+//
+// A 64-permutation shuffle runs BESIDE the analytic null as the check that the
+// formula is right, never as the null itself: the analytic form carries no
+// Monte-Carlo variance, and the primary should not pay for noise it can avoid.
+
+// log C(a, b), so the gap formula survives C(206, 35).
+static double drift_lchoose(double a, double b) {
+  if (b < 0.0 || b > a) return -HUGE_VAL;  // exp() then returns 0 and the caller skips it
+  return std::lgamma(a + 1.0) - std::lgamma(b + 1.0) - std::lgamma(a - b + 1.0);
+}
+
+struct DriftRuns {
+  bool ok = false;         // m >= 2 and n >= 3: the primary is defined
+  uint32_t n = 0, m = 0;   // scored positions, flagged positions
+  uint32_t adj = 0;        // flagged positions with a flagged NEIGHBOUR
+  uint32_t runs = 0, longest = 0;
+  uint32_t bucket[4] = {};     // flagged positions in runs of 1 / 2-3 / 4-7 / 8+
+  double e_bucket[4] = {};     // the exact null for the same four
+  double blocked = 0.0;        // adj / m
+  double exact = 0.0;          // the closed form
+  double exact_gap = 0.0;      // the same quantity from the gap formula
+  double shuf = 0.0;           // the 64-permutation check
+  double ident = 0.0;          // sum_L L*E[R_L] / m -- must be 1.0000
+};
+
+// THE TREND CONFOUND, AND IT WAS NOT PRE-REGISTERED. The 450k and 900k runs read
+// the derived index's per-window error rate at 0.2409 and 0.1668, and the 900k
+// session's first 206 teaching windows ARE the 450k session's (same seeds, same
+// trial loop), so the second half runs at about 0.093. THE RATE DECLINES.
+//
+// That matters because a declining rate produces ADJACENCY WITH NO BLOCK
+// MECHANISM: errors concentrate early, so an error is likelier to have an error
+// neighbour than a uniform arrangement of the same total would give. The exact
+// null above holds n and m fixed and assumes the arrangement is UNIFORM, which a
+// trend violates -- and neither calibration arm can catch it, because `IID171`
+// and `BLK8` are both STATIONARY by construction
+// (`control-blind-to-its-artefact`: a control blind to an artefact that is not
+// about the thing it varies).
+//
+// The fix is stratification, not argument. Cut the scored sequence into
+// consecutive blocks of L windows, count adjacency WITHIN each block, and take
+// the exact null from that block's OWN n_s and m_s. A trend between blocks then
+// cannot contribute, because no pair spans a boundary and every block is scored
+// against its own local rate. The closed form degenerates correctly at the edges
+// -- at m_s = 1 it gives E[singletons] = 1 and so E[adj] = 0, at m_s = 0 it gives
+// 0 -- so every block can be pooled without a drop rule.
+//
+// L IS A FIXED WINDOW COUNT, not a fraction of the session, so the stratification
+// has the same granularity at both budgets. Reported at two values of L, because
+// a conclusion that hinges on L is a conclusion about L.
+struct DriftStrat {
+  double adj = 0.0, e_adj = 0.0, m = 0.0;
+  uint32_t blocks = 0;
+};
+static DriftStrat drift_strat(const std::vector<uint8_t>& ind, uint32_t L) {
+  DriftStrat r;
+  if (L < 3) return r;
+  const size_t N = ind.size();
+  for (size_t s = 0; s < N; s += L) {
+    const size_t e = std::min(s + size_t(L), N);
+    const double n = double(e - s);
+    if (n < 3.0) continue;
+    double m = 0.0;
+    for (size_t i = s; i < e; ++i) m += ind[i] ? 1.0 : 0.0;
+    uint32_t adj = 0;
+    for (size_t i = s; i < e; ++i) {
+      if (!ind[i]) continue;
+      const bool left = i > s && ind[i - 1] != 0;
+      const bool right = i + 1 < e && ind[i + 1] != 0;
+      if (left || right) ++adj;
+    }
+    const double z = n - m;
+    r.adj += double(adj);
+    r.e_adj += m - (m * z * (z + 1.0)) / (n * (n - 1.0));
+    r.m += m;
+    ++r.blocks;
+  }
+  return r;
+}
+
+// Everything §56 measures, over a 0/1 indicator on the SCORED subsequence. The
+// label-confound column and the probe secondary run through this same function
+// with a different indicator, so no arm gets its own code path
+// (`control-on-a-different-code-path`).
+static DriftRuns drift_score(const std::vector<uint8_t>& ind, uint64_t seed) {
+  DriftRuns r;
+  r.n = uint32_t(ind.size());
+  for (uint8_t v : ind) r.m += v ? 1u : 0u;
+  if (r.n < 3 || r.m < 2 || r.m >= r.n) return r;
+  r.ok = true;
+
+  // Adjacency and the run-length histogram in one pass.
+  for (uint32_t i = 0; i < r.n; ++i) {
+    if (!ind[i]) continue;
+    const bool left = i > 0 && ind[i - 1] != 0;
+    const bool right = i + 1 < r.n && ind[i + 1] != 0;
+    if (left || right) ++r.adj;
+    if (!left) {  // a run starts here
+      uint32_t L = 0;
+      for (uint32_t j = i; j < r.n && ind[j]; ++j) ++L;
+      ++r.runs;
+      if (L > r.longest) r.longest = L;
+      const uint32_t b = L == 1 ? 0u : (L <= 3 ? 1u : (L <= 7 ? 2u : 3u));
+      r.bucket[b] += L;
+    }
+  }
+  r.blocked = double(r.adj) / double(r.m);
+
+  const double n = double(r.n), m = double(r.m), z = n - m;
+  r.exact = 1.0 - (z * (z + 1.0)) / (n * (n - 1.0));
+  // The gap formula, independently, for every attainable run length. `ident`
+  // below is what says the two derivations agree.
+  const double lc_tot = drift_lchoose(n, m);
+  double e1 = 0.0, acc = 0.0;
+  for (uint32_t L = 1; L <= r.m; ++L) {
+    const double e = std::exp(std::log(z + 1.0) +
+                              drift_lchoose(m - double(L) + z - 1.0, z - 1.0) - lc_tot);
+    if (!(e > 0.0)) continue;
+    if (L == 1) e1 = e;
+    acc += double(L) * e;
+    const uint32_t b = L == 1 ? 0u : (L <= 3 ? 1u : (L <= 7 ? 2u : 3u));
+    r.e_bucket[b] += double(L) * e;
+  }
+  r.exact_gap = 1.0 - e1 / m;
+  r.ident = acc / m;
+
+  // THE CHECK ON THE FORMULA, not the null. A permutation holds n and m exactly
+  // and destroys only the arrangement, which is the one thing being claimed.
+  aibaby::Rng sh;
+  sh.seed(seed);
+  constexpr uint32_t kShuffles = 64;
+  std::vector<uint8_t> t = ind;
+  double acc_sh = 0.0;
+  for (uint32_t s = 0; s < kShuffles; ++s) {
+    for (uint32_t i = r.n - 1; i > 0; --i) {
+      const uint32_t j = uint32_t(sh.next() % uint64_t(i + 1));
+      std::swap(t[i], t[j]);
+    }
+    uint32_t a = 0;
+    for (uint32_t i = 0; i < r.n; ++i) {
+      if (!t[i]) continue;
+      if ((i > 0 && t[i - 1]) || (i + 1 < r.n && t[i + 1])) ++a;
+    }
+    acc_sh += double(a) / double(r.m);
+  }
+  r.shuf = acc_sh / double(kShuffles);
+  return r;
+}
+
+bool run_slotdrift(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  // THE BOUNDARY, DERIVED AND THEN FROZEN. The smallest structural departure
+  // this estimator can express is ONE error window acquiring ONE neighbour it
+  // would not have had by chance, worth 2/m on the primary. At 450k the protocol
+  // gives 206 scored teaching windows per creature (§55's `tw_n` 4944 over 24,
+  // every window live) and §53's rate gives m = 0.1712 * 206 = 35.3, so the
+  // boundary is 2/35.3.
+  //
+  // IT IS FIXED AT THE 450k VALUE FOR BOTH BUDGETS. Computing it from each run's
+  // own m would HALVE it at 900k, and a boundary that moves with the budget
+  // moves the verdict with it. The realised figure is printed beside it.
+  constexpr double kRate53 = 0.1712;
+  const double kWin450 = 206.0;
+  const double kBound = 2.0 / (kRate53 * kWin450);        // 0.0567
+  constexpr double kNoVerdictHalf = 0.10;                  // 14% of full scale
+  // THE VERDICT BUDGET, separate from the registry minimum. 450k is the
+  // comparability run against §53 and §55 and reports every column with NO
+  // VERDICT BY REGISTRATION -- which is not verdict C, because nothing failed:
+  // it is the wrong budget for a boundary derived at 450k's own window count.
+  constexpr uint64_t kVerdictTicks = 900000ull;
+  // The CROSS-INSTRUMENT band on DERIVED's rate: does this estimator read the
+  // quantity §53 published? That is an agreement check against a printed figure,
+  // not a sampling tolerance, and the smoke read |d| 0.19 when it genuinely
+  // disagreed, so 0.03 discriminates with room to spare.
+  constexpr double kCalTol = 0.03;
+  constexpr double kShufTol = 0.02;                        // formula vs shuffle
+
+  struct Arm {
+    const char* name;
+    int pin;
+    double w;
+    int blk;
+    uint32_t n;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"DERIVED", 0, 0.0, 0, 24u, "THE MEASUREMENT -- the retina's own index"},
+      {"PINNED", 1, 0.0, 0, 12u, "EXACT self-test: m = 0, the pin IS the label"},
+      {"IID171", 3, kRate53, 0, 12u, "§54's OWN ARM -- the load-bearing null, primary 0"},
+      {"BLK8", 5, kRate53, 8, 12u, "positive control -- same rate, runs of 8"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §56. §54's corruption was an INDEPENDENT COIN PER TRIAL and\n"
+              "                    §55 bounded short within-window runs at a quarter of the\n"
+              "                    deficit. The ARRANGEMENT of the errors across windows has\n"
+              "                    never been measured, and `retention` (a conflicting BLOCK\n"
+              "                    erases) beside §54 (interleaved conflicts average) says a\n"
+              "                    clamped store treats the two differently.\n");
+  std::printf("  the quantity      blocked = share of ERROR windows with an ERROR NEIGHBOUR in\n"
+              "                    the scored sequence. An error is a teaching window whose\n"
+              "                    modal slot differs from the session's modal assignment for\n"
+              "                    the object it showed -- §53's own `modal`, order kept.\n");
+  std::printf("  the null          EXACT, not a shuffle: 1 - (n-m)(n-m+1)/(n(n-1)) per creature\n"
+              "                    from its OWN n and m, so it carries no Monte-Carlo variance.\n"
+              "                    A 64-permutation shuffle checks the formula beside it.\n");
+  std::printf("  PRIMARY           blocked_obs - blocked_exact, meaned across creatures.\n"
+              "                    Signed: an anti-clustered index reads NEGATIVE.\n");
+  std::printf("  the boundaries    A: CI upper <  %+.4f -- i.i.d., ARRANGEMENT REFUTED.\n"
+              "                    B: CI lower >  %+.4f -- clustered, §54 UNDERSTATES.\n"
+              "                    C: anything else, or a half-width above %.2f.\n"
+              "                    Full scale up is +%.4f at §53's rate; range is signed.\n",
+              kBound, kBound, kNoVerdictHalf, 1.0 - 0.3035);
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms);
+  if (ticks < 450000ull) {
+    std::printf("  *** BELOW THE REGISTERED MINIMUM (%llu < 450000). A smoke resolves the\n"
+                "      EXACT self-test, the calibrations and the bookkeeping identities --\n"
+                "      properties of the INSTRUMENT, which are budget-independent. It resolves\n"
+                "      NO column: §55's smoke was wrong by seven SE on its own primary.\n",
+                (unsigned long long)ticks);
+  }
+  instrument("slotdrift", dna.header().seed ^ 0x56A0u, kJobs, "sessions");
+
+  struct Cell {
+    bool ok = false;
+    bool degen = false;
+    uint32_t dark = 0, pdark = 0;
+    int a0 = -1, a1 = -1;
+    DriftRuns t, l, p;  // teaching errors, the LABEL confound, probe errors
+    // ADDED AFTER THE SMOKE AND SAID SO, exactly as §55 disclosed its three
+    // post-smoke columns. The 150k smoke found 20 of 24 DERIVED creatures with a
+    // DEGENERATE assignment -- both objects' modal slot the same -- while §53
+    // reports `degenerate 0` on 36 of 36 at 450k. So the assignment is NOT
+    // stationary: the index starts collapsed and splits as the conscience
+    // separates the prototypes. That is session-scale drift of a benign kind,
+    // and it is the question §55 actually named ("cut the session into blocks and
+    // ask whether the modal assignment FLIPS"), so it gets MEASURED here rather
+    // than inferred from a smoke that cannot resolve it.
+    //
+    // +1 both halves defined and AGREE, -1 both defined and FLIPPED, 0 at least
+    // one half degenerate. The PRE-REGISTERED primary and its boundary are
+    // untouched; this is a secondary and no verdict reads it.
+    int halfcmp = 0;
+    // THE TREND, measured two ways, both added after the registered run and both
+    // disclosed. `prof` is the error rate in each of eight equal segments of the
+    // scored sequence -- the measurement that exposes the confound -- and
+    // `st32` / `st16` are the stratified primary at two block lengths. The
+    // PRE-REGISTERED primary and its boundary are untouched; these say how much
+    // of it survives the trend.
+    double prof[8] = {};
+    uint32_t prof_n[8] = {};
+    // AND THE SAME EIGHTHS SCORED AS ASSIGNMENTS, not as rates, because a POOLED
+    // rate of 0.31 in the final eighth is equally consistent with every creature
+    // degrading a little and with a THIRD OF THEM INVERTING -- and those are
+    // different findings. The half-session column cannot see it: 53 inverted
+    // windows inside a 206-window half do not move that half's modal slot.
+    //
+    // +1 agree with the session assignment, -1 INVERTED, 0 degenerate within the
+    // eighth. Same `modal` lambda again, so a flip is a flip of one estimator.
+    int8_t eflip[8] = {};
+    DriftStrat st32, st16;
+    double present = 0;
+    uint32_t slots = 0;
+  };
+  const std::vector<Cell> cells = parallel_reps<Cell>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Cell c;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // EVERY ARGUMENT IS §52's, §53's, §54's AND §55's EXCEPT `pin_mode`,
+    // `write_noise` AND the block length, which rides in on `flicker`.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, /*pairing=*/0, arms[a].w,
+                            arms[a].blk);
+    if (!run.ok) return c;
+    c.ok = true;
+    c.present = run.ctx_present_frac;
+    c.slots = run.ctx_slots;
+
+    // §53's `modal`, unchanged, and then the ORDER it discarded.
+    auto modal = [](const std::vector<int>& lab, const std::vector<int>& sl, int o) -> int {
+      uint32_t h[aibaby::kMaxContextSlots] = {};
+      const size_t n = std::min(lab.size(), sl.size());
+      for (size_t k = 0; k < n; ++k) {
+        if (lab[k] != o || sl[k] < 0 || sl[k] >= int(aibaby::kMaxContextSlots)) continue;
+        ++h[sl[k]];
+      }
+      int best = -1;
+      uint32_t bn = 0;
+      for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+        if (h[s] > bn) { bn = h[s]; best = int(s); }
+      }
+      return best;
+    };
+    auto build = [&](const std::vector<int>& lab, const std::vector<int>& sl,
+                     int b0, int b1, uint32_t* dark, std::vector<uint8_t>* err,
+                     std::vector<uint8_t>* lind) {
+      const size_t n = std::min(lab.size(), sl.size());
+      for (size_t k = 0; k < n; ++k) {
+        if (sl[k] < 0) { ++*dark; continue; }
+        const int want = lab[k] == 0 ? b0 : b1;
+        err->push_back(sl[k] != want ? 1u : 0u);
+        lind->push_back(lab[k] == 1 ? 1u : 0u);
+      }
+    };
+
+    c.a0 = modal(run.teach_label, run.teach_slot, 0);
+    c.a1 = modal(run.teach_label, run.teach_slot, 1);
+    // A creature whose teaching index collapsed onto ONE slot has no assignment
+    // to be wrong about: every window of one object would be scored an error and
+    // the rate column would read ~0.5 for a reason that is not an error rate.
+    // Counted and excluded, never folded in (§53's `degen` rule).
+    if (c.a0 < 0 || c.a1 < 0 || c.a0 == c.a1) {
+      c.degen = true;
+      return c;
+    }
+    std::vector<uint8_t> err, lind;
+    build(run.teach_label, run.teach_slot, c.a0, c.a1, &c.dark, &err, &lind);
+    c.t = drift_score(err, seed + 0x56B1u);
+    // THE ONE CONFOUND, MEASURED. If the OBJECT SEQUENCE had runs, a lagging
+    // index would produce clustered errors with no clustering of its own. The
+    // draw at the top of the teaching loop is `rng.next() & 1` -- an i.i.d. fair
+    // coin -- and that is a code fact, so this column should read its own
+    // analytic value. A label-destroyed arm could not catch this
+    // (`control-blind-to-its-artefact`), which is why it is measured instead.
+    c.l = drift_score(lind, seed + 0x56B2u);
+
+    // THE TREND, measured. Eight equal segments give the rate's PROFILE, and the
+    // two stratified readings say how much of the primary survives it. Both
+    // added after the registered run and disclosed as such.
+    if (!err.empty()) {
+      for (size_t k = 0; k < err.size(); ++k) {
+        const size_t b = std::min<size_t>(k * 8 / err.size(), 7);
+        c.prof[b] += err[k] ? 1.0 : 0.0;
+        ++c.prof_n[b];
+      }
+      c.st32 = drift_strat(err, 32u);
+      c.st16 = drift_strat(err, 16u);
+    }
+    // The eighths as ASSIGNMENTS. Cut on the SAME boundaries the rate profile
+    // uses, over the raw window vectors so each eighth is scored exactly as the
+    // session and the halves were.
+    {
+      const size_t nw = std::min(run.teach_label.size(), run.teach_slot.size());
+      for (uint32_t b = 0; b < 8 && nw >= 8; ++b) {
+        const size_t s = nw * b / 8, e = nw * (b + 1) / 8;
+        if (e <= s) continue;
+        std::vector<int> lb(run.teach_label.begin() + s, run.teach_label.begin() + e);
+        std::vector<int> sb(run.teach_slot.begin() + s, run.teach_slot.begin() + e);
+        const int u = modal(lb, sb, 0), v = modal(lb, sb, 1);
+        c.eflip[b] = (u < 0 || v < 0 || u == v) ? int8_t(0)
+                     : ((u == c.a0 && v == c.a1) ? int8_t(1) : int8_t(-1));
+      }
+    }
+
+    // THE HALF-SESSION ASSIGNMENT, disclosed as post-smoke. Each half is scored
+    // by the SAME `modal` lambda over its own windows, so a flip is a flip of the
+    // same estimator and not of a second one.
+    {
+      const size_t nw = std::min(run.teach_label.size(), run.teach_slot.size());
+      const size_t cut = nw / 2;
+      std::vector<int> l0(run.teach_label.begin(), run.teach_label.begin() + cut);
+      std::vector<int> s0(run.teach_slot.begin(), run.teach_slot.begin() + cut);
+      std::vector<int> l1(run.teach_label.begin() + cut, run.teach_label.begin() + nw);
+      std::vector<int> s1(run.teach_slot.begin() + cut, run.teach_slot.begin() + nw);
+      const int x0 = modal(l0, s0, 0), y0 = modal(l0, s0, 1);
+      const int x1 = modal(l1, s1, 0), y1 = modal(l1, s1, 1);
+      const bool d0 = x0 < 0 || y0 < 0 || x0 == y0;
+      const bool d1 = x1 < 0 || y1 < 0 || x1 == y1;
+      c.halfcmp = (d0 || d1) ? 0 : ((x0 == x1 && y0 == y1) ? 1 : -1);
+    }
+
+    // The probe window, SECONDARY and scored against its OWN assignment, since
+    // §53 already measured BETWEEN-window registration at 100% and this asks a
+    // different question. No verdict reads it.
+    const int p0 = modal(run.ctx_label, run.ctx_slot, 0);
+    const int p1 = modal(run.ctx_label, run.ctx_slot, 1);
+    if (p0 >= 0 && p1 >= 0 && p0 != p1) {
+      std::vector<uint8_t> perr, plind;
+      build(run.ctx_label, run.ctx_slot, p0, p1, &c.pdark, &perr, &plind);
+      c.p = drift_score(perr, seed + 0x56B3u);
+    }
+    return c;
+  });
+
+  struct Row {
+    uint32_t n = 0, ok = 0, degen = 0, usable = 0, m_ge5 = 0;
+    uint32_t hagree = 0, hflip = 0, hdegen = 0;
+    uint64_t wins = 0, errs = 0, dark = 0, runs = 0;
+    uint64_t bucket[4] = {};
+    double e_bucket[4] = {};
+    double present = 0, longest = 0, ident = 0, gapdiff = 0;
+    uint32_t slots = 0;
+    std::vector<double> prim, obs, exact, shuf, rate;
+    std::vector<double> lprim, pprim;
+    std::vector<double> s32, s16;
+    double prof[8] = {};
+    uint32_t prof_n[8] = {};
+    uint32_t eagree[8] = {}, einv[8] = {}, edeg[8] = {};
+  };
+  std::vector<Row> rows(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    Row& R = rows[job_arm[i]];
+    ++R.n;
+    const Cell& c = cells[i];
+    if (!c.ok) continue;
+    ++R.ok;
+    R.present += c.present;
+    R.slots = c.slots;
+    if (c.degen) { ++R.degen; continue; }
+    if (c.halfcmp > 0) ++R.hagree;
+    else if (c.halfcmp < 0) ++R.hflip;
+    else ++R.hdegen;
+    R.wins += c.t.n;
+    R.errs += c.t.m;
+    R.dark += c.dark;
+    // The rate column is defined whenever the assignment is, INCLUDING at m = 0,
+    // which is exactly where `PINNED`'s self-test lives. Only the primary needs
+    // m >= 2, so the two gates are separate rather than one drop rule.
+    if (c.t.n > 0) R.rate.push_back(double(c.t.m) / double(c.t.n));
+    if (c.t.m >= 5) ++R.m_ge5;
+    // THE PROFILE AND THE EIGHTH-WISE ASSIGNMENT ARE ACCUMULATED ABOVE THE
+    // `c.t.ok` GATE, which is about the PRIMARY being defined (m >= 2) and not
+    // about the assignment. A perfectly pinned index has m = 0, so gating these
+    // on it printed `PINNED` as an all-zero row -- which reads as a failure of a
+    // column where it is in fact the self-test: a pinned arm must be `ok` in all
+    // eight eighths and never degenerate.
+    for (uint32_t b = 0; b < 8; ++b) {
+      R.prof[b] += c.prof[b];
+      R.prof_n[b] += c.prof_n[b];
+      if (c.eflip[b] > 0) ++R.eagree[b];
+      else if (c.eflip[b] < 0) ++R.einv[b];
+      else ++R.edeg[b];
+    }
+    if (!c.t.ok) continue;
+    ++R.usable;
+    R.runs += c.t.runs;
+    R.longest += double(c.t.longest);
+    R.ident += c.t.ident;
+    R.gapdiff += std::fabs(c.t.exact - c.t.exact_gap);
+    for (uint32_t b = 0; b < 4; ++b) {
+      R.bucket[b] += c.t.bucket[b];
+      R.e_bucket[b] += c.t.e_bucket[b];
+    }
+    R.prim.push_back(c.t.blocked - c.t.exact);
+    R.obs.push_back(c.t.blocked);
+    R.exact.push_back(c.t.exact);
+    R.shuf.push_back(c.t.shuf);
+    if (c.l.ok) R.lprim.push_back(c.l.blocked - c.l.exact);
+    if (c.p.ok) R.pprim.push_back(c.p.blocked - c.p.exact);
+    // Per creature as a RATIO OF SUMS over its own blocks, then meaned across
+    // creatures -- the same shape §55 used, and not a mean of per-block ratios
+    // (`mean-of-ratios`).
+    if (c.st32.m > 0.0) R.s32.push_back((c.st32.adj - c.st32.e_adj) / c.st32.m);
+    if (c.st16.m > 0.0) R.s16.push_back((c.st16.adj - c.st16.e_adj) / c.st16.m);
+  }
+  auto mean_se = [](const std::vector<double>& v, double* se) {
+    if (v.empty()) { *se = 0.0; return 0.0; }
+    double m = 0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    if (v.size() < 2) { *se = 0.0; return m; }
+    double s2 = 0;
+    for (double x : v) s2 += (x - m) * (x - m);
+    s2 /= double(v.size() - 1);
+    *se = std::sqrt(s2 / double(v.size()));
+    return m;
+  };
+  auto mean = [](const std::vector<double>& v) {
+    if (v.empty()) return 0.0;
+    double m = 0;
+    for (double x : v) m += x;
+    return m / double(v.size());
+  };
+  // THE KNOB TOLERANCE IS DERIVED PER ARM, NOT COPIED FROM §54. A
+  // block-structured arm draws ONE coin per B windows, so at the same window
+  // count its realised rate carries sqrt(B) times the SD of a per-trial coin --
+  // and §54's 0.03, which was right for ~400 independent draws, is about 2 SE
+  // for BLK8's ~51 effective draws at 900k. That is a ~5% chance of VOIDING the
+  // whole run on a knob that is working correctly, which is a gate failing for a
+  // reason that is not the thing it tests (`guard-measures-the-wrong-quantity`).
+  //
+  // Three SE of the arm's OWN effective draw count, which fires spuriously at
+  // ~0.3%. Derived and fixed before any 450k or 900k number was read: the
+  // defect was found by auditing the printf block while the first launch was in
+  // flight, and that launch was KILLED rather than allowed to report under a
+  // tolerance I already knew was wrong (`verdict-fitted-to-data` cuts both ways
+  // -- a gate loosened after it fires is fitted, a gate corrected before it is
+  // read is not).
+  auto rate_tol = [&](const Row& R, int blk) -> double {
+    const double k = double(std::max<size_t>(R.rate.size(), size_t(1)));
+    const double n = R.wins ? double(R.wins) / k : 0.0;
+    // FAILS CLOSED. Returning a WIDE tolerance when the arm has no windows would
+    // make `|w - 0.1712| <= tol` vacuously true -- a gate that passes hardest
+    // exactly when it has no data. A NEGATIVE tolerance cannot be satisfied by
+    // any |difference|, so an unmeasurable arm reads FAIL and says so.
+    if (n < 1.0) return -1.0;
+    const double B = blk > 0 ? double(blk) : 1.0;
+    return 3.0 * std::sqrt(kRate53 * (1.0 - kRate53) * B / n) / std::sqrt(k);
+  };
+
+  std::printf("\n  THE RATE AND THE ASSIGNMENT. `w_obs` must reproduce §53's %.4f on DERIVED --\n"
+              "  the same quantity from the same vectors by a different code path. `dark` is\n"
+              "  windows whose index never went live, dropped by `ctx_slot`'s own rule.\n",
+              kRate53);
+  std::printf("    %-8s crt   degen  windows  dark    m    w_obs   m>=5  usable\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s %2u/%-2u %5u %8llu %5llu %6llu  %6.4f  %4u  %4u\n",
+                arms[a].name, R.ok, R.n, R.degen, (unsigned long long)R.wins,
+                (unsigned long long)R.dark, (unsigned long long)R.errs,
+                R.wins ? double(R.errs) / double(R.wins) : 0.0, R.m_ge5, R.usable);
+  }
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-8s %s\n", arms[a].name, arms[a].what);
+  }
+
+  std::printf("\n  THE PRIMARY. `obs` is the share of error windows with an error neighbour,\n"
+              "  `exact` its analytic null at that creature's own n and m, `shuf` the\n"
+              "  64-permutation check on the formula. Mean of per-creature differences.\n");
+  std::printf("    %-8s     obs    exact     shuf   |   PRIMARY +- SE        95%% CI\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (R.prim.empty()) { std::printf("    %-8s  VOID -- no usable creature\n", arms[a].name); continue; }
+    double se = 0.0;
+    const double m = mean_se(R.prim, &se);
+    std::printf("    %-8s  %6.4f   %6.4f   %6.4f   | %+7.4f +- %6.4f  [%+7.4f, %+7.4f]\n",
+                arms[a].name, mean(R.obs), mean(R.exact), mean(R.shuf), m, se,
+                m - 1.96 * se, m + 1.96 * se);
+  }
+
+  std::printf("\n  THE RUN-LENGTH DISTRIBUTION, in error WINDOWS, against its exact null per\n"
+              "  bucket -- the mixture-safe companion §55 taught me to print instead of a\n"
+              "  mean. `sumL` is sum_L L*E[R_L]/m and must read 1.0000: a bookkeeping\n"
+              "  identity over the whole null, and `|closed-gap|` is the two derivations of\n"
+              "  the singleton term checked against each other.\n");
+  std::printf("    %-8s      1       2-3      4-7       8+  | longest  sumL  |closed-gap|\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (!R.usable || !R.errs) { std::printf("    %-8s  VOID\n", arms[a].name); continue; }
+    const double tot = double(R.errs);
+    std::printf("    %-8s %6.4f  %6.4f  %6.4f  %6.4f  | %7.1f %6.4f  %10.2e\n",
+                arms[a].name, double(R.bucket[0]) / tot, double(R.bucket[1]) / tot,
+                double(R.bucket[2]) / tot, double(R.bucket[3]) / tot,
+                R.longest / double(R.usable), R.ident / double(R.usable),
+                R.gapdiff / double(R.usable));
+    std::printf("    %-8s %6.4f  %6.4f  %6.4f  %6.4f  | NULL\n", "",
+                R.e_bucket[0] / tot, R.e_bucket[1] / tot, R.e_bucket[2] / tot,
+                R.e_bucket[3] / tot);
+  }
+
+  std::printf("\n  THE CONFOUND AND THE SECONDARY. `label` runs the SAME estimator on the\n"
+              "  object sequence itself: the draw is an i.i.d. coin, so it must read ~0 and a\n"
+              "  non-zero reading would mean clustered errors were inherited rather than the\n"
+              "  index's. `probe` is the read-back window, scored against its own assignment.\n");
+  std::printf("    %-8s  label primary +- SE    probe primary +- SE   (NEITHER is read by a verdict)\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    double sl = 0.0, sp = 0.0;
+    const double ml = mean_se(R.lprim, &sl), mp = mean_se(R.pprim, &sp);
+    std::printf("    %-8s     %+7.4f +- %6.4f (n=%2u)   %+7.4f +- %6.4f (n=%2u)\n",
+                arms[a].name, ml, sl, uint32_t(R.lprim.size()), mp, sp,
+                uint32_t(R.pprim.size()));
+  }
+
+  std::printf("\n  THE HALF-SESSION ASSIGNMENT -- ADDED AFTER THE SMOKE AND SAID SO. The 150k\n"
+              "  smoke found 20 of 24 DERIVED creatures with a DEGENERATE assignment, where\n"
+              "  §53 reports `degenerate 0` on 36 of 36 at 450k: the index starts COLLAPSED\n"
+              "  and splits as the conscience separates the prototypes, so the assignment is\n"
+              "  not stationary. This scores each half with the same `modal` lambda and asks\n"
+              "  whether the halves AGREE. It is the question §55 named, it is a SECONDARY,\n"
+              "  and no verdict below reads it -- the pre-registered primary is untouched.\n");
+  std::printf("    %-8s  agree  FLIPPED  a half degenerate   (of %s non-degenerate creatures)\n",
+              "arm", "the");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s %6u %8u %18u   %u\n", arms[a].name, R.hagree, R.hflip,
+                R.hdegen, R.hagree + R.hflip + R.hdegen);
+  }
+
+  std::printf("\n  THE TREND, AND IT WAS NOT PRE-REGISTERED -- ADDED AFTER THE REGISTERED RUN\n"
+              "  AND SAID SO. The 450k and 900k runs read DERIVED's rate at 0.2409 and 0.1668,\n"
+              "  and the 900k session's first 206 windows ARE the 450k session's, so the\n"
+              "  second half runs near 0.093. A DECLINING rate makes errors adjacent with no\n"
+              "  block mechanism at all, the exact null assumes a UNIFORM arrangement, and\n"
+              "  neither calibration arm can catch it because both are STATIONARY by\n"
+              "  construction. The two rows below are the measurement, not the argument.\n");
+  std::printf("    %-8s  the error rate in each EIGHTH of the scored sequence\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    std::printf("    %-8s ", arms[a].name);
+    for (uint32_t b = 0; b < 8; ++b) {
+      std::printf(" %6.4f", R.prof_n[b] ? R.prof[b] / double(R.prof_n[b]) : 0.0);
+    }
+    std::printf("\n");
+  }
+  std::printf("\n  THE SAME EIGHTHS SCORED AS ASSIGNMENTS, which the pooled rate above cannot\n"
+              "  separate: 0.31 in an eighth is equally consistent with every creature\n"
+              "  degrading a little and with A THIRD OF THEM INVERTING. `inv` counts\n"
+              "  creatures whose modal assignment in that eighth is the OPPOSITE of their\n"
+              "  session assignment, `deg` those with no assignment in it at all.\n");
+  std::printf("    %-8s %-4s", "arm", "");
+  for (uint32_t b = 0; b < 8; ++b) std::printf("   e%u", b + 1);
+  std::printf("\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const char* tags[3] = {"inv", "deg", "ok"};
+    for (uint32_t row = 0; row < 3; ++row) {
+      std::printf("    %-8s %-4s", row == 0 ? arms[a].name : "", tags[row]);
+      for (uint32_t b = 0; b < 8; ++b) {
+        const uint32_t v = row == 0 ? R.einv[b] : (row == 1 ? R.edeg[b] : R.eagree[b]);
+        std::printf(" %4u", v);
+      }
+      std::printf("\n");
+    }
+  }
+
+  std::printf("\n  AND THE STRATIFIED PRIMARY: adjacency counted WITHIN blocks of L windows,\n"
+              "  each scored against its own local rate, so a trend between blocks cannot\n"
+              "  contribute. Two values of L, because a conclusion that hinges on L is a\n"
+              "  conclusion about L. The PRE-REGISTERED primary is unchanged and is still the\n"
+              "  verdict's quantity; these say how much of it SURVIVES the trend.\n");
+  std::printf("    %-8s   pre-registered    L = 32 windows      L = 16 windows\n", "arm");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (R.prim.empty()) { std::printf("    %-8s  VOID\n", arms[a].name); continue; }
+    double sp = 0.0, s3 = 0.0, s1 = 0.0;
+    const double mp = mean_se(R.prim, &sp);
+    const double m3 = mean_se(R.s32, &s3);
+    const double m1 = mean_se(R.s16, &s1);
+    std::printf("    %-8s  %+7.4f +-%6.4f  %+7.4f +-%6.4f  %+7.4f +-%6.4f\n",
+                arms[a].name, mp, sp, m3, s3, m1, s1);
+  }
+
+  // CLAUSE 0 FIRST, ALWAYS -- §53's T-A printed PASS twice on an EMPTY SET.
+  std::printf("\n  CLAUSE 0 (FIRST) -- LIVENESS AND IDENTIFICATION. An arm with no scored\n"
+              "  window, or an index the genome could not run, is VOID. The primary is\n"
+              "  UNDEFINED at m < 2, so the identification check asks how many DERIVED\n"
+              "  creatures carry m >= 5 -- asserting identification is how a gate that cannot\n"
+              "  fail gets written (`vacuity-gate-cannot-guard-a-rejection`).\n");
+  bool any_void = false;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    const bool bad = R.ok == 0 || R.slots != kObjects || R.wins == 0;
+    if (bad) any_void = true;
+    std::printf("    %-8s %s  creatures %u/%u  windows %llu  ctx_slots %u  present %.4f\n",
+                arms[a].name, bad ? "VOID" : "ok  ", R.ok, R.n,
+                (unsigned long long)R.wins, R.slots,
+                R.ok ? R.present / double(R.ok) : 0.0);
+  }
+  const Row& D = rows[0];
+  const double w_d = D.wins ? double(D.errs) / double(D.wins) : 0.0;
+  const bool rate_ok = std::fabs(w_d - kRate53) <= kCalTol;
+  const bool ident_ok = D.m_ge5 >= 20u;
+  std::printf("    DERIVED  w_obs %.4f against §53's %.4f (|d| %.4f, tol %.2f)  %s\n",
+              w_d, kRate53, std::fabs(w_d - kRate53), kCalTol, rate_ok ? "PASS" : "*** FAIL");
+  std::printf("    DERIVED  m >= 5 on %u of %u creatures (need 20), degenerate %u  %s\n",
+              D.m_ge5, D.n, D.degen, ident_ok ? "PASS" : "*** FAIL");
+
+  std::printf("\n  CLAUSE 1 -- THE EXACT SELF-TEST. On PINNED the pin IS the label, so no\n"
+              "  window can be mis-assigned: m must be ZERO, not small.\n");
+  const Row& P = rows[1];
+  // `P.errs == 0` is TRUE over no data at all, so the window count is part of the
+  // condition and not context: an arm that scored nothing must read FAIL here
+  // rather than printing the strongest possible PASS on an empty set.
+  const bool pin_ok = P.ok > 0 && P.wins > 0 && P.errs == 0 && P.degen == 0;
+  std::printf("    PINNED   m %llu over %llu windows, degenerate %u  %s\n",
+              (unsigned long long)P.errs, (unsigned long long)P.wins, P.degen,
+              pin_ok ? "PASS" : "*** FAIL");
+
+  std::printf("\n  CLAUSE 2 -- THE CALIBRATION, BOTH ENDS OF THE ESTIMATOR'S RANGE. IID171 is\n"
+              "  §54's mode 3 (a coin per trial), so its primary is ZERO by construction and\n"
+              "  its across-creature SD is THE ERROR MODEL -- not the pre-flight arithmetic\n"
+              "  (`power-is-not-the-error-model`). BLK8 draws the same coin once per 8\n"
+              "  consecutive teaching windows, so every error has a neighbour and `obs` must\n"
+              "  read 1.0000 bar one block truncated by the session's end.\n");
+  double se_i = 0.0, se_b = 0.0;
+  const Row& I = rows[2];
+  const Row& B = rows[3];
+  const double m_i = mean_se(I.prim, &se_i);
+  const double m_b = mean_se(B.prim, &se_b);
+  const double w_i = I.wins ? double(I.errs) / double(I.wins) : 0.0;
+  const double w_b = B.wins ? double(B.errs) / double(B.wins) : 0.0;
+  const bool iid_ok = !I.prim.empty() && std::fabs(m_i) <= kBound;
+  const bool blk_ok = !B.prim.empty() && mean(B.obs) >= 0.98 && m_b >= 0.60;
+  const double tol_i = rate_tol(I, arms[2].blk), tol_b = rate_tol(B, arms[3].blk);
+  const bool knob_ok = std::fabs(w_i - kRate53) <= tol_i && std::fabs(w_b - kRate53) <= tol_b;
+  std::printf("    IID171   primary %+.4f +- %.4f (tol %+.4f)   w_obs %.4f   %s\n",
+              m_i, se_i, kBound, w_i, iid_ok ? "PASS" : "*** FAIL");
+  std::printf("    BLK8     obs %.4f (need >= 0.98), primary %+.4f (need >= +0.60), w_obs %.4f   %s\n",
+              mean(B.obs), m_b, w_b, blk_ok ? "PASS" : "*** FAIL");
+  std::printf("    the knob rates %.4f and %.4f against %.4f, tolerances DERIVED per arm from\n"
+              "             its own effective draw count (B = 1 and %d): %.4f and %.4f  %s\n",
+              w_i, w_b, kRate53, arms[3].blk, tol_i, tol_b, knob_ok ? "PASS" : "*** FAIL");
+  // A GATE WHOSE EMPTY SET PASSES IS NOT A GATE. `shuf_ok` starts true and is
+  // only ever falsified inside this loop, which SKIPS arms with no usable
+  // creature -- so with every arm empty it would report PASS over nothing, which
+  // is `vacuity-gate-cannot-guard-a-rejection` verbatim. The count of arms
+  // ACTUALLY CHECKED is therefore part of the condition, not an aside.
+  bool shuf_ok = true;
+  uint32_t shuf_checked = 0;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const Row& R = rows[a];
+    if (R.obs.empty()) continue;
+    ++shuf_checked;
+    // PER CREATURE, then meaned -- not the difference of the two means, which can
+    // CANCEL a creature reading high against another reading low and report
+    // agreement the formula never had.
+    double acc = 0.0;
+    for (size_t q = 0; q < R.exact.size() && q < R.shuf.size(); ++q) {
+      acc += std::fabs(R.exact[q] - R.shuf[q]);
+    }
+    const double d = R.exact.empty() ? 1.0 : acc / double(R.exact.size());
+    if (d > kShufTol) shuf_ok = false;
+    std::printf("    %-8s |exact - shuffle| %.4f (tol %.2f)  %s\n", arms[a].name, d,
+                kShufTol, d <= kShufTol ? "PASS" : "*** FAIL");
+  }
+  if (shuf_checked == 0) shuf_ok = false;
+  std::printf("    the formula  checked on %u of %u arms (ZERO would be a gate that cannot\n"
+              "                 fail, so zero is a FAILURE and not a pass)  %s\n",
+              shuf_checked, kArms, shuf_checked > 0 ? "PASS" : "*** FAIL");
+  std::printf("    THE ERROR MODEL. Pre-flight said SE 0.0158 at 450k on 24 creatures and\n"
+              "    0.0112 at 900k. IID171's realised SE is %.4f on %u creatures, per-creature\n"
+              "    SD %.4f.\n",
+              se_i, uint32_t(I.prim.size()),
+              se_i * std::sqrt(double(std::max<size_t>(I.prim.size(), 1))));
+
+  // CLAUSE 3. Three ways, signed, on the pre-registered CI.
+  std::printf("\n  CLAUSE 3 -- THE VERDICT, on DERIVED's TEACHING windows. Pre-registered three\n"
+              "  ways in ROADMAP §56 before any number existed. The boundary %+.4f is 2/m at\n"
+              "  450k's window count and is FROZEN across budgets; realised m is %.1f, which\n"
+              "  would give %+.4f, printed for disclosure and NOT used.\n",
+              kBound, D.usable ? double(D.errs) / double(D.usable) : 0.0,
+              D.errs && D.usable ? 2.0 * double(D.usable) / double(D.errs) : 0.0);
+  double se_d = 0.0;
+  const double m_d = mean_se(D.prim, &se_d);
+  const double lo = m_d - 1.96 * se_d, hi = m_d + 1.96 * se_d;
+  std::printf("    across creatures  primary %+.4f +- %.4f (n = %u), 95%% CI [%+.4f, %+.4f]\n",
+              m_d, se_d, uint32_t(D.prim.size()), lo, hi);
+  std::printf("    obs %.4f against an exact null of %.4f; longest error run %.1f windows\n",
+              mean(D.obs), mean(D.exact), D.usable ? D.longest / double(D.usable) : 0.0);
+
+  const bool gates = !any_void && rate_ok && ident_ok && pin_ok && iid_ok && blk_ok &&
+                     knob_ok && shuf_ok && D.prim.size() >= 2;
+  if (ticks < kVerdictTicks) {
+    std::printf("\n    *** NO VERDICT BY REGISTRATION, not verdict C: %llu ticks against the\n"
+                "    verdict budget of %llu. Every column above is a comparability reading\n"
+                "    against §53 and §55 and the gates below still say whether the instrument\n"
+                "    held. Nothing here is a verdict on the arrangement.\n",
+                (unsigned long long)ticks, (unsigned long long)kVerdictTicks);
+    std::printf("    the gates at this budget: %s\n",
+                gates ? "ALL PASS" : "AT LEAST ONE FAILED -- see clauses 0-2 above");
+  } else if (!gates) {
+    std::printf("\n    *** VERDICT C -- NO VERDICT. %s%s%s%s%s%s%s\n",
+                any_void ? "an arm is VOID. " : "",
+                !rate_ok ? "w_obs does not reproduce §53's rate. " : "",
+                !ident_ok ? "the primary is not identified on enough creatures. " : "",
+                !pin_ok ? "the EXACT self-test failed. " : "",
+                !(iid_ok && knob_ok) ? "the i.i.d. calibration missed zero. " : "",
+                !blk_ok ? "the BLOCK positive control missed its prediction. " : "",
+                !shuf_ok ? "the analytic null disagrees with its own shuffle. " : "");
+    std::printf("    The instrument is not trustworthy here, so the arrangement is not read.\n");
+  } else if (se_d * 1.96 > kNoVerdictHalf) {
+    std::printf("\n    *** VERDICT C -- NO VERDICT. The 95%% half-width %.4f exceeds the\n"
+                "    registered resolution %.2f, so this budget cannot answer the question\n"
+                "    whichever side of %+.4f the point estimate falls.\n",
+                se_d * 1.96, kNoVerdictHalf, kBound);
+  } else if (hi < kBound) {
+    std::printf("\n    *** VERDICT A -- REFUTED: primary 95%% CI [%+.4f, %+.4f], upper bound\n"
+                "    below %+.4f. The derived index's errors arrive essentially INDEPENDENTLY,\n"
+                "    so §54's per-trial coin was the right noise model and the ARRANGEMENT of\n"
+                "    the errors is NOT where the remaining 2.8 SE lives.\n",
+                lo, hi, kBound);
+  } else if (lo > kBound) {
+    std::printf("\n    *** VERDICT B -- SURVIVES: primary 95%% CI [%+.4f, %+.4f], lower bound\n"
+                "    above %+.4f. The errors are CLUSTERED, so §54's i.i.d. corruption\n"
+                "    understates what the derived index does to a clamped store -- and the\n"
+                "    bucket table above says at what scale, which is what decides whether this\n"
+                "    is the `retention` mechanism or merely adjacency.\n",
+                lo, hi, kBound);
+  } else {
+    std::printf("\n    *** VERDICT C -- NO VERDICT. primary 95%% CI [%+.4f, %+.4f] straddles the\n"
+                "    boundary %+.4f. Said rather than rounded to whichever side is nearer --\n"
+                "    `verdict-fitted-to-data`, and §55 returned C by exactly this route.\n",
+                lo, hi, kBound);
+  }
+  // THE VERDICT CANNOT BE QUOTED WITHOUT THESE TWO, so they print inside the
+  // verdict block rather than above it.
+  {
+    double s3 = 0.0, s1 = 0.0;
+    const double m3 = mean_se(D.s32, &s3), m1 = mean_se(D.s16, &s1);
+    std::printf("\n    AND TWO THINGS THE VERDICT MUST BE READ WITH, neither pre-registered.\n");
+    std::printf("    (1) THE TREND. Stratified within blocks, so a declining rate cannot\n"
+                "        contribute: %+.4f +- %.4f at L = 32 and %+.4f +- %.4f at L = 16,\n"
+                "        against the pre-registered %+.4f +- %.4f. %s\n",
+                m3, s3, m1, s1, m_d, se_d,
+                (m3 - 1.96 * s3 > kBound && m1 - 1.96 * s1 > kBound)
+                    ? "BOTH still clear the boundary, so the clustering is NOT the trend."
+                : (m3 + 1.96 * s3 < kBound && m1 + 1.96 * s1 < kBound)
+                    ? "BOTH EXCLUDE THE BOUNDARY FROM ABOVE. The clustering IS the trend:\n"
+                      "        once each block is scored against its own local rate there is no\n"
+                      "        excess adjacency left, so the pre-registered verdict is an\n"
+                      "        ARTEFACT OF A CONFOUND I DID NOT REGISTER, and the arrangement\n"
+                      "        question answers the OTHER way -- within a locally constant rate\n"
+                      "        the errors are INDEPENDENT. §54's per-trial coin had the right\n"
+                      "        form after all; what it did not have is a CONSTANT rate."
+                    : "THE TWO DISAGREE OR STRADDLE: no clean statement, and the\n"
+                      "        pre-registered verdict above must not be quoted alone.");
+    std::printf("    (2) THE LOAD-BEARING NULL reads %+.4f, not zero, on an arm whose\n"
+                "        expectation is zero BY CONSTRUCTION (%.1f SE). Within the registered\n"
+                "        tolerance, and the `label` column through the identical estimator is\n"
+                "        flat, so this is most likely chance -- but subtracting it from the\n"
+                "        primary as an offset leaves %+.4f, which is the conservative reading.\n",
+                m_i, se_i > 0.0 ? m_i / se_i : 0.0, m_d - m_i);
+  }
+  std::printf("\n    AND WHAT §56 CANNOT SETTLE, SAID IN THE PRE-REGISTRATION. `blocked`\n"
+              "    detects clustering at any scale >= 2 windows. The clamp-walk mechanism\n"
+              "    needs runs long enough to walk `bias_ctx_` to the opposite clamp, and the\n"
+              "    archive does not contain that length -- `retention` erased with a\n"
+              "    conflicting PHASE of thousands of trials, which bounds nothing at the scale\n"
+              "    of tens. No threshold on the 8+ bucket is pre-registered, because inventing\n"
+              "    one here is how a verdict gets fitted to data.\n");
   return true;
 }
 

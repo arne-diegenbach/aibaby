@@ -263,6 +263,32 @@ const Spec kSpecs[] = {
      "  every f ticks, and a fair coin leaves the slot alone half the time, so\n"
      "  the estimator must read 2f truncated by the window (19.78 / 94.74 /\n"
      "  225.00) and NOT f. kRead: every branch prints"},
+    {"slotdrift", 450000, Expect::kRead, Tier::kLong,
+     "derived: §56. §54's corruption was an INDEPENDENT COIN PER TRIAL and §55\n"
+     "  bounded short WITHIN-window runs at a quarter of the deficit. What neither\n"
+     "  touched is the ARRANGEMENT of the errors ACROSS windows: a marginal rate\n"
+     "  of 0.171 is equally consistent with i.i.d. errors and with an index that\n"
+     "  is right for long stretches and wrong for others, and `retention` (a\n"
+     "  conflicting BLOCK erases) beside §54 (interleaved conflicts average) says\n"
+     "  a clamped store treats the two differently. The sequence has been\n"
+     "  collected since §50 and §53 reduced it to ONE session-wide modal\n"
+     "  assignment, discarding the order; this reads the order. PRIMARY: blocked\n"
+     "  = the share of error windows with an error NEIGHBOUR, minus an EXACT\n"
+     "  analytic null -- 1-(n-m)(n-m+1)/(n(n-1)) at each creature's own n and m,\n"
+     "  which carries no Monte-Carlo variance, with a 64-permutation shuffle\n"
+     "  beside it as the check on the formula rather than as the null. Verdict\n"
+     "  three ways and SIGNED on the 95% CI against 2/m = +0.0567, the value one\n"
+     "  extra adjacent pair would produce, FROZEN at 450k's window count so the\n"
+     "  boundary cannot move with the budget. CLAUSE 0 is liveness AND\n"
+     "  identification (the primary is undefined at m < 2). pin_mode 1 is an\n"
+     "  EXACT self-test (m = 0: the pin IS the label) and pin_modes 3 and 5\n"
+     "  bracket the range -- same rate, i.i.d. per trial (primary 0) against runs\n"
+     "  of 8 (obs 1.0). THE MINIMUM IS 450000 AND THE VERDICT BUDGET IS 900000:\n"
+     "  450k is the comparability run against §53 and §55 and prints every column\n"
+     "  with NO VERDICT BY REGISTRATION, because the boundary was derived at 450k's\n"
+     "  window count and the power pre-flight wants the budget that halves the SE.\n"
+     "  Registered in that order before any number existed. kRead: every branch\n"
+     "  prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1528,6 +1554,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotdose") ok = run_slotdose(dna_blob, ticks, verbose);
   else if (name == "writerate") ok = run_writerate(dna_blob, ticks, verbose);
   else if (name == "switchrate") ok = run_switchrate(dna_blob, ticks, verbose);
+  else if (name == "slotdrift") ok = run_slotdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

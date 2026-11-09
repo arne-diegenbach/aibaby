@@ -1,0 +1,198 @@
+experiment: slotdrift
+  the question      §56. §54's corruption was an INDEPENDENT COIN PER TRIAL and
+                    §55 bounded short within-window runs at a quarter of the
+                    deficit. The ARRANGEMENT of the errors across windows has
+                    never been measured, and `retention` (a conflicting BLOCK
+                    erases) beside §54 (interleaved conflicts average) says a
+                    clamped store treats the two differently.
+  the quantity      blocked = share of ERROR windows with an ERROR NEIGHBOUR in
+                    the scored sequence. An error is a teaching window whose
+                    modal slot differs from the session's modal assignment for
+                    the object it showed -- §53's own `modal`, order kept.
+  the null          EXACT, not a shuffle: 1 - (n-m)(n-m+1)/(n(n-1)) per creature
+                    from its OWN n and m, so it carries no Monte-Carlo variance.
+                    A 64-permutation shuffle checks the formula beside it.
+  PRIMARY           blocked_obs - blocked_exact, meaned across creatures.
+                    Signed: an anti-clustered index reads NEGATIVE.
+  the boundaries    A: CI upper <  +0.0567 -- i.i.d., ARRANGEMENT REFUTED.
+                    B: CI lower >  +0.0567 -- clustered, §54 UNDERSTATES.
+                    C: anything else, or a half-width above 0.10.
+                    Full scale up is +0.6965 at §53's rate; range is signed.
+  session           900.0 s of simulated life x 60 sessions, 4 arms
+  instrument        slotdrift   trial seed 0000000001357169   60 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  THE RATE AND THE ASSIGNMENT. `w_obs` must reproduce §53's 0.1712 on DERIVED --
+  the same quantity from the same vectors by a different code path. `dark` is
+  windows whose index never went live, dropped by `ctx_slot`'s own rule.
+    arm      crt   degen  windows  dark    m    w_obs   m>=5  usable
+    DERIVED  24/24     0    10176     0   1697  0.1668    24    24
+    PINNED   12/12     0     5088     0      0  0.0000     0     0
+    IID171   12/12     0     5088     0    846  0.1663    12    12
+    BLK8     12/12     0     5088     0    832  0.1635    12    12
+    DERIVED  THE MEASUREMENT -- the retina's own index
+    PINNED   EXACT self-test: m = 0, the pin IS the label
+    IID171   §54's OWN ARM -- the load-bearing null, primary 0
+    BLK8     positive control -- same rate, runs of 8
+
+  THE PRIMARY. `obs` is the share of error windows with an error neighbour,
+  `exact` its analytic null at that creature's own n and m, `shuf` the
+  64-permutation check on the formula. Mean of per-creature differences.
+    arm          obs    exact     shuf   |   PRIMARY +- SE        95% CI
+    DERIVED   0.6097   0.3000   0.3018   | +0.3098 +- 0.0265  [+0.2579, +0.3616]
+    PINNED    VOID -- no usable creature
+    IID171    0.3441   0.3010   0.3010   | +0.0432 +- 0.0216  [+0.0009, +0.0854]
+    BLK8      1.0000   0.2932   0.2965   | +0.7068 +- 0.0289  [+0.6502, +0.7634]
+
+  THE RUN-LENGTH DISTRIBUTION, in error WINDOWS, against its exact null per
+  bucket -- the mixture-safe companion §55 taught me to print instead of a
+  mean. `sumL` is sum_L L*E[R_L]/m and must read 1.0000: a bookkeeping
+  identity over the whole null, and `|closed-gap|` is the two derivations of
+  the singleton term checked against each other.
+    arm           1       2-3      4-7       8+  | longest  sumL  |closed-gap|
+    DERIVED  0.3954  0.3848  0.2104  0.0094  |     5.5 1.0000    7.22e-14
+             0.6789  0.2988  0.0222  0.0001  | NULL
+    PINNED    VOID
+    IID171   0.6548  0.3286  0.0165  0.0000  |     3.2 1.0000    6.22e-14
+             0.6958  0.2882  0.0159  0.0000  | NULL
+    BLK8     0.0000  0.0000  0.0000  1.0000  |    14.0 1.0000    7.70e-14
+             0.6724  0.3006  0.0269  0.0002  | NULL
+
+  THE CONFOUND AND THE SECONDARY. `label` runs the SAME estimator on the
+  object sequence itself: the draw is an i.i.d. coin, so it must read ~0 and a
+  non-zero reading would mean clustered errors were inherited rather than the
+  index's. `probe` is the read-back window, scored against its own assignment.
+    arm       label primary +- SE    probe primary +- SE   (NEITHER is read by a verdict)
+    DERIVED      +0.0048 +- 0.0057 (n=24)   -0.1985 +- 0.0137 (n=24)
+    PINNED       +0.0000 +- 0.0000 (n= 0)   +0.0000 +- 0.0000 (n= 0)
+    IID171       +0.0006 +- 0.0060 (n=12)   +0.0000 +- 0.0000 (n= 0)
+    BLK8         +0.0006 +- 0.0060 (n=12)   +0.0000 +- 0.0000 (n= 0)
+
+  THE HALF-SESSION ASSIGNMENT -- ADDED AFTER THE SMOKE AND SAID SO. The 150k
+  smoke found 20 of 24 DERIVED creatures with a DEGENERATE assignment, where
+  §53 reports `degenerate 0` on 36 of 36 at 450k: the index starts COLLAPSED
+  and splits as the conscience separates the prototypes, so the assignment is
+  not stationary. This scores each half with the same `modal` lambda and asks
+  whether the halves AGREE. It is the question §55 named, it is a SECONDARY,
+  and no verdict below reads it -- the pre-registered primary is untouched.
+    arm       agree  FLIPPED  a half degenerate   (of the non-degenerate creatures)
+    DERIVED      24        0                  0   24
+    PINNED       12        0                  0   12
+    IID171       12        0                  0   12
+    BLK8         12        0                  0   12
+
+  THE TREND, AND IT WAS NOT PRE-REGISTERED -- ADDED AFTER THE REGISTERED RUN
+  AND SAID SO. The 450k and 900k runs read DERIVED's rate at 0.2409 and 0.1668,
+  and the 900k session's first 206 windows ARE the 450k session's, so the
+  second half runs near 0.093. A DECLINING rate makes errors adjacent with no
+  block mechanism at all, the exact null assumes a UNIFORM arrangement, and
+  neither calibration arm can catch it because both are STATIONARY by
+  construction. The two rows below are the measurement, not the argument.
+    arm       the error rate in each EIGHTH of the scored sequence
+    DERIVED   0.4458 0.3263 0.1195 0.0464 0.0338 0.0322 0.0181 0.3121
+    PINNED    0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000
+    IID171    0.1635 0.1777 0.1494 0.1619 0.1667 0.1730 0.1619 0.1761
+    BLK8      0.1730 0.1289 0.1871 0.1903 0.1824 0.1478 0.1651 0.1336
+
+  THE SAME EIGHTHS SCORED AS ASSIGNMENTS, which the pooled rate above cannot
+  separate: 0.31 in an eighth is equally consistent with every creature
+  degrading a little and with A THIRD OF THEM INVERTING. `inv` counts
+  creatures whose modal assignment in that eighth is the OPPOSITE of their
+  session assignment, `deg` those with no assignment in it at all.
+    arm             e1   e2   e3   e4   e5   e6   e7   e8
+    DERIVED  inv     0    0    0    0    0    0    0    0
+             deg    22   18    2    0    0    0    0   16
+             ok      2    6   22   24   24   24   24    8
+    PINNED   inv     0    0    0    0    0    0    0    0
+             deg     0    0    0    0    0    0    0    0
+             ok     12   12   12   12   12   12   12   12
+    IID171   inv     0    0    0    0    0    0    0    0
+             deg     0    0    0    0    0    0    0    0
+             ok     12   12   12   12   12   12   12   12
+    BLK8     inv     0    0    1    1    0    0    0    0
+             deg     0    0    0    1    0    0    0    0
+             ok     12   12   11   10   12   12   12   12
+
+  AND THE STRATIFIED PRIMARY: adjacency counted WITHIN blocks of L windows,
+  each scored against its own local rate, so a trend between blocks cannot
+  contribute. Two values of L, because a conclusion that hinges on L is a
+  conclusion about L. The PRE-REGISTERED primary is unchanged and is still the
+  verdict's quantity; these say how much of it SURVIVES the trend.
+    arm        pre-registered    L = 32 windows      L = 16 windows
+    DERIVED   +0.3098 +-0.0265  +0.0130 +-0.0125  +0.0038 +-0.0127
+    PINNED    VOID
+    IID171    +0.0432 +-0.0216  +0.0541 +-0.0203  +0.0450 +-0.0203
+    BLK8      +0.7068 +-0.0289  +0.4780 +-0.0318  +0.2528 +-0.0140
+
+  CLAUSE 0 (FIRST) -- LIVENESS AND IDENTIFICATION. An arm with no scored
+  window, or an index the genome could not run, is VOID. The primary is
+  UNDEFINED at m < 2, so the identification check asks how many DERIVED
+  creatures carry m >= 5 -- asserting identification is how a gate that cannot
+  fail gets written (`vacuity-gate-cannot-guard-a-rejection`).
+    DERIVED  ok    creatures 24/24  windows 10176  ctx_slots 2  present 1.0000
+    PINNED   ok    creatures 12/12  windows 5088  ctx_slots 2  present 1.0000
+    IID171   ok    creatures 12/12  windows 5088  ctx_slots 2  present 1.0000
+    BLK8     ok    creatures 12/12  windows 5088  ctx_slots 2  present 1.0000
+    DERIVED  w_obs 0.1668 against §53's 0.1712 (|d| 0.0044, tol 0.03)  PASS
+    DERIVED  m >= 5 on 24 of 24 creatures (need 20), degenerate 0  PASS
+
+  CLAUSE 1 -- THE EXACT SELF-TEST. On PINNED the pin IS the label, so no
+  window can be mis-assigned: m must be ZERO, not small.
+    PINNED   m 0 over 5088 windows, degenerate 0  PASS
+
+  CLAUSE 2 -- THE CALIBRATION, BOTH ENDS OF THE ESTIMATOR'S RANGE. IID171 is
+  §54's mode 3 (a coin per trial), so its primary is ZERO by construction and
+  its across-creature SD is THE ERROR MODEL -- not the pre-flight arithmetic
+  (`power-is-not-the-error-model`). BLK8 draws the same coin once per 8
+  consecutive teaching windows, so every error has a neighbour and `obs` must
+  read 1.0000 bar one block truncated by the session's end.
+    IID171   primary +0.0432 +- 0.0216 (tol +0.0567)   w_obs 0.1663   PASS
+    BLK8     obs 1.0000 (need >= 0.98), primary +0.7068 (need >= +0.60), w_obs 0.1635   PASS
+    the knob rates 0.1663 and 0.1635 against 0.1712, tolerances DERIVED per arm from
+             its own effective draw count (B = 1 and 8): 0.0158 and 0.0448  PASS
+    DERIVED  |exact - shuffle| 0.0070 (tol 0.02)  PASS
+    IID171   |exact - shuffle| 0.0068 (tol 0.02)  PASS
+    BLK8     |exact - shuffle| 0.0055 (tol 0.02)  PASS
+    the formula  checked on 3 of 4 arms (ZERO would be a gate that cannot
+                 fail, so zero is a FAILURE and not a pass)  PASS
+    THE ERROR MODEL. Pre-flight said SE 0.0158 at 450k on 24 creatures and
+    0.0112 at 900k. IID171's realised SE is 0.0216 on 12 creatures, per-creature
+    SD 0.0747.
+
+  CLAUSE 3 -- THE VERDICT, on DERIVED's TEACHING windows. Pre-registered three
+  ways in ROADMAP §56 before any number existed. The boundary +0.0567 is 2/m at
+  450k's window count and is FROZEN across budgets; realised m is 70.7, which
+  would give +0.0283, printed for disclosure and NOT used.
+    across creatures  primary +0.3098 +- 0.0265 (n = 24), 95% CI [+0.2579, +0.3616]
+    obs 0.6097 against an exact null of 0.3000; longest error run 5.5 windows
+
+    *** VERDICT B -- SURVIVES: primary 95% CI [+0.2579, +0.3616], lower bound
+    above +0.0567. The errors are CLUSTERED, so §54's i.i.d. corruption
+    understates what the derived index does to a clamped store -- and the
+    bucket table above says at what scale, which is what decides whether this
+    is the `retention` mechanism or merely adjacency.
+
+    AND TWO THINGS THE VERDICT MUST BE READ WITH, neither pre-registered.
+    (1) THE TREND. Stratified within blocks, so a declining rate cannot
+        contribute: +0.0130 +- 0.0125 at L = 32 and +0.0038 +- 0.0127 at L = 16,
+        against the pre-registered +0.3098 +- 0.0265. BOTH EXCLUDE THE BOUNDARY FROM ABOVE. The clustering IS the trend:
+        once each block is scored against its own local rate there is no
+        excess adjacency left, so the pre-registered verdict is an
+        ARTEFACT OF A CONFOUND I DID NOT REGISTER, and the arrangement
+        question answers the OTHER way -- within a locally constant rate
+        the errors are INDEPENDENT. §54's per-trial coin had the right
+        form after all; what it did not have is a CONSTANT rate.
+    (2) THE LOAD-BEARING NULL reads +0.0432, not zero, on an arm whose
+        expectation is zero BY CONSTRUCTION (2.0 SE). Within the registered
+        tolerance, and the `label` column through the identical estimator is
+        flat, so this is most likely chance -- but subtracting it from the
+        primary as an offset leaves +0.2666, which is the conservative reading.
+
+    AND WHAT §56 CANNOT SETTLE, SAID IN THE PRE-REGISTRATION. `blocked`
+    detects clustering at any scale >= 2 windows. The clamp-walk mechanism
+    needs runs long enough to walk `bias_ctx_` to the opposite clamp, and the
+    archive does not contain that length -- `retention` erased with a
+    conflicting PHASE of thousands of trials, which bounds nothing at the scale
+    of tens. No threshold on the 8+ bucket is pre-registered, because inventing
+    one here is how a verdict gets fitted to data.

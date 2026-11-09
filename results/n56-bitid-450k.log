@@ -1,0 +1,144 @@
+experiment: slotdose
+  the question      §53. §52's pre-registered primary cleared 2 SE mostly
+                    because its CONTROL went negative (79% of it at 900k).
+                    Why did the control move? Measured, not re-run.
+  the method        the formant gap splits EXACTLY into a SLOT TERM -- all a
+                    per-context bias table can produce -- and an OBJECT
+                    RESIDUAL, which it cannot. No new mechanism, no new genome
+                    field, no core change: instrumentation only.
+  the hypothesis    UNEQUAL DOSE. The untaught voice already sits 30% of the
+                    way toward /a/ (G = +0.4950 of 1.6417), so a 50/50
+                    compromise LOWERS G -- and the more-written slot is pulled
+                    further. Predicts sign(dG) = -sign(d dose). SIGN DERIVED.
+  session           450.0 s of simulated life x 120 sessions, 4 arms
+  instrument        slotdose   trial seed 0000000001357469   120 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  CLAUSE 0 -- LIVENESS AND IDENTIFICATION, read on EVERY arm including the
+  one whose null is load-bearing. A creature with != 2 live slots is DROPPED
+  from the cell columns; the residual needs all four cells populated.
+    T1.RET       n 36/36  dropped 0  present 1.0000  occ 0.5163  4-cell 32/36  median |d dose| 0.1189
+    T1.RET.D     n 36/36  dropped 0  present 1.0000  occ 0.5143  4-cell 34/36  median |d dose| 0.1790
+    T1.ORACLE.D  n 36/36  dropped 0  present 1.0000  occ 0.5000  4-cell 0/36  median |d dose| 0.1198
+    T1.ORACLE    n 12/12  dropped 0  present 1.0000  occ 0.5000  4-cell 0/12  median |d dose| 0.0833
+
+  THE MIXTURE -- H's PREMISE, TESTED RATHER THAN ASSUMED. Fraction of each
+  slot's lessons that taught kWords[1] /i/. A DRAWN arm must read ~0.50 in
+  BOTH slots (that is what makes it label-destroyed); a PAIRED arm must not.
+    T1.RET       slot A 0.2431   slot B 0.7334   (paired)
+    T1.RET.D     slot A 0.4954   slot B 0.5004   (drawn: both -> 0.50)
+    T1.ORACLE.D  slot A 0.4834   slot B 0.4983   (drawn: both -> 0.50)
+    T1.ORACLE    slot A 0.0000   slot B 1.0000   (paired)
+
+  THE WORD PREFERENCE, G = perr(cube) - perr(ball), POSITIVE = NEARER /a/.
+  `echo G` is the untaught reference measured in this run. Slot A is the one
+  object 0 over-occupies, so sign(slot term) = sign(G_A - G_B) by construction.
+    T1.RET       G_A +0.4628  G_B +0.5560  G_A-G_B -0.0932  mean G +0.5102  echo G +0.5021
+    T1.RET.D     G_A +0.4774  G_B +0.6140  G_A-G_B -0.1367  mean G +0.5535  echo G +0.5021
+    T1.ORACLE.D  G_A +0.5315  G_B +0.5341  G_A-G_B -0.0026  mean G +0.5348  echo G +0.5021
+    T1.ORACLE    G_A +0.6372  G_B +0.4862  G_A-G_B +0.1509  mean G +0.5642  echo G +0.4896
+
+  THE DECOMPOSITION. `gap` is §52's primary rebuilt from the cells and must
+  reproduce the `pe` column beside it. `identity` is gap - (slot + residual)
+  and is ARITHMETIC: anything but zero is a bookkeeping error of mine.
+    T1.RET       gap -0.0064 +- 0.0175  (pe -0.0064)   SLOT -0.0173 +- 0.0142   RESIDUAL +0.0109   identity +7.63e-17
+    T1.RET.D     gap -0.0691 +- 0.0242  (pe -0.0691)   SLOT -0.0802 +- 0.0241   RESIDUAL +0.0111   identity +8.33e-17
+    T1.ORACLE.D  gap -0.0103 +- 0.0288  (pe -0.0103)   SLOT -0.0103 +- 0.0288   RESIDUAL +0.0000   identity -5.55e-17
+    T1.ORACLE    gap +0.0827 +- 0.0506  (pe +0.0827)   SLOT +0.0827 +- 0.0506   RESIDUAL +0.0000   identity +5.90e-17
+
+  THE REPRODUCTION COLUMN -- this log's own proof that the instrument did
+  not move the session. §52's drop rule, every scored creature, so these
+  must equal §52's formant-gap column at the same budget TO FOUR DECIMALS
+  INCLUDING THE SE. (The cell columns above drop != 2-live-slot creatures and
+  so run on a subset; this one does not.)
+    T1.RET       formant gap -0.0064 +- 0.0175  (n 36)
+    T1.RET.D     formant gap -0.0691 +- 0.0242  (n 36)
+    T1.ORACLE.D  formant gap -0.0103 +- 0.0288  (n 36)
+    T1.ORACLE    formant gap +0.0827 +- 0.0506  (n 12)
+
+  T-A -- THE BOOKKEEPING SELF-TEST. A PINNED index makes the cells exactly
+  diagonal, so T1.ORACLE's residual must be EXACTLY zero and its slot term
+  must equal its gap. Worst identity over all 120 creatures +8.33e-17.
+    identity zero everywhere  PASS
+    ORACLE residual zero      PASS (+0.00e+00)
+
+  T-E -- REGISTRATION. Is the lesson read back from the slot it was WRITTEN
+  to? The modal slot per object over the TEACHING windows against the modal
+  slot per object over the PROBES. NOTHING IN §49-§52 CAN SEE THIS:
+  `vis_ctx_match` maximises over slot permutations, so a perfectly SWAPPED
+  index scores exactly what an aligned one does. The pinned arms must read
+  100% aligned -- that is a self-test, not a result.
+    T1.RET       aligned 36  SWAPPED  0  degenerate  0   (100% aligned)
+    T1.RET.D     aligned 35  SWAPPED  0  degenerate  1   (97% aligned)
+    T1.ORACLE.D  aligned 36  SWAPPED  0  degenerate  0   (100% aligned)
+    T1.ORACLE    aligned 12  SWAPPED  0  degenerate  0   (100% aligned)
+    pinned arms 0% swapped   PASS
+
+  AND THE SPLIT, PRE-REGISTERED WITH ITS DIRECTION BEFORE IT WAS READ: if a
+  swap is reading the lesson out of the wrong slot, then within the PAIRED
+  derived arm the ALIGNED creatures read POSITIVE and the SWAPPED ones
+  NEGATIVE. Registration is scored off the slot histograms and never off G,
+  so conditioning on it is not fitting the verdict to the data.
+    T1.RET       ALIGNED G_A-G_B -0.0932 +- 0.0412 gap -0.0064 (n 36)   SWAPPED G_A-G_B +0.0000 +- 0.0000 gap +0.0000 (n  0)
+    T1.RET.D     ALIGNED G_A-G_B -0.1277 +- 0.0610 gap -0.0700 (n 35)   SWAPPED G_A-G_B +0.0000 +- 0.0000 gap +0.0000 (n  0)
+    T1.ORACLE.D  ALIGNED G_A-G_B -0.0026 +- 0.0495 gap -0.0103 (n 36)   SWAPPED G_A-G_B +0.0000 +- 0.0000 gap +0.0000 (n  0)
+    T1.ORACLE    ALIGNED G_A-G_B +0.1509 +- 0.0924 gap +0.0827 (n 12)   SWAPPED G_A-G_B +0.0000 +- 0.0000 gap +0.0000 (n  0)
+
+  T-B -- THE PRIMARY, A PAIRED SIGN TEST ON T1.RET.D. Per creature, does
+  sign(G_A - G_B) OPPOSE sign(dose_A - dose_B)? Bar >=26 of 36 (p = 0.0057).
+    T1.RET       oppose 20  agree 16  tied  0
+    T1.RET.D     oppose 14  agree 22  tied  0
+    T1.ORACLE.D  oppose 21  agree 15  tied  0
+    T1.ORACLE    oppose  4  agree  8  tied  0
+
+  T-C -- THE SHARE. How much of T1.RET.D's displacement the slot route
+  accounts for, and the per-creature regressions of gap on the two
+  imbalances. H predicts NEGATIVE on both.
+    slot term -0.0802 of gap -0.0691 = 116% of it
+    slope d gap / d FIRING dose +0.2374 +- 0.1061 (2.2 SE)
+    slope d gap / d OCCUPANCY   +0.3036 +- 0.1260 (2.4 SE)
+
+  §53b -- THE SLOT TERM AT ZERO IMBALANCE. §53 measured the confound's slope
+  at +5.2 SE and the two derived arms carrying DIFFERENT amounts of it, so it
+  does not cancel in their difference. Each arm's per-creature slot term is
+  regressed on its SIGNED occupancy imbalance and read at zero. The signed
+  means are printed because §53 printed only medians of |.| and had to infer
+  the sign from a regression instead of reading it off.
+  DISCLOSED: a MEASURED covariate, not a randomised one -- an adjustment under
+  a linearity assumption it cannot verify, printed BESIDE the raw term.
+    T1.RET       mean occ imb +0.0010 (SD 0.1175)  mean dose imb -0.0277 | RAW slot -0.0173 +- 0.0142 | slope +0.3327 +- 0.1104  ADJUSTED -0.0176 +- 0.0128 (-1.4 SE)
+    T1.RET.D     mean occ imb -0.0797 (SD 0.1824)  mean dose imb -0.1427 | RAW slot -0.0802 +- 0.0241 | slope +0.3292 +- 0.1235  ADJUSTED -0.0540 +- 0.0243 (-2.2 SE)
+    T1.ORACLE.D  mean occ imb -0.0174 (SD 0.1462)  mean dose imb +0.0027 | RAW slot -0.0103 +- 0.0288 | slope +0.6247 +- 0.1717  ADJUSTED +0.0006 +- 0.0249 (0.0 SE)
+    T1.ORACLE    mean occ imb +0.0181 (SD 0.0937)  mean dose imb +0.0208 | RAW slot +0.0827 +- 0.0506 | slope +0.7928 +- 0.5355  ADJUSTED +0.0683 +- 0.0490 (1.4 SE)
+
+    PREDICTION 1 (SELF-TEST): T1.ORACLE.D's adjusted term within 2 SE of
+    zero -- PASS (+0.0006 +- 0.0249, 0.0 SE), on a regressor with SD 0.1462 so the
+    test is IDENTIFIED and could have failed. A pinned label-destroyed arm
+    has nothing to express at equal occupancy; a non-zero value would mean
+    the adjustment is MIS-SPECIFIED and nothing in §53b could be quoted.
+    (DISCLOSED: at 150k this same arm reads SD 0.0126 and the test is void
+    by construction there, which is why the branch measures rather than
+    asserts.)
+
+    THE LINEARITY CHECK, WHICH CAN FAIL: T1.RET.D split at its median
+    imbalance gives slopes +0.3343 +- 0.2042 (low) and +0.6647 +- 0.3686 (high),
+    differing by 0.8 SE -- CONSISTENT: a linear adjustment is supported
+
+    PREDICTION 2: T1.RET.D's displacement at zero imbalance -0.0540 +- 0.0243 -- STILL NON-ZERO: the confound is PARTIAL and this is the size of what survives
+    PREDICTION 3: T1.RET's lesson estimate -0.0176 +- 0.0128, against §53's
+    bracket of +0.046 (21% of the ceiling) and +0.114 (66%, write purity).
+    The pinned ceiling on the SAME footing is +0.0683 +- 0.0490 (adjusted, its regressor identified), so this
+    is -26% of it.
+
+    AND THE ADJUSTMENT'S POSITIVE CONTROL: the same correction applied to
+    the PINNED arm leaves +0.0683 of its raw +0.0827 -- 83% retained, 1.4 SE
+    above zero. So the correction is NOT a blunt shrink toward zero: it
+    keeps a real lesson where there is one and removes the derived arm's.
+    *** THE CEILING DOES NOT CLEAR 2 SE AFTER ADJUSTMENT, so this run cannot tell a removed confound from a removed effect and the derived arm's null is UNINFORMATIVE.
+
+  THE VERDICT.
+
+    (4b) NO VERDICT ON H: oppose 14, agree 22 of 36, neither at the bar of
+    26. The decomposition still stands on its own and is the result:
+    slot -0.0802 +- 0.0241, residual +0.0111.

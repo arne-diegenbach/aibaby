@@ -9795,3 +9795,387 @@ cannot test a branch they never take*:
 The second row is the one that matters: it is the defect the `wc -l` key was invented for and could
 never catch, since a clean log and a doubled log were both 936 lines. A count of exactly one catches
 it, and now catches it without anyone retyping the pattern.
+
+## §56 (2026-11-09) — DO THE INDEX'S ERRORS ARRIVE IN BLOCKS? THE PRE-REGISTRATION
+
+§53 measured the derived visual index's wrong-write rate at **0.1712** and §54 made that rate the only
+manipulated variable: a *perfect* index whose write slot is corrupted at exactly that rate still
+expresses **+0.1046 ± 0.0241**, against the derived index's **+0.0081 ± 0.0170**. So the derived index
+performs **3.3–4.0 SE worse than its own error rate accounts for**, and §55 bounded the one candidate
+§54 named — short within-window runs — at **at most a quarter** of that deficit, with **+0.0696 ±
+0.0247, 2.8 SE** surviving the most generous arithmetic.
+
+**§54 corrupted the write slot with an INDEPENDENT COIN PER TRIAL. That is a modelling choice, and the
+marginal rate does not constrain it.** A rate of 0.171 is equally consistent with i.i.d. errors and
+with an index that is 100% correct for long stretches and 100% *wrong* for others. Those two processes
+are the same measurement and different mechanisms, and the archive already contains the measurement
+that separates them: [[aibaby-retention]] found that a **conflicting block ERASES** (0.22 mean, 0.03
+and 0.06 on two seeds) while §54 found that **interleaved conflicts AVERAGE**. A clamped accumulator
+does both without contradiction — opposite increments cancel below the clamp, a long consistent block
+walks the store to the opposite clamp — so **arrangement is a mechanism, not a nuisance**, and §54's
+i.i.d. model would *understate* the damage if the real errors come in blocks.
+
+Nothing has ever asked. `teach_label` and `teach_slot` are returned per teaching window and have been
+since §50, and §53 reduced them to a single session-wide modal assignment (`reg`), discarding the
+order. **The sequence is already collected; this reads it.**
+
+### THE QUANTITY
+
+Per creature, from the chronological teaching-window vectors:
+
+1. **the session assignment** `A(o) = argmax_s #{k : label_k = o, slot_k = s}` — §53's own `modal`
+   lambda, unchanged;
+2. a window is **scored** if its index went live (`slot_k >= 0`, the drop rule `ctx_slot` already
+   uses) and is an **error** if `slot_k != A(label_k)`;
+3. `w_obs = m / n` over the n scored windows — **which must reproduce §53's 0.1712**, cross-instrument,
+   from the same vectors by a different code path;
+4. **`blocked`** = the share of the m error windows that have an **adjacent error window** in the
+   scored sequence.
+
+**PRIMARY = `blocked_obs − blocked_exact`**, per creature, meaned across creatures with its SE.
+
+### THE NULL IS EXACT, WHICH IS WHY IT IS NOT A SHUFFLE
+
+Under a uniformly random arrangement of m errors over n positions, an error at an interior position is
+a singleton with probability `((n−m)/(n−1))·((n−m−1)/(n−2))` and at either end with probability
+`(n−m)/(n−1)`, so
+
+    E[#singletons] = m(n−m)(n−m+1) / (n(n−1))
+    blocked_exact  = 1 − (n−m)(n−m+1) / (n(n−1))
+
+and because **m is fixed under that null**, dividing by m is exact rather than a ratio of expectations
+([[aibaby-mean-of-ratios]] is about the other case and does not apply). Each creature is scored
+against **its own n and m**, so the null consumes no tuning constant and carries **no Monte-Carlo
+variance** — which is why the estimator is the analytic one and a 64-permutation shuffle is run
+*beside* it as the check that the formula is right, not as the null itself.
+
+At the protocol's own numbers — 450k ticks gives **206 scored teaching windows per creature** (§55
+measured `tw_n` 4944 over 24, every window live) and §53's rate gives m̄ = 35.3:
+
+    blocked_exact = 1 − (171·172)/(206·205) = 0.3035
+
+### FULL SCALE, IN THE CLAIM'S UNITS, BEFORE THE BUDGET
+
+[[aibaby-calibrate-the-estimator-in-claim-units]]. `blocked_obs` is bounded in [0, 1], so at the
+measured rate the primary's range is **[−0.3035, +0.6965]**: perfectly spread errors at the bottom,
+every error contiguous at the top. **Full scale up is +0.6965**, and it is signed — an anti-clustered
+index reads negative instead of scoring as a null.
+
+**THE BOUNDARY IS DERIVED, AND IT IS FIXED AT THE 450k VALUE FOR BOTH BUDGETS.** The smallest
+structural departure the estimator can express is **one error window acquiring one neighbour it would
+not have had by chance**, worth `2/m̄ = 2/35.3 =` **0.0567** on the primary. A boundary computed from
+each run's own m̄ would HALVE at 900k, and a boundary that moves with the budget moves the verdict with
+it, so 0.0567 is fixed now, from §53's published rate and the protocol's window count. The log prints
+the realised m̄ beside it and the 900k-equivalent for disclosure.
+
+### POWER, FROM THE LOAD-BEARING NULL — AND THE PROBABILITY THE REFUSAL FIRES
+
+[[aibaby-power-is-not-the-error-model]]: three pre-flights, not one.
+
+* **Power.** Per creature, `blocked_obs` is a proportion over m̄ = 35.3 errors, so its SD is
+  ≈ `sqrt(0.3035·0.6965/35.3)` = **0.0775**. Over 24 creatures: **SE ≈ 0.0158**, half-width **0.031** —
+  **4.5% of full scale**. At 900k, n doubles and the per-creature SE falls by √2: **SE ≈ 0.0112**,
+  half-width **0.022**.
+* **The error model.** The load-bearing null is the **`IID171` arm**, whose expectation on the primary
+  is exactly zero by construction. **Its realised across-creature SD is the error model**, and the
+  pre-flight arithmetic above is checked against it rather than assumed.
+* **The probability a refusal clause fires, as a number.** Clause 0's rate check and clause 1's exact
+  self-test are **wiring** gates: at rate 0.171 over 206 windows, P(m < 5) < 1e-10, so they fire only
+  if the estimator is mis-wired, not by chance. Clause 2's ±0.0567 tolerance on `IID171` sits at 3.6
+  SE, so it fires spuriously with P ≈ 0.0003. **The real risk is clause 3's NO VERDICT: with a 900k
+  half-width of 0.022, a CI straddles 0.0567 whenever the truth lies in [0.035, 0.079], and in that
+  band §56 returns C with probability ≳ 50%.** §55 returned C by exactly this route. Saying so now
+  means it is a registered outcome and not a disappointment.
+
+### THE ARMS, AND THE TWO THAT BRACKET THE ESTIMATOR'S RANGE
+
+An arm selector must pin the whole dose vector ([[aibaby-control-on-a-different-code-path]]); every
+argument below is §52's, §53's, §54's and §55's except `pin_mode`, `write_noise` and the block length.
+
+| arm | `pin_mode` | w | B | n | prediction |
+|---|---|---|---|---|---|
+| `DERIVED` | 0 | — | — | 24 | **the measurement** |
+| `PINNED` | 1 | — | — | 12 | **m = 0 EXACTLY** on every creature |
+| `IID171` | 3 | 0.1712 | 1 | 12 | **primary 0.0000** — §54's own arm, the load-bearing null |
+| `BLK8` | **5 (new)** | 0.1712 | 8 | 12 | **`blocked_obs` ≥ 0.98, primary ≥ +0.60** |
+
+**`IID171` is §54's `pin_mode` 3 unchanged, and it is already the right calibration arm** because that
+mode corrupts the pin for the *whole trial*, so the corruption is visible in `teach_slot` — which is
+also why §55's `W171` read 0 *within-window* switches while flipping *between* windows at rate 0.171.
+The i.i.d. calibration therefore costs no new code.
+
+**`pin_mode` 5 is the positive control and the only new code path**: `pin_mode` 3 with the corruption
+coin drawn **once per block of B consecutive teaching windows** instead of once per trial. Its
+marginal rate is w in expectation and its error runs are `B × (consecutive corrupt blocks)`, hence
+always ≥ 8 ≥ 2, so **every error has a neighbour** and `blocked_obs` = 1.0000 up to one block truncated
+at the session's end (deficit ≤ 1/m). Without it the estimator's sensitivity to the very structure
+being claimed would be *asserted* — [[aibaby-vacuity-gate-cannot-guard-a-rejection]]: a gate that
+cannot fail is not a gate. It draws from `wn_rng`, which modes 1, 2 and 4 never touch, so every
+archived log stays bit-identical and that will be **proved** by re-running §53's `slotdose` and
+diffing content lines, against `n53b-450k.log` and not against the pre-§53b archive.
+
+### THE ONE CONFOUND, MEASURED RATHER THAN ASSUMED
+
+[[aibaby-control-blind-to-its-artefact]]: a label-destroyed arm cannot catch an artefact that is not
+about the label. If the **object sequence itself** had runs, a lagging index would produce clustered
+errors with no clustering in the index. `experiments_probes.cpp:1742` draws
+`object = int(rng.next() & 1u)` — an i.i.d. fair coin per trial — so the label sequence has no runs to
+inherit. **That is a code fact, and it is still printed as a measurement:** the same `blocked`
+estimator is run on the label indicator, where it must read its own analytic value.
+
+### THE CLAUSES, IN ORDER — ORDER IS PART OF A PRE-REGISTRATION
+
+0. **LIVENESS AND IDENTIFICATION.** `ctx_slots` = 2 and every arm has scored windows; **≥ 20 of 24**
+   `DERIVED` creatures have m ≥ 5 (the primary is undefined at m < 2); and `DERIVED`'s `w_obs` is
+   within **0.03** of §53's 0.1712. A failure here means the estimator is not reading §53's quantity
+   and **nothing below is read**.
+1. **THE EXACT SELF-TEST.** `PINNED` reads **m = 0** — not small, zero: the pin *is* the label.
+2. **THE CALIBRATION, BOTH ENDS.** `IID171`'s primary within ±0.0567 of 0; `BLK8`'s `blocked_obs`
+   ≥ 0.98 and primary ≥ +0.60; `BLK8`'s realised `w_obs` within 0.03 of 0.1712 (the knob verifies
+   itself, as in §54); and `blocked_shuf` within 0.02 of `blocked_exact` on every arm with m ≥ 5.
+3. **THE VERDICT, THREE-WAY AND SIGNED**, on `DERIVED`'s teaching windows:
+   * **A — REFUTED.** 95% CI **upper < +0.0567**: the errors are i.i.d. or anti-clustered, §54's model
+     was the right model, and **arrangement is not where the deficit lives**.
+   * **B — SURVIVES.** 95% CI **lower > +0.0567**: the errors are clustered, and §54's i.i.d.
+     corruption *understates* what the derived index does to a clamped store.
+   * **C — NO VERDICT.** Anything else, including a straddling CI or a half-width above 0.10.
+
+**AND WHAT §56 CANNOT SETTLE, SAID BEFORE IT RUNS.** `blocked` detects clustering at any scale ≥ 2
+windows. The *clamp-walk* mechanism needs runs long enough to walk `bias_ctx_` to the opposite clamp,
+and **the archive does not contain that length** — `retention` erased with a conflicting *phase* of
+thousands of trials, which bounds nothing at the scale of tens. So the run-length distribution is
+printed in four buckets (1, 2–3, 4–7, 8+) with its exact null per bucket, as the mixture-safe
+companion §55 taught me to print instead of a mean — but **no threshold on the 8+ bucket is
+pre-registered, because inventing one here is how a verdict gets fitted to data**
+([[aibaby-verdict-fitted-to-data]]). A positive primary carried entirely by the 2–3 bucket would be
+clustering that does **not** support the clamp-walk story, and §56 will say so.
+
+**THE VERDICT IS READ AT 900k.** 450k is run first as the comparability budget against §53 and §55 and
+reports the same columns with **no verdict**, because the boundary above was derived at 450k's window
+count and the power pre-flight wants the budget that halves the SE. Registered in that order, before
+any number exists.
+
+### AMENDMENTS, AND WHEN EACH WAS MADE
+
+§55's precedent: a column added after the smoke gets disclosed in the log and here, and the
+pre-registered primary and boundary stay untouched. Both kinds of change below were made **before any
+450k or 900k number was read**, and the first launch was **killed** rather than allowed to report under
+a gate I already knew was wrong. That ordering is the whole claim — a gate loosened after it fires is
+fitted to data; one corrected before it is read is not.
+
+**1. ADDED AFTER THE 150k SMOKE: the half-session assignment.** The smoke found **20 of 24** `DERIVED`
+creatures with a *degenerate* assignment — both objects' modal slot the same — where §53 reports
+`degenerate 0` on **36 of 36** at 450k. So the index **starts collapsed and splits** as the conscience
+separates the prototypes, and the assignment is not stationary. That is session-scale drift of a benign
+kind and it is the question §55 actually named, so each half is now scored by the same `modal` lambda
+and the halves compared: `agree` / `FLIPPED` / `a half degenerate`. **Secondary, no verdict reads it.**
+Its three branches were exercised by real rows before the registered run — including one `BLK8`
+creature reading **FLIPPED**, which makes the positive control a positive control for the flip detector
+too.
+
+The smoke also showed why it could not have answered anything: **clause 0 fired for a real reason I had
+not priced.** My pre-flight called clause 0 a *wiring* gate on the grounds that P(m < 5) < 1e-10, and
+that was right about m and silent about **degeneracy of the assignment**, which is a different failure
+mode. The clause caught it; the probability I attached to it was wrong.
+
+**2. FOUR GATES FAILED OPEN, found by auditing the printf block while the first launch was in flight.**
+
+| defect | why it was wrong | fix |
+|---|---|---|
+| `kCalTol = 0.03` on both knob rates | copied from §54, where the rate came from ~400 **per-trial** coins. `BLK8` draws one coin per 8 windows, so ~51 effective draws and 0.03 is ~2 SE: a **~5% chance of voiding the run on a knob that works** | tolerance **derived per arm** as 3 SE of its own effective draw count, `3·sqrt(w(1−w)·B/n)/sqrt(k)` |
+| `rate_tol` returned **1.0** when an arm had no windows | `\|w − 0.1712\| <= 1.0` is vacuously true — the gate passes hardest exactly when it has no data | returns **−1.0**: no \|difference\| satisfies it, so an unmeasurable arm reads FAIL |
+| `shuf_ok` initialised `true`, falsified only inside a loop that **skips** empty arms | an empty set reports PASS over nothing — `vacuity-gate-cannot-guard-a-rejection` verbatim | the count of arms **actually checked** is part of the condition, and zero is a FAILURE |
+| clause 1's `P.errs == 0` | **true over no data at all**, so a `PINNED` arm that scored nothing would print the strongest possible PASS | `P.wins > 0` is part of the condition |
+
+And one tightening that was not a hole: the shuffle check compared `mean(exact)` with `mean(shuf)`,
+which can **cancel** a creature reading high against another reading low. It is now the mean of
+**per-creature** absolute differences.
+
+**The registry minimum is 450000 and the verdict budget is 900000**, encoded as two separate constants
+so the 450k comparability run prints every column and says **NO VERDICT BY REGISTRATION** — which is
+not verdict C, because nothing failed. It is the wrong budget for a boundary derived at 450k's own
+window count.
+
+**AND THE BIT-IDENTITY CHECK IS NOW A SCRIPT, FOR THE SAME REASON THE VERIFY KEYS ARE.** §55 diffed
+against `n53-slotdose-450k.log`, which predates the §53b block later added to the same experiment, and
+read `*** CONTENT DIVERGED ***` on a binary that was fine. `tools/bitid.sh` finds every archived log of
+the same experiment **at the same budget**, orders them, and **refuses if the baseline handed to it is
+not the newest** — so choosing an older one requires saying so out loud, which is the step that was
+missing. It keeps `tools/cmp.sh`'s three INCONCLUSIVE states, because a missing file, an empty file and
+an unfinished run must never read as a pass, and it compares **content lines**, since `time` appends a
+block that cannot be equal. Exercised on all seven branches before use, including §55's own defect and
+§51's false divergence.
+
+**3. AND ONE CORRECTION MADE AFTER THE WRITE-UP, WHICH IS A DIFFERENT AND WORSE KIND.** The two
+amendments above were made before any number was read. This one was not: I wrote the result section's
+inversion claim as **"NOT ONE CREATURE EVER INVERTS … not once, at any scale"** off the **900k log
+alone**, and the 450k log of the same run reads `FLIPPED 1` of 24 at the half scale with `inv` 1 in two
+eighths. The claim was true at the budget I had open and false at the other, and I had both. **A
+two-budget design is only a cross-check if both budgets are read for every claim**, not just for the
+one the confound turned up in — the trend was found by comparing budgets, and then I stopped comparing
+them. The corrected statement is scope-bound and sits in the result section; the calibration that makes
+those 450k readings *mean nothing* — `BLK8` inverting in four of eight eighths while being
+never-inverting by construction — was already in the log, unread.
+
+**4. TWO DISCLOSURES ABOUT THE ARCHIVE ITSELF, NEITHER AN ERROR BUT BOTH VISIBLE TO ANYONE DIFFING IT.**
+Three generations of log are archived — `n56-pretrend-*` (as registered, no trend columns),
+`n56-trend-*` (trend profile added) and `n56-slotdrift-*` (final, with the eighth-wise assignment
+table). They are all kept **on purpose**, including the superseded middle pair, because of the first
+disclosure:
+
+- **The instrument's own printed interpretation was strengthened between runs.** `n56-trend-*` reads
+  *"AT LEAST ONE FALLS TO THE BOUNDARY: the clustering **may BE** the trend"*; the final log reads
+  *"BOTH EXCLUDE THE BOUNDARY … The clustering **IS** the trend"*. That is a post-hoc sharpening of a
+  **secondary** that was already labelled NOT PRE-REGISTERED, and **no registered gate or verdict
+  changed** — the pre-registered verdict B still prints unchanged in every generation. But a printed
+  conclusion that moves after its data is read is the shape of [[aibaby-verdict-fitted-to-data]], so it
+  is recorded here and the superseded log is kept so the change can be seen rather than taken on
+  trust.
+- **One phrase in the final log is ambiguous and should be read against this sentence.** It prints
+  *"BOTH EXCLUDE THE BOUNDARY FROM ABOVE"*, which can be misread as the intervals lying *above* the
+  boundary. They lie **below** it: +0.0130 ± 0.0125 and +0.0038 ± 0.0127, so the upper limits are
+  +0.0375 and +0.0287 against a +0.0567 boundary. The source string is **deliberately left alone**,
+  because the logs are already archived and silently re-wording an instrument whose output is the
+  record is worse than documenting the reading.
+
+## §56 RESULT — THE PRE-REGISTERED TEST SAYS CLUSTERED AND THE CONFOUND CONTROL SAYS IT IS THE TREND (2026-11-09)
+
+`--experiment slotdrift`, `Tier::kLong`, `Expect::kRead`, 60 sessions per budget, 450k and 900k, ~6 and
+~12 minutes. Genome `results/n56-genome.toml`, byte-identical to §53's, §54's and §55's.
+
+**EVERY REGISTERED GATE PASSED AT THE VERDICT BUDGET, AND THE PRE-REGISTERED VERDICT IS STILL AN
+ARTEFACT.** That sentence is the result. The gates were sound, the instrument was calibrated at both
+ends of its range, the primary cleared its boundary by eleven SE — and a confound I had not registered
+accounts for essentially all of it.
+
+### THE INSTRUMENT, FIRST, BECAUSE NOTHING BELOW IT COUNTS OTHERWISE
+
+| check | 900k reading |
+|---|---|
+| `PINNED` exact self-test — the pin *is* the label | **m = 0** over 5088 windows, 0 degenerate |
+| `DERIVED`'s rate against §53's published 0.1712 | **0.1668**, \|d\| 0.0044 |
+| identification — the primary is undefined at m < 2 | **m ≥ 5 on 24 of 24**, 0 degenerate |
+| `IID171` load-bearing null, expectation 0 by construction | **+0.0432 ± 0.0216** (within the ±0.0567 tolerance) |
+| `BLK8` positive control, same rate in runs of 8 | **obs 1.0000**, primary **+0.7068** |
+| both knobs' realised rates, tolerances derived per arm | 0.1663 and 0.1635 against 0.1712 |
+| the bucket null's identity `Σ L·E[R_L]/m` | **1.0000** on every arm |
+| two independent derivations of the singleton term | agree to **7e-14** |
+| the analytic null against its own 64-permutation shuffle | 0.0055–0.0070 |
+
+### THE PRE-REGISTERED PRIMARY, AND THE CONFOUND THAT EATS IT
+
+**Primary +0.3098 ± 0.0265, 95% CI [+0.2579, +0.3616] — VERDICT B, eleven SE above a boundary of
++0.0567.** Read alone, that says the derived index's errors arrive in clusters.
+
+**It is the rate declining.** The error rate across eighths of the scored sequence:
+
+```
+DERIVED   0.4458 0.3263 0.1195 0.0464 0.0338 0.0322 0.0181 0.3121
+IID171    0.1635 0.1777 0.1494 0.1619 0.1667 0.1730 0.1619 0.1761
+```
+
+A rate that falls 25-fold makes errors adjacent **with no block mechanism at all** — they concentrate
+where the rate is high — and the exact null holds n and m fixed while assuming the arrangement is
+*uniform*. **Neither calibration arm could catch this, because both are stationary by construction.**
+That is [[aibaby-control-blind-to-its-artefact]] in its own words: a control blind to an artefact that
+is not about the thing it varies. I bracketed the estimator's *range* and never asked whether a trend
+inflates it.
+
+Stratifying — adjacency counted **within** blocks of L windows, each scored against its own local rate,
+so no pair spans a boundary:
+
+| arm | pre-registered | L = 32 | L = 16 |
+|---|---|---|---|
+| `DERIVED` | **+0.3098 ± 0.0265** | **+0.0130 ± 0.0125** | **+0.0038 ± 0.0127** |
+| `IID171` | +0.0432 ± 0.0216 | +0.0541 ± 0.0203 | +0.0450 ± 0.0203 |
+| `BLK8` | +0.7068 ± 0.0289 | **+0.4780 ± 0.0318** | **+0.2528 ± 0.0140** |
+
+**`DERIVED` collapses to zero and `BLK8` does not.** That contrast is what makes this a measurement
+rather than a shrug: a genuine block structure at scale 8 is still detected after stratifying, and the
+trend-driven signal is not. `DERIVED`'s stratified value also sits **below** the load-bearing null's, so
+correcting for that offset leaves nothing at all.
+
+**So the arrangement question answers the OTHER way. Within a locally constant rate the errors are
+INDEPENDENT. §54's per-trial coin had the right FORM; what it did not have is a constant rate.**
+
+### AND WHAT THE RATE PROFILE IS ACTUALLY DOING — THE REAL FINDING
+
+The profile is not a decline. It falls 25-fold over seven eighths and then **jumps back to 0.3121**.
+That is not an end-of-session artefact: the 450k profile ends at 0.0483 still falling, and the two
+budgets are the same session — **verified, not assumed**, since inside the session only the trial-loop
+bound and §55's late-half accumulator read `ticks`, and neither consumes RNG. The cross-budget check
+confirms it to within 0.008 at all four comparable points, and the eight eighths average to exactly the
+headline 0.1668.
+
+A pooled 0.31 cannot distinguish "every creature degrades a little" from "a third of them invert", and
+the half-session column is blind to it by construction — 53 inverted windows inside a 206-window half
+do not move that half's modal slot. **Scored per eighth, per creature, it is neither:**
+
+```
+DERIVED  inv     0    0    0    0    0    0    0    0
+         deg    22   18    2    0    0    0    0   16
+         ok      2    6   22   24   24   24   24    8
+```
+
+**IT FAILS BY LOSING THE DISTINCTION, NOT BY REVERSING IT.** The index **starts collapsed, splits by
+the third eighth, holds perfectly for four, and then RE-COLLAPSES in the final eighth** — 16 of 24
+creatures lose any distinguishable slot-to-object assignment at the end of the session. `IID171` is
+`ok` 12/12 in all eight eighths, so the shape is the creature's and not the instrument's.
+
+**§55's named question closes negative, and the budget it closes at is part of the claim.** Over the
+whole session (900k) the modal assignment never reverses: **24 of 24 agree between halves and `inv` is
+0 in all eight eighths.** At 450k — which is the *first half* of the same session, the
+collapse-and-split phase where 22 of 24 start degenerate — **1 of 24 reads FLIPPED between halves and
+two eighths register `inv` 1.** I first wrote this up as "not once, at any scale" off the 900k log
+alone. That was the wrong scope, and this paragraph is the correction.
+
+**Those 450k readings are not evidence of reversal, and the positive control is what says so.**
+`BLK8`'s assignment is stable by construction — its errors are blocked, never inverted — yet it
+registers `inv` in **four of eight eighths at 450k, twice at a count of 2**, and in two eighths at 900k.
+A by-construction never-inverting arm therefore produces *more* apparent inversions at that granularity
+than `DERIVED` does, and `BLK8` reads `FLIPPED 0` of 12 at the half scale, against which 1 of 24 is not
+distinguishable. These are near-ties in a regime where the assignment is barely identified, not learned
+reversals. **So the claim that survives is scope-bound: no inversion where the assignment is
+identified, and no excess over a never-inverting control where it is not.** What the index does instead
+is **collapse**, twice — once before it has learned, and once again at the end.
+
+### WHAT THIS COSTS §54, AND WHAT IT DOES NOT
+
+§54's `w = 0.1712` is a **firing-weighted** figure: `dose_slot[cs] += 1.0` runs once per caregiver
+firing, sampling the slot *at that instant*. §56's rate is **window-counted on the modal slot**. They
+are different quantities, which is why clause 0 FAILED at 450k (0.2409 against 0.1712) and passed at
+900k (0.1668) — **and the reason it passed is a coincidence of averaging**, not agreement: a session
+whose rate runs from 0.45 to 0.02 happens to average near 0.17. **A single `w` does not describe this
+index at any budget, and §54's arm was matched to a number that is a session mean of a quantity varying
+by a factor of 25.** §54's conclusion that averaging beats overwrite stands — that was a comparison
+between two *models* at a fixed rate, and nothing here touches it.
+
+### FOUR THINGS I GOT WRONG — THREE BEFORE THE NUMBER WAS READ, ONE AFTER THE WRITE-UP
+
+1. **The trend confound was not pre-registered**, and it is the whole result. It was found by comparing
+   two budgets — 0.2409 against 0.1668 — not by inspecting the estimator. **A stationarity check belongs
+   in every pre-registration that uses an arrangement null**, and no amount of bracketing the
+   estimator's range substitutes for it.
+2. **Clause 0's identity check compared a window-counted rate against a firing-weighted one.** That is
+   [[aibaby-guard-measures-the-wrong-quantity]] committed in my own pre-registration, for the second
+   time in three sections — §54 did it with `present 1.0000`. The source line
+   (`out.dose_slot[cs] += 1.0` inside `if (fire)`) settles it without reference to any data.
+3. **Four gates failed open and one tolerance was copied from the wrong arm**, all found by auditing
+   the printf block while the first launch was in flight, and the launch was **killed** rather than
+   allowed to report under them. Detailed in the amendments above.
+4. **And this one is the worst of the four, because it happened after the result was written up.** I
+   claimed the index inverts *"not once, at any scale"* from the 900k log while the 450k log of the same
+   run sat beside it reading `FLIPPED 1` of 24. **Having two budgets is not a cross-check unless both
+   are read for every claim** — I used the comparison to find the trend and then stopped using it. The
+   reading that disarms those 450k numbers was in the log already: `BLK8` inverts in four of eight
+   eighths while being never-inverting by construction. Amendment 3 above.
+
+### THE SUCCESSOR, AND IT IS NOT A GUESS
+
+**Why does a fully differentiated index re-collapse after ~790k ticks?** It is sharp, it is in 16 of 24
+creatures, it is absent from both stationary arms, and it is invisible to every column published before
+§56. The candidates are nameable and distinguishable: the conscience (`ctx_proto_gate = 2`) continuing
+to push prototypes after the split is earned, homeostasis, or the bias table's own growth feeding back
+into the index. **And it bears directly on the deficit**, because a creature that cannot index for the
+last eighth of its life cannot express a conditional lesson there either — so §53's null was measured
+partly over a window in which the index had already collapsed.
