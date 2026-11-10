@@ -339,6 +339,33 @@ const Spec kSpecs[] = {
      "  all; clause 3 TESTS the phase cut's transfer from §56's pin_mode 5 arm\n"
      "  rather than assuming it. No core change, no new genome field, no RNG draw,\n"
      "  so the pinned hash cannot move. kRead: every branch prints"},
+    {"slotmat", 900000, Expect::kRead, Tier::kLong,
+     "derived: §59a. THE RULER, AND IT CARRIES NO PRIMARY. §58 named a re-score on\n"
+     "  its expression ramp as the next test, and §58's OWN LOG says that is\n"
+     "  underpowered: one eighth reads SE 0.0338 and FOUR read 0.0297, so quadrupling\n"
+     "  the window width buys 12% -- the between-creature component is a floor near\n"
+     "  0.029 that width does not touch, which is the same quantity that made §58's\n"
+     "  projection 23% low. A two-eighth window is therefore ~0.031 against an\n"
+     "  averaging prediction of +0.1228, a separation of 3.96 SE, UNDER sw_classify's\n"
+     "  own A >= 4E gate: the named test would return UNDEFINED. Nor can the power\n"
+     "  come from a longer session, because the sleep prune is first reachable at\n"
+     "  ~1.04M ticks and would turn a mechanism ON inside the comparison. So this run\n"
+     "  MEASURES the slot term's SE over every one of the 36 contiguous eighth-windows\n"
+     "  and sizes §59b from the one the pre-registration fixed in advance (e6-e7, from\n"
+     "  the ramp's plateau, with e5-e7 the single declared fallback and a 96-creature\n"
+     "  affordability limit stated first) -- a separate run from the test precisely so\n"
+     "  the window is not chosen from the data it is then tested in. SECOND PRODUCT,\n"
+     "  and it is §58's item 2: one new per-probe byte splits what probe_g_ok\n"
+     "  conflates, so `no voiced frame` and `index never live` are counted apart. §58\n"
+     "  found T1.ORACLE -- PINNED, whose index CANNOT collapse -- scoring n 1 of 12 in\n"
+     "  e8, and G2 derives from source that a pinned probe sets pin_context_oracle, so\n"
+     "  dark MUST read 0 on it: with that gate passed the e8 ledger says whether the\n"
+     "  late failure is SILENCE or a dark index, three-way and registered. G0 proves\n"
+     "  the per-eighth cells additive against a one-pass accumulation AND against the\n"
+     "  live cell_g/cell_n, which is what licenses re-deriving any window offline from\n"
+     "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
+     "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
+     "  change, no new genome field, no RNG draw. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1607,6 +1634,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotdrift") ok = run_slotdrift(dna_blob, ticks, verbose);
   else if (name == "ctxfreeze") ok = run_ctxfreeze(dna_blob, ticks, verbose);
   else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
+  else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

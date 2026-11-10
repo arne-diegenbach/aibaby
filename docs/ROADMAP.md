@@ -10876,3 +10876,340 @@ them.
 at the distances. §58 was run to decide whether that was worth a budget, and
 the answer is now conditional: if the ramp's plateau expresses, the question
 moves to why it collapses at e8, where item 2 is the cheaper first cut.
+
+## §59a PRE-REGISTRATION — THE INSTRUMENT RUN THAT MAKES THE RAMP TESTABLE, AND THE DROP LEDGER THAT SPLITS e8 (2026-11-10)
+
+**This section carries NO PRIMARY and can neither confirm nor refute
+expression.** It is an instrument run, registered as one, and the reason it is
+separate from the test it enables is the discipline in
+`verdict-fitted-to-data`: if one run both measured the window's noise and read
+a verdict in it, the window would have been chosen from the data it was then
+tested on. §59b is the test. This is the ruler.
+
+### WHY §58's NAMED SUCCESSOR IS NOT RUNNABLE AS WRITTEN
+
+§58 named "re-score on the window the ramp defines, with SEs" as item 1, and
+§58's own log already says that cannot be done at 36 creatures. The archived
+figures for two window widths on `T1.RET`:
+
+    TRANS (e3)        1 eighth    SE 0.0338   n 36
+    CLEAN (e4-e7)     4 eighths   SE 0.0297   n 35
+
+**Quadrupling the window width buys 12% of the SE.** The between-creature
+component is a floor near 0.029 and window width barely touches it — the same
+quantity whose behaviour made §58's projection of 0.0241 come in 23% low. A
+two-eighth window therefore reads **~0.031, no better than CLEAN**. Averaging's
+probe-weighted prediction over e6-e7 is
+
+    (34 x 0.1210 + 33 x 0.1246) / 67 = +0.1228
+
+so the model separation is **+0.1228 / 0.031 = 3.96 SE**, against
+`sw_classify`'s `A >= 4E` identification gate. **The test returns UNDEFINED.**
+§58 cleared that bar by 1.8%; its own successor misses it by about 1%. Running
+it unchanged would spend a budget to be told the instrument cannot see.
+
+**And the power cannot come from a longer session.** The sleep prune is first
+reachable at ~1.04M ticks (`core/src/network.cpp:3969`, in terms), so raising
+the per-creature budget past that turns a mechanism ON inside the comparison —
+and §49-§58 have every one of them run at 450k-900k, so no section of this line
+has ever had sleep execute. The power has to come from MORE CREATURES, and
+sizing them needs a MEASURED SE for the exact window, which is this run.
+
+### WHAT IS REGISTERED HERE, AND IN WHICH ORDER IT IS READ
+
+`--experiment slotmat`. §53's and §58's exact four arms, exact budget, exact
+genome, exact session call. **No core change, no genome field, no RNG draw**:
+one more per-probe vector — the reason a probe was unscorable — pushed beside
+the two §58 added, and every number below is host-side arithmetic over those
+vectors.
+
+**G0 — ADDITIVITY, AND IT IS WHAT LICENSES EVERY LATER SECTION.** The cells
+accumulated per creature-eighth, summed over the eight eighths, must equal the
+cells accumulated over the whole session, and those must equal the live
+`cell_g`/`cell_n` accumulators. Pure arithmetic, never budget-gated, worst case
+over all 120 creatures printed. **This is the claim that a window's slot term
+is recoverable offline from the dumped matrix** — a slot term is NOT the sum of
+its eighths' slot terms (`Gbar_s` is re-estimated over the window), but it IS
+an exact function of the summed cells, and that is the identity being tested.
+If it fails, the matrix is not a ruler and nothing below is readable.
+
+**G1 — BOOKKEEPING ON THE DROP LEDGER.** Every probe in a window is either
+scored or dropped for at least one named reason, and the reasons may overlap.
+Registered identity: `kept + dropped_for_any == probes`, per creature-eighth,
+exactly. The overlap count is printed rather than assumed away. Never gated.
+
+**G2 — THE IDENTIFICATION GATE, AND IT IS DERIVED FROM SOURCE BEFORE THE RUN.**
+A probe calls `observe(object, 0, /*speak=*/false, /*show=*/true, ...)`, and the
+pin block at `experiments_probes.cpp:1437` is gated on `show`, so on
+`pin_mode == 1` the probe sets `pin_context_oracle(object)` — which makes
+`context_present()` true and `active_context()` the true object for every
+scored tick of that probe. **Therefore `ctx_slot` can never be -1 on a pinned
+arm, and the registered requirement is `dark == 0` in all eight eighths on BOTH
+pinned arms.** A non-zero count there means the split is labelling the wrong
+quantity and the ledger is void (`guard-measures-the-wrong-quantity`). This is
+a real gate with a real failure mode, not an assertion: it is exactly the kind
+of claim that has been wrong in this project before, and it is the gate that
+makes the next paragraph's answer mean anything.
+
+**THE QUESTION G2 UNLOCKS, WHICH IS §58's ITEM 2.** §58 found `T1.ORACLE`
+scoring **n 1 of 12** creatures in e8 while being PINNED — an index that cannot
+collapse. With `dark` proven 0 on that arm, the e8 ledger's remaining columns
+say whether those creatures went **SILENT** (no voiced frame in the probe) or
+produced frames whose formants were **unscorable**, and those are different
+mechanisms with different fixes. Three-way and pre-registered, so the verdict
+is the code's branches and not a reading made afterwards
+(`verdict-fitted-to-data`):
+
+- `novoice` dominant in e8 on the pinned arm -> the late failure is SILENCE,
+  which points at `delivery-fraction` / `silence-is-the-homeostat` and at §57's
+  surviving homeostasis lead, and it is NOT about the index at all.
+- `badformant` dominant -> the creature vocalises and the ruler cannot score
+  it, which is an instrument problem in `formant_error` and is cheap to fix.
+- Neither dominant and `total < min` the binding constraint -> the probes are
+  simply fewer, which is a protocol-geometry fact and closes the question.
+
+**I expect SILENCE and I am recording that before the run**, because the pinned
+arm's index is forced and §58's derived arm lost creatures in e8 too — a shared
+failure across a pinned and a derived arm cannot be about the index. **If the
+ledger says otherwise the prediction was wrong and the ledger wins.**
+
+**G3 — TRANSFER FROM §58, BUDGET-BOUND.** The 36-window table below must
+reproduce §58's four published phase windows to four decimals including their
+SEs, on `T1.RET`: `EARLY +0.0060 +- 0.0076 (n36)`, `TRANS -0.0550 +- 0.0338
+(n36)`, `CLEAN +0.0442 +- 0.0297 (n35)`, `LATE -0.0377 +- 0.0446 (n21)`, and
+`T1.ORACLE CLEAN +0.1289 +- 0.0473 (n11)`. Those four windows are contiguous
+eighth-ranges, so they are cells of the general table and not a special case.
+This is §58's clause 0 one level up: it is what makes this §58's session rather
+than a second measurement of it. A 900k measurement, so **UNDEFINED, not
+failed, below that budget** — and it still prints its numbers, so the plumbing
+stays visible at a smoke budget. The per-window minimum is `6.0 x width`, which
+is §58's own phase rule unchanged, so no new threshold enters.
+
+### THE SIZING OUTPUT FOR §59b, WITH THE WINDOW FIXED NOW
+
+**The window for §59b is `e6-e7`, declared here and not chosen from this run's
+numbers.** It comes from §58's expression ramp — `-0.0550 +0.0124 +0.0359
++0.0904 +0.0914` across e3-e7 — where the plateau is e6 and e7. Reading the
+36-window table and then picking the window with the best separation is the
+defect this section exists to avoid.
+
+With `E` the measured SE of `T1.RET` over e6-e7 at `n` creatures and
+`A = +0.1228`, the creatures §59b needs for a separation `s` are
+`n' = n x (E s / A)^2`, since the SE falls as `1/sqrt(n)` in the CREATURE count
+even though it does not fall in the window width — and that asymmetry is the
+whole lesson of §58's power miss, so it is printed as a column and not relied
+on silently.
+
+**THE AFFORDABILITY LIMIT IS 96 CREATURES PER DERIVED ARM, STATED NOW.** The
+decision rule, in this order:
+
+1. If `n'` for **4.5 SE** separation over e6-e7 is at most 96, §59b runs on
+   e6-e7 at that `n'`.
+2. Otherwise widen to **e5-e7**, the single pre-declared fallback, and apply
+   the same limit.
+3. If that also exceeds 96, **§59b is not runnable under this architecture and
+   that is the finding** — the ramp would then be permanently descriptive, and
+   the honest report is that the expression question cannot be decided by
+   windowing §53's design at all.
+
+A rule with a threshold and an order fixed in advance is a registration; the
+same rule applied after seeing which window won would not be.
+
+### DISCLOSED BEFORE THE RUN
+
+- **There is no primary and no verdict.** Nothing here can move §53's null or
+  §58's. Any sentence in the result that reads like a verdict on expression is
+  a mistake in the write-up, not a finding.
+- The 36-window table will be read for its SEs and **not** for its point
+  estimates. Thirty-six windows times four arms is 144 figures and some will be
+  2 SE from zero by construction; `read-every-budget-for-every-claim` applies
+  to this table against myself.
+- The matrix dump is 960 lines prefixed `MAT`, one per creature-eighth. It is
+  archived so a future section can re-estimate any window with any estimator
+  without re-running — `mean-of-ratios` and §57's 2.5x disagreement are the
+  reason both estimators should stay recoverable.
+- `badformant` and `novoice` are both already folded into §58's
+  `probe_g_ok == 0`, so this run cannot disagree with §58 about the TOTAL
+  number of dropped probes — only about its composition. If the totals differ,
+  G0 or G1 has failed and the split is wrong.
+- The smoke runs at 450k and not 150k, because an eighth needs 6 scorable
+  probes and a 150k session yields ~23 in total, so every sub-window would read
+  `n 0` and the windowed scorer would go unexercised
+  (`smoke-the-exact-command`: smoke big enough for the SMALLEST rung to score).
+  §58 learned that by wasting a smoke on it.
+
+## §59a RESULT — e8 IS SILENCE, NOT A DARK INDEX; AND THE RULER CORRECTS THE PREMISE THAT MOTIVATED IT (2026-11-10)
+
+`--experiment slotmat`, 120 sessions at 900k, 20m22s, all gates passed. **No
+primary, and nothing below is a verdict on expression.** The genome is
+byte-identical to §53's, §57's and §58's (md5 `9f6faac320210cc8e9f5830adf066934`).
+
+### THE GATES, AND G3 IS AS STRONG AS THIS PROJECT HAS MANAGED
+
+| gate | result |
+|---|---|
+| G0 additivity, eighths summed vs one pass | `2.13e-14` over 3840 cells, PASS |
+| G0 additivity, vs live `cell_g`/`cell_n` | `2.13e-14` over 3840 cells, PASS |
+| G1 `kept + dropped == probes` | 0 bad of **960** creature-eighths, PASS |
+| G1 `why == 0` iff `probe_g_ok == 1` | 0 mismatched probes, PASS |
+| G1 kept probes outside slots 0-1 | 0, PASS |
+| G2 dark on the pinned arms | **0** over 48 creatures, all eight eighths, PASS |
+| G3 transfer from §58 | **all five windows match to four decimals including the SE and the n** |
+
+G3 reproduced `T1.RET EARLY +0.0060 +- 0.0076 (n36)`, `TRANS -0.0550 +- 0.0338
+(n36)`, `CLEAN +0.0442 +- 0.0297 (n35)`, `LATE -0.0377 +- 0.0446 (n21)` and
+`T1.ORACLE CLEAN +0.1289 +- 0.0473 (n11)` **exactly**, from a scorer written
+independently of §58's and running over a per-eighth matrix rather than over the
+probe stream. Both arms of that gate have now run: with
+`AIBABY_SLOTMAT_FORCE_GATES=1` at 450k all five read `*** DIFFERS ***`. The five
+synthetic branches of the e8 reading passed 5/5 before any real column, and the
+sizing formula's inversion self-check read identity `+0.00e+00`.
+
+**G0 is `2.13e-14`, not zero, and that is summation order** — the per-eighth path
+and the one-pass path add the same terms in different orders. It is inside the
+`1e-12` gate and five orders inside G3's `5e-5` tolerance, but it is a tolerance
+and not an identity, and calling it one would be the kind of overstatement
+`plausible-wrong-number` is about.
+
+### §58's ITEM 2, ANSWERED: e8 IS THE CREATURE FALLING SILENT
+
+    T1.ORACLE e8   probes 216  kept 34  dropped 182   nov 182  badf 0  dark 0
+    creatures with >= 6 kept in e8   1 of 12
+
+**That `1 of 12` is §58's `n 1/12`, reproduced, and now explained.**
+`T1.ORACLE` is PINNED, G2 proves its index was live on every probe in every
+eighth, and **100% of its e8 drops are probes with no voiced frame at all.** The
+late failure on that arm is lost OUTPUT. It is not about the index, and §56's
+and §58's single conflated column could not have said so.
+
+It is a session-wide progression that ends in a cliff. `nov`, per eighth:
+
+| arm | e1 | e2 | e3 | e4 | e5 | e6 | e7 | e8 |
+|---|---|---|---|---|---|---|---|---|
+| `T1.RET` | 11 | 58 | 51 | 71 | 89 | 90 | 103 | **403** |
+| `T1.RET.D` | 4 | 59 | 70 | 82 | 132 | 136 | 173 | **408** |
+| `T1.ORACLE.D` | 1 | 27 | 60 | 114 | 138 | 168 | 175 | **479** |
+| `T1.ORACLE` | 2 | 1 | 12 | 16 | 22 | 34 | 42 | **182** |
+
+`kept` collapses with it — `T1.RET` 545 -> 245, `T1.ORACLE` 174 -> 34 between e7
+and e8. **Every arm, pinned and derived alike**, which is what rules the index
+out: a pinned index cannot collapse and the pinned arms fall silent hardest in
+proportion. This is [[aibaby-delivery-fraction]] and
+[[aibaby-silence-is-the-homeostat]] arriving in an experiment not built to look
+for them, and it is §57's surviving homeostasis lead with a second witness.
+
+**AND THE CLIFF IS KEYED TO ABSOLUTE TICKS, NOT TO SESSION FRACTION.** At 450k
+the same arm's e8 reads `nov 8 of 108` — 7.4% against 84% at 900k. The last
+eighth of a 450k session is not a late session, so this is not an
+end-of-session artefact of the protocol. It is the same conclusion §56 reached
+for the index collapse, by a different route.
+
+**`badf` is identically 0 over all 960 creature-eighths**, so `formant_error`
+never refused a frame it was given and the split is effectively two-way, dark
+versus silent. That branch therefore cannot be reached by a real row and was
+exercised synthetically; it is disclosed in the log rather than left to be
+inferred from a column of zeros.
+
+**WHAT THIS DOES NOT SAY.** It does not say the derived index is fine in e8.
+§58's clause 3 measured `deg 21 of 36` on `T1.RET`'s **teaching windows**, where
+scoring does not require the creature to vocalise at all, and §56 measured the
+same thing independently. So e8 holds **both** failures: a real index
+re-collapse on the derived arms, and silence on every arm. §58 said "at least
+two failures"; §59a names the second one and leaves the first exactly where §56
+and §57 left it.
+
+### THE RAMP NOW HAS ERROR BARS, WHICH WAS §58's INSTRUMENT GAP
+
+`T1.RET`, per eighth, with the SEs §58 could not print:
+
+    e1 +0.0313+-0.0048(30)   e2 -0.0281+-0.0217(34)   e3 -0.0550+-0.0338(36)
+    e4 +0.0124+-0.0378(35)   e5 +0.0359+-0.0420(33)   e6 +0.0904+-0.0384(34)
+    e7 +0.0914+-0.0432(33)   e8 -0.0377+-0.0446(21)
+
+The plateau is **2.35 SE** (e6) and **2.12 SE** (e7) above zero, and **0.80 and
+0.77 SE BELOW averaging's prediction** for those eighths. Suggestive in the
+averaging direction and nowhere near the 4 SE needed to separate the two models
+at a single eighth — which is the whole reason §59b pools two.
+
+### AND WHAT THE SE ACTUALLY DOES WITH WIDTH
+
+    width      1       2       3       4       5       6       7       8
+    measured  0.0333  0.0293  0.0278  0.0261  0.0253  0.0229  0.0196  0.0170
+    naive     0.0333  0.0235  0.0192  0.0166  0.0149  0.0136  0.0126  0.0118
+    ratio     1.00    1.24    1.44    1.57    1.70    1.68    1.56    1.44
+
+`naive` is the width-1 mean scaled as `1/sqrt(width)`, the law §58's
+pre-registration used. **It is wrong by up to 70%**, and the gap is the
+between-creature component, which does not shrink when a window widens. This
+table is now archived, so no future section has to re-derive it.
+
+### FOUR THINGS I GOT WRONG, AND THE FIRST IS THE PREMISE FOR THIS RUN
+
+**1. §58's named test WAS runnable at 36 creatures, and my argument that it was
+not is refuted by this run's own ruler.** I projected `e6-e7` at SE ~0.031,
+giving a 3.96 SE separation against the classifier's `A >= 4E` gate, and
+concluded the test would return UNDEFINED. **Measured: `E 0.0293`, separation
+4.18 SE — a verdict, not a refusal.** The error is specific and worth naming: I
+extrapolated the width-4 SE from §58's CLEAN window alone (0.0297) when the
+width-4 **mean** is 0.0261, so CLEAN is an atypically noisy width-4 window and I
+generalised from one window to a width. **That is the same family of mistake as
+§58's power miss, one level up, and the width table above is the instrument that
+exposes it.** §59a still earned its budget — it answered item 2, it proved the
+matrix additive so no window ever needs a re-run, and it reproduced §58's table
+exactly — but it was not needed for the reason I gave.
+
+**2. The window estimate is NOT the mean of its eighths' estimates.** `e6-e7`
+reads **+0.0772** while e6 and e7 individually read +0.0904 and +0.0914, whose
+mean is +0.0909 — **15% higher**. `Gbar_s` is re-estimated over the pooled
+window, so this is `mean-of-ratios` again, inside a single creature this time.
+**§58's ramp figures therefore cannot be averaged to predict a window**, and any
+future reading of that ramp has to say which it means.
+
+**3. I can see what §59b is likely to answer, and I do not get to claim it.**
+Applying §58's `sw_classify` to `S +0.0772, E 0.0293, A +0.1228` returns
+**EXPRESSES AS AVERAGING PREDICTS** — the opposite of §53's and §58's registered
+conclusions. **This is not a result and must not be cited as one.** It is a
+number from a run that pre-registered "read this table for its SEs and not for
+its point estimates", the boundaries it clears it clears by ~30%, and reading a
+verdict off a ruler is exactly `verdict-fitted-to-data`. What it legitimately
+says is that **§59b's outcome is genuinely uncertain and worth a budget**, which
+is a statement about §59b's value.
+
+**4. AND HAVING LOOKED CHANGES WHAT §59b MAY BE.** Creature seeds are
+`seed + r * 7919`, so an arm of 40 contains the 36 I have now seen as a subset:
+90% of the "new" test would be the data that produced the peek.
+**§59b's PRIMARY must therefore run on a DISJOINT creature set** — `r = 36..75`
+— with the pooled 76 reported as a secondary. That is
+`pairing-on-discovery-sample` and `holdout-exact-half` applying to me, and it is
+a constraint §59b inherits **because** §59a looked. 40 fresh creatures per
+derived arm is inside the 96 limit stated in advance, and the pooled set would
+read about 6.5 SE.
+
+### THE REGISTERED DECISION, AS THE CODE APPLIED IT
+
+    TARGET   e6-e7   E 0.0293   n 34   A +0.1228   separation 4.18 SE
+             4.0 SE -> 32   4.5 SE -> 40   5.0 SE -> 49      limit 96   WITHIN
+    FALLBACK e5-e7   E 0.0292   n 35   A +0.1221   separation 4.18 SE
+             4.0 SE -> 33   4.5 SE -> 41   5.0 SE -> 51      limit 96   WITHIN
+
+    §59b RUNS on e6-e7 at 40 creatures per derived arm.
+
+Amended by item 4 above, and the amendment is disclosed as one: **40 creatures,
+`r = 36..75`, disjoint from §59a's**, with the pooled 76 as a secondary.
+
+### THE SUCCESSOR
+
+1. **§59b, as sized and as amended.** `e6-e7`, 40 fresh creatures per derived
+   arm disjoint from these, averaging's prediction at `+0.1228`, §58's
+   five-way classifier with its refusal branch. **If it returns EXPRESSES, §54's
+   averaging model transfers to the derived index and the expression route is
+   OPEN** — the opposite of §53's and §58's conclusions, which is why it must be
+   a fresh sample.
+2. **The silence, which §59a turned from a lead into a measurement.** Every arm
+   loses 55-80% of its probes between e7 and e8, pinned arms included, keyed to
+   absolute ticks. [[aibaby-silence-is-the-homeostat]] says this IS the
+   homeostat and [[aibaby-delivery-fraction]] says not to turn `ip_rate` down.
+   What is new here is a per-eighth ledger on four arms, so the cliff can be
+   located in time rather than inferred from a session mean.
+3. Only then §57's named successor, which §58 deferred and this run does not
+   touch.

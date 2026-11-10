@@ -1,0 +1,1167 @@
+experiment: slotmat
+  the question      §59a. NOT A TEST. §58 named a re-score on its expression
+                    ramp, and §58's own log says that is UNDERPOWERED: one
+                    eighth reads SE 0.0338 and FOUR read 0.0297, so width
+                    buys 12% and a 2-eighth window is ~0.031 against an
+                    averaging prediction of +0.1228 -- 3.96 SE, under the
+                    classifier's own A >= 4E gate. This run SIZES that test.
+  and the second    §58 found T1.ORACLE -- PINNED, so its index CANNOT
+                    collapse -- scoring n 1 of 12 in e8. One byte per probe
+                    splits SILENCE from a DARK INDEX, which §56 and §58 both
+                    read through a single conflated number.
+  THERE IS NO PRIMARY HERE. Nothing below can move §53's null or §58's.
+  the window        §59b will use e6-e7, fixed from §58's RAMP in the
+                    pre-registration and NOT from the table below. Fallback
+                    e5-e7. Affordability limit 96 creatures, stated first.
+  session           900.0 s of simulated life x 120 sessions, 4 arms
+  instrument        slotmat   trial seed 0000000001357e69   120 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  creatures live  120/120
+
+  THE e8 READING'S FOUR BRANCHES, exercised on synthetic input first. The
+  450k smoke found `badf` identically 0 over all 960 creature-eighths, so
+  its branch CANNOT be reached by a real row and the first row ever to take
+  it would be one carrying the answer.
+    dropped 0 nov 0 badf 0 -> PROBES MERELY FEWER        ok  (nothing dropped)
+    dropped 8 nov 8 badf 0 -> SILENCE                    ok  (all drops silent -- the shape of the real column)
+    dropped 8 nov 0 badf 8 -> UNSCORABLE FRAMES          ok  (all drops unscorable -- UNREACHABLE from real data)
+    dropped 8 nov 4 badf 4 -> NEITHER REASON DOMINATES   ok  (an even split picks neither)
+    dropped 8 nov 3 badf 2 -> NEITHER REASON DOMINATES   ok  (nov leads but carries under half the drops)
+    branches reachable  5/5  PASS
+
+  G0 -- ADDITIVITY, READ FIRST. The per-eighth cells summed over the eight
+  eighths must equal the cells accumulated in ONE pass over every probe, and
+  both must equal the live `cell_g`/`cell_n`. A window's SLOT TERM is not
+  the sum of its eighths' slot terms -- `Gbar_s` is re-estimated over the
+  window -- but it IS an exact function of the summed CELLS, and that is the
+  identity being tested. It is what licenses re-estimating any window
+  offline from the matrix. Pure arithmetic, never budget-gated.
+    eighths summed  vs  one pass        2.13e-14   over 3840 cells   PASS
+    eighths summed  vs  live cell_g/n   2.13e-14   over 3840 cells   PASS
+
+  G1 -- BOOKKEEPING ON THE LEDGER. Every probe is kept or dropped for at
+  least one named reason, and the reasons OVERLAP: a probe can be dark and
+  silent at once, so they are counted independently and the overlap is
+  printed rather than assumed away. Also checked: `probe_why == 0` is
+  exactly `probe_g_ok == 1` on every probe, so the new byte cannot disagree
+  with §58's bit about whether a probe scored, and no kept probe lands
+  outside slots 0-1, which is what makes the matrix dump lossless.
+    kept + dropped == probes           0 bad of 960 creature-eighths   PASS
+    why == 0  iff  probe_g_ok == 1      0 mismatched probes   PASS
+    kept probes outside slots 0-1       0   PASS
+
+  G2 -- IDENTIFICATION, AND IT IS A REAL GATE. A probe calls
+  `observe(object, 0, speak=false, show=TRUE, ...)`, and the pin block is
+  gated on `show`, so on a pinned arm the probe sets
+  `pin_context_oracle(object)`: `context_present()` is true and
+  `active_context()` is the true object for every scored tick. **`ctx_slot`
+  therefore CANNOT be -1 on a pinned arm.** Required: dark == 0 in all eight
+  eighths on BOTH pinned arms. A non-zero count means the split is labelling
+  the wrong quantity and the ledger is void -- which is the whole reason the
+  e8 answer below is worth anything.
+    T1.ORACLE.D  dark     0     0     0     0     0     0     0     0 
+    T1.ORACLE    dark     0     0     0     0     0     0     0     0 
+    dark probes on the pinned arms, total   0   over 48 creatures   PASS
+
+  THE DROP LEDGER PER EIGHTH, summed over each arm's creatures. `probes`
+  is how many the window held, `kept` how many carried a cell, and the rest
+  are the named reasons. `dark` is the index never going live (ctx_slot < 0)
+  and `nov` / `badf` are §58's single `probe_g_ok == 0` split in two: no
+  voiced frame reached the formant accumulator, versus frames that existed
+  and could not be scored.
+    T1.RET       probes   612   648   612   648   648   612   648   648
+                 kept     601   590   561   577   559   522   545   245
+                 dark       0     0     0     0     0     0     0     0
+                 nov       11    58    51    71    89    90   103   403
+                 badf       0     0     0     0     0     0     0     0
+    T1.RET.D     probes   612   648   612   648   648   612   648   648
+                 kept     608   589   542   566   516   476   475   240
+                 dark       0     0     0     0     0     0     0     0
+                 nov        4    59    70    82   132   136   173   408
+                 badf       0     0     0     0     0     0     0     0
+    T1.ORACLE.D  probes   612   648   612   648   648   612   648   648
+                 kept     611   621   552   534   510   444   473   169
+                 dark       0     0     0     0     0     0     0     0
+                 nov        1    27    60   114   138   168   175   479
+                 badf       0     0     0     0     0     0     0     0
+    T1.ORACLE    probes   204   216   204   216   216   204   216   216
+                 kept     202   215   192   200   194   170   174    34
+                 dark       0     0     0     0     0     0     0     0
+                 nov        2     1    12    16    22    34    42   182
+                 badf       0     0     0     0     0     0     0     0
+
+  §58's ITEM 2, ANSWERED. T1.ORACLE is PINNED, so its index cannot
+  collapse, and G2 above proves dark == 0 on it. Its e8 column therefore
+  says what the late failure IS. The three readings were registered before
+  the run: `nov` dominant means SILENCE and points away from the index
+  entirely; `badf` dominant means the ruler cannot score real frames; and
+  neither dominant means the probes are merely fewer.
+    T1.ORACLE e8   probes 216  kept 34  dropped 182   nov 182  badf 0  dark 0
+    creatures with >= 6 kept in e8   1 of 12
+    READING: SILENCE
+    100.0% of e8's drops are probes with no voiced frame at all. The
+    late failure on a PINNED index is lost OUTPUT, so it is not about
+    the index -- it points at `delivery-fraction`,
+    `silence-is-the-homeostat` and §57's surviving homeostasis lead.
+    over the WHOLE run: nov 3413, badf 0.  badf is EMPTY, so the split is effectively TWO-WAY
+    (dark vs silent) and `formant_error` never refused a frame it was
+    given. Its branch was exercised synthetically above, not here.
+
+  G3 -- TRANSFER. §58's four published phase windows are contiguous
+  eighth-ranges, so they are CELLS of the table below. Reproducing them to
+  four decimals INCLUDING THE SE, from an independently written scorer over
+  a per-eighth matrix, is what makes this §58's session rather than a second
+  measurement of it. A 900k measurement, so UNDEFINED below that budget --
+  the numbers still print so the plumbing stays visible.
+    T1.RET EARLY     +0.0060 +- 0.0076 (n36)   §58 +0.0060 +- 0.0076 (n36)   match
+    T1.RET TRANS     -0.0550 +- 0.0338 (n36)   §58 -0.0550 +- 0.0338 (n36)   match
+    T1.RET CLEAN     +0.0442 +- 0.0297 (n35)   §58 +0.0442 +- 0.0297 (n35)   match
+    T1.RET LATE      -0.0377 +- 0.0446 (n21)   §58 -0.0377 +- 0.0446 (n21)   match
+    T1.ORACLE CLEAN  +0.1289 +- 0.0473 (n11)   §58 +0.1289 +- 0.0473 (n11)   match
+
+  THE SLOT TERM OVER EVERY CONTIGUOUS WINDOW, as mean +- SE (n). Read for
+  the SEs. **NOT for the point estimates**: 36 windows x 4 arms is 144
+  figures and some are 2 SE from zero by construction, so no cell here is a
+  result (`read-every-budget-for-every-claim`, applied to myself).
+    T1.RET -- derived + paired -- the arm §59b will test
+      width 1  e1:+0.0313+-0.0048(30) e2:-0.0281+-0.0217(34) e3:-0.0550+-0.0338(36) e4:+0.0124+-0.0378(35) e5:+0.0359+-0.0420(33) e6:+0.0904+-0.0384(34) e7:+0.0914+-0.0432(33) e8:-0.0377+-0.0446(21) 
+      width 2  e1:+0.0060+-0.0076(36) e2:-0.0510+-0.0211(36) e3:-0.0141+-0.0346(36) e4:+0.0185+-0.0370(35) e5:+0.0481+-0.0374(35) e6:+0.0772+-0.0293(34) e7:+0.0554+-0.0378(36) 
+      width 3  e1:-0.0209+-0.0115(36) e2:-0.0284+-0.0228(36) e3:+0.0067+-0.0355(36) e4:+0.0547+-0.0396(36) e5:+0.0575+-0.0292(35) e6:+0.0618+-0.0279(36) 
+      width 4  e1:-0.0160+-0.0145(36) e2:-0.0114+-0.0241(36) e3:+0.0246+-0.0344(36) e4:+0.0442+-0.0297(35) e5:+0.0578+-0.0278(36) 
+      width 5  e1:-0.0089+-0.0169(36) e2:+0.0056+-0.0246(36) e3:+0.0345+-0.0301(36) e4:+0.0517+-0.0293(36) 
+      width 6  e1:+0.0029+-0.0181(36) e2:+0.0153+-0.0227(36) e3:+0.0301+-0.0278(36) 
+      width 7  e1:+0.0093+-0.0173(36) e2:+0.0133+-0.0220(36) 
+      width 8  e1:+0.0081+-0.0170(36) 
+    T1.RET.D -- derived + drawn -- §58's clause 5 control
+      width 1  e1:+0.0206+-0.0044(29) e2:-0.0595+-0.0258(32) e3:-0.1801+-0.0543(34) e4:-0.0700+-0.0388(32) e5:-0.1014+-0.0513(32) e6:-0.0997+-0.0517(29) e7:-0.1234+-0.0487(28) e8:-0.1729+-0.0393(21) 
+      width 2  e1:-0.0174+-0.0119(36) e2:-0.1218+-0.0329(35) e3:-0.1233+-0.0495(35) e4:-0.1059+-0.0442(33) e5:-0.1111+-0.0508(33) e6:-0.1367+-0.0518(33) e7:-0.1715+-0.0463(31) 
+      width 3  e1:-0.0719+-0.0195(36) e2:-0.1178+-0.0366(36) e3:-0.1119+-0.0452(35) e4:-0.1226+-0.0466(34) e5:-0.1284+-0.0489(35) e6:-0.1259+-0.0461(33) 
+      width 4  e1:-0.0811+-0.0245(36) e2:-0.1166+-0.0369(36) e3:-0.1200+-0.0469(36) e4:-0.1235+-0.0468(35) e5:-0.1164+-0.0459(34) 
+      width 5  e1:-0.0884+-0.0270(36) e2:-0.1115+-0.0376(36) e3:-0.1236+-0.0475(36) e4:-0.1197+-0.0435(35) 
+      width 6  e1:-0.0880+-0.0289(36) e2:-0.1166+-0.0391(36) e3:-0.1192+-0.0450(36) 
+      width 7  e1:-0.0944+-0.0309(36) e2:-0.1141+-0.0378(36) 
+      width 8  e1:-0.0947+-0.0306(36) 
+    T1.ORACLE.D -- pinned + drawn
+      width 1  e1:+0.0114+-0.0186(36) e2:-0.0529+-0.0374(36) e3:-0.0233+-0.0438(33) e4:+0.0590+-0.0542(33) e5:+0.0163+-0.0447(34) e6:+0.0774+-0.0549(25) e7:+0.0461+-0.0636(26) e8:+0.1403+-0.0557(10) 
+      width 2  e1:-0.0201+-0.0248(36) e2:-0.0469+-0.0362(36) e3:+0.0326+-0.0444(34) e4:+0.0319+-0.0448(34) e5:+0.0682+-0.0482(35) e6:+0.0928+-0.0566(28) e7:+0.0783+-0.0681(26) 
+      width 3  e1:-0.0269+-0.0268(36) e2:-0.0159+-0.0377(36) e3:+0.0280+-0.0425(35) e4:+0.0674+-0.0462(35) e5:+0.0771+-0.0518(35) e6:+0.0971+-0.0593(27) 
+      width 4  e1:-0.0080+-0.0290(36) e2:-0.0078+-0.0362(36) e3:+0.0432+-0.0414(35) e4:+0.0725+-0.0478(35) e5:+0.0850+-0.0555(34) 
+      width 5  e1:-0.0034+-0.0288(36) e2:+0.0087+-0.0366(36) e3:+0.0512+-0.0429(35) e4:+0.0777+-0.0508(34) 
+      width 6  e1:+0.0094+-0.0299(36) e2:+0.0181+-0.0381(36) e3:+0.0546+-0.0455(34) 
+      width 7  e1:+0.0167+-0.0316(36) e2:+0.0230+-0.0391(36) 
+      width 8  e1:+0.0211+-0.0327(36) 
+    T1.ORACLE -- pinned + paired -- the ceiling, and e8's puzzle
+      width 1  e1:+0.1299+-0.0299(12) e2:+0.1260+-0.0540(12) e3:-0.0171+-0.0935(12) e4:+0.0678+-0.0641(11) e5:+0.1238+-0.0552(11) e6:+0.1665+-0.0685(11) e7:+0.1747+-0.0703(11) e8:-0.1654+-0.0000( 1) 
+      width 2  e1:+0.1280+-0.0378(12) e2:+0.0561+-0.0639(12) e3:+0.0487+-0.0800(12) e4:+0.0995+-0.0504(11) e5:+0.1445+-0.0577(11) e6:+0.1696+-0.0600(11) e7:+0.1446+-0.0591(10) 
+      width 3  e1:+0.0800+-0.0492(12) e2:+0.0726+-0.0612(12) e3:+0.0919+-0.0708(12) e4:+0.1186+-0.0490(11) e5:+0.1516+-0.0540(11) e6:+0.1742+-0.0584(11) 
+      width 4  e1:+0.0857+-0.0507(12) e2:+0.0966+-0.0574(12) e3:+0.1175+-0.0677(12) e4:+0.1289+-0.0473(11) e5:+0.1549+-0.0525(11) 
+      width 5  e1:+0.1019+-0.0487(12) e2:+0.1152+-0.0560(12) e3:+0.1344+-0.0659(12) e4:+0.1322+-0.0472(11) 
+      width 6  e1:+0.1163+-0.0480(12) e2:+0.1284+-0.0556(12) e3:+0.1369+-0.0648(12) 
+      width 7  e1:+0.1272+-0.0482(12) e2:+0.1307+-0.0550(12) 
+      width 8  e1:+0.1293+-0.0478(12) 
+
+  AND WHAT THE SE DOES WITH WIDTH, on T1.RET. `naive` is the width-1 mean
+  SE scaled as 1/sqrt(width), which is the law §58's pre-registration used
+  and which came in 23% low. The gap between the two columns is the
+  BETWEEN-CREATURE component, and it does not shrink with width at all.
+    width-1 mean SE  0.0333  over 8 eighths
+      width 1   measured 0.0333   naive 0.0333   ratio 1.00
+      width 2   measured 0.0293   naive 0.0235   ratio 1.24
+      width 3   measured 0.0278   naive 0.0192   ratio 1.44
+      width 4   measured 0.0261   naive 0.0166   ratio 1.57
+      width 5   measured 0.0253   naive 0.0149   ratio 1.70
+      width 6   measured 0.0229   naive 0.0136   ratio 1.68
+      width 7   measured 0.0196   naive 0.0126   ratio 1.56
+      width 8   measured 0.0170   naive 0.0118   ratio 1.44
+
+  SIZING §59b, ON THE WINDOW FIXED IN THE PRE-REGISTRATION. The separation
+  is A/E and the classifier refuses below 4.0, so this is the number that
+  decides whether §59b exists. The SE falls as 1/sqrt(CREATURES) even though
+  it barely falls with width -- that asymmetry is §58's power miss, so the
+  required n is printed and not assumed.
+    formula self-check: inverting at the measured separation returns
+    n 34.0000 against the measured n 34   identity +0.00e+00   PASS
+    TARGET   e6-e7   S +0.0772   E 0.0293   n 34   A +0.1228   separation 4.18 SE
+        creatures needed per arm:   4.0 SE -> 32   4.5 SE -> 40   5.0 SE -> 49
+        at the registered 4.5 SE that is 40, limit 96   WITHIN
+    FALLBACK e5-e7   S +0.0575   E 0.0292   n 35   A +0.1221   separation 4.18 SE
+        creatures needed per arm:   4.0 SE -> 33   4.5 SE -> 41   5.0 SE -> 51
+        at the registered 4.5 SE that is 41, limit 96   WITHIN
+
+    THE REGISTERED DECISION, applied in the registered order:
+    §59b RUNS on e6-e7 at 40 creatures per derived arm.
+
+  THE MATRIX. One line per creature-eighth, prefixed `MAT` so it greps
+  cleanly: arm, creature, eighth, then the four cell COUNTS and the four
+  cell SUMS as n(obj,slot) and g(obj,slot) over slots 0-1. G0 proved these
+  additive and G1 proved nothing lands outside those slots, so ANY window
+  and ANY estimator -- `mean-of-ratios` and §57's 2.5x disagreement are why
+  both should stay recoverable -- can be re-derived from this table without
+  running the experiment again.
+  MAT arm rep e  n00 n01 n10 n11  g00 g01 g10 g11  probes kept dark nov badf
+  MAT T1.RET        0 1    5   4   5   3    +4.2814   +1.5875   +4.2845   +0.7712   17  17   0   0   0
+  MAT T1.RET        0 2    0   9   7   2    +0.0000   +1.2263   +6.0202   +0.5615   18  18   0   0   0
+  MAT T1.RET        0 3    0   8   9   0    +0.0000   +0.8436   +7.7378   +0.0000   17  17   0   0   0
+  MAT T1.RET        0 4    0   9   9   0    +0.0000   +5.3955   +8.7762   +0.0000   18  18   0   0   0
+  MAT T1.RET        0 5    0   9   9   0    +0.0000   +5.6982   +5.8308   +0.0000   18  18   0   0   0
+  MAT T1.RET        0 6    0   9   8   0    +0.0000   +1.5473   +4.4833   +0.0000   17  17   0   0   0
+  MAT T1.RET        0 7    0   9   9   0    +0.0000   +3.9089   +5.4627   +0.0000   18  18   0   0   0
+  MAT T1.RET        0 8    0   1   2   0    +0.0000   +0.5138   +0.6731   +0.0000   18   3   0  15   0
+  MAT T1.RET        1 1    6   3   5   3    +3.2839   +1.4509   +2.6532   +1.4549   17  17   0   0   0
+  MAT T1.RET        1 2    6   3   0   7    +3.3551   +1.1309   +0.0000   +2.2923   18  16   0   2   0
+  MAT T1.RET        1 3    8   0   0   8    +2.3473   +0.0000   +0.0000   -1.4716   17  16   0   1   0
+  MAT T1.RET        1 4    9   0   0   2    +1.5155   +0.0000   +0.0000   +0.0944   18  11   0   7   0
+  MAT T1.RET        1 5    9   0   0   0    +1.8246   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET        1 6    9   0   0   4    +5.3792   +0.0000   +0.0000   +1.5412   17  13   0   4   0
+  MAT T1.RET        1 7    7   0   0   1    +3.7920   +0.0000   +0.0000   +0.4434   18   8   0  10   0
+  MAT T1.RET        1 8    6   0   0   0    +4.0253   +0.0000   +0.0000   +0.0000   18   6   0  12   0
+  MAT T1.RET        2 1    5   4   4   4    +1.8827   +1.4242   +1.9589   +1.5428   17  17   0   0   0
+  MAT T1.RET        2 2    9   0   0   9    +4.0896   +0.0000   +0.0000   +1.6363   18  18   0   0   0
+  MAT T1.RET        2 3    8   0   0   9    +4.2395   +0.0000   +0.0000   +3.7119   17  17   0   0   0
+  MAT T1.RET        2 4    9   0   0   9    +4.9587   +0.0000   +0.0000   +7.0891   18  18   0   0   0
+  MAT T1.RET        2 5    9   0   0   9    +5.0458   +0.0000   +0.0000   +0.8085   18  18   0   0   0
+  MAT T1.RET        2 6    9   0   0   8    +5.8153   +0.0000   +0.0000   +4.6061   17  17   0   0   0
+  MAT T1.RET        2 7    9   0   0   9    +9.2032   +0.0000   +0.0000   +9.5161   18  18   0   0   0
+  MAT T1.RET        2 8    2   0   0   3    +2.3812   +0.0000   +0.0000   +1.9110   18   5   0  13   0
+  MAT T1.RET        3 1    6   3   6   2    +1.3278   +2.8510   +1.5068   +1.9294   17  17   0   0   0
+  MAT T1.RET        3 2    7   2   0   9    +2.7957   +0.9002   +0.0000   +3.2626   18  18   0   0   0
+  MAT T1.RET        3 3    8   0   0   9    +4.1296   +0.0000   +0.0000   +6.7790   17  17   0   0   0
+  MAT T1.RET        3 4    9   0   0   8    +7.7242   +0.0000   +0.0000   +8.1017   18  17   0   1   0
+  MAT T1.RET        3 5    9   0   0   9    +8.7243   +0.0000   +0.0000   +9.3819   18  18   0   0   0
+  MAT T1.RET        3 6    9   0   0   8    +8.5363   +0.0000   +0.0000   +7.3724   17  17   0   0   0
+  MAT T1.RET        3 7    9   0   0   2    +8.4005   +0.0000   +0.0000   +2.2566   18  11   0   7   0
+  MAT T1.RET        3 8    3   0   0   2    +1.9079   +0.0000   +0.0000   +1.9460   18   5   0  13   0
+  MAT T1.RET        4 1    9   0   8   0    +4.1173   +0.0000   +3.9738   +0.0000   17  17   0   0   0
+  MAT T1.RET        4 2    0   9   1   8    +0.0000   -2.1685   +0.0072   -2.5488   18  18   0   0   0
+  MAT T1.RET        4 3    6   2   0   9    +3.4314   +0.6848   +0.0000   +7.7127   17  17   0   0   0
+  MAT T1.RET        4 4    9   0   0   7    +9.0653   +0.0000   +0.0000   +7.6944   18  16   0   2   0
+  MAT T1.RET        4 5    9   0   0   9    +7.2594   +0.0000   +0.0000   +9.0767   18  18   0   0   0
+  MAT T1.RET        4 6    8   0   0   8    +6.3311   +0.0000   +0.0000   +6.1889   17  16   0   1   0
+  MAT T1.RET        4 7    5   0   0   9    +2.5034   +0.0000   +0.0000   +4.3753   18  14   0   4   0
+  MAT T1.RET        4 8    1   0   0   2    +0.7244   +0.0000   +0.0000   +1.6529   18   3   0  15   0
+  MAT T1.RET        5 1    6   3   4   4    +3.4316   +1.5462   +2.4747   +1.7494   17  17   0   0   0
+  MAT T1.RET        5 2    6   3   1   8    +3.2260   +2.1343   +0.3486   +5.1544   18  18   0   0   0
+  MAT T1.RET        5 3    8   0   0   9    +8.1088   +0.0000   +0.0000   +6.4541   17  17   0   0   0
+  MAT T1.RET        5 4    9   0   0   9    +8.9033   +0.0000   +0.0000   +8.0441   18  18   0   0   0
+  MAT T1.RET        5 5    9   0   0   9    +5.6662   +0.0000   +0.0000   +6.3153   18  18   0   0   0
+  MAT T1.RET        5 6    9   0   0   8    +2.5841   +0.0000   +0.0000   +4.6639   17  17   0   0   0
+  MAT T1.RET        5 7    9   0   0   9    +1.8684   +0.0000   +0.0000   +3.5445   18  18   0   0   0
+  MAT T1.RET        5 8    2   0   0   3    +0.6319   +0.0000   +0.0000   +0.6533   18   5   0  13   0
+  MAT T1.RET        6 1    8   1   7   1    +2.6909   +0.7636   +2.2116   +0.0466   17  17   0   0   0
+  MAT T1.RET        6 2    2   7   1   8    +0.5417   -0.1655   +0.4043   +0.0061   18  18   0   0   0
+  MAT T1.RET        6 3    0   8   8   1    +0.0000   +5.3686   +3.4443   +0.5079   17  17   0   0   0
+  MAT T1.RET        6 4    0   9   9   0    +0.0000   +4.6418   +5.9202   +0.0000   18  18   0   0   0
+  MAT T1.RET        6 5    0   8   9   0    +0.0000   -0.1235   +1.6815   +0.0000   18  17   0   1   0
+  MAT T1.RET        6 6    0   9   8   0    +0.0000   +4.4662   +0.0575   +0.0000   17  17   0   0   0
+  MAT T1.RET        6 7    0   9   7   0    +0.0000   +6.0686   +1.9213   +0.0000   18  16   0   2   0
+  MAT T1.RET        6 8    0   3   4   0    +0.0000   +1.1598   +1.1479   +0.0000   18   7   0  11   0
+  MAT T1.RET        7 1    7   2   6   2    +0.0111   +1.5332   -0.3930   +1.1472   17  17   0   0   0
+  MAT T1.RET        7 2    4   5   0   9    -0.9753   +2.3528   +0.0000   +2.6410   18  18   0   0   0
+  MAT T1.RET        7 3    8   0   0   9    -0.1761   +0.0000   +0.0000   +1.9450   17  17   0   0   0
+  MAT T1.RET        7 4    9   0   0   9    +1.1284   +0.0000   +0.0000   +5.2100   18  18   0   0   0
+  MAT T1.RET        7 5    9   0   0   9    +3.6818   +0.0000   +0.0000   +7.1542   18  18   0   0   0
+  MAT T1.RET        7 6    9   0   0   8    +1.7160   +0.0000   +0.0000   +3.1985   17  17   0   0   0
+  MAT T1.RET        7 7    9   0   0   9    +4.1564   +0.0000   +0.0000   +4.2659   18  18   0   0   0
+  MAT T1.RET        7 8    2   0   0   3    +0.7096   +0.0000   +0.0000   +0.5894   18   5   0  13   0
+  MAT T1.RET        8 1    7   2   6   2    +3.4756   +1.0786   +2.8089   +1.0851   17  17   0   0   0
+  MAT T1.RET        8 2    3   6   0   9    +0.8736   +0.9396   +0.0000   +2.8762   18  18   0   0   0
+  MAT T1.RET        8 3    8   0   0   9    +2.2091   +0.0000   +0.0000   +7.1595   17  17   0   0   0
+  MAT T1.RET        8 4    5   1   0   9    +4.3286   +0.8494   +0.0000   +7.8409   18  15   0   3   0
+  MAT T1.RET        8 5    3   0   0   9    +0.7532   +0.0000   +0.0000   +6.0343   18  12   0   6   0
+  MAT T1.RET        8 6    8   0   0   8    +2.5044   +0.0000   +0.0000   +5.4375   17  16   0   1   0
+  MAT T1.RET        8 7    9   0   0   9    +4.1149   +0.0000   +0.0000   +4.1141   18  18   0   0   0
+  MAT T1.RET        8 8    3   0   0   4    +1.6656   +0.0000   +0.0000   +1.3774   18   7   0  11   0
+  MAT T1.RET        9 1    7   2   7   1    +3.9165   +0.6734   +3.8952   +0.2891   17  17   0   0   0
+  MAT T1.RET        9 2    2   7   1   8    +1.5158   +3.3376   +1.0266   +3.5350   18  18   0   0   0
+  MAT T1.RET        9 3    7   0   0   9    +8.9099   +0.0000   +0.0000   +5.1111   17  16   0   1   0
+  MAT T1.RET        9 4    8   1   0   9    +7.5195   +0.4293   +0.0000   +3.3834   18  18   0   0   0
+  MAT T1.RET        9 5    9   0   0   9    +2.2567   +0.0000   +0.0000   -0.9374   18  18   0   0   0
+  MAT T1.RET        9 6    9   0   0   8    -0.0089   +0.0000   +0.0000   -0.3920   17  17   0   0   0
+  MAT T1.RET        9 7    9   0   0   9    +3.1826   +0.0000   +0.0000   +3.6685   18  18   0   0   0
+  MAT T1.RET        9 8    3   0   0   3    +1.9113   +0.0000   +0.0000   +1.5778   18   6   0  12   0
+  MAT T1.RET       10 1    7   2   6   2    +3.6454   +1.4382   +2.5860   +1.8205   17  17   0   0   0
+  MAT T1.RET       10 2    0   9   4   5    +0.0000   +5.4041   +1.5489   +2.7525   18  18   0   0   0
+  MAT T1.RET       10 3    0   8   9   0    +0.0000   +7.3658   +4.8547   +0.0000   17  17   0   0   0
+  MAT T1.RET       10 4    0   9   9   0    +0.0000   +1.0371   +3.2067   +0.0000   18  18   0   0   0
+  MAT T1.RET       10 5    0   9   9   0    +0.0000   +1.8528   +3.6077   +0.0000   18  18   0   0   0
+  MAT T1.RET       10 6    0   9   8   0    +0.0000   +1.9315   +3.2029   +0.0000   17  17   0   0   0
+  MAT T1.RET       10 7    0   4   9   0    +0.0000   +0.5570   +2.8238   +0.0000   18  13   0   5   0
+  MAT T1.RET       10 8    0   0   1   0    +0.0000   +0.0000   +0.2476   +0.0000   18   1   0  17   0
+  MAT T1.RET       11 1    7   2   7   1    +3.5610   +1.0652   +3.5413   +0.8189   17  17   0   0   0
+  MAT T1.RET       11 2    3   6   1   8    +0.8498   +2.3803   +0.2367   +2.7191   18  18   0   0   0
+  MAT T1.RET       11 3    8   0   0   8    +2.2687   +0.0000   +0.0000   +1.0930   17  16   0   1   0
+  MAT T1.RET       11 4    9   0   0   9    +3.8737   +0.0000   +0.0000   +3.6513   18  18   0   0   0
+  MAT T1.RET       11 5    9   0   0   6    +2.8818   +0.0000   +0.0000   +2.4832   18  15   0   3   0
+  MAT T1.RET       11 6    9   0   0   5    +4.1565   +0.0000   +0.0000   +2.0496   17  14   0   3   0
+  MAT T1.RET       11 7    9   0   0   8    +3.8906   +0.0000   +0.0000   +2.9549   18  17   0   1   0
+  MAT T1.RET       11 8    4   0   0   4    +0.7966   +0.0000   +0.0000   +0.9657   18   8   0  10   0
+  MAT T1.RET       12 1    7   2   6   2    +2.3505   +0.6156   +1.9072   +0.2916   17  17   0   0   0
+  MAT T1.RET       12 2    5   4   0   6    +1.5224   +1.9653   +0.0000   +2.3857   18  15   0   3   0
+  MAT T1.RET       12 3    8   0   0   9    +3.1433   +0.0000   +0.0000   +2.7242   17  17   0   0   0
+  MAT T1.RET       12 4    9   0   0   9    +4.9774   +0.0000   +0.0000   +1.6589   18  18   0   0   0
+  MAT T1.RET       12 5    9   0   0   9    +4.4894   +0.0000   +0.0000   +2.3713   18  18   0   0   0
+  MAT T1.RET       12 6    9   0   0   4    +5.0964   +0.0000   +0.0000   +0.5746   17  13   0   4   0
+  MAT T1.RET       12 7    9   0   0   2    +3.5272   +0.0000   +0.0000   +0.4862   18  11   0   7   0
+  MAT T1.RET       12 8    5   0   0   5    +1.3937   +0.0000   +0.0000   +0.6186   18  10   0   8   0
+  MAT T1.RET       13 1    6   3   6   2    +3.5273   +2.2155   +3.6831   +1.5141   17  17   0   0   0
+  MAT T1.RET       13 2    1   8   4   5    +0.7253   +3.9943   +2.0841   +2.2132   18  18   0   0   0
+  MAT T1.RET       13 3    0   8   9   0    +0.0000   +4.2379   +3.6000   +0.0000   17  17   0   0   0
+  MAT T1.RET       13 4    0   9   3   0    +0.0000   +4.7488   +1.0210   +0.0000   18  12   0   6   0
+  MAT T1.RET       13 5    0   9   2   0    +0.0000   +1.7914   +0.4283   +0.0000   18  11   0   7   0
+  MAT T1.RET       13 6    0   9   5   0    +0.0000   +2.2055   +0.6196   +0.0000   17  14   0   3   0
+  MAT T1.RET       13 7    0   9   9   0    +0.0000   +2.9297   +1.7286   +0.0000   18  18   0   0   0
+  MAT T1.RET       13 8    0   3   3   0    +0.0000   +0.9749   +0.6106   +0.0000   18   6   0  12   0
+  MAT T1.RET       14 1    7   2   6   1    +3.1233   +1.6374   +2.4629   +0.5472   17  16   0   1   0
+  MAT T1.RET       14 2    0   5   5   1    +0.0000   +2.5937   +1.8033   +0.5076   18  11   0   7   0
+  MAT T1.RET       14 3    0   5   9   0    +0.0000   +3.2673   +6.2073   +0.0000   17  14   0   3   0
+  MAT T1.RET       14 4    0   7   9   0    +0.0000   +5.6314   +6.7958   +0.0000   18  16   0   2   0
+  MAT T1.RET       14 5    0   9   9   0    +0.0000   +5.8616   +4.7468   +0.0000   18  18   0   0   0
+  MAT T1.RET       14 6    0   9   8   0    +0.0000   +5.8468   +4.0177   +0.0000   17  17   0   0   0
+  MAT T1.RET       14 7    0   9   9   0    +0.0000   +4.4408   +5.0964   +0.0000   18  18   0   0   0
+  MAT T1.RET       14 8    0   3   1   0    +0.0000   +0.6565   +0.3300   +0.0000   18   4   0  14   0
+  MAT T1.RET       15 1    8   0   8   0    +2.1407   +0.0000   +2.5552   +0.0000   17  16   0   1   0
+  MAT T1.RET       15 2    1   7   0   8    +1.0776   +4.5156   +0.0000   +5.5121   18  16   0   2   0
+  MAT T1.RET       15 3    5   3   1   8    +2.8558   +2.7987   +0.6237   +6.5868   17  17   0   0   0
+  MAT T1.RET       15 4    9   0   0   9    +3.4077   +0.0000   +0.0000   +2.7176   18  18   0   0   0
+  MAT T1.RET       15 5    9   0   0   9    +3.3351   +0.0000   +0.0000   +0.5546   18  18   0   0   0
+  MAT T1.RET       15 6    9   0   0   8    +2.3561   +0.0000   +0.0000   +2.7525   17  17   0   0   0
+  MAT T1.RET       15 7    9   0   0   9    +0.9905   +0.0000   +0.0000   +2.7058   18  18   0   0   0
+  MAT T1.RET       15 8    2   0   0   4    +0.6883   +0.0000   +0.0000   +0.4543   18   6   0  12   0
+  MAT T1.RET       16 1    7   2   6   2    +4.1157   +0.3698   +3.1085   +0.6812   17  17   0   0   0
+  MAT T1.RET       16 2    1   8   2   7    +0.9239   +1.1495   +1.5228   +0.7021   18  18   0   0   0
+  MAT T1.RET       16 3    1   2   5   0    +0.9831   +0.6139   +3.6636   +0.0000   17   8   0   9   0
+  MAT T1.RET       16 4    2   5   9   0    +1.9873   +1.6176   +7.6442   +0.0000   18  16   0   2   0
+  MAT T1.RET       16 5    0   9   9   0    +0.0000   +1.5566   +6.8931   +0.0000   18  18   0   0   0
+  MAT T1.RET       16 6    0   9   8   0    +0.0000   +0.5039   +5.4995   +0.0000   17  17   0   0   0
+  MAT T1.RET       16 7    0   9   8   0    +0.0000   +4.4385   +4.5968   +0.0000   18  17   0   1   0
+  MAT T1.RET       16 8    0   7   7   0    +0.0000   +4.6125   +4.3507   +0.0000   18  14   0   4   0
+  MAT T1.RET       17 1    5   4   5   3    +3.2317   +2.4457   +3.3083   +1.8317   17  17   0   0   0
+  MAT T1.RET       17 2    9   0   0   9    +5.6176   +0.0000   +0.0000   +8.3590   18  18   0   0   0
+  MAT T1.RET       17 3    8   0   0   9    +3.8148   +0.0000   +0.0000   +6.7661   17  17   0   0   0
+  MAT T1.RET       17 4    9   0   0   7    +7.9449   +0.0000   +0.0000   +6.2171   18  16   0   2   0
+  MAT T1.RET       17 5    9   0   0   1    +5.6772   +0.0000   +0.0000   +0.7313   18  10   0   8   0
+  MAT T1.RET       17 6    9   0   0   0    +2.4972   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.RET       17 7    9   0   0   4    +1.9762   +0.0000   +0.0000   +2.3587   18  13   0   5   0
+  MAT T1.RET       17 8    3   0   0   1    +1.1390   +0.0000   +0.0000   +0.7793   18   4   0  14   0
+  MAT T1.RET       18 1    8   1   7   1    +3.5320   +0.6532   +3.2848   +0.3076   17  17   0   0   0
+  MAT T1.RET       18 2    2   7   0   9    +0.9160   +5.7677   +0.0000   +7.0438   18  18   0   0   0
+  MAT T1.RET       18 3    8   0   0   9    +4.2272   +0.0000   +0.0000   -0.0687   17  17   0   0   0
+  MAT T1.RET       18 4    9   0   0   9    +6.5102   +0.0000   +0.0000   -0.5909   18  18   0   0   0
+  MAT T1.RET       18 5    9   0   0   9    +7.9921   +0.0000   +0.0000   -2.2958   18  18   0   0   0
+  MAT T1.RET       18 6    9   0   0   8    +7.2876   +0.0000   +0.0000   +2.4541   17  17   0   0   0
+  MAT T1.RET       18 7    9   0   0   9    +3.8425   +0.0000   +0.0000   +0.2574   18  18   0   0   0
+  MAT T1.RET       18 8    4   0   0   5    +1.9920   +0.0000   +0.0000   +2.1947   18   9   0   9   0
+  MAT T1.RET       19 1    9   0   8   0    +5.0018   +0.0000   +4.3855   +0.0000   17  17   0   0   0
+  MAT T1.RET       19 2    1   8   1   8    +0.7601   +2.6662   +0.7687   +2.8482   18  18   0   0   0
+  MAT T1.RET       19 3    2   5   2   7    +0.2878   -0.3912   +0.7419   -0.3447   17  16   0   1   0
+  MAT T1.RET       19 4    1   8   8   1    +0.1528   +2.6267   +1.5476   +0.6105   18  18   0   0   0
+  MAT T1.RET       19 5    0   8   7   2    +0.0000   +3.9809   +6.0118   +1.1535   18  17   0   1   0
+  MAT T1.RET       19 6    0   8   6   2    +0.0000   +6.0022   +6.0502   +1.6823   17  16   0   1   0
+  MAT T1.RET       19 7    0   9   8   0    +0.0000   +7.8586   +5.8782   +0.0000   18  17   0   1   0
+  MAT T1.RET       19 8    0   5   5   0    +0.0000   +4.7546   +3.9310   +0.0000   18  10   0   8   0
+  MAT T1.RET       20 1    6   3   5   3    +2.4564   +1.9934   +1.7634   +1.8708   17  17   0   0   0
+  MAT T1.RET       20 2    7   2   0   5    +0.6664   +0.9281   +0.0000   +1.6172   18  14   0   4   0
+  MAT T1.RET       20 3    8   0   0   9    +1.3223   +0.0000   +0.0000   +5.0171   17  17   0   0   0
+  MAT T1.RET       20 4    9   0   0   9    +1.2430   +0.0000   +0.0000   +3.2278   18  18   0   0   0
+  MAT T1.RET       20 5    9   0   0   9    +2.9678   +0.0000   +0.0000   +4.0099   18  18   0   0   0
+  MAT T1.RET       20 6    9   0   0   8    +3.6322   +0.0000   +0.0000   +2.3726   17  17   0   0   0
+  MAT T1.RET       20 7    9   0   0   9    +0.7224   +0.0000   +0.0000   -1.0445   18  18   0   0   0
+  MAT T1.RET       20 8    3   0   0   3    +0.3018   +0.0000   +0.0000   -0.7136   18   6   0  12   0
+  MAT T1.RET       21 1    7   2   5   3    +1.2623   +1.3439   +0.3802   +2.0013   17  17   0   0   0
+  MAT T1.RET       21 2    4   5   0   9    +1.7531   +2.9192   +0.0000   +5.0453   18  18   0   0   0
+  MAT T1.RET       21 3    5   3   0   9    +3.2932   +2.1642   +0.0000   +5.6097   17  17   0   0   0
+  MAT T1.RET       21 4    9   0   0   9    +4.0166   +0.0000   +0.0000   +4.1586   18  18   0   0   0
+  MAT T1.RET       21 5    9   0   0   9    +3.7463   +0.0000   +0.0000   +4.4404   18  18   0   0   0
+  MAT T1.RET       21 6    9   0   0   8    +5.2481   +0.0000   +0.0000   +3.9798   17  17   0   0   0
+  MAT T1.RET       21 7    9   0   0   9    +6.1243   +0.0000   +0.0000   +5.0148   18  18   0   0   0
+  MAT T1.RET       21 8    2   0   0   2    +1.2013   +0.0000   +0.0000   +0.9161   18   4   0  14   0
+  MAT T1.RET       22 1    7   2   7   1    +3.5850   +0.8263   +3.3569   +0.3077   17  17   0   0   0
+  MAT T1.RET       22 2    0   9   3   6    +0.0000   +4.9193   +0.7459   +2.1043   18  18   0   0   0
+  MAT T1.RET       22 3    0   7   9   0    +0.0000   +6.4678   +3.2860   +0.0000   17  16   0   1   0
+  MAT T1.RET       22 4    0   2   9   0    +0.0000   +1.9599   +2.7880   +0.0000   18  11   0   7   0
+  MAT T1.RET       22 5    0   0   9   0    +0.0000   +0.0000   +4.2113   +0.0000   18   9   0   9   0
+  MAT T1.RET       22 6    0   2   8   0    +0.0000   +1.2550   +2.9907   +0.0000   17  10   0   7   0
+  MAT T1.RET       22 7    0   4   9   0    +0.0000   +2.1782   +4.3278   +0.0000   18  13   0   5   0
+  MAT T1.RET       22 8    0   5   6   0    +0.0000   +3.6476   +2.2112   +0.0000   18  11   0   7   0
+  MAT T1.RET       23 1    8   1   7   1    +3.0068   +0.7809   +2.6344   +0.7556   17  17   0   0   0
+  MAT T1.RET       23 2    3   6   0   9    +2.3676   +5.9980   +0.0000   +8.7619   18  18   0   0   0
+  MAT T1.RET       23 3    6   0   0   9    +3.9776   +0.0000   +0.0000   +4.7737   17  15   0   2   0
+  MAT T1.RET       23 4    9   0   0   9    +4.9808   +0.0000   +0.0000   +6.8518   18  18   0   0   0
+  MAT T1.RET       23 5    9   0   0   8   +10.1242   +0.0000   +0.0000  +10.6142   18  17   0   1   0
+  MAT T1.RET       23 6    9   0   0   8    +6.5563   +0.0000   +0.0000   +3.1033   17  17   0   0   0
+  MAT T1.RET       23 7    9   0   0   9    +5.8521   +0.0000   +0.0000   +0.6849   18  18   0   0   0
+  MAT T1.RET       23 8    4   0   0   5    +1.6161   +0.0000   +0.0000   -0.2102   18   9   0   9   0
+  MAT T1.RET       24 1    8   1   7   1    +3.7143   +0.4150   +3.3491   +0.5606   17  17   0   0   0
+  MAT T1.RET       24 2    1   7   0   8    +0.6402   +3.5658   +0.0000   +3.9038   18  16   0   2   0
+  MAT T1.RET       24 3    0   3   8   1    +0.0000   +1.9502   +4.9216   +0.4510   17  12   0   5   0
+  MAT T1.RET       24 4    0   6   9   0    +0.0000   +4.0192  +11.0237   +0.0000   18  15   0   3   0
+  MAT T1.RET       24 5    0   3   9   0    +0.0000   +2.2519   +7.1299   +0.0000   18  12   0   6   0
+  MAT T1.RET       24 6    0   0   3   0    +0.0000   +0.0000   +1.4691   +0.0000   17   3   0  14   0
+  MAT T1.RET       24 7    0   0   9   0    +0.0000   +0.0000   -1.4845   +0.0000   18   9   0   9   0
+  MAT T1.RET       24 8    0   1   7   0    +0.0000   +0.2731   +5.0178   +0.0000   18   8   0  10   0
+  MAT T1.RET       25 1    8   1   8   0    +0.7573   +0.5041   +0.4215   +0.0000   17  17   0   0   0
+  MAT T1.RET       25 2    0   8   0   8    +0.0000   +3.8977   +0.0000   +4.3492   18  16   0   2   0
+  MAT T1.RET       25 3    8   0   0   6    -0.1978   +0.0000   +0.0000   +2.4054   17  14   0   3   0
+  MAT T1.RET       25 4    9   0   0   6    -0.6306   +0.0000   +0.0000   +3.1025   18  15   0   3   0
+  MAT T1.RET       25 5    9   0   0   4    +2.2882   +0.0000   +0.0000   +2.4878   18  13   0   5   0
+  MAT T1.RET       25 6    9   0   0   1    +1.4659   +0.0000   +0.0000   +0.6349   17  10   0   7   0
+  MAT T1.RET       25 7    7   0   0   1    +0.6906   +0.0000   +0.0000   +0.7267   18   8   0  10   0
+  MAT T1.RET       25 8    4   0   0   0    +0.6563   +0.0000   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.RET       26 1    7   2   5   3    +2.5392   +0.7873   +2.3222   +0.9055   17  17   0   0   0
+  MAT T1.RET       26 2    0   9   4   5    +0.0000   +3.7529   +1.5834   +1.3364   18  18   0   0   0
+  MAT T1.RET       26 3    0   8   9   0    +0.0000   +7.1029   +2.9794   +0.0000   17  17   0   0   0
+  MAT T1.RET       26 4    0   9   9   0    +0.0000  +10.9426   +1.6377   +0.0000   18  18   0   0   0
+  MAT T1.RET       26 5    0   9   9   0    +0.0000   +9.8493   +2.4513   +0.0000   18  18   0   0   0
+  MAT T1.RET       26 6    0   9   8   0    +0.0000   +6.4732   +2.9347   +0.0000   17  17   0   0   0
+  MAT T1.RET       26 7    0   9   9   0    +0.0000  +10.2909   +7.3562   +0.0000   18  18   0   0   0
+  MAT T1.RET       26 8    0   1   1   0    +0.0000   +1.2399   +0.8333   +0.0000   18   2   0  16   0
+  MAT T1.RET       27 1    9   0   8   0    +6.5816   +0.0000   +5.8800   +0.0000   17  17   0   0   0
+  MAT T1.RET       27 2    0   9   1   8    +0.0000   +5.9436   +0.8796   +5.6032   18  18   0   0   0
+  MAT T1.RET       27 3    0   8   7   0    +0.0000   +5.5591   +6.1045   +0.0000   17  15   0   2   0
+  MAT T1.RET       27 4    0   9   2   0    +0.0000   +8.4879   +1.3811   +0.0000   18  11   0   7   0
+  MAT T1.RET       27 5    0   9   6   0    +0.0000   +9.7334   +2.9778   +0.0000   18  15   0   3   0
+  MAT T1.RET       27 6    0   5   2   0    +0.0000   +5.5079   +1.6208   +0.0000   17   7   0  10   0
+  MAT T1.RET       27 7    0   1   4   0    +0.0000   +1.0315   +2.8134   +0.0000   18   5   0  13   0
+  MAT T1.RET       27 8    0   1   6   0    +0.0000   +1.0104   +4.3152   +0.0000   18   7   0  11   0
+  MAT T1.RET       28 1    8   1   8   0    +4.3707   +0.4663   +4.6012   +0.0000   17  17   0   0   0
+  MAT T1.RET       28 2    0   7   0   6    +0.0000   +1.7923   +0.0000   +1.4721   18  13   0   5   0
+  MAT T1.RET       28 3    0   6   7   0    +0.0000   +0.7187   +4.1240   +0.0000   17  13   0   4   0
+  MAT T1.RET       28 4    0   9   1   0    +0.0000   +2.1067   +0.4537   +0.0000   18  10   0   8   0
+  MAT T1.RET       28 5    0   9   4   0    +0.0000   +5.1166   +2.3858   +0.0000   18  13   0   5   0
+  MAT T1.RET       28 6    0   9   4   0    +0.0000   +6.9639   +1.6647   +0.0000   17  13   0   4   0
+  MAT T1.RET       28 7    0   9   9   0    +0.0000   +5.9977   +3.0581   +0.0000   18  18   0   0   0
+  MAT T1.RET       28 8    0   6   6   0    +0.0000   +4.6233   +2.5934   +0.0000   18  12   0   6   0
+  MAT T1.RET       29 1    7   2   6   2    +5.9843   +1.0000   +5.3330   +1.2260   17  17   0   0   0
+  MAT T1.RET       29 2    5   4   0   9    +3.1283   +3.4085   +0.0000   +9.6443   18  18   0   0   0
+  MAT T1.RET       29 3    7   0   0   9    +2.2854   +0.0000   +0.0000   +5.9959   17  16   0   1   0
+  MAT T1.RET       29 4    9   0   0   9    +6.8569   +0.0000   +0.0000   +7.1539   18  18   0   0   0
+  MAT T1.RET       29 5    5   0   0   9    +4.9943   +0.0000   +0.0000   +5.8636   18  14   0   4   0
+  MAT T1.RET       29 6    8   0   0   8    +4.5006   +0.0000   +0.0000   +2.6150   17  16   0   1   0
+  MAT T1.RET       29 7    8   0   0   9    +2.4026   +0.0000   +0.0000   +2.8638   18  17   0   1   0
+  MAT T1.RET       29 8    5   0   0   6    -0.5845   +0.0000   +0.0000   +1.8541   18  11   0   7   0
+  MAT T1.RET       30 1    6   2   5   0    +2.9013   +1.2353   +2.5184   +0.0000   17  13   0   4   0
+  MAT T1.RET       30 2    0   9   6   1    +0.0000   +6.2815   +3.4680   +0.5047   18  16   0   2   0
+  MAT T1.RET       30 3    0   8   9   0    +0.0000   +2.0773   +4.7929   +0.0000   17  17   0   0   0
+  MAT T1.RET       30 4    0   9   9   0    +0.0000   +2.2087   +4.3426   +0.0000   18  18   0   0   0
+  MAT T1.RET       30 5    0   9   9   0    +0.0000   +4.3965   +6.2218   +0.0000   18  18   0   0   0
+  MAT T1.RET       30 6    0   3   8   0    +0.0000   +2.2235   +6.6673   +0.0000   17  11   0   6   0
+  MAT T1.RET       30 7    0   9   9   0    +0.0000   +6.7649   +7.1910   +0.0000   18  18   0   0   0
+  MAT T1.RET       30 8    0   5   5   0    +0.0000   +2.5155   +5.0449   +0.0000   18  10   0   8   0
+  MAT T1.RET       31 1    6   3   6   2    +2.6080   +2.3439   +3.0883   +1.8556   17  17   0   0   0
+  MAT T1.RET       31 2    5   4   0   9    +2.3755   +1.7713   +0.0000   +5.0224   18  18   0   0   0
+  MAT T1.RET       31 3    8   0   0   2    +6.0468   +0.0000   +0.0000   +1.9882   17  10   0   7   0
+  MAT T1.RET       31 4    8   0   0   0    +6.8203   +0.0000   +0.0000   +0.0000   18   8   0  10   0
+  MAT T1.RET       31 5    4   0   0   0    +3.5057   +0.0000   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.RET       31 6    6   0   0   1    +4.2423   +0.0000   +0.0000   +0.4774   17   7   0  10   0
+  MAT T1.RET       31 7    2   0   0   2    +1.0699   +0.0000   +0.0000   +0.7708   18   4   0  14   0
+  MAT T1.RET       31 8    4   0   0   5    +2.5926   +0.0000   +0.0000   +2.5246   18   9   0   9   0
+  MAT T1.RET       32 1    7   1   7   1    +6.4318   +0.3259   +7.4875   +0.7488   17  16   0   1   0
+  MAT T1.RET       32 2    0   2   3   1    +0.0000   +1.1897   +4.1110   +0.4738   18   6   0  12   0
+  MAT T1.RET       32 3    0   7   9   0    +0.0000   +3.8609  +11.5156   +0.0000   17  16   0   1   0
+  MAT T1.RET       32 4    0   9   9   0    +0.0000   +6.7533   +9.8657   +0.0000   18  18   0   0   0
+  MAT T1.RET       32 5    0   9   9   0    +0.0000   +6.8003   +8.8819   +0.0000   18  18   0   0   0
+  MAT T1.RET       32 6    0   9   8   0    +0.0000   +7.3124   +6.2521   +0.0000   17  17   0   0   0
+  MAT T1.RET       32 7    0   9   9   0    +0.0000   +6.7467   +6.2852   +0.0000   18  18   0   0   0
+  MAT T1.RET       32 8    0   4   4   0    +0.0000   +3.2977   +4.7062   +0.0000   18   8   0  10   0
+  MAT T1.RET       33 1    9   0   8   0    +2.6133   +0.0000   +1.9539   +0.0000   17  17   0   0   0
+  MAT T1.RET       33 2    1   5   1   5    -0.0028   +1.8436   -0.0703   +2.0412   18  12   0   6   0
+  MAT T1.RET       33 3    4   1   0   3    +0.1961   +0.3162   +0.0000   +0.5831   17   8   0   9   0
+  MAT T1.RET       33 4    9   0   0   3    +2.9530   +0.0000   +0.0000   +1.9999   18  12   0   6   0
+  MAT T1.RET       33 5    9   0   0   4    +5.9415   +0.0000   +0.0000   +0.5816   18  13   0   5   0
+  MAT T1.RET       33 6    9   0   0   4    +7.9512   +0.0000   +0.0000   +1.9516   17  13   0   4   0
+  MAT T1.RET       33 7    9   0   0   9    +8.4036   +0.0000   +0.0000   +7.7066   18  18   0   0   0
+  MAT T1.RET       33 8    5   0   0   6    +3.2583   +0.0000   +0.0000   +4.2200   18  11   0   7   0
+  MAT T1.RET       34 1    7   0   6   1    +5.2933   +0.0000   +4.1401   +0.5197   17  14   0   3   0
+  MAT T1.RET       34 2    6   1   0   7    +1.5893   +0.4010   +0.0000   +3.6335   18  14   0   4   0
+  MAT T1.RET       34 3    8   0   0   9    +3.4253   +0.0000   +0.0000   +5.3990   17  17   0   0   0
+  MAT T1.RET       34 4    9   0   0   9    +8.6728   +0.0000   +0.0000   +9.5095   18  18   0   0   0
+  MAT T1.RET       34 5    9   0   0   9    +6.6403   +0.0000   +0.0000   +8.0453   18  18   0   0   0
+  MAT T1.RET       34 6    9   0   0   8    +4.7847   +0.0000   +0.0000   +5.0672   17  17   0   0   0
+  MAT T1.RET       34 7    9   0   0   9    +4.7168   +0.0000   +0.0000   +4.3998   18  18   0   0   0
+  MAT T1.RET       34 8    2   0   0   2    +0.7936   +0.0000   +0.0000   +0.1628   18   4   0  14   0
+  MAT T1.RET       35 1    8   0   8   0    +2.4775   +0.0000   +2.5974   +0.0000   17  16   0   1   0
+  MAT T1.RET       35 2    1   5   1   4    +0.6631   +3.6382   +0.6404   +2.6634   18  11   0   7   0
+  MAT T1.RET       35 3    6   2   0   9    +2.7204   +0.6157   +0.0000   +4.3951   17  17   0   0   0
+  MAT T1.RET       35 4    9   0   0   7    +2.1343   +0.0000   +0.0000   +1.3958   18  16   0   2   0
+  MAT T1.RET       35 5    9   0   0   7    +3.7999   +0.0000   +0.0000   +1.7442   18  16   0   2   0
+  MAT T1.RET       35 6    9   0   0   6    +9.2642   +0.0000   +0.0000   +6.2532   17  15   0   2   0
+  MAT T1.RET       35 7    9   0   0   1   +12.3346   +0.0000   +0.0000   +0.9413   18  10   0   8   0
+  MAT T1.RET       35 8    4   0   0   1    +4.0139   +0.0000   +0.0000   +0.9302   18   5   0  13   0
+  MAT T1.RET.D      0 1    8   1   8   0    +7.4661   +0.2732   +7.4247   +0.0000   17  17   0   0   0
+  MAT T1.RET.D      0 2    0   4   1   6    +0.0000   +1.5057   +0.8520   +1.5818   18  11   0   7   0
+  MAT T1.RET.D      0 3    0   0   9   0    +0.0000   +0.0000   +6.3576   +0.0000   17   9   0   8   0
+  MAT T1.RET.D      0 4    0   0   9   0    +0.0000   +0.0000   +9.6623   +0.0000   18   9   0   9   0
+  MAT T1.RET.D      0 5    0   0   9   0    +0.0000   +0.0000   +6.7102   +0.0000   18   9   0   9   0
+  MAT T1.RET.D      0 6    0   1   8   0    +0.0000   +0.6257   +7.2928   +0.0000   17   9   0   8   0
+  MAT T1.RET.D      0 7    0   0   4   0    +0.0000   +0.0000   +3.5401   +0.0000   18   4   0  14   0
+  MAT T1.RET.D      0 8    0   4   6   0    +0.0000   +1.2641   +4.3387   +0.0000   18  10   0   8   0
+  MAT T1.RET.D      1 1    5   3   4   4    +2.4821   +1.8679   +1.8702   +1.9520   17  16   0   1   0
+  MAT T1.RET.D      1 2    9   0   0   9    +3.8048   +0.0000   +0.0000   +8.6854   18  18   0   0   0
+  MAT T1.RET.D      1 3    8   0   0   9    +0.0131   +0.0000   +0.0000   +8.4965   17  17   0   0   0
+  MAT T1.RET.D      1 4    9   0   0   9    +3.3965   +0.0000   +0.0000   +5.2622   18  18   0   0   0
+  MAT T1.RET.D      1 5    9   0   0   9    +4.5004   +0.0000   +0.0000   +6.7852   18  18   0   0   0
+  MAT T1.RET.D      1 6    9   0   0   8    +2.1324   +0.0000   +0.0000   +7.4516   17  17   0   0   0
+  MAT T1.RET.D      1 7    9   0   0   9    +4.2472   +0.0000   +0.0000   +9.6242   18  18   0   0   0
+  MAT T1.RET.D      1 8    4   0   0   5    +2.4906   +0.0000   +0.0000   +5.5047   18   9   0   9   0
+  MAT T1.RET.D      2 1    6   3   5   3    +0.5099   +3.1370   +0.4354   +2.8676   17  17   0   0   0
+  MAT T1.RET.D      2 2    8   1   0   9    -0.2361   +1.0491   +0.0000   +5.6053   18  18   0   0   0
+  MAT T1.RET.D      2 3    8   0   0   9    -1.2140   +0.0000   +0.0000   +5.2594   17  17   0   0   0
+  MAT T1.RET.D      2 4    8   0   0   9    +3.4932   +0.0000   +0.0000   +4.3467   18  17   0   1   0
+  MAT T1.RET.D      2 5    2   0   0   9    +0.1468   +0.0000   +0.0000   -0.1091   18  11   0   7   0
+  MAT T1.RET.D      2 6    9   0   0   8    +1.3214   +0.0000   +0.0000   -0.2679   17  17   0   0   0
+  MAT T1.RET.D      2 7    9   0   0   9    +2.4787   +0.0000   +0.0000   +2.5203   18  18   0   0   0
+  MAT T1.RET.D      2 8    3   0   0   4    +2.0273   +0.0000   +0.0000   +1.4802   18   7   0  11   0
+  MAT T1.RET.D      3 1    7   1   7   1    +3.3297   +0.8300   +3.9168   +0.8256   17  16   0   1   0
+  MAT T1.RET.D      3 2    6   2   0   6    +3.7237   +0.4360   +0.0000   +0.0744   18  14   0   4   0
+  MAT T1.RET.D      3 3    7   0   0   9    +4.3939   +0.0000   +0.0000   +6.7063   17  16   0   1   0
+  MAT T1.RET.D      3 4    7   0   0   9    +4.0311   +0.0000   +0.0000   +5.3511   18  16   0   2   0
+  MAT T1.RET.D      3 5    9   0   0   9    +5.1779   +0.0000   +0.0000   +9.1974   18  18   0   0   0
+  MAT T1.RET.D      3 6    9   0   0   8    +2.9051   +0.0000   +0.0000   +8.9700   17  17   0   0   0
+  MAT T1.RET.D      3 7    9   0   0   9    +3.2440   +0.0000   +0.0000   +9.3122   18  18   0   0   0
+  MAT T1.RET.D      3 8    4   0   0   4    +1.9223   +0.0000   +0.0000   +4.8357   18   8   0  10   0
+  MAT T1.RET.D      4 1    6   3   5   3    +2.4080   +3.8085   +1.5269   +3.1678   17  17   0   0   0
+  MAT T1.RET.D      4 2    6   1   0   9    +3.2282   +1.4375   +0.0000  +11.6627   18  16   0   2   0
+  MAT T1.RET.D      4 3    1   0   0   9    +1.5337   +0.0000   +0.0000  +12.6626   17  10   0   7   0
+  MAT T1.RET.D      4 4    0   0   0   6    +0.0000   +0.0000   +0.0000   +7.4949   18   6   0  12   0
+  MAT T1.RET.D      4 5    4   0   0   7    +0.9263   +0.0000   +0.0000   +6.8725   18  11   0   7   0
+  MAT T1.RET.D      4 6    4   0   0   8    +0.4225   +0.0000   +0.0000   +6.1291   17  12   0   5   0
+  MAT T1.RET.D      4 7    0   0   0   9    +0.0000   +0.0000   +0.0000  +10.6582   18   9   0   9   0
+  MAT T1.RET.D      4 8    2   0   0   4    +1.4919   +0.0000   +0.0000   +3.9225   18   6   0  12   0
+  MAT T1.RET.D      5 1    9   0   8   0    +2.6619   +0.0000   +2.9927   +0.0000   17  17   0   0   0
+  MAT T1.RET.D      5 2    2   7   2   7    +0.6561   +4.3583   +0.5318   +4.3325   18  18   0   0   0
+  MAT T1.RET.D      5 3    3   5   0   9    +0.8344   +0.7324   +0.0000   +1.0393   17  17   0   0   0
+  MAT T1.RET.D      5 4    8   1   0   9    +1.4268   -0.5732   +0.0000   -3.0703   18  18   0   0   0
+  MAT T1.RET.D      5 5    9   0   0   9    +2.9548   +0.0000   +0.0000   +0.4633   18  18   0   0   0
+  MAT T1.RET.D      5 6    9   0   0   8    +5.8634   +0.0000   +0.0000   +2.2395   17  17   0   0   0
+  MAT T1.RET.D      5 7    9   0   0   9    +3.8293   +0.0000   +0.0000   +4.0831   18  18   0   0   0
+  MAT T1.RET.D      5 8    1   0   0   2    +0.1989   +0.0000   +0.0000   +0.5177   18   3   0  15   0
+  MAT T1.RET.D      6 1    7   2   6   2    +2.3559   +0.8028   +2.1673   +0.4258   17  17   0   0   0
+  MAT T1.RET.D      6 2    0   9   4   5    +0.0000   +0.8130   +0.4627   +0.5978   18  18   0   0   0
+  MAT T1.RET.D      6 3    0   8   9   0    +0.0000   +0.6335   +4.2478   +0.0000   17  17   0   0   0
+  MAT T1.RET.D      6 4    0   9   9   0    +0.0000   +1.5591  +11.3674   +0.0000   18  18   0   0   0
+  MAT T1.RET.D      6 5    0   9   9   0    +0.0000   +4.4333  +11.9712   +0.0000   18  18   0   0   0
+  MAT T1.RET.D      6 6    0   9   8   0    +0.0000   +3.9544   +9.5057   +0.0000   17  17   0   0   0
+  MAT T1.RET.D      6 7    0   9   9   0    +0.0000   +1.8925   +8.6840   +0.0000   18  18   0   0   0
+  MAT T1.RET.D      6 8    0   2   2   0    +0.0000   +0.8184   +1.2033   +0.0000   18   4   0  14   0
+  MAT T1.RET.D      7 1    5   4   4   4    +2.1897   +2.4232   +1.3761   +1.9459   17  17   0   0   0
+  MAT T1.RET.D      7 2    8   1   0   9    +3.5939   +0.5671   +0.0000   +3.9893   18  18   0   0   0
+  MAT T1.RET.D      7 3    8   0   0   9    +3.7731   +0.0000   +0.0000   +7.6929   17  17   0   0   0
+  MAT T1.RET.D      7 4    4   0   0   9    +2.3535   +0.0000   +0.0000   +6.0853   18  13   0   5   0
+  MAT T1.RET.D      7 5    0   0   0   9    +0.0000   +0.0000   +0.0000   +4.3667   18   9   0   9   0
+  MAT T1.RET.D      7 6    0   0   0   8    +0.0000   +0.0000   +0.0000   +4.1454   17   8   0   9   0
+  MAT T1.RET.D      7 7    2   0   0   9    +0.2821   +0.0000   +0.0000   +2.7233   18  11   0   7   0
+  MAT T1.RET.D      7 8    2   0   0   5    +0.5022   +0.0000   +0.0000   +1.0618   18   7   0  11   0
+  MAT T1.RET.D      8 1    7   2   7   1    +4.1477   +1.2856   +4.2786   +0.4044   17  17   0   0   0
+  MAT T1.RET.D      8 2    4   5   0   9    +2.7478   +3.2745   +0.0000   +5.9757   18  18   0   0   0
+  MAT T1.RET.D      8 3    8   0   0   9    +1.4255   +0.0000   +0.0000   +4.8998   17  17   0   0   0
+  MAT T1.RET.D      8 4    9   0   0   9    +0.8441   +0.0000   +0.0000   +4.0296   18  18   0   0   0
+  MAT T1.RET.D      8 5    9   0   0   9    +3.0367   +0.0000   +0.0000   +6.4162   18  18   0   0   0
+  MAT T1.RET.D      8 6    9   0   0   7    +3.7660   +0.0000   +0.0000   +5.2964   17  16   0   1   0
+  MAT T1.RET.D      8 7    9   0   0   0    +4.3215   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D      8 8    3   0   0   0    +2.2751   +0.0000   +0.0000   +0.0000   18   3   0  15   0
+  MAT T1.RET.D      9 1    6   3   5   3    +1.6422   +1.1949   +0.9726   +1.4006   17  17   0   0   0
+  MAT T1.RET.D      9 2    6   3   0   9    +0.8705   +0.4609   +0.0000   +1.9971   18  18   0   0   0
+  MAT T1.RET.D      9 3    8   0   0   7    +1.9449   +0.0000   +0.0000   -0.3878   17  15   0   2   0
+  MAT T1.RET.D      9 4    9   0   0   0    +3.2772   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D      9 5    9   0   0   0    +0.1126   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D      9 6    8   0   0   0    +2.4734   +0.0000   +0.0000   +0.0000   17   8   0   9   0
+  MAT T1.RET.D      9 7    9   0   0   1    +3.3799   +0.0000   +0.0000   +0.5033   18  10   0   8   0
+  MAT T1.RET.D      9 8    7   0   0   0    +2.7747   +0.0000   +0.0000   +0.0000   18   7   0  11   0
+  MAT T1.RET.D     10 1    7   2   6   2    +5.0376   +0.8721   +4.4543   +1.3469   17  17   0   0   0
+  MAT T1.RET.D     10 2    2   7   2   7    +1.1812   +5.9674   +0.8071   +5.8988   18  18   0   0   0
+  MAT T1.RET.D     10 3    0   8   8   0    +0.0000   +9.7634   +6.6635   +0.0000   17  16   0   1   0
+  MAT T1.RET.D     10 4    0   9   9   0    +0.0000   +5.8365   +4.3737   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     10 5    0   9   6   0    +0.0000   +4.9752   +3.8398   +0.0000   18  15   0   3   0
+  MAT T1.RET.D     10 6    0   9   8   0    +0.0000   +5.5839   +3.3337   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     10 7    0   8   9   0    +0.0000   +4.3170   +7.0965   +0.0000   18  17   0   1   0
+  MAT T1.RET.D     10 8    0   3   4   0    +0.0000   +1.9211   +3.4839   +0.0000   18   7   0  11   0
+  MAT T1.RET.D     11 1    6   3   5   3    +2.3309   +2.3395   +2.7799   +1.9895   17  17   0   0   0
+  MAT T1.RET.D     11 2    4   5   4   5    +1.6766   +2.2834   +1.6683   +3.2571   18  18   0   0   0
+  MAT T1.RET.D     11 3    7   1   1   8    +3.7758   +0.4033   +0.6445   +1.5868   17  17   0   0   0
+  MAT T1.RET.D     11 4    7   1   0   9    +3.1393   +0.1594   +0.0000   +2.1701   18  17   0   1   0
+  MAT T1.RET.D     11 5    9   0   0   9    +4.7234   +0.0000   +0.0000   +5.7141   18  18   0   0   0
+  MAT T1.RET.D     11 6    9   0   0   8    +3.1550   +0.0000   +0.0000   +6.3030   17  17   0   0   0
+  MAT T1.RET.D     11 7    3   0   0   9    +1.7354   +0.0000   +0.0000   +4.9706   18  12   0   6   0
+  MAT T1.RET.D     11 8    2   0   0   6    +0.8083   +0.0000   +0.0000   +3.5995   18   8   0  10   0
+  MAT T1.RET.D     12 1    6   3   5   3    +3.8799   +1.6862   +3.4013   +1.1537   17  17   0   0   0
+  MAT T1.RET.D     12 2    6   3   1   8    +5.5831   +1.3885   +1.2746   +4.3233   18  18   0   0   0
+  MAT T1.RET.D     12 3    8   0   0   9    +6.9051   +0.0000   +0.0000   +7.3243   17  17   0   0   0
+  MAT T1.RET.D     12 4    9   0   0   9    +7.3259   +0.0000   +0.0000   +5.2065   18  18   0   0   0
+  MAT T1.RET.D     12 5    9   0   0   9    +7.3465   +0.0000   +0.0000   +5.3713   18  18   0   0   0
+  MAT T1.RET.D     12 6    9   0   0   8    +7.4549   +0.0000   +0.0000   +4.7242   17  17   0   0   0
+  MAT T1.RET.D     12 7    9   0   0   9    +7.3892   +0.0000   +0.0000   +5.2430   18  18   0   0   0
+  MAT T1.RET.D     12 8    4   0   0   5    +2.9982   +0.0000   +0.0000   +3.3296   18   9   0   9   0
+  MAT T1.RET.D     13 1    8   0   7   1    +3.5344   +0.0000   +2.5708   +0.8443   17  16   0   1   0
+  MAT T1.RET.D     13 2    1   7   1   6    -0.1181   +4.2692   +0.0640   +3.3798   18  15   0   3   0
+  MAT T1.RET.D     13 3    4   4   6   3    -0.5907   +2.6398   +0.2944   +2.2869   17  17   0   0   0
+  MAT T1.RET.D     13 4    0   6   9   0    +0.0000   +3.1378   +2.0034   +0.0000   18  15   0   3   0
+  MAT T1.RET.D     13 5    1   8   9   0    +0.2701   +1.9046   +4.7722   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     13 6    0   6   8   0    +0.0000   +0.7687   +2.1622   +0.0000   17  14   0   3   0
+  MAT T1.RET.D     13 7    0   3   9   0    +0.0000   +0.6304   +2.9486   +0.0000   18  12   0   6   0
+  MAT T1.RET.D     13 8    0   4   7   0    +0.0000   -0.1604   +0.3817   +0.0000   18  11   0   7   0
+  MAT T1.RET.D     14 1    9   0   8   0    +3.1758   +0.0000   +2.0772   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     14 2    0   1   0   0    +0.0000   +0.3833   +0.0000   +0.0000   18   1   0  17   0
+  MAT T1.RET.D     14 3    0   0   9   0    +0.0000   +0.0000   +2.9056   +0.0000   17   9   0   8   0
+  MAT T1.RET.D     14 4    0   3   9   0    +0.0000   +1.8780   +2.4173   +0.0000   18  12   0   6   0
+  MAT T1.RET.D     14 5    0   1   9   0    +0.0000   +0.2291   +1.0545   +0.0000   18  10   0   8   0
+  MAT T1.RET.D     14 6    0   4   8   0    +0.0000   +2.6801   +6.1630   +0.0000   17  12   0   5   0
+  MAT T1.RET.D     14 7    0   3   9   0    +0.0000   +0.3868   +5.8877   +0.0000   18  12   0   6   0
+  MAT T1.RET.D     14 8    0   5   5   0    +0.0000   +1.9053   +1.0213   +0.0000   18  10   0   8   0
+  MAT T1.RET.D     15 1    7   2   6   2    +5.6785   +0.5445   +4.9536   +0.6925   17  17   0   0   0
+  MAT T1.RET.D     15 2    0   9   3   5    +0.0000   +7.1031   +2.8294   +3.9016   18  17   0   1   0
+  MAT T1.RET.D     15 3    0   8   9   0    +0.0000   +6.7151   +9.7778   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     15 4    0   9   9   0    +0.0000   -1.0193   +4.4865   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     15 5    0   9   8   0    +0.0000   -1.4749   +4.5378   +0.0000   18  17   0   1   0
+  MAT T1.RET.D     15 6    0   9   4   0    +0.0000   +1.1504   +3.3397   +0.0000   17  13   0   4   0
+  MAT T1.RET.D     15 7    0   9   7   0    +0.0000   +3.7837   +6.0014   +0.0000   18  16   0   2   0
+  MAT T1.RET.D     15 8    0   2   3   0    +0.0000   +0.6576   +2.2580   +0.0000   18   5   0  13   0
+  MAT T1.RET.D     16 1    9   0   8   0    +4.4236   +0.0000   +3.9750   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     16 2    1   8   0   9    +0.5361   +1.5691   +0.0000   +2.1863   18  18   0   0   0
+  MAT T1.RET.D     16 3    7   1   0   9    +6.4900   +0.0018   +0.0000   +2.1862   17  17   0   0   0
+  MAT T1.RET.D     16 4    8   1   0   9    +8.9885   +0.1423   +0.0000   +2.3541   18  18   0   0   0
+  MAT T1.RET.D     16 5    8   0   0   9    +6.4675   +0.0000   +0.0000   +2.2470   18  17   0   1   0
+  MAT T1.RET.D     16 6    7   0   0   8    +4.3381   +0.0000   +0.0000   +1.4290   17  15   0   2   0
+  MAT T1.RET.D     16 7    3   0   0   9    +1.7089   +0.0000   +0.0000   +2.4580   18  12   0   6   0
+  MAT T1.RET.D     16 8    0   0   0   7    +0.0000   +0.0000   +0.0000   +1.5870   18   7   0  11   0
+  MAT T1.RET.D     17 1    7   2   6   2    +4.0577   +1.1112   +2.9907   +1.0512   17  17   0   0   0
+  MAT T1.RET.D     17 2    2   5   0   8    +1.2430   +2.3357   +0.0000   +5.0386   18  15   0   3   0
+  MAT T1.RET.D     17 3    1   0   0   9    +0.7541   +0.0000   +0.0000   +5.0259   17  10   0   7   0
+  MAT T1.RET.D     17 4    1   0   0   9    +1.0200   +0.0000   +0.0000   +0.9788   18  10   0   8   0
+  MAT T1.RET.D     17 5    3   0   0   9    +1.6917   +0.0000   +0.0000   +2.3512   18  12   0   6   0
+  MAT T1.RET.D     17 6    0   0   0   4    +0.0000   +0.0000   +0.0000   +1.3304   17   4   0  13   0
+  MAT T1.RET.D     17 7    3   0   0   7    +1.7238   +0.0000   +0.0000   +1.9005   18  10   0   8   0
+  MAT T1.RET.D     17 8    4   0   0   4    +2.3558   +0.0000   +0.0000   +2.0202   18   8   0  10   0
+  MAT T1.RET.D     18 1    7   2   7   1    +3.1491   +1.4046   +3.3135   +0.5738   17  17   0   0   0
+  MAT T1.RET.D     18 2    4   5   0   9    +2.3088   +4.2696   +0.0000   +8.0085   18  18   0   0   0
+  MAT T1.RET.D     18 3    8   0   0   9    +2.8327   +0.0000   +0.0000   +9.0532   17  17   0   0   0
+  MAT T1.RET.D     18 4    9   0   0   9    +5.6629   +0.0000   +0.0000  +10.9817   18  18   0   0   0
+  MAT T1.RET.D     18 5    9   0   0   9    +4.1324   +0.0000   +0.0000  +12.0166   18  18   0   0   0
+  MAT T1.RET.D     18 6    9   0   0   8    +6.5366   +0.0000   +0.0000  +10.3631   17  17   0   0   0
+  MAT T1.RET.D     18 7    9   0   0   8    +8.4509   +0.0000   +0.0000   +9.1620   18  17   0   1   0
+  MAT T1.RET.D     18 8    4   0   0   4    +3.3258   +0.0000   +0.0000   +3.5938   18   8   0  10   0
+  MAT T1.RET.D     19 1    8   1   8   0    +6.4133   +0.2678   +7.8128   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     19 2    0   9   0   9    +0.0000   +4.0162   +0.0000   +4.2288   18  18   0   0   0
+  MAT T1.RET.D     19 3    0   8   9   0    +0.0000   +5.1179   +6.0885   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     19 4    0   9   9   0    +0.0000   +7.5439   +7.0046   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     19 5    0   9   9   0    +0.0000   +6.2188   +4.9227   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     19 6    0   9   8   0    +0.0000   +5.6716   +4.0782   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     19 7    0   9   9   0    +0.0000   +5.2605   +3.0045   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     19 8    0   3   3   0    +0.0000   +1.6757   +1.1834   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     20 1    6   3   5   3    +1.3717   +1.2245   +0.8998   +1.8451   17  17   0   0   0
+  MAT T1.RET.D     20 2    7   2   0   9    +2.3139   +1.7197   +0.0000   +6.8929   18  18   0   0   0
+  MAT T1.RET.D     20 3    8   0   0   9    +5.9414   +0.0000   +0.0000   +8.4395   17  17   0   0   0
+  MAT T1.RET.D     20 4    9   0   0   9    +2.5331   +0.0000   +0.0000   +7.5621   18  18   0   0   0
+  MAT T1.RET.D     20 5    9   0   0   5    +4.4457   +0.0000   +0.0000   +3.3327   18  14   0   4   0
+  MAT T1.RET.D     20 6    9   0   0   0    +5.7892   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.RET.D     20 7    9   0   0   0    +2.2403   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D     20 8    3   0   0   0    +0.5533   +0.0000   +0.0000   +0.0000   18   3   0  15   0
+  MAT T1.RET.D     21 1    6   3   5   3    +0.8112   +2.2181   +0.7598   +1.9589   17  17   0   0   0
+  MAT T1.RET.D     21 2    2   7   3   6    +0.7555   +4.3984   +1.3599   +3.0627   18  18   0   0   0
+  MAT T1.RET.D     21 3    4   4   2   7    +0.9157   +3.9820   +1.5118   +7.7774   17  17   0   0   0
+  MAT T1.RET.D     21 4    6   3   2   7    +2.3204   +2.2162   +0.2176   +3.2016   18  18   0   0   0
+  MAT T1.RET.D     21 5    8   1   0   9    +4.7245   +0.3140   +0.0000   +3.8368   18  18   0   0   0
+  MAT T1.RET.D     21 6    8   0   0   8    +3.8192   +0.0000   +0.0000   +2.5466   17  16   0   1   0
+  MAT T1.RET.D     21 7    9   0   0   9    +4.0827   +0.0000   +0.0000   -0.3738   18  18   0   0   0
+  MAT T1.RET.D     21 8    0   0   0   5    +0.0000   +0.0000   +0.0000   +1.1108   18   5   0  13   0
+  MAT T1.RET.D     22 1    9   0   8   0    +4.5683   +0.0000   +4.1142   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     22 2    0   6   0   7    +0.0000   +2.6195   +0.0000   +3.0827   18  13   0   5   0
+  MAT T1.RET.D     22 3    0   5   8   1    +0.0000   +2.6337   +1.6234   +0.4564   17  14   0   3   0
+  MAT T1.RET.D     22 4    0   9   9   0    +0.0000   +7.8465   +4.5324   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     22 5    0   3   7   0    +0.0000   +2.6760   +3.9781   +0.0000   18  10   0   8   0
+  MAT T1.RET.D     22 6    0   1   3   0    +0.0000   +0.7848   +2.0020   +0.0000   17   4   0  13   0
+  MAT T1.RET.D     22 7    0   0   6   0    +0.0000   +0.0000   +4.1292   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     22 8    0   0   2   0    +0.0000   +0.0000   +1.3888   +0.0000   18   2   0  16   0
+  MAT T1.RET.D     23 1    7   2   7   1    +2.2821   +1.3308   +2.6235   +0.4696   17  17   0   0   0
+  MAT T1.RET.D     23 2    0   9   3   6    +0.0000   +1.8066   +0.5100   +2.2541   18  18   0   0   0
+  MAT T1.RET.D     23 3    0   8   4   0    +0.0000   +2.0711   +0.8494   +0.0000   17  12   0   5   0
+  MAT T1.RET.D     23 4    0   9   0   0    +0.0000   +4.9226   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D     23 5    0   9   0   0    +0.0000   +3.4786   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D     23 6    0   9   0   0    +0.0000   +5.1048   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.RET.D     23 7    0   8   0   0    +0.0000   +4.5641   +0.0000   +0.0000   18   8   0  10   0
+  MAT T1.RET.D     23 8    0   4   0   0    +0.0000   +2.0554   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.RET.D     24 1    6   3   6   2    +5.2974   +2.0288   +4.9462   +1.1402   17  17   0   0   0
+  MAT T1.RET.D     24 2    6   3   0   9    +4.6702   +2.1280   +0.0000   +4.4284   18  18   0   0   0
+  MAT T1.RET.D     24 3    8   0   0   9    +6.2112   +0.0000   +0.0000   +1.6962   17  17   0   0   0
+  MAT T1.RET.D     24 4    9   0   0   9    +4.4118   +0.0000   +0.0000   +0.5040   18  18   0   0   0
+  MAT T1.RET.D     24 5    9   0   0   9    +3.5564   +0.0000   +0.0000   +2.2507   18  18   0   0   0
+  MAT T1.RET.D     24 6    9   0   0   8    +3.9047   +0.0000   +0.0000   +3.6955   17  17   0   0   0
+  MAT T1.RET.D     24 7    9   0   0   9    +3.8606   +0.0000   +0.0000   +4.0400   18  18   0   0   0
+  MAT T1.RET.D     24 8    2   0   0   2    +0.3265   +0.0000   +0.0000   +0.8860   18   4   0  14   0
+  MAT T1.RET.D     25 1    7   2   6   2    +3.6106   +1.4350   +2.8215   +1.4071   17  17   0   0   0
+  MAT T1.RET.D     25 2    4   3   0   8    +2.2091   +2.5822   +0.0000   +5.1585   18  15   0   3   0
+  MAT T1.RET.D     25 3    8   0   0   9    +4.9676   +0.0000   +0.0000   +6.4204   17  17   0   0   0
+  MAT T1.RET.D     25 4    9   0   0   8    +4.4746   +0.0000   +0.0000   +4.5768   18  17   0   1   0
+  MAT T1.RET.D     25 5    9   0   0   1    +4.2404   +0.0000   +0.0000   +0.7852   18  10   0   8   0
+  MAT T1.RET.D     25 6    9   0   0   2    +6.6713   +0.0000   +0.0000   +1.8525   17  11   0   6   0
+  MAT T1.RET.D     25 7    9   0   0   6    +5.9643   +0.0000   +0.0000   +4.5490   18  15   0   3   0
+  MAT T1.RET.D     25 8    4   0   0   4    +3.4268   +0.0000   +0.0000   +3.7150   18   8   0  10   0
+  MAT T1.RET.D     26 1    8   1   8   0    +5.4546   +0.0046   +6.1254   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     26 2    0   7   2   5    +0.0000   +2.5279   +1.9186   +1.5369   18  14   0   4   0
+  MAT T1.RET.D     26 3    0   1   9   0    +0.0000   +0.3353   +6.8734   +0.0000   17  10   0   7   0
+  MAT T1.RET.D     26 4    0   8   9   0    +0.0000   +1.2404   +5.3447   +0.0000   18  17   0   1   0
+  MAT T1.RET.D     26 5    0   1   9   0    +0.0000   +0.1365   +6.8814   +0.0000   18  10   0   8   0
+  MAT T1.RET.D     26 6    0   0   8   0    +0.0000   +0.0000   +4.5602   +0.0000   17   8   0   9   0
+  MAT T1.RET.D     26 7    0   5   9   0    +0.0000   +0.1733   +5.5937   +0.0000   18  14   0   4   0
+  MAT T1.RET.D     26 8    0   2   4   0    +0.0000   +0.3327   +1.6834   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     27 1    9   0   8   0    +7.2205   +0.0000   +6.7989   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     27 2    0   8   1   8    +0.0000   +1.4948   +1.0723   +1.8522   18  17   0   1   0
+  MAT T1.RET.D     27 3    6   2   0   9    +5.5276   -0.3001   +0.0000   -0.3604   17  17   0   0   0
+  MAT T1.RET.D     27 4    9   0   0   8    +7.5133   +0.0000   +0.0000   +2.9836   18  17   0   1   0
+  MAT T1.RET.D     27 5    9   0   0   2    +8.9708   +0.0000   +0.0000   +0.5098   18  11   0   7   0
+  MAT T1.RET.D     27 6    9   0   0   1    +5.9656   +0.0000   +0.0000   +0.4223   17  10   0   7   0
+  MAT T1.RET.D     27 7    9   0   0   0    +3.3911   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.RET.D     27 8    6   0   0   0    +2.6735   +0.0000   +0.0000   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     28 1    9   0   8   0    +6.6144   +0.0000   +5.6269   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     28 2    1   8   2   7    +0.6763   +5.3804   +1.6768   +5.0534   18  18   0   0   0
+  MAT T1.RET.D     28 3    0   1   4   5    +0.0000   +0.4959   +2.7951   +3.4046   17  10   0   7   0
+  MAT T1.RET.D     28 4    0   6   9   0    +0.0000   +2.7450   +3.1222   +0.0000   18  15   0   3   0
+  MAT T1.RET.D     28 5    0   3   9   0    +0.0000   +0.9306   +5.2686   +0.0000   18  12   0   6   0
+  MAT T1.RET.D     28 6    0   6   6   0    +0.0000   +4.4022   +5.3356   +0.0000   17  12   0   5   0
+  MAT T1.RET.D     28 7    0   7   5   0    +0.0000   +6.3886   +3.7346   +0.0000   18  12   0   6   0
+  MAT T1.RET.D     28 8    0   3   4   0    +0.0000   +2.2343   +3.2537   +0.0000   18   7   0  11   0
+  MAT T1.RET.D     29 1    6   3   6   2    +4.2885   +3.2439   +4.6432   +2.1213   17  17   0   0   0
+  MAT T1.RET.D     29 2    6   3   0   9    +3.3175   +3.0946   +0.0000   +6.0945   18  18   0   0   0
+  MAT T1.RET.D     29 3    8   0   0   9    +1.8545   +0.0000   +0.0000   +5.3287   17  17   0   0   0
+  MAT T1.RET.D     29 4    9   0   0   9    +3.8493   +0.0000   +0.0000   +4.8014   18  18   0   0   0
+  MAT T1.RET.D     29 5    9   0   0   9    +4.4672   +0.0000   +0.0000   +7.5600   18  18   0   0   0
+  MAT T1.RET.D     29 6    9   0   0   8    +2.5710   +0.0000   +0.0000   +5.4854   17  17   0   0   0
+  MAT T1.RET.D     29 7    6   0   0   9    -0.9181   +0.0000   +0.0000   +5.8272   18  15   0   3   0
+  MAT T1.RET.D     29 8    5   0   0   6    -0.5474   +0.0000   +0.0000   +4.0240   18  11   0   7   0
+  MAT T1.RET.D     30 1    9   0   8   0    +3.9660   +0.0000   +3.1616   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     30 2    0   8   0   6    +0.0000   +2.9471   +0.0000   +2.4436   18  14   0   4   0
+  MAT T1.RET.D     30 3    2   6   8   1    +1.0062   +4.0172   +4.0080   +0.3771   17  17   0   0   0
+  MAT T1.RET.D     30 4    0   9   9   0    +0.0000   +1.9578   +3.4439   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     30 5    0   9   8   0    +0.0000   +1.9900   +3.3985   +0.0000   18  17   0   1   0
+  MAT T1.RET.D     30 6    0   9   8   0    +0.0000   +1.2975   +4.3264   +0.0000   17  17   0   0   0
+  MAT T1.RET.D     30 7    0   8   9   0    +0.0000   +1.9359   +4.7333   +0.0000   18  17   0   1   0
+  MAT T1.RET.D     30 8    0   6   7   0    +0.0000   +0.8020   +2.9842   +0.0000   18  13   0   5   0
+  MAT T1.RET.D     31 1    7   2   6   2    +4.1831   +1.6245   +3.6562   +1.3294   17  17   0   0   0
+  MAT T1.RET.D     31 2    4   4   0   7    +2.9794   +4.6205   +0.0000   +7.9646   18  15   0   3   0
+  MAT T1.RET.D     31 3    2   0   0   9    +0.4573   +0.0000   +0.0000   +8.3874   17  11   0   6   0
+  MAT T1.RET.D     31 4    3   0   0   9    +2.2426   +0.0000   +0.0000   +8.9970   18  12   0   6   0
+  MAT T1.RET.D     31 5    3   0   0   9    +3.4048   +0.0000   +0.0000  +10.2841   18  12   0   6   0
+  MAT T1.RET.D     31 6    4   0   0   8    +3.9263   +0.0000   +0.0000   +8.7778   17  12   0   5   0
+  MAT T1.RET.D     31 7    1   0   0   9    +0.7895   +0.0000   +0.0000   +9.8005   18  10   0   8   0
+  MAT T1.RET.D     31 8    1   0   0   4    -0.1867   +0.0000   +0.0000   +1.2724   18   5   0  13   0
+  MAT T1.RET.D     32 1    6   3   4   4    +1.3302   +3.6245   +0.4713   +4.1730   17  17   0   0   0
+  MAT T1.RET.D     32 2    9   0   0   9    +0.2843   +0.0000   +0.0000   +8.8022   18  18   0   0   0
+  MAT T1.RET.D     32 3    1   0   0   9    +0.3396   +0.0000   +0.0000   +6.1963   17  10   0   7   0
+  MAT T1.RET.D     32 4    6   0   0   9    +0.6261   +0.0000   +0.0000   +5.2665   18  15   0   3   0
+  MAT T1.RET.D     32 5    6   0   0   9    +3.3618   +0.0000   +0.0000   +2.6713   18  15   0   3   0
+  MAT T1.RET.D     32 6    7   0   0   8    +3.3806   +0.0000   +0.0000   +4.9783   17  15   0   2   0
+  MAT T1.RET.D     32 7    6   0   0   9    +2.2794   +0.0000   +0.0000   +3.2500   18  15   0   3   0
+  MAT T1.RET.D     32 8    4   0   0   5    +2.5325   +0.0000   +0.0000   +5.1502   18   9   0   9   0
+  MAT T1.RET.D     33 1    7   1   6   2    +3.3756   +0.4576   +2.2933   +0.8679   17  16   0   1   0
+  MAT T1.RET.D     33 2    0   8   4   4    +0.0000   +0.8861   +1.5533   +0.0056   18  16   0   2   0
+  MAT T1.RET.D     33 3    0   7   9   0    +0.0000   +4.0617  +10.1228   +0.0000   17  16   0   1   0
+  MAT T1.RET.D     33 4    0   9   9   0    +0.0000   +5.0619   +9.0117   +0.0000   18  18   0   0   0
+  MAT T1.RET.D     33 5    0   5   9   0    +0.0000   +3.3984   +7.2760   +0.0000   18  14   0   4   0
+  MAT T1.RET.D     33 6    0   2   8   0    +0.0000   +1.2304   +6.0630   +0.0000   17  10   0   7   0
+  MAT T1.RET.D     33 7    0   0   6   0    +0.0000   +0.0000   +4.0654   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     33 8    0   1   5   0    +0.0000   +0.4121   +3.1531   +0.0000   18   6   0  12   0
+  MAT T1.RET.D     34 1    6   3   6   2    +2.6254   +2.9953   +3.0568   +2.5415   17  17   0   0   0
+  MAT T1.RET.D     34 2    8   1   0   9    +5.8981   +0.7285   +0.0000   +7.5524   18  18   0   0   0
+  MAT T1.RET.D     34 3    8   0   0   9    +5.0900   +0.0000   +0.0000  +10.1805   17  17   0   0   0
+  MAT T1.RET.D     34 4    9   0   0   9    +9.0457   +0.0000   +0.0000   +9.2306   18  18   0   0   0
+  MAT T1.RET.D     34 5    9   0   0   9    +9.8116   +0.0000   +0.0000  +10.6891   18  18   0   0   0
+  MAT T1.RET.D     34 6    8   0   0   8   +10.1511   +0.0000   +0.0000  +11.2975   17  16   0   1   0
+  MAT T1.RET.D     34 7    9   0   0   7    +7.8326   +0.0000   +0.0000   +9.3917   18  16   0   2   0
+  MAT T1.RET.D     34 8    2   0   0   2    +1.5668   +0.0000   +0.0000   +2.2990   18   4   0  14   0
+  MAT T1.RET.D     35 1    7   2   6   2    +1.5444   +1.8503   +0.9410   +1.7376   17  17   0   0   0
+  MAT T1.RET.D     35 2    3   6   0   9    +2.2242   +6.5251   +0.0000   +9.9513   18  18   0   0   0
+  MAT T1.RET.D     35 3    6   2   1   8    +3.1621   +1.4720   +0.6659   +5.3522   17  17   0   0   0
+  MAT T1.RET.D     35 4    7   0   0   9    +2.6612   +0.0000   +0.0000   +5.7263   18  16   0   2   0
+  MAT T1.RET.D     35 5    1   0   0   9    +0.2454   +0.0000   +0.0000   +4.0799   18  10   0   8   0
+  MAT T1.RET.D     35 6    4   0   0   8    +0.0653   +0.0000   +0.0000   +1.1705   17  12   0   5   0
+  MAT T1.RET.D     35 7    1   0   0   9    +0.0979   +0.0000   +0.0000   -1.1012   18  10   0   8   0
+  MAT T1.RET.D     35 8    1   0   0   3    +0.6200   +0.0000   +0.0000   +1.2107   18   4   0  14   0
+  MAT T1.ORACLE.D   0 1    8   0   0   8    +3.7447   +0.0000   +0.0000   +7.9243   17  16   0   1   0
+  MAT T1.ORACLE.D   0 2    3   0   0   9    +0.7615   +0.0000   +0.0000  +10.0664   18  12   0   6   0
+  MAT T1.ORACLE.D   0 3    7   0   0   9    +2.3506   +0.0000   +0.0000   +7.6731   17  16   0   1   0
+  MAT T1.ORACLE.D   0 4    9   0   0   8    +4.7539   +0.0000   +0.0000   +7.4467   18  17   0   1   0
+  MAT T1.ORACLE.D   0 5    9   0   0   1    +4.5377   +0.0000   +0.0000   +0.6903   18  10   0   8   0
+  MAT T1.ORACLE.D   0 6    9   0   0   0    +5.7117   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.ORACLE.D   0 7    9   0   0   0    +8.1320   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D   0 8    2   0   0   0    +1.6623   +0.0000   +0.0000   +0.0000   18   2   0  16   0
+  MAT T1.ORACLE.D   1 1    9   0   0   8    +7.1589   +0.0000   +0.0000   +4.6216   17  17   0   0   0
+  MAT T1.ORACLE.D   1 2    9   0   0   7    +6.8391   +0.0000   +0.0000   +3.9873   18  16   0   2   0
+  MAT T1.ORACLE.D   1 3    8   0   0   6    +3.4067   +0.0000   +0.0000   +2.2511   17  14   0   3   0
+  MAT T1.ORACLE.D   1 4    9   0   0   1    +5.2813   +0.0000   +0.0000   +1.0270   18  10   0   8   0
+  MAT T1.ORACLE.D   1 5    9   0   0   5    +4.4274   +0.0000   +0.0000   +3.5897   18  14   0   4   0
+  MAT T1.ORACLE.D   1 6    9   0   0   2    +4.2695   +0.0000   +0.0000   +1.1232   17  11   0   6   0
+  MAT T1.ORACLE.D   1 7    9   0   0   3    +7.2508   +0.0000   +0.0000   +2.1572   18  12   0   6   0
+  MAT T1.ORACLE.D   1 8    4   0   0   0    +1.6842   +0.0000   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.ORACLE.D   2 1    9   0   0   8    +3.7619   +0.0000   +0.0000   +5.9397   17  17   0   0   0
+  MAT T1.ORACLE.D   2 2    9   0   0   9    +3.2890   +0.0000   +0.0000   +6.6668   18  18   0   0   0
+  MAT T1.ORACLE.D   2 3    8   0   0   7    +1.2662   +0.0000   +0.0000   +5.6448   17  15   0   2   0
+  MAT T1.ORACLE.D   2 4    9   0   0   3    +5.2217   +0.0000   +0.0000   +1.8159   18  12   0   6   0
+  MAT T1.ORACLE.D   2 5    9   0   0   9    +5.3387   +0.0000   +0.0000   +5.6250   18  18   0   0   0
+  MAT T1.ORACLE.D   2 6    8   0   0   8    +8.2505   +0.0000   +0.0000   +3.8624   17  16   0   1   0
+  MAT T1.ORACLE.D   2 7    9   0   0   9   +11.0719   +0.0000   +0.0000   +5.6948   18  18   0   0   0
+  MAT T1.ORACLE.D   2 8    4   0   0   5    +4.9270   +0.0000   +0.0000   +2.5299   18   9   0   9   0
+  MAT T1.ORACLE.D   3 1    9   0   0   8    +3.6897   +0.0000   +0.0000   +5.0527   17  17   0   0   0
+  MAT T1.ORACLE.D   3 2    3   0   0   9    +1.2065   +0.0000   +0.0000   +5.2738   18  12   0   6   0
+  MAT T1.ORACLE.D   3 3    0   0   0   9    +0.0000   +0.0000   +0.0000   +6.1613   17   9   0   8   0
+  MAT T1.ORACLE.D   3 4    0   0   0   9    +0.0000   +0.0000   +0.0000   +5.7654   18   9   0   9   0
+  MAT T1.ORACLE.D   3 5    0   0   0   9    +0.0000   +0.0000   +0.0000   +3.8769   18   9   0   9   0
+  MAT T1.ORACLE.D   3 6    0   0   0   8    +0.0000   +0.0000   +0.0000   +3.5608   17   8   0   9   0
+  MAT T1.ORACLE.D   3 7    0   0   0   9    +0.0000   +0.0000   +0.0000   +4.0404   18   9   0   9   0
+  MAT T1.ORACLE.D   3 8    0   0   0   5    +0.0000   +0.0000   +0.0000   +2.2508   18   5   0  13   0
+  MAT T1.ORACLE.D   4 1    9   0   0   8    +3.7162   +0.0000   +0.0000   +5.3451   17  17   0   0   0
+  MAT T1.ORACLE.D   4 2    9   0   0   9    +6.0824   +0.0000   +0.0000   +9.9534   18  18   0   0   0
+  MAT T1.ORACLE.D   4 3    8   0   0   9    +2.7298   +0.0000   +0.0000   +6.2243   17  17   0   0   0
+  MAT T1.ORACLE.D   4 4    9   0   0   9    +4.5452   +0.0000   +0.0000   +5.2055   18  18   0   0   0
+  MAT T1.ORACLE.D   4 5    8   0   0   9    +3.0500   +0.0000   +0.0000   +2.2146   18  17   0   1   0
+  MAT T1.ORACLE.D   4 6    9   0   0   6    +2.0772   +0.0000   +0.0000   +0.0500   17  15   0   2   0
+  MAT T1.ORACLE.D   4 7    9   0   0   5    +2.0419   +0.0000   +0.0000   -0.2102   18  14   0   4   0
+  MAT T1.ORACLE.D   4 8    1   0   0   1    +0.0877   +0.0000   +0.0000   -0.0822   18   2   0  16   0
+  MAT T1.ORACLE.D   5 1    9   0   0   8    +2.5990   +0.0000   +0.0000   +3.8791   17  17   0   0   0
+  MAT T1.ORACLE.D   5 2    9   0   0   9    +4.6402   +0.0000   +0.0000   +1.2798   18  18   0   0   0
+  MAT T1.ORACLE.D   5 3    8   0   0   9    +3.4940   +0.0000   +0.0000   +1.6737   17  17   0   0   0
+  MAT T1.ORACLE.D   5 4    6   0   0   9    +2.5609   +0.0000   +0.0000   +1.2224   18  15   0   3   0
+  MAT T1.ORACLE.D   5 5    4   0   0   9    +2.0317   +0.0000   +0.0000   +8.0615   18  13   0   5   0
+  MAT T1.ORACLE.D   5 6    0   0   0   8    +0.0000   +0.0000   +0.0000   +5.7221   17   8   0   9   0
+  MAT T1.ORACLE.D   5 7    0   0   0   9    +0.0000   +0.0000   +0.0000   +7.0689   18   9   0   9   0
+  MAT T1.ORACLE.D   5 8    0   0   0   5    +0.0000   +0.0000   +0.0000   +3.2857   18   5   0  13   0
+  MAT T1.ORACLE.D   6 1    9   0   0   8    +3.9816   +0.0000   +0.0000   +2.3128   17  17   0   0   0
+  MAT T1.ORACLE.D   6 2    9   0   0   9    +5.1444   +0.0000   +0.0000   +3.6612   18  18   0   0   0
+  MAT T1.ORACLE.D   6 3    5   0   0   9    +2.1413   +0.0000   +0.0000   +3.7689   17  14   0   3   0
+  MAT T1.ORACLE.D   6 4    1   0   0   9    +0.2992   +0.0000   +0.0000   +3.9361   18  10   0   8   0
+  MAT T1.ORACLE.D   6 5    5   0   0   9    +3.4646   +0.0000   +0.0000   +4.7004   18  14   0   4   0
+  MAT T1.ORACLE.D   6 6    0   0   0   8    +0.0000   +0.0000   +0.0000   +1.3106   17   8   0   9   0
+  MAT T1.ORACLE.D   6 7    6   0   0   9    +3.8558   +0.0000   +0.0000   +3.0409   18  15   0   3   0
+  MAT T1.ORACLE.D   6 8    3   0   0   4    +2.9432   +0.0000   +0.0000   +2.3751   18   7   0  11   0
+  MAT T1.ORACLE.D   7 1    9   0   0   8    +4.0141   +0.0000   +0.0000   +3.4487   17  17   0   0   0
+  MAT T1.ORACLE.D   7 2    9   0   0   9    +2.0954   +0.0000   +0.0000   +6.3488   18  18   0   0   0
+  MAT T1.ORACLE.D   7 3    8   0   0   9    +1.7096   +0.0000   +0.0000   +6.8905   17  17   0   0   0
+  MAT T1.ORACLE.D   7 4    9   0   0   9    +4.2103   +0.0000   +0.0000   +5.8603   18  18   0   0   0
+  MAT T1.ORACLE.D   7 5    8   0   0   9    +2.7363   +0.0000   +0.0000   +5.8699   18  17   0   1   0
+  MAT T1.ORACLE.D   7 6    9   0   0   8    +0.9687   +0.0000   +0.0000   +4.9269   17  17   0   0   0
+  MAT T1.ORACLE.D   7 7    9   0   0   9    -0.1096   +0.0000   +0.0000   +4.6077   18  18   0   0   0
+  MAT T1.ORACLE.D   7 8    3   0   0   3    +1.7044   +0.0000   +0.0000   +1.0079   18   6   0  12   0
+  MAT T1.ORACLE.D   8 1    9   0   0   8    +5.1899   +0.0000   +0.0000   +5.5150   17  17   0   0   0
+  MAT T1.ORACLE.D   8 2    9   0   0   9    +3.7872   +0.0000   +0.0000   +8.0833   18  18   0   0   0
+  MAT T1.ORACLE.D   8 3    4   0   0   9    +1.8812   +0.0000   +0.0000   +5.9399   17  13   0   4   0
+  MAT T1.ORACLE.D   8 4    2   0   0   9    +0.8882   +0.0000   +0.0000   +5.2897   18  11   0   7   0
+  MAT T1.ORACLE.D   8 5    9   0   0   2    +3.1920   +0.0000   +0.0000   +0.8770   18  11   0   7   0
+  MAT T1.ORACLE.D   8 6    9   0   0   8    +0.0202   +0.0000   +0.0000   +3.6750   17  17   0   0   0
+  MAT T1.ORACLE.D   8 7    9   0   0   9    -1.8649   +0.0000   +0.0000   +7.8543   18  18   0   0   0
+  MAT T1.ORACLE.D   8 8    1   0   0   2    -0.5372   +0.0000   +0.0000   +1.4570   18   3   0  15   0
+  MAT T1.ORACLE.D   9 1    9   0   0   8    +4.7997   +0.0000   +0.0000   +5.5661   17  17   0   0   0
+  MAT T1.ORACLE.D   9 2    9   0   0   9    +2.5542   +0.0000   +0.0000   +3.3817   18  18   0   0   0
+  MAT T1.ORACLE.D   9 3    8   0   0   6    +2.6512   +0.0000   +0.0000   +1.3243   17  14   0   3   0
+  MAT T1.ORACLE.D   9 4    9   0   0   5    +5.4346   +0.0000   +0.0000   +2.2207   18  14   0   4   0
+  MAT T1.ORACLE.D   9 5    9   0   0   3    +4.1618   +0.0000   +0.0000   +2.8505   18  12   0   6   0
+  MAT T1.ORACLE.D   9 6    9   0   0   0    +9.0609   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.ORACLE.D   9 7    9   0   0   0    +7.7653   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D   9 8    5   0   0   0    +5.5817   +0.0000   +0.0000   +0.0000   18   5   0  13   0
+  MAT T1.ORACLE.D  10 1    9   0   0   8    +4.6127   +0.0000   +0.0000   +4.1066   17  17   0   0   0
+  MAT T1.ORACLE.D  10 2    9   0   0   9    +5.5168   +0.0000   +0.0000   +5.9291   18  18   0   0   0
+  MAT T1.ORACLE.D  10 3    7   0   0   9    +2.6654   +0.0000   +0.0000   +5.0821   17  16   0   1   0
+  MAT T1.ORACLE.D  10 4    2   0   0   9    +0.6375   +0.0000   +0.0000   +6.9347   18  11   0   7   0
+  MAT T1.ORACLE.D  10 5    3   0   0   9    +1.5636   +0.0000   +0.0000   +5.8802   18  12   0   6   0
+  MAT T1.ORACLE.D  10 6    4   0   0   8    +1.8243   +0.0000   +0.0000   +4.4010   17  12   0   5   0
+  MAT T1.ORACLE.D  10 7    2   0   0   9    +1.1686   +0.0000   +0.0000   +4.3139   18  11   0   7   0
+  MAT T1.ORACLE.D  10 8    1   0   0   2    +0.7686   +0.0000   +0.0000   +1.5362   18   3   0  15   0
+  MAT T1.ORACLE.D  11 1    9   0   0   8    +2.0595   +0.0000   +0.0000   +4.1683   17  17   0   0   0
+  MAT T1.ORACLE.D  11 2    9   0   0   9    +3.7769   +0.0000   +0.0000   +5.2116   18  18   0   0   0
+  MAT T1.ORACLE.D  11 3    8   0   0   9    +3.6539   +0.0000   +0.0000   +5.4429   17  17   0   0   0
+  MAT T1.ORACLE.D  11 4    9   0   0   8    +3.1951   +0.0000   +0.0000   +2.4151   18  17   0   1   0
+  MAT T1.ORACLE.D  11 5    9   0   0   3    +1.2595   +0.0000   +0.0000   +0.3791   18  12   0   6   0
+  MAT T1.ORACLE.D  11 6    9   0   0   0    +2.5682   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.ORACLE.D  11 7    9   0   0   0    +1.9026   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  11 8    5   0   0   0    +0.7883   +0.0000   +0.0000   +0.0000   18   5   0  13   0
+  MAT T1.ORACLE.D  12 1    9   0   0   8    +4.3170   +0.0000   +0.0000   +2.9553   17  17   0   0   0
+  MAT T1.ORACLE.D  12 2    9   0   0   9    +9.1521   +0.0000   +0.0000   +5.3078   18  18   0   0   0
+  MAT T1.ORACLE.D  12 3    8   0   0   9    +6.6290   +0.0000   +0.0000   +5.4362   17  17   0   0   0
+  MAT T1.ORACLE.D  12 4    9   0   0   9    +4.1604   +0.0000   +0.0000   +1.3596   18  18   0   0   0
+  MAT T1.ORACLE.D  12 5    9   0   0   9    -0.5787   +0.0000   +0.0000   +1.5803   18  18   0   0   0
+  MAT T1.ORACLE.D  12 6    9   0   0   4    +4.8946   +0.0000   +0.0000   +0.9277   17  13   0   4   0
+  MAT T1.ORACLE.D  12 7    9   0   0   1    +4.6570   +0.0000   +0.0000   +0.2532   18  10   0   8   0
+  MAT T1.ORACLE.D  12 8    3   0   0   1    +1.2346   +0.0000   +0.0000   +0.2184   18   4   0  14   0
+  MAT T1.ORACLE.D  13 1    9   0   0   8    +2.5071   +0.0000   +0.0000   +5.8626   17  17   0   0   0
+  MAT T1.ORACLE.D  13 2    9   0   0   9    +0.3906   +0.0000   +0.0000   +4.6584   18  18   0   0   0
+  MAT T1.ORACLE.D  13 3    8   0   0   9    +5.3677   +0.0000   +0.0000   +4.9990   17  17   0   0   0
+  MAT T1.ORACLE.D  13 4    9   0   0   9    +7.7371   +0.0000   +0.0000   +6.0833   18  18   0   0   0
+  MAT T1.ORACLE.D  13 5    9   0   0   9    +8.3771   +0.0000   +0.0000   +5.5061   18  18   0   0   0
+  MAT T1.ORACLE.D  13 6    9   0   0   8    +8.3108   +0.0000   +0.0000   +5.6832   17  17   0   0   0
+  MAT T1.ORACLE.D  13 7    9   0   0   5    +5.6145   +0.0000   +0.0000   +3.3236   18  14   0   4   0
+  MAT T1.ORACLE.D  13 8    3   0   0   0    +2.0556   +0.0000   +0.0000   +0.0000   18   3   0  15   0
+  MAT T1.ORACLE.D  14 1    9   0   0   8    +3.6152   +0.0000   +0.0000   +3.3497   17  17   0   0   0
+  MAT T1.ORACLE.D  14 2    9   0   0   9    +1.1922   +0.0000   +0.0000   +3.5416   18  18   0   0   0
+  MAT T1.ORACLE.D  14 3    8   0   0   9    +0.8598   +0.0000   +0.0000   +4.4158   17  17   0   0   0
+  MAT T1.ORACLE.D  14 4    9   0   0   9    +1.7819   +0.0000   +0.0000   +5.3628   18  18   0   0   0
+  MAT T1.ORACLE.D  14 5    9   0   0   8    +0.8890   +0.0000   +0.0000   +4.4027   18  17   0   1   0
+  MAT T1.ORACLE.D  14 6    9   0   0   6    +3.8042   +0.0000   +0.0000   +2.7848   17  15   0   2   0
+  MAT T1.ORACLE.D  14 7    9   0   0   9    +3.4035   +0.0000   +0.0000   +3.3749   18  18   0   0   0
+  MAT T1.ORACLE.D  14 8    2   0   0   2    +0.6621   +0.0000   +0.0000   +0.4304   18   4   0  14   0
+  MAT T1.ORACLE.D  15 1    9   0   0   8    +4.5307   +0.0000   +0.0000   +5.1976   17  17   0   0   0
+  MAT T1.ORACLE.D  15 2    9   0   0   9    +7.1550   +0.0000   +0.0000   +4.4815   18  18   0   0   0
+  MAT T1.ORACLE.D  15 3    8   0   0   9    +5.3659   +0.0000   +0.0000   +6.3207   17  17   0   0   0
+  MAT T1.ORACLE.D  15 4    9   0   0   9    +9.4609   +0.0000   +0.0000   +8.2260   18  18   0   0   0
+  MAT T1.ORACLE.D  15 5    9   0   0   9    +4.4255   +0.0000   +0.0000   +7.3713   18  18   0   0   0
+  MAT T1.ORACLE.D  15 6    9   0   0   8    -1.4395   +0.0000   +0.0000   +6.3422   17  17   0   0   0
+  MAT T1.ORACLE.D  15 7    9   0   0   9    +0.2406   +0.0000   +0.0000   +7.3850   18  18   0   0   0
+  MAT T1.ORACLE.D  15 8    1   0   0   1    +0.3307   +0.0000   +0.0000   +1.3681   18   2   0  16   0
+  MAT T1.ORACLE.D  16 1    9   0   0   8    +1.8753   +0.0000   +0.0000   +3.8692   17  17   0   0   0
+  MAT T1.ORACLE.D  16 2    9   0   0   9    +3.7448   +0.0000   +0.0000   +6.3783   18  18   0   0   0
+  MAT T1.ORACLE.D  16 3    8   0   0   9    +6.9167   +0.0000   +0.0000   +6.4750   17  17   0   0   0
+  MAT T1.ORACLE.D  16 4    9   0   0   4   +12.1804   +0.0000   +0.0000   +2.2223   18  13   0   5   0
+  MAT T1.ORACLE.D  16 5    9   0   0   1    +5.6374   +0.0000   +0.0000   +0.4443   18  10   0   8   0
+  MAT T1.ORACLE.D  16 6    9   0   0   0    +1.9275   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.ORACLE.D  16 7    9   0   0   0    +2.6542   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  16 8    6   0   0   0    +3.7467   +0.0000   +0.0000   +0.0000   18   6   0  12   0
+  MAT T1.ORACLE.D  17 1    9   0   0   8    +3.6254   +0.0000   +0.0000   +2.2823   17  17   0   0   0
+  MAT T1.ORACLE.D  17 2    9   0   0   6    +4.4839   +0.0000   +0.0000   +0.5881   18  15   0   3   0
+  MAT T1.ORACLE.D  17 3    8   0   0   1    +6.6089   +0.0000   +0.0000   -0.0026   17   9   0   8   0
+  MAT T1.ORACLE.D  17 4    9   0   0   3    +6.7825   +0.0000   +0.0000   -0.7859   18  12   0   6   0
+  MAT T1.ORACLE.D  17 5    5   0   0   4    +3.1358   +0.0000   +0.0000   -1.6336   18   9   0   9   0
+  MAT T1.ORACLE.D  17 6    9   0   0   1    +6.7024   +0.0000   +0.0000   -0.2590   17  10   0   7   0
+  MAT T1.ORACLE.D  17 7    9   0   0   0    +6.2038   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  17 8    5   0   0   2    +1.7723   +0.0000   +0.0000   -0.5014   18   7   0  11   0
+  MAT T1.ORACLE.D  18 1    9   0   0   8    +5.0921   +0.0000   +0.0000   +3.5886   17  17   0   0   0
+  MAT T1.ORACLE.D  18 2    9   0   0   9    +4.7384   +0.0000   +0.0000   +5.1260   18  18   0   0   0
+  MAT T1.ORACLE.D  18 3    8   0   0   9    +6.8350   +0.0000   +0.0000   +6.8805   17  17   0   0   0
+  MAT T1.ORACLE.D  18 4    9   0   0   9    +8.1939   +0.0000   +0.0000   +2.9770   18  18   0   0   0
+  MAT T1.ORACLE.D  18 5    9   0   0   9    +4.0623   +0.0000   +0.0000   +7.3548   18  18   0   0   0
+  MAT T1.ORACLE.D  18 6    9   0   0   8    +8.2897   +0.0000   +0.0000   +5.7089   17  17   0   0   0
+  MAT T1.ORACLE.D  18 7    9   0   0   7    +7.0661   +0.0000   +0.0000   +5.1828   18  16   0   2   0
+  MAT T1.ORACLE.D  18 8    4   0   0   0    +2.7527   +0.0000   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.ORACLE.D  19 1    9   0   0   8    +4.6564   +0.0000   +0.0000   +2.3249   17  17   0   0   0
+  MAT T1.ORACLE.D  19 2    9   0   0   9    +7.5206   +0.0000   +0.0000   +3.7315   18  18   0   0   0
+  MAT T1.ORACLE.D  19 3    8   0   0   9    +4.4424   +0.0000   +0.0000   -0.7831   17  17   0   0   0
+  MAT T1.ORACLE.D  19 4    9   0   0   9    +4.6004   +0.0000   +0.0000   -0.4150   18  18   0   0   0
+  MAT T1.ORACLE.D  19 5    9   0   0   4    +3.2960   +0.0000   +0.0000   +1.4425   18  13   0   5   0
+  MAT T1.ORACLE.D  19 6    6   0   0   1    +1.9607   +0.0000   +0.0000   +0.2074   17   7   0  10   0
+  MAT T1.ORACLE.D  19 7    8   0   0   7    +0.7754   +0.0000   +0.0000   +0.0256   18  15   0   3   0
+  MAT T1.ORACLE.D  19 8    3   0   0   4    +0.3019   +0.0000   +0.0000   +1.5579   18   7   0  11   0
+  MAT T1.ORACLE.D  20 1    9   0   0   8    +5.8208   +0.0000   +0.0000   +5.1598   17  17   0   0   0
+  MAT T1.ORACLE.D  20 2    9   0   0   5    +5.9131   +0.0000   +0.0000   +2.9032   18  14   0   4   0
+  MAT T1.ORACLE.D  20 3    8   0   0   8    +7.2743   +0.0000   +0.0000   +2.4263   17  16   0   1   0
+  MAT T1.ORACLE.D  20 4    7   0   0   7    +8.9699   +0.0000   +0.0000   +1.2804   18  14   0   4   0
+  MAT T1.ORACLE.D  20 5    2   0   0   6    +2.3029   +0.0000   +0.0000   +0.0656   18   8   0  10   0
+  MAT T1.ORACLE.D  20 6    1   0   0   3    +1.2487   +0.0000   +0.0000   -2.2240   17   4   0  13   0
+  MAT T1.ORACLE.D  20 7    6   0   0   3    +7.2592   +0.0000   +0.0000   -1.0977   18   9   0   9   0
+  MAT T1.ORACLE.D  20 8    7   0   0   0    +8.5613   +0.0000   +0.0000   +0.0000   18   7   0  11   0
+  MAT T1.ORACLE.D  21 1    9   0   0   8    +5.3724   +0.0000   +0.0000   +3.1907   17  17   0   0   0
+  MAT T1.ORACLE.D  21 2    9   0   0   9    +7.6439   +0.0000   +0.0000   +2.4343   18  18   0   0   0
+  MAT T1.ORACLE.D  21 3    8   0   0   9    +8.2566   +0.0000   +0.0000   +4.1605   17  17   0   0   0
+  MAT T1.ORACLE.D  21 4    9   0   0   9    +9.3615   +0.0000   +0.0000   +5.1647   18  18   0   0   0
+  MAT T1.ORACLE.D  21 5    9   0   0   9    +9.9663   +0.0000   +0.0000   +4.7217   18  18   0   0   0
+  MAT T1.ORACLE.D  21 6    9   0   0   8    +9.1450   +0.0000   +0.0000   +4.6613   17  17   0   0   0
+  MAT T1.ORACLE.D  21 7    9   0   0   9    +7.9818   +0.0000   +0.0000   +6.3339   18  18   0   0   0
+  MAT T1.ORACLE.D  21 8    2   0   0   3    +1.8740   +0.0000   +0.0000   +1.6834   18   5   0  13   0
+  MAT T1.ORACLE.D  22 1    9   0   0   8    +6.3455   +0.0000   +0.0000   +2.8770   17  17   0   0   0
+  MAT T1.ORACLE.D  22 2    9   0   0   9    +4.9947   +0.0000   +0.0000   +6.0763   18  18   0   0   0
+  MAT T1.ORACLE.D  22 3    8   0   0   9    +6.1069   +0.0000   +0.0000   +2.8749   17  17   0   0   0
+  MAT T1.ORACLE.D  22 4    2   0   0   6    +1.0247   +0.0000   +0.0000   +1.8108   18   8   0  10   0
+  MAT T1.ORACLE.D  22 5    3   0   0   5    +1.5362   +0.0000   +0.0000   +0.6505   18   8   0  10   0
+  MAT T1.ORACLE.D  22 6    4   0   0   1    +1.8110   +0.0000   +0.0000   +0.0979   17   5   0  12   0
+  MAT T1.ORACLE.D  22 7    1   0   0   6    +0.4899   +0.0000   +0.0000   +1.1297   18   7   0  11   0
+  MAT T1.ORACLE.D  22 8    2   0   0   2    +0.8112   +0.0000   +0.0000   +0.2950   18   4   0  14   0
+  MAT T1.ORACLE.D  23 1    9   0   0   8    +5.4833   +0.0000   +0.0000   +5.4364   17  17   0   0   0
+  MAT T1.ORACLE.D  23 2    9   0   0   9    +6.8374   +0.0000   +0.0000   +5.6883   18  18   0   0   0
+  MAT T1.ORACLE.D  23 3    8   0   0   9    +8.3413   +0.0000   +0.0000   +3.5067   17  17   0   0   0
+  MAT T1.ORACLE.D  23 4    9   0   0   9    +6.3662   +0.0000   +0.0000   +4.5748   18  18   0   0   0
+  MAT T1.ORACLE.D  23 5    9   0   0   9    +8.3408   +0.0000   +0.0000   +7.6577   18  18   0   0   0
+  MAT T1.ORACLE.D  23 6    8   0   0   8    +9.4300   +0.0000   +0.0000   +7.5182   17  16   0   1   0
+  MAT T1.ORACLE.D  23 7    9   0   0   8   +10.2069   +0.0000   +0.0000   +6.7663   18  17   0   1   0
+  MAT T1.ORACLE.D  23 8    4   0   0   4    +3.4766   +0.0000   +0.0000   +1.6698   18   8   0  10   0
+  MAT T1.ORACLE.D  24 1    9   0   0   8    +3.2229   +0.0000   +0.0000   +2.9690   17  17   0   0   0
+  MAT T1.ORACLE.D  24 2    8   0   0   8    +5.4436   +0.0000   +0.0000   +1.7454   18  16   0   2   0
+  MAT T1.ORACLE.D  24 3    2   0   0   3    +2.1979   +0.0000   +0.0000   +0.5725   17   5   0  12   0
+  MAT T1.ORACLE.D  24 4    1   0   0   7    +1.0756   +0.0000   +0.0000   +0.6904   18   8   0  10   0
+  MAT T1.ORACLE.D  24 5    1   0   0   9    +1.1645   +0.0000   +0.0000   +1.3835   18  10   0   8   0
+  MAT T1.ORACLE.D  24 6    1   0   0   3    +1.0180   +0.0000   +0.0000   +1.0808   17   4   0  13   0
+  MAT T1.ORACLE.D  24 7    2   0   0   2    +1.5861   +0.0000   +0.0000   +0.6862   18   4   0  14   0
+  MAT T1.ORACLE.D  24 8    1   0   0   2    +0.8349   +0.0000   +0.0000   +0.4291   18   3   0  15   0
+  MAT T1.ORACLE.D  25 1    9   0   0   8    +4.6025   +0.0000   +0.0000   +3.9758   17  17   0   0   0
+  MAT T1.ORACLE.D  25 2    9   0   0   9    +4.7552   +0.0000   +0.0000   +3.9220   18  18   0   0   0
+  MAT T1.ORACLE.D  25 3    8   0   0   9    +5.1731   +0.0000   +0.0000   +6.1844   17  17   0   0   0
+  MAT T1.ORACLE.D  25 4    9   0   0   9    +8.3473   +0.0000   +0.0000   +7.8947   18  18   0   0   0
+  MAT T1.ORACLE.D  25 5    9   0   0   9    +5.7985   +0.0000   +0.0000   +4.0227   18  18   0   0   0
+  MAT T1.ORACLE.D  25 6    9   0   0   8    +7.5088   +0.0000   +0.0000   +3.1613   17  17   0   0   0
+  MAT T1.ORACLE.D  25 7    6   0   0   9    +5.4127   +0.0000   +0.0000   +3.5988   18  15   0   3   0
+  MAT T1.ORACLE.D  25 8    1   0   0   3    +0.8880   +0.0000   +0.0000   +2.8061   18   4   0  14   0
+  MAT T1.ORACLE.D  26 1    9   0   0   8    +5.0811   +0.0000   +0.0000   +4.2849   17  17   0   0   0
+  MAT T1.ORACLE.D  26 2    9   0   0   9    +2.1344   +0.0000   +0.0000   +5.5889   18  18   0   0   0
+  MAT T1.ORACLE.D  26 3    8   0   0   9    +1.5141   +0.0000   +0.0000   +5.0907   17  17   0   0   0
+  MAT T1.ORACLE.D  26 4    9   0   0   9    +1.8359   +0.0000   +0.0000   +5.9078   18  18   0   0   0
+  MAT T1.ORACLE.D  26 5    8   0   0   9    +2.3566   +0.0000   +0.0000   +4.0432   18  17   0   1   0
+  MAT T1.ORACLE.D  26 6    3   0   0   8    +1.8467   +0.0000   +0.0000   +4.2679   17  11   0   6   0
+  MAT T1.ORACLE.D  26 7    7   0   0   6    +4.8562   +0.0000   +0.0000   +2.7388   18  13   0   5   0
+  MAT T1.ORACLE.D  26 8    0   0   0   0    +0.0000   +0.0000   +0.0000   +0.0000   18   0   0  18   0
+  MAT T1.ORACLE.D  27 1    9   0   0   8    +7.5832   +0.0000   +0.0000   +4.6601   17  17   0   0   0
+  MAT T1.ORACLE.D  27 2    5   0   0   9    +2.8300   +0.0000   +0.0000   +3.3297   18  14   0   4   0
+  MAT T1.ORACLE.D  27 3    0   0   0   9    +0.0000   +0.0000   +0.0000   +2.5741   17   9   0   8   0
+  MAT T1.ORACLE.D  27 4    0   0   0   8    +0.0000   +0.0000   +0.0000   +2.6848   18   8   0  10   0
+  MAT T1.ORACLE.D  27 5    1   0   0   9    +0.9824   +0.0000   +0.0000   +3.4229   18  10   0   8   0
+  MAT T1.ORACLE.D  27 6    0   0   0   8    +0.0000   +0.0000   +0.0000   +2.2846   17   8   0   9   0
+  MAT T1.ORACLE.D  27 7    0   0   0   9    +0.0000   +0.0000   +0.0000   +3.9776   18   9   0   9   0
+  MAT T1.ORACLE.D  27 8    0   0   0   5    +0.0000   +0.0000   +0.0000   +4.9958   18   5   0  13   0
+  MAT T1.ORACLE.D  28 1    9   0   0   8    +5.1721   +0.0000   +0.0000   +3.6679   17  17   0   0   0
+  MAT T1.ORACLE.D  28 2    9   0   0   9    +3.3023   +0.0000   +0.0000   +5.5353   18  18   0   0   0
+  MAT T1.ORACLE.D  28 3    8   0   0   9    +1.4008   +0.0000   +0.0000   +4.2187   17  17   0   0   0
+  MAT T1.ORACLE.D  28 4    9   0   0   9    +1.6668   +0.0000   +0.0000   +3.3081   18  18   0   0   0
+  MAT T1.ORACLE.D  28 5    9   0   0   5    -3.1880   +0.0000   +0.0000   +1.9224   18  14   0   4   0
+  MAT T1.ORACLE.D  28 6    9   0   0   2    -1.9790   +0.0000   +0.0000   +0.2316   17  11   0   6   0
+  MAT T1.ORACLE.D  28 7    9   0   0   0    +2.3163   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  28 8    4   0   0   0    +3.0229   +0.0000   +0.0000   +0.0000   18   4   0  14   0
+  MAT T1.ORACLE.D  29 1    9   0   0   8    +7.3022   +0.0000   +0.0000   +4.3814   17  17   0   0   0
+  MAT T1.ORACLE.D  29 2    9   0   0   9    +6.4985   +0.0000   +0.0000   +8.8073   18  18   0   0   0
+  MAT T1.ORACLE.D  29 3    8   0   0   9    +3.4008   +0.0000   +0.0000  +10.0329   17  17   0   0   0
+  MAT T1.ORACLE.D  29 4    9   0   0   8    +4.8146   +0.0000   +0.0000   +6.9889   18  17   0   1   0
+  MAT T1.ORACLE.D  29 5    9   0   0   9    +6.7809   +0.0000   +0.0000   +8.0825   18  18   0   0   0
+  MAT T1.ORACLE.D  29 6    8   0   0   8    +6.0948   +0.0000   +0.0000   +3.3663   17  16   0   1   0
+  MAT T1.ORACLE.D  29 7    9   0   0   9    +5.6289   +0.0000   +0.0000   +5.9779   18  18   0   0   0
+  MAT T1.ORACLE.D  29 8    4   0   0   5    +2.6507   +0.0000   +0.0000   +3.3888   18   9   0   9   0
+  MAT T1.ORACLE.D  30 1    9   0   0   8    +7.1236   +0.0000   +0.0000   +5.7975   17  17   0   0   0
+  MAT T1.ORACLE.D  30 2    9   0   0   9    +4.4717   +0.0000   +0.0000   +6.8975   18  18   0   0   0
+  MAT T1.ORACLE.D  30 3    8   0   0   9    +7.3976   +0.0000   +0.0000   +4.3266   17  17   0   0   0
+  MAT T1.ORACLE.D  30 4    9   0   0   9    +6.9407   +0.0000   +0.0000   +3.9809   18  18   0   0   0
+  MAT T1.ORACLE.D  30 5    9   0   0   9    +5.5121   +0.0000   +0.0000   +4.5462   18  18   0   0   0
+  MAT T1.ORACLE.D  30 6    9   0   0   8    +3.7098   +0.0000   +0.0000   +1.2357   17  17   0   0   0
+  MAT T1.ORACLE.D  30 7    9   0   0   9    +5.9684   +0.0000   +0.0000   +2.4562   18  18   0   0   0
+  MAT T1.ORACLE.D  30 8    3   0   0   4    +1.7929   +0.0000   +0.0000   -0.1690   18   7   0  11   0
+  MAT T1.ORACLE.D  31 1    9   0   0   8    +5.6818   +0.0000   +0.0000   +3.0554   17  17   0   0   0
+  MAT T1.ORACLE.D  31 2    9   0   0   9    +1.2304   +0.0000   +0.0000   -1.7822   18  18   0   0   0
+  MAT T1.ORACLE.D  31 3    8   0   0   9    +1.2902   +0.0000   +0.0000   -1.8114   17  17   0   0   0
+  MAT T1.ORACLE.D  31 4    9   0   0   9    +4.8844   +0.0000   +0.0000   -4.9720   18  18   0   0   0
+  MAT T1.ORACLE.D  31 5    9   0   0   9    +6.9605   +0.0000   +0.0000   -3.6669   18  18   0   0   0
+  MAT T1.ORACLE.D  31 6    7   0   0   8    +3.5884   +0.0000   +0.0000   -4.2163   17  15   0   2   0
+  MAT T1.ORACLE.D  31 7    2   0   0   9    +0.9943   +0.0000   +0.0000   +1.3475   18  11   0   7   0
+  MAT T1.ORACLE.D  31 8    0   0   0   3    +0.0000   +0.0000   +0.0000   +0.5587   18   3   0  15   0
+  MAT T1.ORACLE.D  32 1    9   0   0   8    +4.4555   +0.0000   +0.0000   +6.3482   17  17   0   0   0
+  MAT T1.ORACLE.D  32 2    9   0   0   9    +6.6918   +0.0000   +0.0000  +10.8457   18  18   0   0   0
+  MAT T1.ORACLE.D  32 3    7   0   0   9    +4.3131   +0.0000   +0.0000   +7.4159   17  16   0   1   0
+  MAT T1.ORACLE.D  32 4    9   0   0   9    +6.6771   +0.0000   +0.0000   +7.6736   18  18   0   0   0
+  MAT T1.ORACLE.D  32 5    9   0   0   9    +7.7912   +0.0000   +0.0000   +6.8611   18  18   0   0   0
+  MAT T1.ORACLE.D  32 6    8   0   0   8    +7.1338   +0.0000   +0.0000   +5.7510   17  16   0   1   0
+  MAT T1.ORACLE.D  32 7    4   0   0   9    +3.6854   +0.0000   +0.0000   +5.9360   18  13   0   5   0
+  MAT T1.ORACLE.D  32 8    3   0   0   4    +2.5580   +0.0000   +0.0000   +2.2801   18   7   0  11   0
+  MAT T1.ORACLE.D  33 1    9   0   0   8    +4.1748   +0.0000   +0.0000   +6.1552   17  17   0   0   0
+  MAT T1.ORACLE.D  33 2    9   0   0   9    +1.1283   +0.0000   +0.0000   +7.6883   18  18   0   0   0
+  MAT T1.ORACLE.D  33 3    8   0   0   4    +5.7370   +0.0000   +0.0000   +3.6317   17  12   0   5   0
+  MAT T1.ORACLE.D  33 4    9   0   0   0    +7.3914   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  33 5    9   0   0   0    +8.6792   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE.D  33 6    9   0   0   8    +7.8681   +0.0000   +0.0000   +5.9731   17  17   0   0   0
+  MAT T1.ORACLE.D  33 7    9   0   0   9    +8.4187   +0.0000   +0.0000   +2.0448   18  18   0   0   0
+  MAT T1.ORACLE.D  33 8    3   0   0   4    +2.3391   +0.0000   +0.0000   +0.0280   18   7   0  11   0
+  MAT T1.ORACLE.D  34 1    9   0   0   8    +4.9228   +0.0000   +0.0000   +4.8822   17  17   0   0   0
+  MAT T1.ORACLE.D  34 2    9   0   0   9    +5.0497   +0.0000   +0.0000   +3.8879   18  18   0   0   0
+  MAT T1.ORACLE.D  34 3    8   0   0   9    +0.1226   +0.0000   +0.0000   +6.2373   17  17   0   0   0
+  MAT T1.ORACLE.D  34 4    9   0   0   9    +1.9426   +0.0000   +0.0000   +6.1311   18  18   0   0   0
+  MAT T1.ORACLE.D  34 5    9   0   0   9    +3.4200   +0.0000   +0.0000   +8.3677   18  18   0   0   0
+  MAT T1.ORACLE.D  34 6    9   0   0   8    +3.5970   +0.0000   +0.0000   +6.2730   17  17   0   0   0
+  MAT T1.ORACLE.D  34 7    9   0   0   9    -5.4339   +0.0000   +0.0000   +5.4627   18  18   0   0   0
+  MAT T1.ORACLE.D  34 8    0   0   0   1    +0.0000   +0.0000   +0.0000   +0.4039   18   1   0  17   0
+  MAT T1.ORACLE.D  35 1    9   0   0   8    +3.4440   +0.0000   +0.0000   +3.9190   17  17   0   0   0
+  MAT T1.ORACLE.D  35 2    9   0   0   9    +0.2565   +0.0000   +0.0000   +5.9485   18  18   0   0   0
+  MAT T1.ORACLE.D  35 3    8   0   0   9    -2.6607   +0.0000   +0.0000   +2.4657   17  17   0   0   0
+  MAT T1.ORACLE.D  35 4    4   0   0   9    -1.2990   +0.0000   +0.0000   +4.1709   18  13   0   5   0
+  MAT T1.ORACLE.D  35 5    1   0   0   9    -0.5889   +0.0000   +0.0000   +2.7619   18  10   0   8   0
+  MAT T1.ORACLE.D  35 6    1   0   0   8    -0.3711   +0.0000   +0.0000   +2.8758   17   9   0   8   0
+  MAT T1.ORACLE.D  35 7    7   0   0   9    -0.8553   +0.0000   +0.0000   +1.7373   18  16   0   2   0
+  MAT T1.ORACLE.D  35 8    0   0   0   2    +0.0000   +0.0000   +0.0000   -0.0609   18   2   0  16   0
+  MAT T1.ORACLE     0 1    9   0   0   8    +7.0965   +0.0000   +0.0000   +3.4950   17  17   0   0   0
+  MAT T1.ORACLE     0 2    9   0   0   9    +9.0478   +0.0000   +0.0000   +2.3287   18  18   0   0   0
+  MAT T1.ORACLE     0 3    8   0   0   9    +7.8597   +0.0000   +0.0000   +2.6206   17  17   0   0   0
+  MAT T1.ORACLE     0 4    9   0   0   9   +10.4957   +0.0000   +0.0000   +4.0560   18  18   0   0   0
+  MAT T1.ORACLE     0 5    8   0   0   9    +9.3645   +0.0000   +0.0000   +4.5838   18  17   0   1   0
+  MAT T1.ORACLE     0 6    9   0   0   8    +9.5105   +0.0000   +0.0000   +2.4145   17  17   0   0   0
+  MAT T1.ORACLE     0 7    9   0   0   9    +9.6790   +0.0000   +0.0000   +1.0588   18  18   0   0   0
+  MAT T1.ORACLE     0 8    1   0   0   1    +1.2056   +0.0000   +0.0000   +0.0622   18   2   0  16   0
+  MAT T1.ORACLE     1 1    9   0   0   8    +3.0247   +0.0000   +0.0000   +4.2942   17  17   0   0   0
+  MAT T1.ORACLE     1 2    9   0   0   9    -0.3078   +0.0000   +0.0000   +4.2170   18  18   0   0   0
+  MAT T1.ORACLE     1 3    8   0   0   9    +0.5192   +0.0000   +0.0000   +9.1921   17  17   0   0   0
+  MAT T1.ORACLE     1 4    9   0   0   9    +2.1826   +0.0000   +0.0000   +4.5696   18  18   0   0   0
+  MAT T1.ORACLE     1 5    9   0   0   9    +5.3357   +0.0000   +0.0000   +3.6541   18  18   0   0   0
+  MAT T1.ORACLE     1 6    8   0   0   7    +5.5853   +0.0000   +0.0000   +0.9182   17  15   0   2   0
+  MAT T1.ORACLE     1 7    7   0   0   1    +4.8580   +0.0000   +0.0000   +0.1065   18   8   0  10   0
+  MAT T1.ORACLE     1 8    2   0   0   0    +1.2264   +0.0000   +0.0000   +0.0000   18   2   0  16   0
+  MAT T1.ORACLE     2 1    9   0   0   8    +6.4213   +0.0000   +0.0000   +3.3576   17  17   0   0   0
+  MAT T1.ORACLE     2 2    9   0   0   9    +7.2562   +0.0000   +0.0000   +1.5384   18  18   0   0   0
+  MAT T1.ORACLE     2 3    8   0   0   6    +5.3453   +0.0000   +0.0000   +2.5959   17  14   0   3   0
+  MAT T1.ORACLE     2 4    9   0   0   6    +6.3142   +0.0000   +0.0000   +1.6988   18  15   0   3   0
+  MAT T1.ORACLE     2 5    9   0   0   8    +5.1570   +0.0000   +0.0000   +3.1562   18  17   0   1   0
+  MAT T1.ORACLE     2 6    9   0   0   8    +3.5443   +0.0000   +0.0000   +5.8580   17  17   0   0   0
+  MAT T1.ORACLE     2 7    9   0   0   8    +7.2362   +0.0000   +0.0000   +5.4567   18  17   0   1   0
+  MAT T1.ORACLE     2 8    2   0   0   0    +1.9929   +0.0000   +0.0000   +0.0000   18   2   0  16   0
+  MAT T1.ORACLE     3 1    9   0   0   8    +5.0665   +0.0000   +0.0000   +2.1354   17  17   0   0   0
+  MAT T1.ORACLE     3 2    9   0   0   9    +6.8710   +0.0000   +0.0000   +4.4897   18  18   0   0   0
+  MAT T1.ORACLE     3 3    8   0   0   9    +9.4817   +0.0000   +0.0000   +4.3531   17  17   0   0   0
+  MAT T1.ORACLE     3 4    9   0   0   9    +9.5796   +0.0000   +0.0000   +3.0221   18  18   0   0   0
+  MAT T1.ORACLE     3 5    9   0   0   9    +7.3511   +0.0000   +0.0000   +1.9693   18  18   0   0   0
+  MAT T1.ORACLE     3 6    9   0   0   7    +7.4557   +0.0000   +0.0000   +2.8090   17  16   0   1   0
+  MAT T1.ORACLE     3 7    9   0   0   9    +4.3029   +0.0000   +0.0000   +2.9745   18  18   0   0   0
+  MAT T1.ORACLE     3 8    2   0   0   2    +1.7950   +0.0000   +0.0000   +0.5147   18   4   0  14   0
+  MAT T1.ORACLE     4 1    9   0   0   8    +5.4665   +0.0000   +0.0000   +3.4206   17  17   0   0   0
+  MAT T1.ORACLE     4 2    9   0   0   9    -1.7752   +0.0000   +0.0000   +1.8122   18  18   0   0   0
+  MAT T1.ORACLE     4 3    8   0   0   9    -1.1276   +0.0000   +0.0000   +4.8771   17  17   0   0   0
+  MAT T1.ORACLE     4 4    9   0   0   9    +2.7316   +0.0000   +0.0000   +2.1081   18  18   0   0   0
+  MAT T1.ORACLE     4 5    4   0   0   9    +1.0875   +0.0000   +0.0000   +3.0227   18  13   0   5   0
+  MAT T1.ORACLE     4 6    1   0   0   8    +0.7179   +0.0000   +0.0000   +2.6114   17   9   0   8   0
+  MAT T1.ORACLE     4 7    3   0   0   9    +2.1429   +0.0000   +0.0000   +2.0692   18  12   0   6   0
+  MAT T1.ORACLE     4 8    1   0   0   1    +0.4762   +0.0000   +0.0000   -0.1585   18   2   0  16   0
+  MAT T1.ORACLE     5 1    9   0   0   8    +6.1952   +0.0000   +0.0000   +4.1833   17  17   0   0   0
+  MAT T1.ORACLE     5 2    9   0   0   9    +5.0148   +0.0000   +0.0000   +2.8629   18  18   0   0   0
+  MAT T1.ORACLE     5 3    8   0   0   9    +4.9478   +0.0000   +0.0000   +8.9895   17  17   0   0   0
+  MAT T1.ORACLE     5 4    9   0   0   9    +7.0361   +0.0000   +0.0000   +8.0054   18  18   0   0   0
+  MAT T1.ORACLE     5 5    9   0   0   9    +5.7061   +0.0000   +0.0000   +3.6904   18  18   0   0   0
+  MAT T1.ORACLE     5 6    7   0   0   8    +3.4330   +0.0000   +0.0000   +1.6228   17  15   0   2   0
+  MAT T1.ORACLE     5 7    3   0   0   9    +0.4964   +0.0000   +0.0000   +2.6069   18  12   0   6   0
+  MAT T1.ORACLE     5 8    1   0   0   2    +0.2444   +0.0000   +0.0000   +0.1046   18   3   0  15   0
+  MAT T1.ORACLE     6 1    9   0   0   8    +5.0147   +0.0000   +0.0000   +1.4332   17  17   0   0   0
+  MAT T1.ORACLE     6 2    9   0   0   8    +6.9980   +0.0000   +0.0000   +5.8216   18  17   0   1   0
+  MAT T1.ORACLE     6 3    8   0   0   3    +6.7039   +0.0000   +0.0000   +2.3645   17  11   0   6   0
+  MAT T1.ORACLE     6 4    9   0   0   0    +5.4917   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE     6 5    9   0   0   0    +6.3672   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE     6 6    9   0   0   0    +6.4844   +0.0000   +0.0000   +0.0000   17   9   0   8   0
+  MAT T1.ORACLE     6 7    9   0   0   0    +6.9275   +0.0000   +0.0000   +0.0000   18   9   0   9   0
+  MAT T1.ORACLE     6 8    2   0   0   0    +0.6154   +0.0000   +0.0000   +0.0000   18   2   0  16   0
+  MAT T1.ORACLE     7 1    9   0   0   8    +7.0572   +0.0000   +0.0000   +1.8813   17  17   0   0   0
+  MAT T1.ORACLE     7 2    9   0   0   9    +7.9267   +0.0000   +0.0000   +3.2565   18  18   0   0   0
+  MAT T1.ORACLE     7 3    8   0   0   9    +3.4784   +0.0000   +0.0000   +3.1547   17  17   0   0   0
+  MAT T1.ORACLE     7 4    9   0   0   9    +6.1464   +0.0000   +0.0000   +3.6762   18  18   0   0   0
+  MAT T1.ORACLE     7 5    5   0   0   9    +3.5831   +0.0000   +0.0000   +2.5628   18  14   0   4   0
+  MAT T1.ORACLE     7 6    7   0   0   8    +4.3700   +0.0000   +0.0000   +0.8934   17  15   0   2   0
+  MAT T1.ORACLE     7 7    3   0   0   9    +2.3207   +0.0000   +0.0000   +0.2622   18  12   0   6   0
+  MAT T1.ORACLE     7 8    0   0   0   4    +0.0000   +0.0000   +0.0000   +0.0990   18   4   0  14   0
+  MAT T1.ORACLE     8 1    9   0   0   8    +5.8757   +0.0000   +0.0000   +3.5054   17  17   0   0   0
+  MAT T1.ORACLE     8 2    9   0   0   9    +5.8051   +0.0000   +0.0000   +1.7485   18  18   0   0   0
+  MAT T1.ORACLE     8 3    8   0   0   9    +3.6384   +0.0000   +0.0000  +11.6961   17  17   0   0   0
+  MAT T1.ORACLE     8 4    9   0   0   9    +4.1902   +0.0000   +0.0000   +8.1267   18  18   0   0   0
+  MAT T1.ORACLE     8 5    9   0   0   9    +4.7405   +0.0000   +0.0000   +7.0658   18  18   0   0   0
+  MAT T1.ORACLE     8 6    9   0   0   7    +6.5393   +0.0000   +0.0000   +6.1227   17  16   0   1   0
+  MAT T1.ORACLE     8 7    9   0   0   9    +8.3556   +0.0000   +0.0000   +7.6266   18  18   0   0   0
+  MAT T1.ORACLE     8 8    0   0   0   1    +0.0000   +0.0000   +0.0000   -0.3832   18   1   0  17   0
+  MAT T1.ORACLE     9 1    9   0   0   8    +6.5062   +0.0000   +0.0000   +6.0691   17  17   0   0   0
+  MAT T1.ORACLE     9 2    9   0   0   9    +9.9486   +0.0000   +0.0000   +6.1503   18  18   0   0   0
+  MAT T1.ORACLE     9 3    5   0   0   9    +7.4338   +0.0000   +0.0000  +10.1037   17  14   0   3   0
+  MAT T1.ORACLE     9 4    5   0   0   9    +6.3789   +0.0000   +0.0000   +8.5468   18  14   0   4   0
+  MAT T1.ORACLE     9 5    9   0   0   9   +12.6085   +0.0000   +0.0000   +6.0732   18  18   0   0   0
+  MAT T1.ORACLE     9 6    4   0   0   8    +5.8789   +0.0000   +0.0000   +3.0778   17  12   0   5   0
+  MAT T1.ORACLE     9 7    9   0   0   9   +11.7897   +0.0000   +0.0000   +5.6324   18  18   0   0   0
+  MAT T1.ORACLE     9 8    3   0   0   4    +1.9234   +0.0000   +0.0000   +3.0810   18   7   0  11   0
+  MAT T1.ORACLE    10 1    7   0   0   8    +5.0661   +0.0000   +0.0000   +2.8337   17  15   0   2   0
+  MAT T1.ORACLE    10 2    9   0   0   9    +4.4016   +0.0000   +0.0000   +2.5528   18  18   0   0   0
+  MAT T1.ORACLE    10 3    8   0   0   9    +4.6889   +0.0000   +0.0000   +3.3279   17  17   0   0   0
+  MAT T1.ORACLE    10 4    9   0   0   9    +3.2145   +0.0000   +0.0000   +4.4693   18  18   0   0   0
+  MAT T1.ORACLE    10 5    9   0   0   9    +7.0815   +0.0000   +0.0000   +7.9491   18  18   0   0   0
+  MAT T1.ORACLE    10 6    9   0   0   8    +8.0638   +0.0000   +0.0000   +7.7538   17  17   0   0   0
+  MAT T1.ORACLE    10 7    9   0   0   9    +8.7843   +0.0000   +0.0000   +9.3550   18  18   0   0   0
+  MAT T1.ORACLE    10 8    1   0   0   2    +1.0921   +0.0000   +0.0000   +1.5423   18   3   0  15   0
+  MAT T1.ORACLE    11 1    9   0   0   8    +3.9471   +0.0000   +0.0000   +3.9295   17  17   0   0   0
+  MAT T1.ORACLE    11 2    9   0   0   9    +4.0015   +0.0000   +0.0000   +1.2555   18  18   0   0   0
+  MAT T1.ORACLE    11 3    8   0   0   9    +4.8139   +0.0000   +0.0000   +0.3743   17  17   0   0   0
+  MAT T1.ORACLE    11 4    9   0   0   9    +7.3511   +0.0000   +0.0000   +4.2175   18  18   0   0   0
+  MAT T1.ORACLE    11 5    9   0   0   7   +10.5999   +0.0000   +0.0000   +5.0231   18  16   0   2   0
+  MAT T1.ORACLE    11 6    9   0   0   3    +7.8706   +0.0000   +0.0000   +1.5249   17  12   0   5   0
+  MAT T1.ORACLE    11 7    9   0   0   5    +6.4432   +0.0000   +0.0000   +1.9987   18  14   0   4   0
+  MAT T1.ORACLE    11 8    2   0   0   0    +1.7824   +0.0000   +0.0000   +0.0000   18   2   0  16   0
+
+  THERE IS NO PRIMARY IN THIS SECTION. Nothing above is a verdict on
+  expression, and the 36-window table is a ruler and not a result.
+  All gates passed.
