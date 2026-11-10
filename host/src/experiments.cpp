@@ -313,6 +313,32 @@ const Spec kSpecs[] = {
      "  arm. The underflow share is MEASURED against the stored value after the\n"
      "  write, never predicted from eps, because |x-proto| at this operating point\n"
      "  is exactly what is unknown. kRead: every branch prints"},
+    {"slotwin", 900000, Expect::kRead, Tier::kLong,
+     "derived: §58. §53's EXACT arms, budget and genome -- 120 sessions -- with its\n"
+     "  primary scored over a PRE-REGISTERED WINDOW instead of the whole session.\n"
+     "  §53 read the derived index's slot term as +0.0081 +- 0.0170 against a\n"
+     "  pinned ceiling of +0.1293 and closed the expression route. §54 then refuted\n"
+     "  overwrite and left AVERAGING standing, which gives (1-2w) of ceiling -- and\n"
+     "  at the derived arm's MEASURED w = 0.1712 that is +0.0850, which §53's\n"
+     "  figure misses by 4.53 SE. That contradiction is already in the archive and\n"
+     "  has never been stated. §56 supplies the candidate reason: the derived index\n"
+     "  is THREE PHASES, degenerate in 22 and 18 of 24 creatures over the first two\n"
+     "  eighths and 16 of 24 in the last, but PERFECT in all 24 through e4-e7 at a\n"
+     "  quarter of the pooled error rate -- so §53's null was measured partly over\n"
+     "  windows in which there was NO INDEX AT ALL. In CLEAN (w 0.0326) averaging\n"
+     "  predicts +0.1209, 93.5% of the ceiling, so the two models sit 5.02 SE apart\n"
+     "  and §53's own arm sizes resolve them. PRIMARY: the SLOT TERM, which is\n"
+     "  object-conditioned BY CONSTRUCTION since (n_0s - n_1s) is the label\n"
+     "  difference -- not a margin (§57's defect). Five-way, every boundary 2 SE\n"
+     "  from one of the two competing models, plus a sixth branch that REFUSES when\n"
+     "  they sit closer than 4 SE. Clause 0 rebuilds cell_g/cell_n from the new\n"
+     "  per-probe vector and must reproduce §53's published table to four decimals\n"
+     "  INCLUDING the SE; clause 1 re-earns the pinned residual == 0 in every\n"
+     "  eighth; clause 2 puts the vacuity gate on the arm that is KNOWN to express,\n"
+     "  because the question is whether a 17-probe window can carry a slot term at\n"
+     "  all; clause 3 TESTS the phase cut's transfer from §56's pin_mode 5 arm\n"
+     "  rather than assuming it. No core change, no new genome field, no RNG draw,\n"
+     "  so the pinned hash cannot move. kRead: every branch prints"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1580,6 +1606,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "switchrate") ok = run_switchrate(dna_blob, ticks, verbose);
   else if (name == "slotdrift") ok = run_slotdrift(dna_blob, ticks, verbose);
   else if (name == "ctxfreeze") ok = run_ctxfreeze(dna_blob, ticks, verbose);
+  else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

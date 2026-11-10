@@ -10455,3 +10455,424 @@ the last of §56's three candidates still standing. If it does **not** collapse,
 carries the object, the prototypes are still positioned to separate it, and the fault is in the
 latching or the read-out rather than in the competition. **Those two outcomes point at different parts
 of the kernel, which is what §57's primary should have been able to do and could not.**
+
+## §58 PRE-REGISTRATION — DOES THE DERIVED INDEX EXPRESS IN THE WINDOW WHERE §56 PROVED THE INDEX WORKS? (2026-11-10)
+
+`--experiment slotwin`. Tier::kLong, Expect::kRead, 120 sessions at 900k —
+§53's arms, §53's budget, §53's genome, and **no core change whatsoever**. The
+only new thing is the granularity at which §53's own primary is scored.
+
+### THE CONTRADICTION, IN THE PROJECT'S OWN PUBLISHED NUMBERS
+
+Three shipped results cannot all be right.
+
+**§54** refuted overwrite and left averaging standing: a *perfect* index whose
+write slot is corrupted at rate `w` still speaks at `(1 - 2w)` of ceiling.
+
+**§53** measured, at 900k on this genome (`results/n53-slotdose-900k.log`):
+
+    T1.ORACLE   (pinned, paired)   SLOT  +0.1293 +- 0.0478   n 12   <- THE CEILING
+    T1.RET      (derived, paired)  SLOT  +0.0081 +- 0.0170   n 36   <- THE CLAIM
+    T1.RET.D    (derived, drawn)   SLOT  -0.0947 +- 0.0306   n 36
+    T1.ORACLE.D (pinned, drawn)    SLOT  +0.0211 +- 0.0327   n 36
+
+with the derived index's measured wrong-write rate `w = 0.1712`. **Averaging
+therefore predicts the derived arm at `(1 - 2 x 0.1712) x 0.1293 = +0.0850`,
+and §53 measured `+0.0081 +- 0.0170` — a shortfall of 4.53 SE.** That tension
+is already in the archive and has never been stated.
+
+**§56** then found why it might be illusory: the derived index is not one index
+but three phases, and §53's figure is pooled across all of them.
+
+    eighth      e1     e2     e3     e4     e5     e6     e7     e8
+    deg /24     22     18      2      0      0      0      0     16
+    w       0.4458 0.3263 0.1195 0.0464 0.0338 0.0322 0.0181 0.3121
+
+**§53's null was measured partly over windows in which there was no index at
+all.** In e4-e7 there is one, in every creature, at a quarter of the pooled
+error rate.
+
+### THE PHASES, PINNED FROM §56 BEFORE THIS RUN
+
+Read off the table above and **fixed here so they cannot be moved later**:
+
+    EARLY  e1-e2   deg 22, 18      mean w 0.3861
+    TRANS  e3      deg 2           w 0.1195
+    CLEAN  e4-e7   deg 0,0,0,0     mean w 0.0326    <- THE PRIMARY'S WINDOW
+    LATE   e8      deg 16          w 0.3121
+
+Averaging's prediction per phase, `(1 - 2w) x 0.1293`:
+
+    EARLY  +0.0295     TRANS  +0.0984     CLEAN  +0.1209     LATE  +0.0486
+
+**An arithmetic self-check on the prediction, not a result.** `(1 - 2w)` is
+linear in `w`, so the probe-weighted mean of the per-phase predictions must
+equal the prediction at the session-mean rate. Weighting 2:1:4:1 gives
+`+0.0862`, and §56's eight eighths average to `w = 0.1668`, which gives
+`(1 - 0.3336) x 0.1293 = +0.0862`. **They agree to four decimals**; had they
+not, one of the two arithmetics would be wrong. (§57's lesson: a termwise
+inequality that cannot hold is what exposes a bug before the run.)
+
+So **in CLEAN the surviving model predicts +0.1209, which is 93.5% of the
+pinned ceiling**, against §53's pooled `+0.0081`.
+
+### THE PRIMARY, AND IT IS OBJECT-CONDITIONED BY CONSTRUCTION
+
+The SLOT TERM of §53's exact decomposition
+([experiments_probes.cpp:1020](../host/src/experiments_probes.cpp#L1020)):
+
+    gap = SLOT TERM        (1/N) sum_s (n_0s - n_1s) Gbar_s
+        + OBJECT RESIDUAL  (1/N) sum_os n_os sigma_o (Gbar_os - Gbar_s)
+
+`(n_0s - n_1s)` **is** the label difference, so the slot term is a dependence
+and not a magnitude — the thing §57's margin was not
+(`margin-is-confidence-not-dependence`). Only the slot term is the primary; the
+residual is what `bias_ctx_` cannot produce and is reported beside it, never
+added in.
+
+Its sign is constrained by the protocol: `G` is positive toward `kWords[0]`,
+object 0 contributes `+G` and object 1 `-G`, so **correct expression is a
+POSITIVE slot term** and §53's dose artefact is a negative one.
+
+### THE INSTRUMENT, AND WHY IT CANNOT MOVE A SINGLE ARCHIVED BYTE
+
+`G3Probe` already carries `ctx_label` and `ctx_slot` as per-probe vectors. The
+one addition is the per-probe `G` beside them, pushed at the same site so all
+three stay index-aligned:
+
+    std::vector<double> probe_g;      // G(posture), the quantity cell_g sums
+    std::vector<char>   probe_g_ok;   // was there a voiced frame to score
+
+Every window — eighths, phases, the whole session — is then **host-side
+post-processing of the same three vectors**, with no accumulator decision baked
+into the kernel and no second estimator. `cell_g`/`cell_n` stay exactly as they
+are, which is what makes clause 0 possible.
+
+**No core change, no new genome field, no RNG draw.** The pinned determinism
+hash must not move and every archived log must stay bit-identical.
+
+### THE GATES, IN ORDER — AND THE ORDER IS PART OF THE REGISTRATION
+
+**CLAUSE 0 — IDENTITY, READ FIRST.** Summing the per-probe vectors over *all*
+probes must reproduce §53's pooled table to four decimals **including the SE**,
+all four arms, and `gap` must reproduce the `pe` column. If this fails the
+windowed numbers are not §53's session and **nothing below is readable.**
+
+**CLAUSE 1 — THE PER-EIGHTH BOOKKEEPING SELF-TEST.** A pinned index makes the
+cells diagonal, so T1.ORACLE's residual is *identically* zero and its slot term
+*is* its gap — arithmetic, not a result. Required **in every one of the eight
+eighths**, with `gap - (slot + residual)` under 1e-12 for every creature in
+every eighth. §53 proved this pooled; a windowed scorer has to earn it again.
+
+**CLAUSE 2 — VACUITY, ON THE POSITIVE CONTROL AND AT THE PRIMARY'S
+GRANULARITY.** T1.ORACLE's per-eighth slot term must read >= 0.08 in at least 6
+of 8 eighths. **A vacuity gate on the derived arm could not do this job**
+(`vacuity-gate-cannot-guard-a-rejection`): the question is whether a
+*17-probe* window can carry a large slot term at all, and only an arm that is
+known to express can answer it.
+
+**CLAUSE 3 — DO THE PHASES EVEN APPLY TO THESE CREATURES?** The boundaries come
+from §56's `slotdrift` DERIVED arm, which runs `pin_mode 5` — **a different
+enclosing experiment, so transfer is tested and not assumed**
+(`control-on-a-different-code-path`). Scored §56's way on the teaching windows
+of §58's own T1.RET: required `deg` >= 12/36 in e1, >= 8/36 in e8, and exactly
+0/36 in each of e4-e7. If the profile is absent the phase cut is imported from
+an arm this run does not contain and the primary is unreadable.
+
+**CLAUSE 4 — THE PRIMARY.** `S` = T1.RET's CLEAN slot term, `E` its measured
+SE, `A = +0.1209`. Five-way, every boundary derived from one of the two
+competing models:
+
+    1  S <= -2E              ARTEFACT DOMINATES  the dose term beats the lesson
+                                                 exactly where the index is clean
+    2  |S| < 2E              §53's NULL SURVIVES  the clean window does not
+                                                  rescue expression
+    3  2E <= S < A - 2E      PARTIAL              expression real, averaging
+                                                  overstates it
+    4  |S - A| <= 2E         EXPRESSES AS AVERAGING PREDICTS
+    5  S > A + 2E            OVER-EXPRESSES       averaging understates it
+
+**CLAUSE 5 — THE LABEL-DESTROYED CONTROL.** T1.RET.D's CLEAN slot term. If it
+too clears `+2E` positive then a clean-window slot term arises without the
+label and clause 4's reading is void (`null-is-not-a-control`).
+
+### POWER, THE NOISE MODEL, AND THE PROBABILITY THE MIDDLE CLAUSE FIRES
+
+Three separate pre-flights (`power-is-not-the-error-model`), and the third is
+written as a number.
+
+**Power.** CLEAN is four eighths, so ~70 of each creature's 141 probes. Taking
+§53's pooled `+-0.0170` at n=36 over 141 probes and scaling the within-creature
+component by `sqrt(141/70)` gives a projected **CLEAN SE of ~0.0241**. The two
+competing predictions are then `(0.1209 - 0)/0.0241 = 5.02 SE` apart. **The
+budget needs no increase: §53's existing arm sizes resolve this contrast at 5
+SE.**
+
+**The noise model.** Between-creature SE of a per-creature slot term, n=36,
+pooled as a ratio of sums within each creature and a plain mean across them
+(`mean-of-ratios`: the per-creature figure is the unit, the pooled ratio is
+reported beside it and the two are expected to disagree under skew, as §57's
+did at 2.5x).
+
+**The middle clause.** At `E = 0.0241` the PARTIAL band is `[+0.0482,
++0.0727]`, 1.02 SE wide. **P(PARTIAL) = 0.0215 under the null and 0.0215 under
+averaging** — so the registered three-way-plus split is decisive with
+probability 0.978 either way, and the band is not a place the result can hide.
+
+### DISCLOSED BEFORE THE RUN
+
+- **The ceiling is carried in as a constant.** `+0.1293` was measured at n=12,
+  SE `+-0.0478`, so `A` has its own `+-0.0447` which **the five-way split does
+  not propagate.** The per-eighth ORACLE profile is printed so a reader can see
+  whether the pinned ceiling is flat; at n=12 a CLEAN-window ORACLE SE is
+  ~0.068, which is a weak flatness check and is labelled as one.
+- Arm sizes are left at §53's exactly, so clause 0 can check all four published
+  rows. Raising T1.ORACLE's `n` would sharpen `A` and is deliberately not done:
+  the rep seed is `seed + r * 7919` on the **per-arm** index, so it would be
+  safe for the other arms, but it would cost the ORACLE row of clause 0.
+- The eighth cut is §56's exactly — `nw * b / 8` over the raw per-probe
+  vectors — so §58's eighths are the same eighths, not a second convention.
+- Trial and probe alternate 1:1 at `kM3TrialTicks + kM3ProbeTicks`, so the
+  probe ordinal *is* the trial ordinal and the probe clock and §56's teaching
+  clock are the same clock. Stated because the phase import depends on it.
+
+### WHAT EACH OUTCOME BUYS, WRITTEN DOWN BEFORE THE NUMBER EXISTS
+
+**NULL SURVIVES** — the index's *quality* is not what blocks expression, and
+§54's averaging model does not transfer from a corrupted pinned index to a
+derived one. That is a contradiction between two shipped results and it moves
+the whole line off the index. The next suspect becomes whatever differs between
+a pinned slot and a derived one *other than its error rate*: the slot's
+**meaning** drifting while its integer stays modal-stable — which is exactly
+what §57's surviving lead, homeostasis displacing `rate_ema_`, would produce.
+
+**EXPRESSES or PARTIAL** — §53's null was a pooling artefact, G3 off the
+derived index is open, and the remaining work is extending the clean window.
+This also makes §57's named successor worth running with a known payoff.
+
+**ARTEFACT DOMINATES** — the dose asymmetry is strongest exactly where the
+index is cleanest, which would be a new and specific mechanism claim.
+
+**Either way this section decides whether §57's successor is worth a budget**,
+which is the ordering argument for running it first.
+
+### AMENDED BEFORE THE RUN, AND THE SMOKE IS WHY
+
+**1. Clause 3's thresholds were counts over the wrong denominator.** They were
+written as `deg >= 12` in e1 and `>= 8` in e8 — numbers taken from §56's
+profile over **its 24** creatures and applied to an arm that has **36**. §56
+read 0.917 and 0.667 as *proportions*, so the gate was loose by a third. Fixed
+to `>= 0.67n` and `>= 0.50n`, stated as proportions so a changed arm size can
+never silently move the gate again. The same denominator slip `mean-of-ratios`
+is about, one level up.
+
+**2. The shortfall is 4.53 SE, not 4.52.** `(0.6576 x 0.1293 - 0.0081)/0.0170 =
+4.5252`. Corrected everywhere rather than left as a near-miss.
+
+**3. A 150k smoke cannot exercise the windowed scorer at all, and said so.** A
+session yields ~141 probes only at 900k — ~23 at 150k — so an eighth holds
+under 3 and every sub-window falls below the scorer's own minimum. The first
+smoke therefore read `n 0` in all 32 arm-eighths and all 16 arm-phases, with
+only the whole-session reading alive. **The smoke must run above ~410k for the
+smallest rung to score** (`smoke-the-exact-command`: smoke big enough for the
+smallest rung). Re-smoked at 450k.
+
+**4. Clause 1 could pass on an empty set, and the smoke proved it by failing.**
+An identity over zero cells reads `0.00e+00` and would have passed as
+arithmetic. It now prints the count of creature-eighths actually compared and
+treats an empty set as a failure of the gate rather than a pass of the
+identity (`vacuity-gate-cannot-guard-a-rejection`), undefined below the
+registered budget. **The 150k smoke's `*** FAIL -- EMPTY SET ***` is the branch
+working, not the run breaking.**
+
+## §58 RESULT — THE NULL SURVIVES ITS OWN TEST BY 1.5 SE, AND THE INTERESTING COLUMN IS THE ONE THE REGISTRATION AVERAGED AWAY (2026-11-10)
+
+`--experiment slotwin`, 120 sessions at 900k, ~19 minutes. **All gates passed.**
+Registered verdict: **§53's NULL SURVIVES.** It is a weaker negative than that
+name suggests and the run says why.
+
+### CLAUSE 0 IS AS STRONG AS THIS PROJECT HAS MANAGED
+
+The windowed scorer, run over all probes, reproduces §53's published table on
+**all four arms, to four decimals including the SE**:
+
+    T1.RET       +0.0081 +- 0.0170    §53 +0.0081 +- 0.0170
+    T1.RET.D     -0.0947 +- 0.0306    §53 -0.0947 +- 0.0306
+    T1.ORACLE.D  +0.0211 +- 0.0327    §53 +0.0211 +- 0.0327
+    T1.ORACLE    +0.1293 +- 0.0478    §53 +0.1293 +- 0.0478
+
+with the per-creature reconstruction against the live accumulators worst
+**0.00e+00** over all 120 creatures. The windowed numbers below ARE §53's
+session. Clause 1's identity held at 1.67e-16 over **807 creature-eighths**,
+clause 2 passed on the arm that is known to express, and clause 3's transfer
+was better than it had any right to be — §58's own T1.RET reads
+
+    deg  34  28   3   0   0   0   0  21   of 36        (0.94 0.78 0.08 0 0 0 0 0.58)
+    §56  22  18   2   0   0   0   0  16   of 24        (0.92 0.75 0.08 0 0 0 0 0.67)
+
+through a different enclosing experiment and a different `pin_mode`.
+
+### THE PRIMARY, AND THE POWER MISS THAT NEARLY VOIDED IT
+
+    S = +0.0442 +- 0.0297   n 35
+    1.49 SE above zero      2.59 SE below averaging's +0.1209
+    0.342 of the pinned ceiling     0.365 of averaging's prediction
+
+Inside `+-2E`, so **§53's NULL SURVIVES** by the registered rule. But the rule
+only just applied. **The projected SE was 0.0241 and the measured one is
+0.0297, 23% higher**, which drops the separation of the two models from the
+pre-registered **5.02 SE to 4.07** — and `sw_classify` returns UNDEFINED below
+4.0. **An SE 1.8% larger than the one measured would have returned no verdict
+at all.** The PARTIAL band, projected 1.02 SE wide, collapsed to `[+0.0593,
++0.0615]`: 0.02 SE, effectively empty.
+
+So the honest reading of clause 4 is **"indistinguishable from zero at this
+power", not "zero"**. The point estimate is a third of the pinned ceiling.
+**The §53/§54 contradiction is narrowed, not resolved**: §53's pooled +0.0081
+becomes +0.0442 in the clean window, 5.5x larger, while still sitting 2.6 SE
+under averaging.
+
+### WHAT THE REGISTRATION AVERAGED AWAY, AND IT IS THE FINDING
+
+T1.RET's slot term per eighth, against averaging's value for each:
+
+    pred  +0.0140 +0.0449 +0.0984 +0.1173 +0.1206 +0.1210 +0.1246 +0.0486
+    slot  +0.0313 -0.0281 -0.0550 +0.0124 +0.0359 +0.0904 +0.0914 -0.0377
+    n          30      34      36      35      33      34      33      21
+
+**It RAMPS, monotonically, from e3 to e7** — `-0.0550 -> +0.0124 -> +0.0359 ->
++0.0904 -> +0.0914` — reaching **~74% of averaging's prediction and ~70% of the
+pinned ceiling in e6-e7**, and then collapses to `-0.0377` in e8.
+
+**The pre-registered CLEAN window averages the bottom of that ramp with its
+top and halves its own signal.** The cut came from §56's DEGENERACY profile,
+which is flat at 0 across e4-e7 — and that was the wrong cut for expression.
+**A non-degenerate index is NECESSARY BUT NOT SUFFICIENT: the lesson still has
+to accumulate after the index settles**, and nothing in §56 measured how long
+that takes.
+
+**This is a LEAD AND NOT A TEST, for an instrument reason I have to own: the
+per-eighth table prints means with NO SEs**, so the most interesting column in
+the run cannot carry an error bar. The e6-e7 figure is descriptive.
+
+### A SECOND FAILURE IN e8, WHICH §56's SINGLE COLUMN COULD NOT SEE
+
+    e8 scorable creatures:  T1.ORACLE 1/12   T1.ORACLE.D 10/36   T1.RET 21/36   T1.RET.D 21/36
+
+**T1.ORACLE is PINNED. Its index cannot collapse** — the slot is an integer the
+protocol sets. Yet 11 of its 12 creatures have too few scorable probes in the
+last eighth to carry a slot term at all. That is not an index failure; it is a
+loss of **scorable output**, and it happens on the arm where the index is
+guaranteed.
+
+Meanwhile the derived arm's teaching-window degeneracy independently
+reproduces §56 (21 of 36 in e8). **So e8 holds AT LEAST TWO DISTINCT
+FAILURES** — the derived index re-collapsing, and the probes becoming
+unscorable even under a pin — and §56's one column could not tell them apart.
+
+**§58 does not separate silence from a dark index either**, because
+`probe_g_ok` (no voiced frame) and the slot drop (index never live) are counted
+together in the scorer's drop rule. Named as a gap rather than guessed at. It
+does point hard at [[aibaby-delivery-fraction]] and
+[[aibaby-silence-is-the-homeostat]] — "it falls silent as it trains", "it is
+the homeostat" — and therefore at §57's surviving lead.
+
+### THE TWO LABEL-DESTROYED ARMS DISAGREE IN SIGN, AND THAT IS A CAUTION
+
+    CLEAN   T1.RET.D (derived, drawn)  -0.1235 +- 0.0468
+            T1.ORACLE.D (pinned, drawn) +0.0725 +- 0.0478   (1.52 SE)
+    LATE    T1.ORACLE.D                 +0.1403 +- 0.0557   (2.52 SE, n 10)
+
+Clause 5 read the registered control, T1.RET.D, which is negative, so **clause
+4 stands as registered**. But `T1.ORACLE.D` is also label-destroyed and it
+drifts POSITIVE, to 2.52 SE in the late window where n is smallest. §53 saw it
+at +0.0211 +- 0.0327 pooled and nothing was wrong; windowed, in the low-n
+windows, **the estimator's null is not demonstrably zero**. Any future
+per-window claim has to carry this arm beside it
+(`control-blind-to-its-artefact`).
+
+For the same reason the obvious headline is one I am NOT claiming. T1.RET's
+CLEAN sits +0.1677 +- 0.0554 (**3.03 SE**) above its own label-destroyed
+control — but §53 established that the drawn arm is pushed NEGATIVE by the
+unequal-dose artefact, so that difference contains the lesson AND the dose
+asymmetry. **It bounds the lesson from above, not below.**
+
+### THE CONSCIENCE AND THE CEILING, FOR THE RECORD
+
+T1.ORACLE reads `+0.1280 +- 0.0378` in EARLY and `+0.1289 +- 0.0473` in CLEAN
+— **the pinned arm expresses from the first eighth and does not ramp.** So the
+ramp on the derived arm is not a property of the teaching protocol or of the
+reward clock; it is specific to an index the creature has to build. That
+contrast is the cleanest thing in the run and it was free.
+
+### FOUR THINGS I GOT WRONG
+
+**1. The power projection, and it nearly cost the verdict.** I scaled §53's
+pooled SE by `sqrt(141/70)` for the within-creature component and implicitly
+assumed the between-creature component was unchanged. It was not. 23% high on
+the SE turned a 5.02-SE design into 4.07, within 1.8% of returning UNDEFINED,
+and emptied the PARTIAL band the registration had sized at 1.02 SE.
+`calibrate-the-estimator-in-claim-units` says convert full scale into claim
+units before the budget — I did that for the EFFECT and not for the NOISE.
+
+**2. The phase cut answered a different question from the one it was used
+for.** §56's degeneracy profile says where an assignment EXISTS. The primary
+needed to know where the LESSON HAS LANDED, and those differ by most of the
+clean window. Registered, so reported as registered; but the ramp means the
+window was chosen by the wrong criterion.
+
+**3. Per-eighth means with no SEs.** The run's most informative column is
+descriptive only. Four columns of SEs would have cost nothing and were simply
+not written.
+
+**4. I reported the first verify run as unresolved after destroying it.** The
+background command's `.output` file holds the SHELL's stdout, not the file the
+command redirected to, and I copied the former over the latter — overwriting a
+complete 936-line verify log with four lines of `time` output. The `wc -l`
+inside that command had already printed 936, the right length for a clean log,
+but `verify_gate.sh` exists precisely because **line count never distinguishes
+a clean log from a corrupted one** (§53 measured both at 936), so the run was
+lost rather than passed, and it was re-run.
+
+### AND TWO DEFECTS THE SMOKES CAUGHT BEFORE ANY VERDICT EXISTED
+
+Both were in the GATES, not the arithmetic, which is where §57's defect lived
+too.
+
+**Clause 2's threshold was a 900k constant applied at any budget.** An absolute
+`>= 0.08 in >= 6 of 8` read **3/8** at 450k, where the arm's own pooled figure
+is only +0.0827 — a gate that could have failed with nothing wrong at all
+(`baseprobe-gate`). Re-specified against the arm's OWN pooled value at the
+same budget, it passed at 450k (mean +0.0795 vs +0.0413) and at 900k
+(+0.0758 vs +0.0646). **At 900k it passed with 6 of 8 exactly at the
+threshold**, and T1.ORACLE's own e3 reads -0.0171 — the ceiling arm is noisy
+per eighth, which is one more reason the per-eighth table is a lead.
+
+**A one-eighth phase and the same eighth disagreed.** TRANS and LATE scored
+against a flat minimum of 12 while the eighths table used 6, so TRANS read
+`n 0` where e3 read `n 14` — two answers for one window. One rule now, 6
+scorable probes per eighth of width, with the whole-session window keeping
+§53's 12 because clause 0 depends on it.
+
+### THE SUCCESSOR, AND §58 HAS EARNED A SHARPER ONE THAN IT STARTED WITH
+
+Three things to do, in this order, and the first two are nearly free.
+
+**1. Re-score on the window the RAMP defines, with SEs, and pre-register the
+cut from EXPRESSION rather than from degeneracy.** The e6-e7 pair reads ~74% of
+averaging's prediction; with per-eighth SEs and a cut at the ramp's plateau
+this becomes a test instead of a description. If `e6-e7` clears averaging's
+prediction at 2 SE, **§54's model transfers to the derived index after all and
+the expression route is OPEN** — which is the opposite of what §53 concluded
+and what §58's own registered primary says.
+
+**2. Split the drop rule.** Count "no voiced frame" and "index never live"
+separately, per eighth. On the PINNED arm that single change says whether e8's
+`n 1/12` is SILENCE or a DARK INDEX, and those are different mechanisms with
+different fixes. §56 and §58 both read e8 through one number that conflates
+them.
+
+**3. Then, and only then, §57's named successor** — the object-conditioned gap
+at the distances. §58 was run to decide whether that was worth a budget, and
+the answer is now conditional: if the ramp's plateau expresses, the question
+moves to why it collapses at e8, where item 2 is the cheaper first cut.

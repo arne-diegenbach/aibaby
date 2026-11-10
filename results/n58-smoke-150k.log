@@ -1,0 +1,175 @@
+experiment: slotwin
+  SHORT RUN — 150000 ticks against a minimum of 900000. derived: §58. §53's EXACT arms, budget and genome -- 120 sessions -- with its
+  primary scored over a PRE-REGISTERED WINDOW instead of the whole session.
+  §53 read the derived index's slot term as +0.0081 +- 0.0170 against a
+  pinned ceiling of +0.1293 and closed the expression route. §54 then refuted
+  overwrite and left AVERAGING standing, which gives (1-2w) of ceiling -- and
+  at the derived arm's MEASURED w = 0.1712 that is +0.0850, which §53's
+  figure misses by 4.52 SE. That contradiction is already in the archive and
+  has never been stated. §56 supplies the candidate reason: the derived index
+  is THREE PHASES, degenerate in 22 and 18 of 24 creatures over the first two
+  eighths and 16 of 24 in the last, but PERFECT in all 24 through e4-e7 at a
+  quarter of the pooled error rate -- so §53's null was measured partly over
+  windows in which there was NO INDEX AT ALL. In CLEAN (w 0.0326) averaging
+  predicts +0.1209, 93.5% of the ceiling, so the two models sit 5.02 SE apart
+  and §53's own arm sizes resolve them. PRIMARY: the SLOT TERM, which is
+  object-conditioned BY CONSTRUCTION since (n_0s - n_1s) is the label
+  difference -- not a margin (§57's defect). Five-way, every boundary 2 SE
+  from one of the two competing models, plus a sixth branch that REFUSES when
+  they sit closer than 4 SE. Clause 0 rebuilds cell_g/cell_n from the new
+  per-probe vector and must reproduce §53's published table to four decimals
+  INCLUDING the SE; clause 1 re-earns the pinned residual == 0 in every
+  eighth; clause 2 puts the vacuity gate on the arm that is KNOWN to express,
+  because the question is whether a 17-probe window can carry a slot term at
+  all; clause 3 TESTS the phase cut's transfer from §56's pin_mode 5 arm
+  rather than assuming it. No core change, no new genome field, no RNG draw,
+  so the pinned hash cannot move. kRead: every branch prints
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §58. §53 read the derived index's slot term as a null
+                    POOLED OVER THE WHOLE SESSION. §56 then showed that
+                    index is degenerate in 22 and 18 of 24 creatures in the
+                    first two eighths and 16 of 24 in the last, and PERFECT
+                    in all 24 through e4-e7. Does it express THERE?
+  the contradiction §54 left AVERAGING standing: (1-2w) of ceiling. At the
+                    derived arm's measured w = 0.1712 that is +0.0850, and §53
+                    measured +0.0081 +- 0.0170 -- short by 4.53 SE. Already in
+                    the archive, never stated.
+  the method        §53's EXACT primary -- the SLOT TERM, where (n_0s - n_1s)
+                    IS the label difference, so it is a DEPENDENCE and not a
+                    magnitude -- scored over a PRE-REGISTERED window. One
+                    per-probe vector added; no core change, no RNG draw.
+  the two models    §53's NULL: 0.    AVERAGING in CLEAN (w 0.0326): +0.1209,
+                    which is 93.5% of the pinned ceiling +0.1293.
+  session           150.0 s of simulated life x 120 sessions, 4 arms
+  instrument        slotwin   trial seed 0000000001357f69   120 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  THE PREDICTION'S ARITHMETIC SELF-CHECK, which is not a result. (1-2w) is
+  LINEAR in w, so the probe-weighted mean of the per-phase predictions must
+  equal the prediction at the session-mean rate. If these disagree one of
+  the two arithmetics is wrong and nothing below should be read.
+    per-phase, weighted 2:1:4:1   +0.086172
+    at the session-mean w 0.1668    +0.086172
+    identity                      +0.00e+00   PASS
+
+  CLAUSE 4's SIX BRANCHES, exercised on synthetic input before any real
+  row reaches them. E = 0.0241 (the projected CLEAN SE), A = +0.1209.
+    S -0.0600  A +0.1209  -> ARTEFACT DOMINATES                 ok  (below -2E)
+    S +0.0100  A +0.1209  -> §53's NULL SURVIVES               ok  (inside +-2E)
+    S +0.0600  A +0.1209  -> PARTIAL                            ok  (above 2E, below A-2E)
+    S +0.1209  A +0.1209  -> EXPRESSES AS AVERAGING PREDICTS    ok  (within 2E of A)
+    S +0.2000  A +0.1209  -> OVER-EXPRESSES                     ok  (above A+2E)
+    S +0.0600  A +0.0723  -> UNDEFINED -- the models are closer than 4 SE ok  (A < 4E: the gate must REFUSE, not pick)
+    branches reachable  6/6  PASS
+
+  CLAUSE 0 (FIRST) -- IDENTITY. The windowed scorer run over ALL probes
+  must reproduce `cell_g`/`cell_n`, and through them §53's PUBLISHED table.
+  If this fails the windowed numbers are not §53's session and NOTHING
+  below is readable. The archive half is budget-bound and says so.
+    reconstruction, worst over all 120 creatures   0.00e+00   PASS
+    T1.RET       pooled SLOT -0.0019 +- 0.0059   §53 +0.0081 +- 0.0170   n/a
+    T1.RET.D     pooled SLOT -0.0116 +- 0.0054   §53 -0.0947 +- 0.0306   n/a
+    T1.ORACLE.D  pooled SLOT -0.0220 +- 0.0203   §53 +0.0211 +- 0.0327   n/a
+    T1.ORACLE    pooled SLOT +0.1049 +- 0.0312   §53 +0.1293 +- 0.0478   n/a
+    NOT READ AT THIS BUDGET (150000 < 900000): §53's table is a 900k
+    measurement, so the archive half is UNDEFINED here, not failed.
+    The reconstruction half above is budget-free and WAS read.
+
+  CLAUSE 1 -- BOOKKEEPING, PER EIGHTH. A pinned index makes the cells
+  DIAGONAL, so T1.ORACLE's residual is identically zero and its slot term
+  IS its gap. Arithmetic, not a result -- and a windowed scorer has to earn
+  it again in every eighth. `ident` is gap - (slot + residual), worst case.
+    ORACLE residual, worst eighth        0.00e+00   over 0 creature-eighths   *** FAIL -- EMPTY SET ***
+    identity, worst creature x eighth    0.00e+00   PASS
+    and over EVERY arm and eighth        0.00e+00   over 0 creature-eighths   *** FAIL -- EMPTY SET ***
+
+  CLAUSE 2 -- VACUITY, at the PRIMARY'S GRANULARITY and on the arm that is
+  KNOWN to express. The question a vacuity gate must answer here is whether
+  a ~17-probe window can carry a large slot term AT ALL, and only an arm
+  that expresses can answer it -- the derived arm's own column could not
+  (`vacuity-gate-cannot-guard-a-rejection`). Required: >= 0.08 in >= 6 of 8.
+    T1.ORACLE  slot +0.0000 +0.0000 +0.0000 +0.0000 +0.0000 +0.0000 +0.0000 +0.0000 
+               n          0       0       0       0       0       0       0       0 
+    eighths >= 0.08   0/8   n/a
+    NOT READ AT THIS BUDGET: an eighth holds ~17 probes only at 900k,
+    and below it the window falls under the scorer's own minimum.
+    Undefined, not failed -- the column is printed so the plumbing is
+    still visible.
+
+  CLAUSE 3 -- TRANSFER. The phase cut comes from §56's `slotdrift` DERIVED
+  arm, which runs pin_mode 5: a DIFFERENT enclosing experiment, so transfer
+  is TESTED and not assumed. §56's modal rule over §56's cut, on §58's own
+  T1.RET teaching windows. §56 read 22 18 2 0 0 0 0 16 of 24.
+    T1.RET  deg  36  36  36  35  34  32  34  33  of 36
+    e1 >= 12   n/a              e8 >= 8   n/a              e4-e7 == 0   n/a
+    NOT READ AT THIS BUDGET: §56's profile 22 18 2 0 0 0 0 16 is a 900k
+    measurement and a shorter session's eighths cover different ticks --
+    §56 proved the late collapse is keyed to ABSOLUTE ticks. Undefined,
+    not failed.
+
+  THE SLOT TERM PER EIGHTH. `n` is creatures with TWO live slots in that
+  window -- a collapsed window is MISSING DATA, not an observation of no
+  expression, so it is dropped and counted (§53's rule). `min` is the
+  smallest of the four cells as a share, which is identification and is
+  MEASURED rather than asserted. `w56` is §56's error rate for that eighth
+  and `pred` is averaging's prediction from it.
+                        e1       e2       e3       e4       e5       e6       e7       e8  
+             w56    0.4458  0.3263  0.1195  0.0464  0.0338  0.0322  0.0181  0.3121 
+             pred  +0.0140 +0.0449 +0.0984 +0.1173 +0.1206 +0.1210 +0.1246 +0.0486 
+    T1.RET       slot       --      --      --      --      --      --      --      -- 
+                 resid      --      --      --      --      --      --      --      -- 
+                 n           0       0       0       0       0       0       0       0 
+                 min        --      --      --      --      --      --      --      -- 
+    T1.RET.D     slot       --      --      --      --      --      --      --      -- 
+                 resid      --      --      --      --      --      --      --      -- 
+                 n           0       0       0       0       0       0       0       0 
+                 min        --      --      --      --      --      --      --      -- 
+    T1.ORACLE.D  slot       --      --      --      --      --      --      --      -- 
+                 resid      --      --      --      --      --      --      --      -- 
+                 n           0       0       0       0       0       0       0       0 
+                 min        --      --      --      --      --      --      --      -- 
+    T1.ORACLE    slot       --      --      --      --      --      --      --      -- 
+                 resid      --      --      --      --      --      --      --      -- 
+                 n           0       0       0       0       0       0       0       0 
+                 min        --      --      --      --      --      --      --      -- 
+
+  AND BY PHASE, which is where the verdict is read. `pred` is averaging's
+  value for that phase, derived from §56's rate and §53's ceiling.
+    T1.RET        EARLY +0.0000+-0.0000 (n 0)  TRANS +0.0000+-0.0000 (n 0)  CLEAN +0.0000+-0.0000 (n 0)  LATE +0.0000+-0.0000 (n 0)
+    T1.RET.D      EARLY +0.0000+-0.0000 (n 0)  TRANS +0.0000+-0.0000 (n 0)  CLEAN +0.0000+-0.0000 (n 0)  LATE +0.0000+-0.0000 (n 0)
+    T1.ORACLE.D   EARLY +0.0000+-0.0000 (n 0)  TRANS +0.0000+-0.0000 (n 0)  CLEAN +0.0000+-0.0000 (n 0)  LATE +0.0000+-0.0000 (n 0)
+    T1.ORACLE     EARLY +0.0000+-0.0000 (n 0)  TRANS +0.0000+-0.0000 (n 0)  CLEAN +0.0000+-0.0000 (n 0)  LATE +0.0000+-0.0000 (n 0)
+    pred          EARLY +0.0295              TRANS +0.0984              CLEAN +0.1209              LATE +0.0486            
+
+  CLAUSE 4 -- THE PRIMARY. T1.RET's CLEAN slot term against the two
+  competing models. Every boundary is 2 SE from one of them, so none is
+  chosen. The SE is MEASURED here; the pre-registration projected 0.0241.
+    measured   S +0.0000   E 0.0000  (projected 0.0241)   n 0
+    boundaries  -2E -0.0000   +2E +0.0000   A-2E +0.1209   A +0.1209   A+2E +0.1209
+    distance from 0  0.00 SE        distance from A  0.00 SE
+    separation of the two models   0.00 SE  (pre-registered 5.02)
+
+    VERDICT   UNDEFINED -- the models are closer than 4 SE
+    as a fraction of the pinned ceiling   0.000
+    as a fraction of averaging's CLEAN prediction   0.000
+
+  CLAUSE 5 -- THE LABEL-DESTROYED CONTROL. T1.RET.D is the same derived
+  index with the word DRAWN, so no label survives to be expressed. If its
+  CLEAN window also clears +2E POSITIVE then a clean-window slot term
+  arises WITHOUT the label and clause 4's reading is void
+  (`null-is-not-a-control`).
+    T1.RET.D CLEAN  +0.0000 +- 0.0000  (0.00 SE)   n/a at this budget
+
+  THE TWO ESTIMATORS, reported side by side because §57 found them
+  disagreeing by 2.5x under right skew (`mean-of-ratios`). `per-creature`
+  is the mean of each creature's own ratio and is what the verdict reads;
+  `pooled` is the ratio of sums over all of them.
+    T1.RET       CLEAN  per-creature +0.0000 +- 0.0000    pooled +0.0000
+    T1.RET.D     CLEAN  per-creature +0.0000 +- 0.0000    pooled +0.0000
+    T1.ORACLE.D  CLEAN  per-creature +0.0000 +- 0.0000    pooled +0.0000
+    T1.ORACLE    CLEAN  per-creature +0.0000 +- 0.0000    pooled +0.0000
+
+  ONE OR MORE GATES FAILED -- the verdict above is NOT readable.

@@ -910,7 +910,22 @@ struct G3Probe {
   // and never the shippable number.
   std::vector<int> ctx_label;   // which object (or word) the probe presented
   std::vector<int> ctx_slot;    // the modal slice while it was being presented
-  double ctx_present_frac = 0;  // scored ticks with the index live, over all of them
+  // §58. THE PER-PROBE WORD PREFERENCE, pushed beside `ctx_slot`
+  // UNCONDITIONALLY so all three vectors stay index-aligned and the host can
+  // rebuild §53's cells over ANY window without a second accumulator.
+  //
+  // This is `G(posture)` itself -- a property of the posture that does not
+  // mention the object -- and NOT the primary's signed quantity. The `sigma_o`
+  // of the decomposition is applied by the scorer when it differences the two
+  // object rows, which is why one vector suffices for both.
+  //
+  // `cell_g` / `cell_n` below are LEFT EXACTLY AS THEY ARE. Summing these
+  // vectors over every probe must reproduce them, and through them §53's
+  // published table -- the identity that makes a windowed reading §53's own
+  // session rather than a second measurement of it.
+  std::vector<double> probe_g;   // G = perr(kWords[1]) - perr(kWords[0])
+  std::vector<char> probe_g_ok;  // 0 where no voiced frame existed to score
+  double ctx_present_frac = 0;   // scored ticks with the index live, over all of them
   uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
   // §50 clause 3. The same pairing over the TEACHING windows rather than the
   // probes. `ctxsrc` is the reason this is a separate column and not an
@@ -1949,6 +1964,12 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       out.ctx_label.push_back(probe_object);
       out.ctx_slot.push_back(any ? int(best) : -1);
+      // §58. The SAME probe's word preference, beside the same probe's slot.
+      // Pushed on EVERY probe that reached here, including the silent and the
+      // dark ones, because the drop rules belong to the scorer: a vector that
+      // applied them would be one window's answer baked into the instrument.
+      out.probe_g.push_back(g_probe);
+      out.probe_g_ok.push_back(have_g ? char(1) : char(0));
       // §53's cells. A probe whose index never went live, or that produced no
       // voiced frame, enters NEITHER -- the same drop rule the columns above
       // use, for `vocallearn`'s reason: a silent probe is missing data and not a
@@ -14578,4 +14599,841 @@ bool run_ctxfreeze(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return true;
 }
 
+
+// --- §58: DOES THE DERIVED INDEX EXPRESS IN THE WINDOW WHERE IT WORKS? -------
+//
+// §53 measured the derived index's slot term at +0.0081 +- 0.0170 against a
+// pinned ceiling of +0.1293 and closed the expression route. §54 then refuted
+// overwrite and left AVERAGING standing, which gives (1 - 2w) of ceiling at a
+// wrong-write rate w -- and at the derived arm's MEASURED w = 0.1712 that is
+// +0.0850, which §53's figure misses by 4.52 SE. **That tension is already in
+// the archive and has never been stated.**
+//
+// §56 found why it may be illusory. The derived index is not one index but
+// three phases: degenerate in 22 and 18 of 24 creatures over the first two
+// eighths, PERFECT in all 24 through the fourth to the seventh, and
+// re-collapsed in 16 of 24 in the last. §53's number is pooled across all of
+// them, so its null was measured partly over windows in which THERE WAS NO
+// INDEX AT ALL.
+//
+// In the clean window the rate is 0.0326, where averaging predicts 93.5% of the
+// ceiling. The two models are then 5 SE apart and the question is decidable on
+// §53's own arms at §53's own budget, with no new mechanism and no new genome
+// field. This scores §53's EXACT primary -- the object-conditioned SLOT TERM of
+// its exact decomposition, where (n_0s - n_1s) IS the label difference -- over
+// the pre-registered window instead of over the whole session.
+//
+// NO CORE CHANGE AND NO RNG DRAW. `G3Probe::probe_g` is a per-probe vector
+// pushed beside the per-probe slot, so every window is host-side arithmetic
+// over the same three vectors. Summing them over ALL probes must rebuild
+// `cell_g` / `cell_n` exactly, and through them §53's published table. That
+// identity is clause 0, and it is what makes this §53's session rather than a
+// second measurement of it.
+
+// §53's cell arithmetic, lifted term for term and pointed at a window of probes
+// [lo, hi). The ONLY differences from the pooled scorer are the two bounds and
+// the minimum; the != 2-live drop, the division by the window's OWN total and
+// the identity are all §53's, unchanged.
+struct SwCell {
+  bool ok = false;
+  uint32_t live = 0;
+  double total = 0.0;
+  // The MEANS, which is what §53 publishes and what the between-creature SE is
+  // taken over.
+  double gap = 0.0, slot = 0.0, resid = 0.0, ident = 0.0;
+  // And the NUMERATORS, kept so the arm can also be pooled as a ratio of sums.
+  // §57 found the two estimators disagreeing by 2.5x under right skew
+  // (`mean-of-ratios`), so both are carried and both are printed.
+  double gap_num = 0.0, slot_num = 0.0, resid_num = 0.0;
+  double g_a = 0.0, g_b = 0.0;
+  double min_cell = 0.0;  // smallest of the four cells, as a share: identification
+};
+
+static SwCell sw_score(const G3Probe& run, size_t lo, size_t hi, double min_total) {
+  SwCell c;
+  size_t n = std::min(run.ctx_label.size(), run.ctx_slot.size());
+  n = std::min(n, std::min(run.probe_g.size(), run.probe_g_ok.size()));
+  if (hi > n) hi = n;
+  if (lo >= hi) return c;
+  double cg[2][aibaby::kMaxContextSlots] = {};
+  double cn[2][aibaby::kMaxContextSlots] = {};
+  for (size_t k = lo; k < hi; ++k) {
+    const int s = run.ctx_slot[k];
+    const int o = run.ctx_label[k];
+    // §53's drop rule, applied in the SCORER and not in the instrument: a probe
+    // whose index never went live, or that produced no voiced frame, enters
+    // NEITHER cell rather than counting as a posture at maximum error. Keeping
+    // it here is the reason one vector serves every window -- a vector that had
+    // already applied it would be one window's answer baked into the kernel.
+    if (s < 0 || s >= int(aibaby::kMaxContextSlots)) continue;
+    if (!run.probe_g_ok[k]) continue;
+    if (o < 0 || o > 1) continue;
+    cg[o][s] += run.probe_g[k];
+    cn[o][s] += 1.0;
+  }
+  double ns[aibaby::kMaxContextSlots] = {}, gs[aibaby::kMaxContextSlots] = {};
+  for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+    for (uint32_t o = 0; o < 2; ++o) {
+      ns[s] += cn[o][s];
+      gs[s] += cg[o][s];
+    }
+    if (ns[s] > 0.0) ++c.live;
+    c.total += ns[s];
+  }
+  // The != 2-live drop is §53's and it is load-bearing here rather than
+  // cosmetic: a creature whose index COLLAPSED in this window has one live slot
+  // and no assignment to carry a slot term, which is exactly the state §56 says
+  // most creatures are in during the first two eighths. Dropped and COUNTED,
+  // never folded in as a zero -- a collapsed window is missing data, not an
+  // observation of no expression.
+  if (c.total < min_total || c.live != 2) return c;
+
+  uint32_t sa = aibaby::kMaxContextSlots, sb = aibaby::kMaxContextSlots;
+  double best = 0.0;
+  for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+    if (ns[s] <= 0.0) continue;
+    const double d = cn[0][s] - cn[1][s];
+    if (sa == aibaby::kMaxContextSlots || d > best) {
+      if (sa != aibaby::kMaxContextSlots) sb = sa;
+      sa = s;
+      best = d;
+    } else {
+      sb = s;
+    }
+  }
+  if (sb == aibaby::kMaxContextSlots) return c;
+
+  for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+    c.gap_num += cg[0][s] - cg[1][s];
+  }
+  for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+    if (ns[s] <= 0.0) continue;
+    const double gbar_s = gs[s] / ns[s];
+    c.slot_num += (cn[0][s] - cn[1][s]) * gbar_s;
+    for (uint32_t o = 0; o < 2; ++o) {
+      if (cn[o][s] <= 0.0) continue;
+      const double gbar_os = cg[o][s] / cn[o][s];
+      c.resid_num += (o == 0 ? 1.0 : -1.0) * cn[o][s] * (gbar_os - gbar_s);
+    }
+  }
+  c.gap = c.gap_num / c.total;
+  c.slot = c.slot_num / c.total;
+  c.resid = c.resid_num / c.total;
+  // THE IDENTITY, computed as a residual of two independently-summed terms
+  // against the gap so a bookkeeping error cannot hide inside a subtraction
+  // (`plausible-wrong-number`: the dangerous defect is the one that looks
+  // right). §53 earned this pooled; a windowed scorer has to earn it again, in
+  // every window.
+  c.ident = c.gap - (c.slot + c.resid);
+  c.g_a = ns[sa] > 0.0 ? gs[sa] / ns[sa] : 0.0;
+  c.g_b = ns[sb] > 0.0 ? gs[sb] / ns[sb] : 0.0;
+  double mn = 1.0;
+  for (uint32_t o = 0; o < 2; ++o) {
+    for (uint32_t s : {sa, sb}) mn = std::min(mn, cn[o][s] / c.total);
+  }
+  c.min_cell = mn;
+  c.ok = true;
+  return c;
+}
+
+// §56's modal-slot rule, lifted so §58's eighths are scored by the SAME
+// estimator §56's were and not by a second one.
+static int sw_modal(const std::vector<int>& lab, const std::vector<int>& sl, int o) {
+  uint32_t h[aibaby::kMaxContextSlots] = {};
+  const size_t n = std::min(lab.size(), sl.size());
+  for (size_t k = 0; k < n; ++k) {
+    if (lab[k] != o || sl[k] < 0 || sl[k] >= int(aibaby::kMaxContextSlots)) continue;
+    ++h[sl[k]];
+  }
+  int best = -1;
+  uint32_t bn = 0;
+  for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+    if (h[s] > bn) { bn = h[s]; best = int(s); }
+  }
+  return best;
+}
+
+static inline double sw_abs(double v) { return v < 0.0 ? -v : v; }
+
+// CLAUSE 4's BRANCHES, as a pure function so all six can be exercised on
+// synthetic input before any real row reaches them
+// (`deferral-note-is-untested-code`: real rows cannot test a branch they never
+// take). Every boundary is 2 SE from one of the two COMPETING MODELS -- zero
+// and averaging's prediction -- so none of them is chosen.
+enum SwVerdict { kSwUndefined = 0, kSwArtefact, kSwNull, kSwPartial, kSwExpress, kSwOver };
+
+static SwVerdict sw_classify(double S, double E, double A) {
+  // A GATE THAT CANNOT DISCRIMINATE MUST SAY SO RATHER THAN PICK. With the two
+  // predictions closer than 4 SE the bands below overlap and the sequential
+  // tests would silently return whichever came first
+  // (`vacuity-gate-cannot-guard-a-rejection`). Pre-registered at 5.02 SE, so
+  // this should not fire -- which is not a reason to leave it unwritten.
+  if (!(E > 0.0) || A < 4.0 * E) return kSwUndefined;
+  if (S <= -2.0 * E) return kSwArtefact;
+  if (sw_abs(S) < 2.0 * E) return kSwNull;
+  if (S < A - 2.0 * E) return kSwPartial;
+  if (sw_abs(S - A) <= 2.0 * E) return kSwExpress;
+  return kSwOver;
+}
+
+static const char* sw_name(SwVerdict v) {
+  switch (v) {
+    case kSwArtefact: return "ARTEFACT DOMINATES";
+    case kSwNull:     return "§53's NULL SURVIVES";
+    case kSwPartial:  return "PARTIAL";
+    case kSwExpress:  return "EXPRESSES AS AVERAGING PREDICTS";
+    case kSwOver:     return "OVER-EXPRESSES";
+    default:          return "UNDEFINED -- the models are closer than 4 SE";
+  }
+}
+
+bool run_slotwin(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kE = 8;  // §56's eighths, cut §56's way
+
+  // --- the constants, all carried in from the archive and NONE fitted here ---
+  //
+  // §53 at 900k, `results/n53-slotdose-900k.log`.
+  constexpr double kCeiling = 0.1293;   // T1.ORACLE's slot term: the pinned ceiling
+  constexpr double kWDerived = 0.1712;  // the derived index's pooled wrong-write rate
+  // §56's per-eighth error rate, `results/n56-slotdrift-900k.log`.
+  const double kW56[kE] = {0.4458, 0.3263, 0.1195, 0.0464, 0.0338, 0.0322, 0.0181, 0.3121};
+  // THE PHASES, pinned from §56's degeneracy profile (22 18 2 0 0 0 0 16) in
+  // the pre-registration and NOT movable from here: [lo, hi) in eighths.
+  struct Phase { const char* name; uint32_t lo, hi; };
+  constexpr uint32_t kPhases = 4;
+  const Phase kPh[kPhases] = {
+      {"EARLY", 0u, 2u},  // deg 22, 18 of 24
+      {"TRANS", 2u, 3u},  // deg 2
+      {"CLEAN", 3u, 7u},  // deg 0,0,0,0  <- THE PRIMARY'S WINDOW
+      {"LATE",  7u, 8u},  // deg 16
+  };
+  constexpr uint32_t kClean = 2u;  // the index of CLEAN above
+  // Averaging's prediction per phase, (1 - 2w) * ceiling, with w the probe-mean
+  // of §56's eighths inside that phase. Derived here from the two archived
+  // constants rather than typed in, so the arithmetic is auditable.
+  double ph_w[kPhases] = {}, ph_pred[kPhases] = {};
+  for (uint32_t p = 0; p < kPhases; ++p) {
+    double acc = 0.0;
+    uint32_t m = 0;
+    for (uint32_t e = kPh[p].lo; e < kPh[p].hi; ++e) { acc += kW56[e]; ++m; }
+    ph_w[p] = m ? acc / double(m) : 0.0;
+    ph_pred[p] = (1.0 - 2.0 * ph_w[p]) * kCeiling;
+  }
+  const double kA = ph_pred[kClean];  // the number clause 4 reads against
+  // AND THE ARITHMETIC SELF-CHECK ON THE PREDICTION, which is not a result.
+  // (1 - 2w) is LINEAR in w, so the probe-weighted mean of the per-phase
+  // predictions must equal the prediction at the session-mean rate. If these
+  // disagree one of the two arithmetics is wrong and the run should not be read
+  // -- §57's lesson, where a termwise inequality that could not hold was what
+  // exposed a host bug before any verdict existed.
+  double pw_acc = 0.0, w56_acc = 0.0;
+  uint32_t pw_n = 0;
+  for (uint32_t p = 0; p < kPhases; ++p) {
+    const uint32_t span = kPh[p].hi - kPh[p].lo;
+    pw_acc += ph_pred[p] * double(span);
+    pw_n += span;
+  }
+  for (uint32_t e = 0; e < kE; ++e) w56_acc += kW56[e];
+  const double pw_mean = pw_n ? pw_acc / double(pw_n) : 0.0;
+  const double w56_mean = w56_acc / double(kE);
+  const double direct = (1.0 - 2.0 * w56_mean) * kCeiling;
+  const double pred_ident = pw_mean - direct;
+
+  struct Arm {
+    const char* name;
+    int pin, pairing;
+    uint32_t n;
+    // §53's published pooled values, for clause 0's archive check.
+    double slot53, slot53_se, gap53;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"T1.RET", 0, 0, 36u, +0.0081, 0.0170, +0.0233,
+       "THE CLAIM -- derived + paired, the arm §53 read as a null"},
+      {"T1.RET.D", 0, 1, 36u, -0.0947, 0.0306, -0.0868,
+       "THE LABEL-DESTROYED CONTROL -- clause 5 reads its CLEAN window"},
+      {"T1.ORACLE.D", 1, 1, 36u, +0.0211, 0.0327, +0.0211,
+       "pinned + drawn -- residual identically zero, a second self-test"},
+      {"T1.ORACLE", 1, 0, 12u, +0.1293, 0.0478, +0.1293,
+       "THE CEILING and clauses 1-2 -- per-eighth residual 0, slot == gap"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    for (uint32_t r = 0; r < arms[a].n; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §58. §53 read the derived index's slot term as a null\n"
+              "                    POOLED OVER THE WHOLE SESSION. §56 then showed that\n"
+              "                    index is degenerate in 22 and 18 of 24 creatures in the\n"
+              "                    first two eighths and 16 of 24 in the last, and PERFECT\n"
+              "                    in all 24 through e4-e7. Does it express THERE?\n");
+  std::printf("  the contradiction §54 left AVERAGING standing: (1-2w) of ceiling. At the\n"
+              "                    derived arm's measured w = %.4f that is %+.4f, and §53\n"
+              "                    measured %+.4f +- %.4f -- short by %.2f SE. Already in\n"
+              "                    the archive, never stated.\n",
+              kWDerived, (1.0 - 2.0 * kWDerived) * kCeiling, arms[0].slot53,
+              arms[0].slot53_se,
+              ((1.0 - 2.0 * kWDerived) * kCeiling - arms[0].slot53) / arms[0].slot53_se);
+  std::printf("  the method        §53's EXACT primary -- the SLOT TERM, where (n_0s - n_1s)\n"
+              "                    IS the label difference, so it is a DEPENDENCE and not a\n"
+              "                    magnitude -- scored over a PRE-REGISTERED window. One\n"
+              "                    per-probe vector added; no core change, no RNG draw.\n");
+  std::printf("  the two models    §53's NULL: 0.    AVERAGING in CLEAN (w %.4f): %+.4f,\n"
+              "                    which is %.1f%% of the pinned ceiling %+.4f.\n",
+              ph_w[kClean], kA, 100.0 * kA / kCeiling, kCeiling);
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms);
+  instrument("slotwin", dna.header().seed ^ 0x58A0u, kJobs, "sessions");
+
+  struct Row {
+    bool ok = false;
+    SwCell all;                 // the whole session, for clause 0
+    SwCell e[kE];               // the eighths
+    SwCell ph[kPhases];         // the phases
+    double pooled_slot53 = 0.0; // §53's own pooled slot term, from cell_g/cell_n
+    double pooled_gap53 = 0.0;
+    double pe = 0.0;            // and §52's primary, for the published cross-check
+    bool pe_ok = false;
+    int8_t edeg[kE] = {};       // §56's degeneracy on the TEACHING windows, per eighth
+    uint32_t probes = 0;
+  };
+
+  const std::vector<Row> rows = parallel_reps<Row>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Row row;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // IDENTICAL to §53's call, argument for argument. The seed, the shift, the
+    // held nuisance, the order, the teacher and the pin/pairing pair are all
+    // §53's, so these creatures ARE §53's creatures -- which is the whole
+    // premise of clause 0 (`control-on-a-different-code-path`: an arm selector
+    // must pin the WHOLE dose vector, and here the selector pins nothing new).
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return row;
+    row.ok = true;
+    row.probes = run.probes;
+    if (run.perr_n > 0) {
+      row.pe = (run.perr_other - run.perr_own) / double(run.perr_n);
+      row.pe_ok = true;
+    }
+
+    // §53's OWN pooled figure, recomputed from `cell_g`/`cell_n` exactly as
+    // `slotdose` does it. Clause 0 compares the windowed scorer's
+    // whole-session reading against THIS, so the identity is tested against
+    // the live accumulators and not only against a printed constant.
+    {
+      double ns[aibaby::kMaxContextSlots] = {}, gs[aibaby::kMaxContextSlots] = {};
+      double total = 0.0;
+      uint32_t live = 0;
+      for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+        for (uint32_t o = 0; o < 2; ++o) {
+          ns[s] += double(run.cell_n[o][s]);
+          gs[s] += run.cell_g[o][s];
+        }
+        if (ns[s] > 0.0) ++live;
+        total += ns[s];
+      }
+      if (total >= 12.0 && live == 2) {
+        double st = 0.0, gp = 0.0;
+        for (uint32_t s = 0; s < aibaby::kMaxContextSlots; ++s) {
+          gp += run.cell_g[0][s] - run.cell_g[1][s];
+          if (ns[s] <= 0.0) continue;
+          st += (double(run.cell_n[0][s]) - double(run.cell_n[1][s])) * (gs[s] / ns[s]);
+        }
+        row.pooled_slot53 = st / total;
+        row.pooled_gap53 = gp / total;
+      }
+    }
+
+    const size_t np = std::min(run.ctx_label.size(), run.ctx_slot.size());
+    row.all = sw_score(run, 0, np, 12.0);
+    // §56's cut, `np * b / kE`, so these are the SAME eighths and not a second
+    // convention. The per-eighth minimum is §53's 12 scaled to an eighth-sized
+    // window and floored at 6; the PRIMARY's window uses §53's 12 unchanged,
+    // which is why no new threshold enters the verdict.
+    for (uint32_t b = 0; b < kE; ++b) {
+      row.e[b] = sw_score(run, np * b / kE, np * (b + 1) / kE, 6.0);
+    }
+    // ONE MINIMUM RULE FOR EVERY SUB-WINDOW, 6 scorable probes per eighth of
+    // width. The first 450k smoke is why: a one-eighth phase scored against a
+    // flat 12 while the SAME eighth in the table above scored against 6, so
+    // TRANS and LATE read `n 0` while e3 and e8 read n 14 and n 30 -- two
+    // answers for one window. The whole-session window keeps §53's own 12
+    // UNCHANGED, because clause 0's reproduction of §53's table depends on it,
+    // and that discontinuity is disclosed rather than smoothed away.
+    for (uint32_t p = 0; p < kPhases; ++p) {
+      const double span = double(kPh[p].hi - kPh[p].lo);
+      row.ph[p] = sw_score(run, np * kPh[p].lo / kE, np * kPh[p].hi / kE, 6.0 * span);
+    }
+
+    // CLAUSE 3's column: §56's degeneracy, on the TEACHING windows, per eighth,
+    // scored by §56's own modal rule over §56's own cut.
+    {
+      const size_t nw = std::min(run.teach_label.size(), run.teach_slot.size());
+      for (uint32_t b = 0; b < kE && nw >= kE; ++b) {
+        const size_t s0 = nw * b / kE, e0 = nw * (b + 1) / kE;
+        if (e0 <= s0) continue;
+        std::vector<int> lb(run.teach_label.begin() + s0, run.teach_label.begin() + e0);
+        std::vector<int> sb(run.teach_slot.begin() + s0, run.teach_slot.begin() + e0);
+        const int u = sw_modal(lb, sb, 0), v = sw_modal(lb, sb, 1);
+        row.edeg[b] = (u < 0 || v < 0 || u == v) ? int8_t(1) : int8_t(0);
+      }
+    }
+    return row;
+  });
+
+  // --- aggregate ------------------------------------------------------------
+  struct Agg {
+    uint32_t n = 0, dropped = 0;
+    double all_slot = 0, all_slot_sd = 0;
+    double pool53 = 0, pool53_gap = 0, pool53_n = 0;
+    double pe = 0;
+    uint32_t e_n[kE] = {};
+    double e_slot[kE] = {}, e_gap[kE] = {}, e_resid[kE] = {}, e_ident[kE] = {};
+    double e_slot_num[kE] = {}, e_tot[kE] = {}, e_min[kE] = {};
+    uint32_t ph_n[kPhases] = {};
+    double ph_slot[kPhases] = {}, ph_slot_sd[kPhases] = {};
+    double ph_resid[kPhases] = {}, ph_num[kPhases] = {}, ph_tot[kPhases] = {};
+    uint32_t edeg[kE] = {};
+    uint32_t ewin = 0;  // creatures contributing at least one scorable eighth
+  };
+  std::vector<Agg> A(kArms);
+  // Two passes: means first, then the spread, so the SE is over the SAME set
+  // the mean was taken over.
+  std::vector<std::vector<double>> ph_vals(size_t(kArms) * kPhases);
+  std::vector<std::vector<double>> all_vals(kArms);
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    const uint32_t a = job_arm[i];
+    const Row& R = rows[i];
+    if (!R.ok) { ++A[a].dropped; continue; }
+    ++A[a].n;
+    if (R.pe_ok) A[a].pe += R.pe;
+    if (R.pooled_slot53 != 0.0 || R.pooled_gap53 != 0.0) {
+      A[a].pool53 += R.pooled_slot53;
+      A[a].pool53_gap += R.pooled_gap53;
+      A[a].pool53_n += 1.0;
+    }
+    if (R.all.ok) all_vals[a].push_back(R.all.slot);
+    bool any_e = false;
+    for (uint32_t b = 0; b < kE; ++b) {
+      A[a].edeg[b] += R.edeg[b] ? 1u : 0u;
+      if (!R.e[b].ok) continue;
+      any_e = true;
+      ++A[a].e_n[b];
+      A[a].e_slot[b] += R.e[b].slot;
+      A[a].e_gap[b] += R.e[b].gap;
+      A[a].e_resid[b] += R.e[b].resid;
+      A[a].e_min[b] += R.e[b].min_cell;
+      A[a].e_slot_num[b] += R.e[b].slot_num;
+      A[a].e_tot[b] += R.e[b].total;
+      const double ai = sw_abs(R.e[b].ident);
+      if (ai > A[a].e_ident[b]) A[a].e_ident[b] = ai;
+    }
+    if (any_e) ++A[a].ewin;
+    for (uint32_t p = 0; p < kPhases; ++p) {
+      if (!R.ph[p].ok) continue;
+      ++A[a].ph_n[p];
+      A[a].ph_slot[p] += R.ph[p].slot;
+      A[a].ph_resid[p] += R.ph[p].resid;
+      A[a].ph_num[p] += R.ph[p].slot_num;
+      A[a].ph_tot[p] += R.ph[p].total;
+      ph_vals[size_t(a) * kPhases + p].push_back(R.ph[p].slot);
+    }
+  }
+  auto mean_se = [](const std::vector<double>& v, double* se) {
+    if (v.empty()) { *se = 0.0; return 0.0; }
+    double m = 0.0;
+    for (double x : v) m += x;
+    m /= double(v.size());
+    if (v.size() < 2) { *se = 0.0; return m; }
+    double s2 = 0.0;
+    for (double x : v) s2 += (x - m) * (x - m);
+    const double sd = std::sqrt(s2 / double(v.size() - 1));
+    *se = sd / std::sqrt(double(v.size()));
+    return m;
+  };
+  for (uint32_t a = 0; a < kArms; ++a) {
+    if (A[a].n) A[a].pe /= double(A[a].n);
+    if (A[a].pool53_n > 0.0) {
+      A[a].pool53 /= A[a].pool53_n;
+      A[a].pool53_gap /= A[a].pool53_n;
+    }
+    double se = 0.0;
+    A[a].all_slot = mean_se(all_vals[a], &se);
+    A[a].all_slot_sd = se;
+    for (uint32_t b = 0; b < kE; ++b) {
+      if (!A[a].e_n[b]) continue;
+      const double d = double(A[a].e_n[b]);
+      A[a].e_slot[b] /= d; A[a].e_gap[b] /= d; A[a].e_resid[b] /= d; A[a].e_min[b] /= d;
+    }
+    for (uint32_t p = 0; p < kPhases; ++p) {
+      if (!A[a].ph_n[p]) continue;
+      A[a].ph_slot[p] = mean_se(ph_vals[size_t(a) * kPhases + p], &A[a].ph_slot_sd[p]);
+      A[a].ph_resid[p] /= double(A[a].ph_n[p]);
+    }
+  }
+
+  bool fatal = false;
+
+  // --- THE PREDICTION'S OWN ARITHMETIC, BEFORE ANY MEASURED COLUMN ----------
+  std::printf("\n  THE PREDICTION'S ARITHMETIC SELF-CHECK, which is not a result. (1-2w) is\n"
+              "  LINEAR in w, so the probe-weighted mean of the per-phase predictions must\n"
+              "  equal the prediction at the session-mean rate. If these disagree one of\n"
+              "  the two arithmetics is wrong and nothing below should be read.\n");
+  std::printf("    per-phase, weighted 2:1:4:1   %+.6f\n", pw_mean);
+  std::printf("    at the session-mean w %.4f    %+.6f\n", w56_mean, direct);
+  std::printf("    identity                      %+.2e   %s\n", pred_ident,
+              sw_abs(pred_ident) < 1e-9 ? "PASS" : "*** FAIL ***");
+  if (sw_abs(pred_ident) >= 1e-9) fatal = true;
+
+  // --- CLAUSE 4's BRANCHES, EXERCISED ON SYNTHETIC INPUT --------------------
+  // Six branches, none of which a real row is guaranteed to take. Run before
+  // the data so a verdict can never be the first thing that touches them.
+  std::printf("\n  CLAUSE 4's SIX BRANCHES, exercised on synthetic input before any real\n"
+              "  row reaches them. E = 0.0241 (the projected CLEAN SE), A = %+.4f.\n", kA);
+  {
+    const double E = 0.0241;
+    struct T { double s; SwVerdict want; const char* why; };
+    const T ts[6] = {
+        {-0.0600, kSwArtefact,  "below -2E"},
+        {+0.0100, kSwNull,      "inside +-2E"},
+        {+0.0600, kSwPartial,   "above 2E, below A-2E"},
+        {+0.1209, kSwExpress,   "within 2E of A"},
+        {+0.2000, kSwOver,      "above A+2E"},
+        {+0.0600, kSwUndefined, "A < 4E: the gate must REFUSE, not pick"},
+    };
+    uint32_t pass = 0;
+    for (uint32_t k = 0; k < 6; ++k) {
+      const double a_k = k == 5 ? 3.0 * E : kA;
+      const SwVerdict got = sw_classify(ts[k].s, E, a_k);
+      const bool ok = got == ts[k].want;
+      pass += ok ? 1u : 0u;
+      std::printf("    S %+.4f  A %+.4f  -> %-34s %s  (%s)\n", ts[k].s, a_k, sw_name(got),
+                  ok ? "ok" : "*** WRONG ***", ts[k].why);
+    }
+    std::printf("    branches reachable  %u/6  %s\n", pass, pass == 6 ? "PASS" : "*** FAIL ***");
+    if (pass != 6) fatal = true;
+  }
+
+  // --- CLAUSE 0: IDENTITY, READ FIRST ---------------------------------------
+  //
+  // THE SPLIT BETWEEN WHAT IS ALWAYS READ AND WHAT IS BUDGET-BOUND, and it is
+  // not cosmetic. The prediction's arithmetic, the six synthetic branches, the
+  // reconstruction identity and the bookkeeping identity are PURE ARITHMETIC
+  // and must hold at any budget, so they are never gated. Clause 0's archive
+  // half, clause 2 and clause 3 compare against 900k MEASUREMENTS -- §53's
+  // published table and §56's eighth profile -- so below that budget they are
+  // UNDEFINED, NOT FAILED. §57's lesson in the other direction: a clause that
+  // short-circuits at a smoke budget leaves the branches after it untested, so
+  // every one of them still PRINTS its measured number here and only the
+  // `fatal` flag is withheld.
+  // AND A LEVER TO EXERCISE THE BUDGET-BOUND BRANCHES BEFORE THE REGISTERED RUN.
+  // Clauses 0, 2, 3 and 5 only reach their PASS/FAIL arms at 900k, so on every
+  // shorter run those arms are untested code and the first row ever to touch
+  // them would be the one carrying the verdict
+  // (`deferral-note-is-untested-code`: real rows cannot test a branch they never
+  // take). Forcing the gates at 450k makes clause 0's archive half and clause
+  // 3's transfer check FAIL -- correctly, because a 450k session's eighths cover
+  // different ticks -- which is how those two branches get run once on purpose.
+  // Debug only: it cannot make a gate PASS that would not have passed, it only
+  // stops one being skipped.
+  const bool force_gates = std::getenv("AIBABY_SLOTWIN_FORCE_GATES") != nullptr;
+  const bool gates_read = ticks >= 900000 || force_gates;
+  const bool c0_read = gates_read;
+  if (force_gates && ticks < 900000) {
+    std::printf("\n  *** AIBABY_SLOTWIN_FORCE_GATES is set and the budget is SHORT. The\n"
+                "  budget-bound gates below are being read against 900k constants on a\n"
+                "  %llu-tick run, so clauses 0 and 3 SHOULD fail. This is a branch\n"
+                "  exercise and NOT a measurement. ***\n",
+                (unsigned long long)ticks);
+  }
+  std::printf("\n  CLAUSE 0 (FIRST) -- IDENTITY. The windowed scorer run over ALL probes\n"
+              "  must reproduce `cell_g`/`cell_n`, and through them §53's PUBLISHED table.\n"
+              "  If this fails the windowed numbers are not §53's session and NOTHING\n"
+              "  below is readable. The archive half is budget-bound and says so.\n");
+  double worst_recon = 0.0;
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    if (!rows[i].ok || !rows[i].all.ok) continue;
+    const double d = sw_abs(rows[i].all.slot - rows[i].pooled_slot53);
+    const double g = sw_abs(rows[i].all.gap - rows[i].pooled_gap53);
+    if (d > worst_recon) worst_recon = d;
+    if (g > worst_recon) worst_recon = g;
+  }
+  std::printf("    reconstruction, worst over all %u creatures   %.2e   %s\n", kJobs,
+              worst_recon, worst_recon < 1e-9 ? "PASS" : "*** FAIL ***");
+  if (worst_recon >= 1e-9) fatal = true;
+  bool c0_arch = true;
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const double ds = sw_abs(A[a].all_slot - arms[a].slot53);
+    const double dse = sw_abs(A[a].all_slot_sd - arms[a].slot53_se);
+    const bool ok = ds < 5e-5 && dse < 5e-5;
+    if (c0_read && !ok) c0_arch = false;
+    std::printf("    %-12s pooled SLOT %+.4f +- %.4f   §53 %+.4f +- %.4f   %s\n",
+                arms[a].name, A[a].all_slot, A[a].all_slot_sd, arms[a].slot53,
+                arms[a].slot53_se, c0_read ? (ok ? "match" : "*** DIFFERS ***") : "n/a");
+  }
+  if (!c0_read) {
+    std::printf("    NOT READ AT THIS BUDGET (%llu < 900000): §53's table is a 900k\n"
+                "    measurement, so the archive half is UNDEFINED here, not failed.\n"
+                "    The reconstruction half above is budget-free and WAS read.\n",
+                (unsigned long long)ticks);
+  } else if (!c0_arch) {
+    fatal = true;
+  }
+
+  // --- CLAUSE 1: THE PER-EIGHTH BOOKKEEPING SELF-TEST ----------------------
+  std::printf("\n  CLAUSE 1 -- BOOKKEEPING, PER EIGHTH. A pinned index makes the cells\n"
+              "  DIAGONAL, so T1.ORACLE's residual is identically zero and its slot term\n"
+              "  IS its gap. Arithmetic, not a result -- and a windowed scorer has to earn\n"
+              "  it again in every eighth. `ident` is gap - (slot + residual), worst case.\n");
+  {
+    const uint32_t ao = 3u;  // T1.ORACLE
+    double worst_r = 0.0, worst_i = 0.0;
+    uint32_t cells_r = 0, cells_all = 0;
+    for (uint32_t b = 0; b < kE; ++b) {
+      if (A[ao].e_n[b]) {
+        worst_r = std::max(worst_r, sw_abs(A[ao].e_resid[b]));
+        cells_r += A[ao].e_n[b];
+      }
+      worst_i = std::max(worst_i, A[ao].e_ident[b]);
+    }
+    for (uint32_t a = 0; a < kArms; ++a)
+      for (uint32_t b = 0; b < kE; ++b) cells_all += A[a].e_n[b];
+    // IDENTIFICATION, MEASURED AND NOT ASSERTED. An identity over an EMPTY set
+    // reads 0.0 and passes, which is a gate that cannot fail
+    // (`vacuity-gate-cannot-guard-a-rejection`). So the count of cells actually
+    // compared is printed beside each worst case and an empty set is a FAIL of
+    // the gate rather than a pass of the arithmetic.
+    std::printf("    ORACLE residual, worst eighth        %.2e   over %u creature-eighths   %s\n",
+                worst_r, cells_r,
+                (cells_r > 0 && worst_r < 1e-12) ? "PASS"
+                : cells_r == 0 ? (gates_read ? "*** FAIL -- EMPTY SET ***" : "n/a -- EMPTY SET")
+                               : "*** FAIL ***");
+    if ((cells_r == 0 && gates_read) || worst_r >= 1e-12) fatal = true;
+    std::printf("    identity, worst creature x eighth    %.2e   %s\n", worst_i,
+                worst_i < 1e-12 ? "PASS" : "*** FAIL ***");
+    if (worst_i >= 1e-12) fatal = true;
+    double worst_all = 0.0;
+    for (uint32_t a = 0; a < kArms; ++a)
+      for (uint32_t b = 0; b < kE; ++b) worst_all = std::max(worst_all, A[a].e_ident[b]);
+    std::printf("    and over EVERY arm and eighth        %.2e   over %u creature-eighths   %s\n",
+                worst_all, cells_all,
+                (cells_all > 0 && worst_all < 1e-12) ? "PASS"
+                : cells_all == 0 ? (gates_read ? "*** FAIL -- EMPTY SET ***" : "n/a -- EMPTY SET")
+                                 : "*** FAIL ***");
+    if ((cells_all == 0 && gates_read) || worst_all >= 1e-12) fatal = true;
+    if (cells_all == 0) {
+      std::printf("    An eighth needs 6 scorable probes and a session yields ~141 only at\n"
+                  "    900k, so below ~410k NO sub-window scores and this identity is\n"
+                  "    UNTESTED rather than satisfied. Smoke above that budget or the\n"
+                  "    windowed scorer is never exercised at all.\n");
+    }
+  }
+
+  // --- CLAUSE 2: VACUITY, ON THE POSITIVE CONTROL -------------------------
+  std::printf("\n  CLAUSE 2 -- VACUITY, at the PRIMARY'S GRANULARITY and on the arm that is\n"
+              "  KNOWN to express. The question a vacuity gate must answer here is whether\n"
+              "  a ~17-probe window can carry a large slot term AT ALL, and only an arm\n"
+              "  that expresses can answer it -- the derived arm's own column could not\n"
+              "  (`vacuity-gate-cannot-guard-a-rejection`).\n"
+              "\n"
+              "  THE THRESHOLD IS THE ARM'S OWN POOLED VALUE AND NOT A CONSTANT, and the\n"
+              "  450k smoke is why: an absolute 0.08 was calibrated on §53's 900k ceiling\n"
+              "  and read 3/8 at 450k, where the arm's OWN pooled figure is only +0.0827.\n"
+              "  That gate could have failed with nothing wrong (`baseprobe-gate`).\n"
+              "  Required: the per-eighth MEAN recovers at least half of what the pooled\n"
+              "  estimator sees on the same arm at the same budget, and >= 6 of 8 eighths\n"
+              "  are strictly positive.\n");
+  {
+    const uint32_t ao = 3u;
+    uint32_t pos = 0, scored = 0;
+    double esum = 0.0;
+    std::printf("    T1.ORACLE  slot ");
+    for (uint32_t b = 0; b < kE; ++b) {
+      std::printf("%+.4f ", A[ao].e_n[b] ? A[ao].e_slot[b] : 0.0);
+      if (!A[ao].e_n[b]) continue;
+      ++scored;
+      esum += A[ao].e_slot[b];
+      if (A[ao].e_slot[b] > 0.0) ++pos;
+    }
+    std::printf("\n               n    ");
+    for (uint32_t b = 0; b < kE; ++b) std::printf("%7u ", A[ao].e_n[b]);
+    const double emean = scored ? esum / double(scored) : 0.0;
+    const double want = 0.5 * A[ao].all_slot;
+    const bool c2a = scored > 0 && A[ao].all_slot > 0.0 && emean >= want;
+    const bool c2b = pos >= 6u;
+    std::printf("\n    per-eighth mean %+.4f  vs half the pooled %+.4f (pooled %+.4f)   %s\n",
+                emean, want, A[ao].all_slot,
+                !gates_read ? "n/a" : c2a ? "PASS" : "*** FAIL ***");
+    std::printf("    eighths strictly positive   %u/8   %s\n", pos,
+                !gates_read ? "n/a" : c2b ? "PASS" : "*** FAIL ***");
+    if (!gates_read) {
+      std::printf("    NOT READ AT THIS BUDGET: an eighth holds ~17 probes only at 900k.\n"
+                  "    Undefined, not failed -- the columns are printed so the plumbing is\n"
+                  "    still visible, and at 450k they read %+.4f and %u/8.\n",
+                  emean, pos);
+    } else if (!(c2a && c2b)) {
+      fatal = true;
+    }
+  }
+
+  // --- CLAUSE 3: DO §56's PHASES APPLY TO THESE CREATURES? -----------------
+  std::printf("\n  CLAUSE 3 -- TRANSFER. The phase cut comes from §56's `slotdrift` DERIVED\n"
+              "  arm, which runs pin_mode 5: a DIFFERENT enclosing experiment, so transfer\n"
+              "  is TESTED and not assumed. §56's modal rule over §56's cut, on §58's own\n"
+              "  T1.RET teaching windows. §56 read 22 18 2 0 0 0 0 16 of 24.\n");
+  {
+    const uint32_t ar = 0u;
+    std::printf("    T1.RET  deg ");
+    for (uint32_t b = 0; b < kE; ++b) std::printf("%3u ", A[ar].edeg[b]);
+    std::printf(" of %u\n", A[ar].n);
+    // THRESHOLDS AS PROPORTIONS, and this is a correction made before the run
+    // and disclosed as one. The pre-registration wrote them as counts (">= 12",
+    // ">= 8") taken from §56's figures over ITS 24 creatures, and this arm has
+    // 36 -- the same denominator slip `mean-of-ratios` is about, one level up.
+    // §56 read 0.917 in e1 and 0.667 in e8; required here with slack, so a
+    // changed arm size can never silently move the gate again.
+    const double dn = A[ar].n ? double(A[ar].n) : 1.0;
+    const bool c3a = double(A[ar].edeg[0]) / dn >= 0.67;
+    const bool c3b = double(A[ar].edeg[7]) / dn >= 0.50;
+    bool c3c = true;
+    for (uint32_t b = 3; b < 7; ++b) if (A[ar].edeg[b] != 0u) c3c = false;
+    std::printf("    e1 >= .67n   %-14s e8 >= .50n   %-14s e4-e7 == 0   %s\n",
+                !gates_read ? "n/a" : c3a ? "PASS" : "*** FAIL ***",
+                !gates_read ? "n/a" : c3b ? "PASS" : "*** FAIL ***",
+                !gates_read ? "n/a" : c3c ? "PASS" : "*** FAIL ***");
+    if (!gates_read) {
+      std::printf("    NOT READ AT THIS BUDGET: §56's profile 22 18 2 0 0 0 0 16 is a 900k\n"
+                  "    measurement and a shorter session's eighths cover different ticks --\n"
+                  "    §56 proved the late collapse is keyed to ABSOLUTE ticks. Undefined,\n"
+                  "    not failed.\n");
+    } else if (!(c3a && c3b && c3c)) {
+      fatal = true;
+      std::printf("    The phase cut is imported from an arm this run does not reproduce,\n"
+                  "    so the primary below is UNREADABLE rather than negative.\n");
+    }
+  }
+
+  // --- THE PROFILE, WHICH IS THE POINT ------------------------------------
+  std::printf("\n  THE SLOT TERM PER EIGHTH. `n` is creatures with TWO live slots in that\n"
+              "  window -- a collapsed window is MISSING DATA, not an observation of no\n"
+              "  expression, so it is dropped and counted (§53's rule). `min` is the\n"
+              "  smallest of the four cells as a share, which is identification and is\n"
+              "  MEASURED rather than asserted -- but it is 0.0000 on the two PINNED arms\n"
+              "  BY CONSTRUCTION, since a pin makes the cells diagonal and two of the four\n"
+              "  empty. The column means something only on the DERIVED arms. `w56` is\n"
+              "  §56's error rate for that eighth and `pred` is averaging's value from it.\n");
+  std::printf("             %-6s", "");
+  for (uint32_t b = 0; b < kE; ++b) std::printf("     e%u  ", b + 1);
+  std::printf("\n             w56   ");
+  for (uint32_t b = 0; b < kE; ++b) std::printf("%7.4f ", kW56[b]);
+  std::printf("\n             pred  ");
+  for (uint32_t b = 0; b < kE; ++b) std::printf("%+7.4f ", (1.0 - 2.0 * kW56[b]) * kCeiling);
+  std::printf("\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-12s slot  ", arms[a].name);
+    for (uint32_t b = 0; b < kE; ++b) {
+      if (A[a].e_n[b]) std::printf("%+7.4f ", A[a].e_slot[b]); else std::printf("%7s ", "--");
+    }
+    std::printf("\n                 resid ");
+    for (uint32_t b = 0; b < kE; ++b) {
+      if (A[a].e_n[b]) std::printf("%+7.4f ", A[a].e_resid[b]); else std::printf("%7s ", "--");
+    }
+    std::printf("\n                 n     ");
+    for (uint32_t b = 0; b < kE; ++b) std::printf("%7u ", A[a].e_n[b]);
+    std::printf("\n                 min   ");
+    for (uint32_t b = 0; b < kE; ++b) {
+      if (A[a].e_n[b]) std::printf("%7.4f ", A[a].e_min[b]); else std::printf("%7s ", "--");
+    }
+    std::printf("\n");
+  }
+
+  std::printf("\n  AND BY PHASE, which is where the verdict is read. `pred` is averaging's\n"
+              "  value for that phase, derived from §56's rate and §53's ceiling.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    std::printf("    %-12s", arms[a].name);
+    for (uint32_t p = 0; p < kPhases; ++p) {
+      std::printf("  %s %+.4f+-%.4f (n%2u)", kPh[p].name, A[a].ph_slot[p], A[a].ph_slot_sd[p],
+                  A[a].ph_n[p]);
+    }
+    std::printf("\n");
+  }
+  std::printf("    %-12s", "pred");
+  for (uint32_t p = 0; p < kPhases; ++p) std::printf("  %s %+.4f            ", kPh[p].name, ph_pred[p]);
+  std::printf("\n");
+
+  // --- CLAUSE 4: THE PRIMARY ----------------------------------------------
+  std::printf("\n  CLAUSE 4 -- THE PRIMARY. T1.RET's CLEAN slot term against the two\n"
+              "  competing models. Every boundary is 2 SE from one of them, so none is\n"
+              "  chosen. The SE is MEASURED here; the pre-registration projected 0.0241.\n");
+  {
+    const double S = A[0].ph_slot[kClean];
+    const double E = A[0].ph_slot_sd[kClean];
+    const SwVerdict v = sw_classify(S, E, kA);
+    std::printf("    measured   S %+.4f   E %.4f  (projected 0.0241)   n %u\n", S, E,
+                A[0].ph_n[kClean]);
+    std::printf("    boundaries  -2E %+.4f   +2E %+.4f   A-2E %+.4f   A %+.4f   A+2E %+.4f\n",
+                -2.0 * E, 2.0 * E, kA - 2.0 * E, kA, kA + 2.0 * E);
+    std::printf("    distance from 0  %.2f SE        distance from A  %.2f SE\n",
+                E > 0.0 ? S / E : 0.0, E > 0.0 ? (S - kA) / E : 0.0);
+    std::printf("    separation of the two models   %.2f SE  (pre-registered 5.02)\n",
+                E > 0.0 ? kA / E : 0.0);
+    std::printf("\n    VERDICT   %s\n", sw_name(v));
+    std::printf("    as a fraction of the pinned ceiling   %.3f\n", S / kCeiling);
+    std::printf("    as a fraction of averaging's CLEAN prediction   %.3f\n", S / kA);
+  }
+
+  // --- CLAUSE 5: THE LABEL-DESTROYED CONTROL ------------------------------
+  std::printf("\n  CLAUSE 5 -- THE LABEL-DESTROYED CONTROL. T1.RET.D is the same derived\n"
+              "  index with the word DRAWN, so no label survives to be expressed. If its\n"
+              "  CLEAN window also clears +2E POSITIVE then a clean-window slot term\n"
+              "  arises WITHOUT the label and clause 4's reading is void\n"
+              "  (`null-is-not-a-control`).\n");
+  {
+    const double S = A[1].ph_slot[kClean], E = A[1].ph_slot_sd[kClean];
+    const bool bad = E > 0.0 && S >= 2.0 * E;
+    std::printf("    T1.RET.D CLEAN  %+.4f +- %.4f  (%.2f SE)   %s\n", S, E,
+                E > 0.0 ? S / E : 0.0,
+                !gates_read ? "n/a at this budget"
+                : bad ? "*** VOIDS CLAUSE 4 ***"
+                      : "does not clear +2E -- clause 4 stands");
+    if (gates_read && bad) fatal = true;
+  }
+
+  // --- THE ESTIMATOR DISAGREEMENT, REPORTED AS REGISTERED -----------------
+  std::printf("\n  THE TWO ESTIMATORS, reported side by side because §57 found them\n"
+              "  disagreeing by 2.5x under right skew (`mean-of-ratios`). `per-creature`\n"
+              "  is the mean of each creature's own ratio and is what the verdict reads;\n"
+              "  `pooled` is the ratio of sums over all of them.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    const double pooled = A[a].ph_tot[kClean] > 0.0 ? A[a].ph_num[kClean] / A[a].ph_tot[kClean]
+                                                    : 0.0;
+    std::printf("    %-12s CLEAN  per-creature %+.4f +- %.4f    pooled %+.4f\n", arms[a].name,
+                A[a].ph_slot[kClean], A[a].ph_slot_sd[kClean], pooled);
+  }
+
+  std::printf("\n  %s\n", fatal ? "ONE OR MORE GATES FAILED -- the verdict above is NOT readable."
+                                : "All gates passed.");
+  return true;
+}
 }  // namespace aibaby_host
