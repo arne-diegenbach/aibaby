@@ -11213,3 +11213,580 @@ Amended by item 4 above, and the amendment is disclosed as one: **40 creatures,
    located in time rather than inferred from a session mean.
 3. Only then §57's named successor, which §58 deferred and this run does not
    touch.
+
+## §59b PRE-REGISTRATION — DOES THE DERIVED INDEX EXPRESS ON THE RAMP'S PLATEAU, ON CREATURES §59a NEVER SAW? (2026-11-11)
+
+`--experiment slotexp`. Tier::kLong, `Expect::kRead`, **320 sessions at 900k**
+(4 arms x 80 reps), ~54 min. §53's arms, §53's budget, §53's genome. **No core
+change, no new genome field, no RNG draw** — the per-probe vectors §58 added and
+§59a split are all the instrument needs, and every window below is host-side
+arithmetic over §59a's per-eighth cell matrix.
+
+> **The 320/80/44 figures above are what was REGISTERED and are left as written.
+> The 450k smoke raised the primary to 60 creatures and the run to 384 sessions
+> before anything was measured at 900k — see "AMENDED AFTER THE 450k SMOKE"
+> below for the measurement that forced it and the direction it pushes.**
+
+This is the test §58 named, sized by §59a, and **run on a creature set disjoint
+from the one that sized it.**
+
+### WHY THE SAMPLE IS THE DESIGN'S FIRST CONSTRAINT AND NOT ITS LAST
+
+§59a's ruler scored `T1.RET`'s `e6-e7` slot term at **+0.0772 +- 0.0293 (n 34)**,
+and §59a reported, as an error of its own, that applying §58's classifier to
+that cell returns EXPRESSES. **I have therefore seen the answer on those
+creatures.** Rep seeds are `dna.header().seed + r * 7919`, so an arm of 40
+starting at `r = 0` would be 90% the data that produced the peek
+(`pairing-on-discovery-sample`, `holdout-exact-half`).
+
+Every arm here runs `r = 0..79`, and the reps are read in three disjoint roles
+**fixed now**:
+
+    r = 0..35   (pinned ceiling arm: r = 0..11)   ARCHIVE   -> G0 only
+    r = 36..79                                    PRIMARY   -> clause 4, 5a, 5b
+    r = 0..79                                     POOLED    -> secondary, and it
+                                                              CONTAINS the peek
+
+The archive subset exists so the transfer gate has something to fail against:
+these are the exact reps §53, §58 and §59a scored, so **the nine published
+windows must come back to four decimals from this new enclosing experiment**
+before any fresh number is readable (`control-on-a-different-code-path`). The
+primary subset has never been run on any arm of this line — `T1.ORACLE` has only
+ever existed at `r = 0..11`, so its 44 fresh reps are new creatures as well as a
+new window.
+
+### THE REGISTERED PRIMARY
+
+`S` = `T1.RET`'s `e6-e7` slot term over `r = 36..79`, `E` its between-creature
+SE, and `A = +0.1228`, carried in. §58's five-way `sw_classify` **reused as
+code**, not reimplemented, so the verdict function is the one already published:
+
+    1  S <= -2E              ARTEFACT DOMINATES
+    2  |S| < 2E              §53's NULL SURVIVES
+    3  2E <= S < A - 2E      PARTIAL
+    4  |S - A| <= 2E         EXPRESSES AS AVERAGING PREDICTS
+    5  S > A + 2E            OVER-EXPRESSES
+       A < 4E                UNDEFINED -- the models are closer than 4 SE
+
+`A` is `(1 - 2 w) x 0.1293` at §56's `w` for e6 and e7 — `w = (0.0322 + 0.0181)/2
+= 0.025150`, so `A = 0.949700 x 0.1293 = +0.12280`. Both constants are archived
+and neither is measured here.
+
+### THE SAMPLE SIZE, WHICH IS 44 AND NOT §59a's 40, FOR AN ARITHMETIC REASON
+
+§59a's sizing formula is `n' = n0 (E s / A)^2` and its `n0 = 34` is the number of
+creatures that **SCORED**, not the number run: `T1.RET` ran 36 and 34 carried a
+slot term in `e6-e7`. **So the registered "40" is 40 SCORABLE**, and 40 run
+yields `40 x 34/36 = 37.8`. Honouring the number rather than the sizing would
+quietly spend 5% of the registered power:
+
+    run   scorable   E projected   separation   P(UNDEFINED)
+     40     37.8       0.02788       4.40 SE        19.3%
+     44     41.6       0.02658       4.62 SE         8.2%
+
+**44 is what delivers the registered 4.5 SE.** `E` is projected from §59a's
+measured `e6-e7` SE (`E0 = 0.02940` at `n0 = 34`, recovered from its three
+printed sizing rungs) scaled as `1/sqrt(creatures)` only — the axis that §59a
+measured as a real power lever — and never by width, which it measured as
+almost none (`calibrate-the-estimator-in-claim-units`, fourth rule).
+
+**AND THE AMENDMENT MOVES THE EXPECTED VERDICT AWAY FROM THE PEEK, WHICH IS WHY
+IT IS DEFENSIBLE.** `A - 2E` is the EXPRESSES band's lower edge, and a smaller
+`E` raises it: at `E = 0.0279` the edge is +0.0670 and at `E = 0.0266` it is
++0.0696. §59a's +0.0772 clears the second by **0.28 SE**. More power here makes
+PARTIAL more likely and EXPRESSES less, so the extra four creatures cannot be a
+thumb on the scale for the exciting answer.
+
+### THE THREE PRE-FLIGHTS, AND THE THIRD IS WRITTEN AS NUMBERS
+
+`power-is-not-the-error-model`: power, the noise model, and the probability each
+refusal clause fires are three separate questions.
+
+**Power.** 4.62 SE between the two competing models, from a measured window of
+exactly this width on exactly this arm — not from a scaling law and not from one
+window standing in for its width, which are §58's and §59a's two misses.
+
+**The noise model.** Between-creature SE of a per-creature slot term; the
+per-creature figure is the unit and the ratio-of-sums pooling is printed beside
+it, expected to disagree under skew (`mean-of-ratios`; §57 saw 2.5x, §59a saw 15%
+between a window and its own eighths).
+
+**The refusal clauses, as numbers.**
+
+- `P(UNDEFINED)` = **8.2%**. `E` must exceed `A/4 = 0.03070`; projected 0.02658
+  with `sd(E) ~ E/sqrt(2(n-1)) = 0.00295`, so `z = 1.39`. **If it fires, that is
+  the reported result and the arm is NOT re-run larger** — sizing `n` until the
+  classifier stops refusing is fitting the design to the verdict.
+- `P(PARTIAL)` = **1.8% under the null and 1.8% under averaging.** The band is
+  `[+0.0532, +0.0696)`, 0.62 SE wide, so the split is decisive with probability
+  0.982 either way and the result cannot hide in the middle.
+- `P(clause 5b fires)` = **between 2% and 42%**, and the range is the point:
+  2.3% if the pinned-drawn arm's true `e6-e7` null is zero, 42% if §59a's
+  `+0.0928 +- 0.0566 (n 28)` on that arm is real. **This is the clause most
+  likely to qualify the headline and it is registered, not discovered.**
+
+### THE GATES, IN ORDER, AND THE ORDER IS PART OF THE REGISTRATION
+
+**G0 — TRANSFER, READ FIRST.** The archive subset must reproduce **all thirteen
+published windows** to within 5e-5 on the mean and on the SE, and exactly on
+`n` where `n` was published:
+
+    T1.RET       e1-e8  +0.0081 +- 0.0170 (n36)    e1-e2  +0.0060 +- 0.0076 (n36)
+                 e3     -0.0550 +- 0.0338 (n36)    e4-e7  +0.0442 +- 0.0297 (n35)
+                 e8     -0.0377 +- 0.0446 (n21)
+    T1.RET.D     e1-e8  -0.0947 +- 0.0306 (n36)    e4-e7  -0.1235 +- 0.0468
+    T1.ORACLE.D  e1-e8  +0.0211 +- 0.0327 (n36)    e4-e7  +0.0725 +- 0.0478
+                 e8     +0.1403 +- 0.0557 (n10)
+    T1.ORACLE    e1-e8  +0.1293 +- 0.0478 (n12)    e1-e2  +0.1280 +- 0.0378
+                 e4-e7  +0.1289 +- 0.0473 (n11)
+
+**The four `e1-e8` rows are §53's published table**, and they are checkable here
+because §59a's log shows that the general `6 x width` minimum at width 8 returns
+§53's pooled figures exactly on all four arms — so the whole-session window is a
+cell of the same table and needs no second rule. **Ten** of the thirteen rows
+carry a published `n` and are checked on it; the **three** that do not are from
+§58's result text, where the count was not printed, and their `n` is **left
+unchecked and said in the log to be unchecked** rather than guessed — the log
+prints the count of unchecked rows so the figure here cannot drift from the code. All four arms are covered,
+which §59a's five-row table did not manage. **A 900k comparison, so UNDEFINED
+below that budget and not failed** — the numbers still print.
+
+**G1 — THE IDENTITY, RE-EARNED IN THE PRIMARY WINDOW.** `gap - (slot + resid)`
+under 1e-12 for every scored creature in `e6-e7`, on every arm, with the count
+of creatures actually compared printed and **an empty set a FAIL of the gate and
+not a pass of the identity** (`vacuity-gate-cannot-guard-a-rejection`, §58's
+clause-1 defect). Plus the pinned arms' residual, which a diagonal cell table
+makes *identically* zero: arithmetic, so stated as arithmetic.
+
+**G2 — VACUITY ON THE POSITIVE CONTROL, AT THE PRIMARY'S GRANULARITY.** Can a
+two-eighth window carry a large slot term at all? Only an arm known to express
+can answer (`vacuity-gate-cannot-guard-a-rejection`). Required: `T1.ORACLE`'s
+fresh `e6-e7` slot term **>= its own whole-session value at the same budget**,
+scored by the same rule. Budget-relative on purpose — an absolute 900k threshold
+is the `baseprobe-gate` defect §58 hit at 450k and fixed the same way.
+
+**G3 — DISJOINTNESS, AND IT IS ARITHMETIC, NOT A GATE.** `seed + r*7919` is
+injective in `r`, so the primary reps cannot collide with the archive reps. It is
+printed as a derivation with the two seed ranges, **labelled as arithmetic**,
+because a check that cannot fail for a measured reason is not evidence
+(`open-is-unfalsifiable-on-an-instrument`).
+
+### CLAUSE 5 — BOTH LABEL-DESTROYED ARMS, AND ONLY ONE OF THEM IS §58's
+
+**5a, registered and load-bearing.** `T1.RET.D`'s fresh `e6-e7`. If it clears
+`+2E` positive then a clean-window slot term arises without a label-paired
+lesson and clause 4's reading is **VOID** (`null-is-not-a-control`). §59a's
+discovery sample read `-0.1367 +- 0.0518`, so this is not expected to fire.
+
+**5b, registered because §58 told its successor to carry it.** `T1.ORACLE.D`'s
+fresh `e6-e7`. §58 found this arm drifting positive in low-n windows (+0.0725 in
+CLEAN, +0.1403 at 2.52 SE in LATE) and wrote that "the estimator's null is not
+demonstrably zero" there; §59a then read it at **+0.0928 +- 0.0566 in e6-e7
+itself**, 76% of `A`. It is pinned, so it has no index error and none of §53's
+dose artefact to explain it. If it clears `+2E` positive, **the primary verdict
+is reported with the name prefixed `QUALIFIED` and the sentence "the estimator's
+null in this window is not demonstrably zero, measured at X +- Y on a
+label-destroyed pinned arm" travels with it from then on.** Not a void: this arm
+differs from `T1.RET` in two ways at once, so a difference against it would
+contain the lesson and the pin, exactly the composition §58 refused to claim as
+a headline.
+
+### THE SECONDARIES, ALL FIVE DECLARED NOW SO NONE IS A SECOND BITE
+
+1. **THE WINDOW-MATCHED CEILING, AND IT POINTS THE OTHER WAY.** `A` carries
+   §53's **pooled** ceiling, +0.1293 at n 12. §59a measured the pinned arm at
+   **+0.1696 +- 0.0600** in `e6-e7` itself, so averaging's prediction evaluated
+   at the operating point (`match-at-the-operating-point`) is
+   `A_win = 0.9497 x Ceiling_fresh`, around **+0.161** — and §59a's +0.0772
+   against it classifies as **PARTIAL, not EXPRESSES.** Three rows are printed:
+   the registered `A`, `A_win` under the primary's SE convention, and `A_win`
+   with the ceiling's own SE propagated in quadrature (projected `E' ~ 0.0399`,
+   separation ~4.04 SE, so **that third row may itself return UNDEFINED**).
+   **The registered primary is the first row.** The other two are declared here,
+   before the run, *with the direction they push stated*, which is the only way
+   declaring them is not self-serving.
+2. **The pooled 80**, flagged in the log as containing the discovery sample.
+3. **`e5-e7`**, §59a's declared fallback window. A robustness row only: the
+   window decision was taken in §59a and is NOT reopened.
+4. **The per-eighth ramp with SEs on the fresh 44** — §58's finding replicated
+   on creatures that did not produce it. Descriptive, and the only reading
+   registered is whether the monotone e3->e7 rise is present.
+5. **The drop ledger on the fresh 44** — §59a's silence cliff, second witness,
+   on a disjoint sample and at no extra cost.
+
+### WHAT EACH OUTCOME BUYS, WRITTEN BEFORE THE NUMBER EXISTS
+
+**EXPRESSES** — §54's averaging model transfers from a corrupted pinned index to
+a derived one, §53's and §58's nulls were both windowing artefacts, and **G3 off
+the creature's own index is OPEN.** That reverses two shipped conclusions, so it
+is the outcome with the highest burden, which is why secondary 1 is registered
+against it rather than discovered afterwards.
+
+**PARTIAL** — expression is real and averaging overstates it. The line stays
+open and the next question is the size of the shortfall, not its existence.
+
+**§53's NULL SURVIVES** — the plateau is where §58's ramp is highest and it
+still does not reach 2 SE, which closes the window-choice explanation for §53's
+null altogether. The index's quality is then not what blocks expression and the
+line moves to §57's surviving homeostasis lead.
+
+**ARTEFACT DOMINATES** — the dose asymmetry is strongest exactly where the index
+is cleanest and the ramp is highest, which would be a new mechanism claim.
+
+**UNDEFINED** — the SE is a between-creature floor this architecture cannot get
+under at an affordable `n`, and the expression question is not decidable by
+windowing §53's design. §59a put the affordability limit at 96 in advance; 44 is
+inside it, and a refusal here means the next `n` is not the answer.
+
+### DISCLOSED BEFORE THE RUN
+
+- **I have seen the discovery sample's answer**, and at the new power it sits
+  **0.28 SE** inside the EXPRESSES band. The run is near a boundary by
+  construction, so **whichever side it lands on, it lands on it narrowly**, and
+  no "clean reversal" reading is available to either outcome.
+- `A`'s ceiling has its own `+-0.0447` (n 12) which the five-way split does not
+  propagate, exactly as §58 disclosed. Secondary 1 is what makes that visible
+  instead of only stated.
+- **Sleep is not a lever.** The prune is first reachable at ~1.04M ticks
+  (`core/src/network.cpp:3969`), so 900k has never run it and a longer budget
+  would turn a mechanism ON inside the comparison rather than add power.
+- `badf` was identically 0 over §59a's 960 creature-eighths, so the drop split is
+  effectively two-way and the ledger here is read that way.
+- The eighth cut is §56's, `np * b / 8` over the raw per-probe vectors, and the
+  minimum is §58's `6 x width`. **No new threshold enters this run.**
+- `sm_from_cells` is reused rather than rewritten. §59a already proved it
+  identical to §58's independent `sw_score` on five windows; G0 re-proves it on
+  nine, inside a new enclosing experiment, which is the part that could fail.
+
+### ONE ADDITION MADE AFTER THE CODE WAS WRITTEN AND BEFORE ANY RUN
+
+`T1.ORACLE` has only ever existed at `r = 0..11` — §53, §58 and §59a all stopped
+at twelve creatures, because §58 froze §53's arm sizes so clause 0 could check
+its published row. So on the ceiling arm **`r = 12..79` are also creatures no
+section has scored**, and they run here anyway because the rep range is uniform
+across arms. Secondary 1 therefore prints one extra row: the window-matched
+ceiling over **every unseen rep of that arm, n up to 68**, beside the registered
+`r = 36..79` row. It is a sharper measurement of an already-disclosed secondary,
+not a second reading of the primary, and the registered row stays the registered
+row.
+
+### AND ONE DEFECT THE 60k BRANCH RUN CAUGHT BEFORE ANY VERDICT EXISTED
+
+A 60k run exists only to make every gate fail, and it did its job. Six of six
+`sw_classify` branches fired on synthetic input including the UNDEFINED refusal,
+G0 read `n/a` at a short budget rather than failing, and G1 and G2 both returned
+`*** FAIL -- EMPTY SET ***` — §58's clause-1 defect, now caught by a branch
+written to catch it.
+
+**The defect was in clause 5.** With `n 0` the arm printed `does not clear +2E`,
+which reads as *the control cleared the primary* when nothing had been measured
+at all. That is `vacuity-gate-cannot-guard-a-rejection` in its exact shape: a
+rejection guarded by a gate that cannot fail. Scorability is now tracked apart
+from the reading, the three states print as `UNSCORABLE -- NOT A PASS`,
+`measured, does not clear +2E` and `CLEARS +2E`, and **an unscorable 5a is
+FATAL** — clause 4's verdict rests on that arm being negative, and an empty set
+is not negative, it is nothing. An unscorable 5b is not fatal but is reported as
+leaving §58's caution unresolved rather than cleared.
+
+### AMENDED AFTER THE 450k SMOKE, BEFORE THE 900k RUN: THE PRIMARY IS 60, NOT 44
+
+The smoke is the reason the registration's own power rule exists, and it
+contradicted the registration.
+
+**What it measured.** 320 sessions at 450k, every arm live, every gate reading
+real numbers. `T1.RET`'s `e6-e7` on the fresh reps came back **+0.0855 +- 0.0328
+(n 39 of 44)** — and at that `E` the separation is **3.75 SE**, so
+`sw_classify` returned **UNDEFINED and the registered refusal clause fired in the
+smoke.** The `PARTIAL [+0.0655, +0.0573)` the log prints is an *inverted*
+interval: when `A < 4E` the band's bounds cross and the five-way split has no
+interior. That inversion is the refusal's geometry, and the log now says so
+rather than leaving a reader to decide it is a formatting fault.
+
+**What that does and does not license.** §58's third rule says to project a
+narrow window's SE from a measured window of that width, and the one measured
+here is at the WRONG BUDGET — 450k's `e6-e7` spans ticks ~281k-394k while 900k's
+spans ~563k-788k, different ticks on differently-aged creatures. **So the smoke's
++0.0855 is not the primary and is not a peek at it**, exactly as registered. But
+its *noise* is now a second estimate of the same window's per-creature SD, and
+the two disagree:
+
+    900k, r 0..35, n 34   E 0.0294   per-creature SD 0.1714   (§59a)
+    450k, r 36..79, n 39  E 0.0328   per-creature SD 0.2048   (this smoke)
+
+Budget and creature set both differ, so **the cause is not identifiable** and
+neither figure can be preferred. Sizing against the optimistic one is what §58
+did and it came within 1.8% of voiding its own section.
+
+    run  scorable   at SD 0.1714          at SD 0.2048
+     44     41.5    E 0.0266  4.62 SE     E 0.0318  3.86 SE   <- UNDER the 4.0 gate
+     52     49.1    E 0.0245  5.02 SE     E 0.0292  4.20 SE
+     60     56.6    E 0.0228  5.39 SE     E 0.0272  4.51 SE   <- clears 4.5 at EITHER
+
+**The primary therefore runs 60 creatures, `r = 36..95`**, and every arm runs
+`r = 0..95`: 384 sessions, ~58 min, ten minutes more than the registered 320.
+Sixty is inside the 96-creature affordability limit §59a stated in advance.
+
+**Why this is a power decision and not a fitted one.** The registration forbids
+re-running the arm larger *after* a verdict, because that is sizing `n` until the
+classifier stops refusing. This is the other thing: a pre-run change from a
+measured SE, which is the correction §58 and §59a each named as their own first
+mistake. And the direction is the test — a smaller `E` raises `A - 2E`, the
+EXPRESSES band's lower edge, so **more creatures make EXPRESSES harder and
+PARTIAL likelier.** The amendment cannot be a thumb on the scale for the
+outcome the discovery sample suggested.
+
+**Four other things the smoke settled.**
+
+- **G1's identity holds on real cells**: worst `2.22e-16` over **262**
+  creature-windows, and the two pinned arms' residuals are **exactly 0.00e+00**
+  as the diagonal-cell arithmetic requires, while the derived arms' run to
+  6.5e-2. The pin is doing what source says it does.
+- **G2 passed with margin** at a budget it was not tuned for: `T1.ORACLE`'s fresh
+  `e6-e7` reads +0.1722 +- 0.0435 against its own whole-session +0.1399 +-
+  0.0299. The budget-relative form is what makes that readable at 450k at all.
+- **Clause 5b did not fire on fresh creatures**: `T1.ORACLE.D` reads **-0.0070
+  +- 0.0496**, flat, where §59a's discovery sample read +0.0928 +- 0.0566. That
+  is consistent with §58's caution being noise — at a different budget, so it
+  narrows nothing yet, but it is the first fresh-sample reading that arm has had.
+- **The scored fraction is lower than projected**: 39 of 44 at 450k (88.6%)
+  against §59a's 34 of 36 at 900k (94.4%). The sizing above uses 94.4%, the 900k
+  figure, because that is the budget the primary runs at.
+
+## §59b RESULT — THE REGISTERED REFUSAL FIRED AT 3.95 SE AGAINST A 4.00 GATE, AND THE CONTROLS SAY MORE THAN THE REFUSAL DOES (2026-11-11)
+
+`results/n59b-slotexp-900k.log`, 384 sessions, 384/384 live, 63 min. Genome
+`9f6faac320210cc8e9f5830adf066934`, byte-identical to §53/§57/§58/§59a's.
+`core/` untouched. `bitid` 183/183 content lines on `slotdrift`; `verify` 936
+lines, hash `ad96f882becbee92`, 24 experiments — all three as predicted before
+the launch.
+
+### THE PRIMARY, AND IT DECLINES TO DECIDE
+
+**`T1.RET` `e6-e7`, r 36..95, creatures no earlier section has scored:**
+
+| | |
+|---|---|
+| `S` | **+0.1056 ± 0.0311**, n **53** scored of 60 run |
+| above zero | 3.40 SE |
+| below averaging's `A` = +0.12280 | 0.55 SE |
+| separation `A/E` | **3.95 SE** — the gate is 4.00 |
+| bands | PARTIAL's bounds **crossed** (`[+0.0622, +0.0606)`), so the five-way split has no interior |
+| **VERDICT** | **UNDEFINED — the models are closer than 4 SE** |
+
+**The registered consequence applies: this is the result, and the arm is NOT
+re-run at a larger `n`.** Sizing until the classifier stops refusing is fitting
+the design to the verdict, which is the thing the pre-registration exists to
+forbid. I am not re-running it.
+
+I recomputed `S` from the matrix dump independently — slot term rebuilt from raw
+cell counts and sums, window minimum and all — and got n 53, mean +0.1056, SE
+0.0311, `A/E` 3.949. The binary's number is right, including the margin that
+loses.
+
+### WHY IT MISSED, WHICH IS A SIZING FAILURE AND MINE
+
+The amendment that raised the primary from 44 creatures to 60 was in the right
+direction and **still not enough, by 1.4 scored creatures.** Both axes of the
+projection came in worse than any pre-run estimate:
+
+| | §59a discovery | 450k smoke | **§59b fresh, 900k** |
+|---|---|---|---|
+| between-creature SD | 0.1714 | 0.2048 | **0.2264** |
+| scored fraction | 94.4% | 88.6% | **88.3%** |
+
+`E` needed for `A/E ≥ 4.00` is 0.03070; the run delivered 0.03110. At the
+measured SD, **54.4 scored creatures** were needed and 53 scored. Had all 60
+scored, `E` would have been 0.02923 and `A/E` **4.20** — it would have cleared.
+
+**The pre-run bullet is scorable and it chose wrong.** The amendment section
+says, in as many words: *"The sizing above uses 94.4%, the 900k figure, because
+that is the budget the primary runs at."* The fresh 900k rate is **88.3%**,
+which matches the 450k smoke's 88.6% and not the 900k discovery sample's 94.4%.
+**The variable that separates those two numbers is DISCOVERY vs FRESH, not the
+budget** — the discovery sample's creatures are the ones that scored, which is
+why they were available to be discovered on. The same applies to the SD: every
+pre-run estimate of it was taken on a sample already conditioned on scoring, and
+the fresh SD is larger than both.
+
+This is `calibrate-the-estimator-in-claim-units` landing a third time, and it
+sharpens to something new: **a between-creature SD and a scoring rate measured
+on a discovery sample are both optimistic for a fresh one. Project from the
+FRESH arm of a smoke, not from the window that motivated the test.**
+
+### THE CONTROLS, WHICH NARROW MORE THAN THE REFUSAL DOES
+
+Clause 5, on the same fresh reps. Neither fired, so the primary is **not
+voided**, and that is the whole of the registered reading:
+
+| arm | | |
+|---|---|---|
+| 5a `T1.RET.D` (derived + drawn) | +0.0558 ± 0.0353 | 1.58 SE — does not clear +2E |
+| 5b `T1.ORACLE.D` (pinned + drawn) | +0.0517 ± 0.0464 | 1.11 SE — does not clear +2E |
+
+**But both are POSITIVE, at about half the primary, and that is the finding the
+registration did not anticipate.** Unregistered arithmetic, flagged as such:
+
+- primary − 5a = **+0.0498 ± 0.0470, 1.06 SE**
+- primary − 5b = **+0.0539 ± 0.0559, 0.96 SE**
+
+So the primary's 3.40 SE above zero is real, and **the part of it attributable
+to the label is ~1 SE and not established.** A label-destroyed arm cannot read
++0.0558 by index error or by dose, so whatever it is measuring, the derived arm
+is measuring it too. **Do not quote the primary's 3.40 SE as a narrowing of
+§53's null without this line beside it** — `null-is-not-a-control` says only the
+label-destroyed arm speaks to the label, and here it speaks against.
+
+**And the two label-destroyed arms now AGREE in sign.** §58 read `T1.RET.D` at
+−0.0947 whole-session and `T1.ORACLE.D` at +0.0211; §59a had them disagreeing in
+sign, which that section's memory says to carry with any windowed claim. On
+fresh creatures in `e6-e7` they are +0.0558 and +0.0517 — the same sign, nearly
+the same size. That is a change in what the controls say, not a confirmation.
+
+### THE FIVE SECONDARIES, ALL DECLARED BEFORE THE RUN
+
+1. **Window-matched ceiling** — declared *with the direction it pushes*, which is
+   what makes declaring it honest rather than self-serving. `Ceiling_window`
+   (`T1.ORACLE` fresh `e6-e7`) = +0.1480 ± 0.0424 (n57), so `A_window` =
+   +0.14057. Three rows: registered `A` → **UNDEFINED**; `A_window` under the
+   primary's SE convention → **EXPRESSES**; `A_window` with the ceiling's own SE
+   propagated in quadrature (`E'` 0.0509, separation 2.76 SE) → **UNDEFINED**.
+   The EXTRA row over every unscored `T1.ORACLE` rep, r 12..95, is the
+   best-measured ceiling this project has: +0.1861 ± 0.0369 (n78), `A_window`
+   +0.17671 → **PARTIAL**. **The better the ceiling is measured, the further the
+   primary falls from full expression.**
+2. **Pooled r 0..95** → +0.0945 ± 0.0221 (n87), which classifies EXPRESSES —
+   **and it contains the 36 discovery creatures this section was designed
+   around, so it cannot be the result.** The consistency check is clean:
+   fresh − archive = +0.0284 ± 0.0428, 0.67 SE, and G0 reproduced §59a's
+   +0.0772 ± 0.0293 (n34) exactly.
+3. **`e5-e7`, the declared fallback window** → +0.0934 ± 0.0328 (n55) against
+   `A` +0.12205 → **UNDEFINED** as well. The two windows agree, so the window
+   choice is not what decided this.
+4. **§58's ramp on creatures that did not produce it** → **it does not fully
+   replicate.** The registered reading was whether the monotone `e3→e7` rise is
+   present: **2 of 4 steps up**, so no. Descriptively the broad shape survives —
+   `T1.RET` reads +0.0282, +0.0115, +0.0236 in `e1-e3` and +0.1025, +0.0677,
+   +0.1141, +0.0990 in `e4-e7` — and the pinned arm is **flat** across all eight
+   eighths (+0.090 to +0.166), so the rise is specific to the derived arm. But
+   the monotone claim is refused and **§58's ramp should not be quoted as
+   replicated.**
+5. **The silence cliff, second witness on a disjoint sample** → replicates
+   plainly. `T1.RET` kept probes fall 1003 → 372 across the eighths while `nov`
+   rises 17 → 708; `dark` is **0 in every cell of all four arms** over 8460
+   probes each, as in §59a. `e8` is silence, not a dark index, on fresh
+   creatures too.
+
+### GATES, AND ONE DISCLOSURE
+
+All passed. G0 reproduced **13 of 13** archived windows to four decimals
+including the SE, with the 3 rows whose `n` was never published printed as `n
+UNCHECKED` rather than hidden in a blank column. G1's identity worst `1.11e-16`
+over **338** creature-windows, both pinned arms' object residuals exactly
+`0.00e+00`. G2 passed budget-relative: `T1.ORACLE` fresh `e6-e7` +0.1480 ±
+0.0424 ≥ its own fresh whole-session +0.1356 ± 0.0224. G3 is printed as
+arithmetic and claims nothing. All **6 of 6** verdict branches were exercised on
+synthetic input before any real row reached the classifier, the UNDEFINED
+refusal among them — which is why the branch that actually fired was already
+known to work.
+
+**Disclosed:** the G0 `*** DIFFERS ***` branch was exercised at 60k on **empty**
+columns, not at 450k on real-but-different numbers as §58 and §59a did it. The
+branch code is identical either way, but it is a weaker exercise and I took it
+to avoid a second 24-minute run.
+
+### WHAT §59b BUYS, STATED WITHOUT INFLATION
+
+The question was whether the derived visual index expresses a conditional lesson
+on the ramp's plateau. **The honest answer is that this design cannot say, for
+two independent reasons, and only one of them is the refusal.**
+
+The refusal is a power failure I own: the estimator's SD on fresh creatures is
+larger than any sample I had to size from, and the registered consequence is to
+report that rather than grow `n`.
+
+The second reason is worse for the hypothesis and does not depend on power at
+all: **the label-destroyed arms read positive at about half the primary**, so
+~1 SE of label-attributable signal is all this window contains, and the
+window-matched ceiling — measured better here than anywhere — puts the primary
+at PARTIAL rather than full expression. §53's null is not refuted, §58's ramp is
+not replicated, and what survives is narrower than when the section started:
+**`e6-e7` carries a slot term 3.40 SE above zero whose dependence on the label
+is unmeasured at this power, on an estimator whose SD this project has now
+measured three times and got three different answers.**
+
+The next thing is not a bigger `n` on this window. It is an arm that can
+separate the label-destroyed arms' positive reading from the primary's — because
+until that number is nonzero, no window of this experiment can show expression.
+
+### THE SUCCESSOR, GROUNDED IN AN EXPLORATORY CHECK THAT COSTS NOTHING TO RUN
+
+**Everything in this subsection is EXPLORATORY and POST-HOC. It changes no
+verdict above, and the registered primary stays UNDEFINED.** It is here because
+naming a successor from a measured quantity beats naming one from a guess, and
+because the measurement is free: the archived `MAT` matrix carries the cell
+counts, so it ran offline against `results/n59b-slotexp-900k.log` with no
+compute.
+
+§53 measured a confound that applies to **every arm**: the per-creature slot
+term rises with signed object-presentation imbalance at a slope near +0.5,
+*"a quantity that takes the same value in the claim arm, the label-destroyed arm
+and both pinned arms"*. The decomposition says why — with `Gbar_0 ≈ Gbar_1` the
+slot term collapses to `Gbar × (n_0· − n_1·)/N`, so the coefficient should be
+the window's mean `G`. Fitting it per arm on `e6-e7`, r 36..95:
+
+| arm | slot | mean imbalance | mean `Gbar` | fitted slope | `slot − imb × Gbar` |
+|---|---|---|---|---|---|
+| `T1.RET` | +0.1056 | +0.0911 | +0.5124 | +0.4448 | **+0.0614 ± 0.0195 (3.14 SE)** |
+| `T1.RET.D` | +0.0558 | +0.0409 | +0.5190 | +0.6521 | **+0.0068 ± 0.0185 (0.37 SE)** |
+| `T1.ORACLE.D` | +0.0517 | +0.0426 | +0.5814 | +0.6327 | +0.0345 ± 0.0290 (1.19 SE) |
+| `T1.ORACLE` | +0.1480 | −0.0068 | +0.5464 | +0.5896 | +0.1122 ± 0.0259 (4.33 SE) |
+
+**The four fitted slopes are +0.44, +0.65, +0.63, +0.59** — positive,
+arm-independent, clustering where §53's four 900k estimates clustered (+0.4465,
++0.5223, +0.5113, +0.5566). That is an independent reproduction of §53's
+confound in a window §53 never scored, and it is the one solid thing here.
+
+**What the correction does to the controls.** Clause 5a — the load-bearing
+label-destroyed arm — **collapses to +0.0068 ± 0.0185, 0.37 SE**, while the
+primary survives at 3.14 SE. `primary − 5a` goes from 1.06 SE to **2.03 SE**.
+But `primary − 5b` goes the other way, from 0.96 SE to **0.77 SE**: the
+**pinned** label-destroyed arm's positive reading is *not* explained by the
+imbalance, and that arm has no index error and no dose asymmetry to blame.
+**One control clears and the other does not, so this is not a rescue.**
+
+**And it reads PARTIAL, not expression.** Against the correction applied to the
+ceiling as well (`match-at-the-operating-point`), corrected `A` = 0.9497 ×
+0.1122 = **+0.1066**, and the corrected primary is **58% of it, 2.32 SE below
+averaging**. The direction secondary 1 was declared to point in is where the
+corrected numbers land too.
+
+**The one genuinely attractive thing — and the trap in it.** The correction
+removes variance as well as level: `E` falls from 0.0311 to 0.0195, so the
+separation `A/E` becomes **5.46 SE**, comfortably clear of the 4.00 gate that
+refused this section. **That power estimate was computed on the data a test
+would be run on, which is `pairing-on-discovery-sample` and the fifth rule
+§59b just paid for, in one object.** A registered successor must therefore:
+
+1. run on **fresh creatures again** (r ≥ 96), with power projected from a
+   smoke's **fresh** arm and the discovery-optimism penalty applied — three
+   measurements of this estimator's SD have now gone 0.1714 → 0.2048 → 0.2264 as
+   the sample got less selected;
+2. **fix the coefficient in advance** — either `Gbar` from the decomposition
+   (principled) or §53's archived +0.5 (independent) — because a slope fitted on
+   the test's own data is a fitted correction, and the fitted slopes above
+   (0.44–0.65) are not identical to `Gbar`;
+3. re-derive **every** archived figure under the corrected estimator before
+   quoting any of them together, per `re-derive-after-an-estimator-fix`: this is
+   a slope fix, not a level fix;
+4. pre-register against **PARTIAL**, which is what the exploratory numbers
+   predict, so that EXPRESSES remains the surprising outcome rather than the
+   hoped-for one;
+5. carry `T1.ORACLE.D` as the load-bearing control, since it is the one the
+   correction does **not** explain.
+
+**What §59b leaves, then, is a better-specified question than it was asked.**
+Not "does the derived index express on the plateau" — this design cannot answer
+that — but "does the slot term carry anything about the label once the
+object-presentation imbalance is removed, and why does a pinned label-destroyed
+arm read positive at all". The second half of that is the part nothing in §53,
+§58, §59a or §59b explains.

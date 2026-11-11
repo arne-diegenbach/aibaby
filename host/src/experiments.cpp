@@ -366,6 +366,32 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"slotexp", 900000, Expect::kRead, Tier::kLong,
+     "derived: §59b. THE TEST §58 NAMED AND §59a SIZED. Does the derived visual index\n"
+     "  express a conditional lesson on §58's expression RAMP PLATEAU (e6-e7), where\n"
+     "  §56 proves the index is clean AND §58 found the lesson has had time to land?\n"
+     "  §53 read NULL pooled over a session whose first two eighths have no index at\n"
+     "  all, and §58 read NULL over a window cut from §56's DEGENERACY profile --\n"
+     "  which says where an assignment EXISTS, not where the lesson has LANDED, and\n"
+     "  those differ by most of the window. The primary is T1.RET's e6-e7 slot term\n"
+     "  against averaging's prediction A = (1 - 2w) x 0.1293 = +0.12280, read by §58's\n"
+     "  five-way sw_classify REUSED AS CODE, with its A >= 4E refusal branch intact.\n"
+     "  THE SAMPLE IS THE DESIGN'S FIRST CONSTRAINT: §59a's log carries this cell for\n"
+     "  r = 0..35, so the answer is already known on those creatures, and rep seeds\n"
+     "  are seed + r*7919. Every arm therefore runs r = 0..79 split into three roles\n"
+     "  fixed in advance -- r < arch is ARCHIVE and feeds G0 alone, r >= 36 is the\n"
+     "  PRIMARY (44 run to score the 40 §59a's formula asked for, since its n counts\n"
+     "  creatures that SCORED), and the union is a secondary that says in the log that\n"
+     "  it contains the discovery sample. G0 reproduces §53's whole-session table and\n"
+     "  §58's phase windows -- thirteen windows, all four arms, four decimals\n"
+     "  INCLUDING the SEs -- so a failure means this is a different experiment from\n"
+     "  §53's and nothing below it is readable. Clause 5 reads BOTH label-destroyed\n"
+     "  arms: T1.RET.D voids the primary if it clears +2E, and T1.ORACLE.D qualifies\n"
+     "  it, which is §58's own unresolved caution promoted to a registered branch.\n"
+     "  Five secondaries are declared before the run, the first of them AGAINST the\n"
+     "  exciting outcome: averaging evaluated at the window-matched ceiling rather\n"
+     "  than §53's pooled one. No core change, no new genome field, no RNG draw.\n"
+     "  kRead: all five verdicts are results and the exit status encodes none of"},
     {"cpprobe", 600000, Expect::kGuard, Tier::kLong,
      "derived: two 300 s phases. Expected to FAIL, and the failure is the current\n"
      "  finding: its own positive control says 300 s of praise does not measurably\n"
@@ -1635,6 +1661,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "ctxfreeze") ok = run_ctxfreeze(dna_blob, ticks, verbose);
   else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
   else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
+  else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

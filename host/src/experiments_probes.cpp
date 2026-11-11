@@ -16177,4 +16177,654 @@ bool run_slotmat(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   (void)verbose;
   return true;
 }
+
+// ===========================================================================
+// §59b -- THE TEST §58 NAMED AND §59a SIZED, ON CREATURES §59a NEVER SAW.
+// ===========================================================================
+//
+// WHY THIS IS A SECOND EXPERIMENT AND NOT A FLAG ON `slotmat`. §59a's archived
+// log carries `T1.RET`'s e6-e7 cell, and §59a itself reported that applying
+// §58's classifier to that cell returns EXPRESSES -- so the answer is already
+// known on those 36 creatures. Rep seeds are `seed + r * 7919`, injective in
+// `r`, so the only way to ask the question again is to ask it of different `r`.
+// Every arm here runs `r = 0..79`, split into three roles fixed in the
+// pre-registration: `r < arch` is ARCHIVE and feeds G0 and nothing else,
+// `r >= kSePrimLo` is the PRIMARY, and the union is a declared secondary that
+// says in the log that it contains the discovery sample.
+//
+// NOTHING NEW IS MEASURED BY A NEW ESTIMATOR. `sm_from_cells` is §59a's, which
+// §59a proved identical to §58's independently written `sw_score` on five
+// windows; `sw_classify` is §58's verdict function reused as code rather than
+// reimplemented. What can fail here is the TRANSFER -- the same scorer inside a
+// different enclosing experiment over a different rep range
+// (`control-on-a-different-code-path`) -- and that is what G0 is.
+
+// AMENDED AFTER THE 450k SMOKE AND BEFORE THE 900k RUN. The registration sized
+// the primary at 44 from §59a's per-creature SD of 0.1714 (E 0.0294 at n 34,
+// 900k, r 0..35). The smoke measured the SAME window on the FRESH reps at 450k
+// and got SD 0.2048 -- 20% higher. Budget and creature set both differ, so the
+// cause is not identifiable, and at the pessimistic SD 44 creatures separate the
+// two models by only 3.86 SE, UNDER sw_classify's own 4.0 gate. 60 clears 4.5 SE
+// at EITHER SD (4.51 and 5.39). This is a pre-run power decision from a measured
+// SE, which is what §58's and §59a's misses both say to do; it is not the
+// post-hoc re-sizing the registration forbids, and a smaller E raises `A - 2E`
+// and so moves the expected verdict AWAY from EXPRESSES and toward PARTIAL.
+constexpr uint32_t kSeReps = 96;     // per arm: 0..95
+constexpr uint32_t kSePrimLo = 36;   // the primary's first rep: disjoint from every archive
+
+// The per-creature slot term aggregated over a rep range, which is the one
+// estimator this section reads. `n` is the count that SCORED, because that is
+// the `n` §59a's sizing formula is written in and running 44 to score 40 is the
+// whole reason this arm is 44 wide.
+struct SeAgg {
+  uint32_t n = 0;
+  double mean = 0.0, se = 0.0;
+  double ratio = 0.0;        // ratio-of-sums pooling, printed beside the mean
+  double resid = 0.0;        // the object residual's mean -- reported, never added in
+  double worst_ident = 0.0;  // max |gap - (slot + resid)| over the range
+  double worst_resid = 0.0;  // max |resid| -- identically 0 on a pinned arm
+};
+
+bool run_slotexp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kK = aibaby::kMaxContextSlots;
+
+  // --- the constants, every one archived and none measured here -------------
+  constexpr double kCeiling = 0.1293;  // §53's T1.ORACLE slot term, POOLED, n 12
+  const double kW56[kSmE] = {0.4458, 0.3263, 0.1195, 0.0464, 0.0338, 0.0322, 0.0181, 0.3121};
+  // THE WINDOW. Decided in §59a from §58's expression ramp and NOT reopened
+  // here; `kFb` is printed as a robustness row and is not a second bite.
+  constexpr uint32_t kTgtLo = 5u, kTgtHi = 7u;  // e6-e7
+  constexpr uint32_t kFbLo = 4u, kFbHi = 7u;    // e5-e7
+
+  auto wbar = [&](uint32_t lo, uint32_t hi) {
+    double acc = 0.0;
+    for (uint32_t b = lo; b < hi; ++b) acc += kW56[b];
+    return (hi > lo) ? acc / double(hi - lo) : 0.0;
+  };
+  // Averaging's prediction: §54's model is that a perfect index corrupted at
+  // rate w speaks at (1 - 2w) of ceiling. Linear in w, which is the property
+  // §58's arithmetic self-check exploited.
+  auto apred = [&](uint32_t lo, uint32_t hi) { return (1.0 - 2.0 * wbar(lo, hi)) * kCeiling; };
+  const double kA = apred(kTgtLo, kTgtHi);
+
+  struct Arm {
+    const char* name;
+    int pin, pairing;
+    uint32_t arch;  // reps §53/§58/§59a scored: the ARCHIVE subset, G0's domain
+    bool pinned;
+    const char* what;
+  };
+  constexpr uint32_t kArms = 4;
+  const Arm arms[kArms] = {
+      {"T1.RET", 0, 0, 36u, false, "derived + paired -- THE PRIMARY"},
+      {"T1.RET.D", 0, 1, 36u, false, "derived + drawn -- clause 5a, load-bearing"},
+      {"T1.ORACLE.D", 1, 1, 36u, true, "pinned + drawn -- clause 5b, §58's caution"},
+      {"T1.ORACLE", 1, 0, 12u, true, "pinned + paired -- the ceiling and G2"},
+  };
+
+  // §53's and §58's PUBLISHED windows. Thirteen rows over all four arms; `n ==
+  // 0` means the count was never printed and is therefore NOT checked, which
+  // the log says out loud rather than leaving a reader to infer from a blank.
+  struct Arch { uint32_t arm, lo, hi; double slot, se; uint32_t n; const char* name; };
+  constexpr uint32_t kArch = 13;
+  const Arch kAr[kArch] = {
+      {0u, 0u, 8u, +0.0081, 0.0170, 36u, "T1.RET      e1-e8"},
+      {0u, 0u, 2u, +0.0060, 0.0076, 36u, "T1.RET      e1-e2"},
+      {0u, 2u, 3u, -0.0550, 0.0338, 36u, "T1.RET      e3   "},
+      {0u, 3u, 7u, +0.0442, 0.0297, 35u, "T1.RET      e4-e7"},
+      {0u, 7u, 8u, -0.0377, 0.0446, 21u, "T1.RET      e8   "},
+      {1u, 0u, 8u, -0.0947, 0.0306, 36u, "T1.RET.D    e1-e8"},
+      {1u, 3u, 7u, -0.1235, 0.0468, 0u, "T1.RET.D    e4-e7"},
+      {2u, 0u, 8u, +0.0211, 0.0327, 36u, "T1.ORACLE.D e1-e8"},
+      {2u, 3u, 7u, +0.0725, 0.0478, 0u, "T1.ORACLE.D e4-e7"},
+      {2u, 7u, 8u, +0.1403, 0.0557, 10u, "T1.ORACLE.D e8   "},
+      {3u, 0u, 8u, +0.1293, 0.0478, 12u, "T1.ORACLE   e1-e8"},
+      {3u, 0u, 2u, +0.1280, 0.0378, 0u, "T1.ORACLE   e1-e2"},
+      {3u, 3u, 7u, +0.1289, 0.0473, 11u, "T1.ORACLE   e4-e7"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kArms; ++a)
+    for (uint32_t r = 0; r < kSeReps; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §59b. THE TEST. Does the derived visual index express a\n"
+              "                    conditional lesson on §58's ramp PLATEAU (e6-e7), where\n"
+              "                    §56 says the index is clean and §58 says the lesson has\n"
+              "                    had time to land? §53 and §58 both read NULL over windows\n"
+              "                    chosen by other criteria; §59a measured the SE so this\n"
+              "                    one can be sized.\n");
+  std::printf("  and the catch     §59a's log CARRIES the e6-e7 cell for r = 0..35, so the\n"
+              "                    answer is known on those creatures. The PRIMARY here runs\n"
+              "                    r = %u..%u -- DISJOINT -- and r < arch is read by G0 only.\n",
+              kSePrimLo, kSeReps - 1);
+  std::printf("  the primary       T1.RET e%u-e%u slot term vs A = %+.5f, §58's five-way\n"
+              "                    sw_classify REUSED AS CODE. A = (1 - 2w) x %.4f at §56's\n"
+              "                    w = %.6f for these eighths.\n",
+              kTgtLo + 1, kTgtHi, kA, kCeiling, wbar(kTgtLo, kTgtHi));
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms x %u reps\n",
+              double(ticks) * dt / 1000.0, kJobs, kArms, kSeReps);
+  instrument("slotexp", dna.header().seed ^ 0x59B0u, kJobs, "sessions");
+
+  struct Row {
+    bool ok = false;
+    uint32_t probes = 0;
+    double cn[kSmE][2][kK] = {};
+    double cg[kSmE][2][kK] = {};
+    uint32_t pn[kSmE] = {}, kept[kSmE] = {}, dark[kSmE] = {};
+    uint32_t novoice[kSmE] = {}, badf[kSmE] = {};
+    uint32_t offslot = 0;
+    uint64_t seed = 0;  // for G3's disjointness derivation
+  };
+
+  const std::vector<Row> rows = parallel_reps<Row>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Row row;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    row.seed = seed;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // IDENTICAL to §53's, §58's and §59a's call, argument for argument. This is
+    // what makes the archive subset the SAME creatures and G0 a real gate.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return row;
+    row.ok = true;
+    row.probes = run.probes;
+
+    size_t np = std::min(run.ctx_label.size(), run.ctx_slot.size());
+    np = std::min(np, std::min(run.probe_g.size(), run.probe_g_ok.size()));
+    np = std::min(np, run.probe_why.size());
+
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      const size_t lo = np * b / kSmE, hi = np * (b + 1) / kSmE;
+      for (size_t k = lo; k < hi; ++k) {
+        ++row.pn[b];
+        const int s = run.ctx_slot[k];
+        const int o = run.ctx_label[k];
+        const bool ok = run.probe_g_ok[k] != 0;
+        const bool is_dark = s < 0 || s >= int(kK);
+        if (is_dark) ++row.dark[b];
+        if (run.probe_why[k] == 1) ++row.novoice[b];
+        if (run.probe_why[k] == 2) ++row.badf[b];
+        if (is_dark || !ok || o < 0 || o > 1) continue;
+        ++row.kept[b];
+        if (s >= int(kSmSlots)) ++row.offslot;
+        row.cn[b][o][s] += 1.0;
+        row.cg[b][o][s] += run.probe_g[k];
+      }
+    }
+    return row;
+  });
+
+  // --- the one scorer, over a rep range and a window -----------------------
+  auto score = [&](uint32_t arm, uint32_t rlo, uint32_t rhi, uint32_t lo, uint32_t hi) {
+    SeAgg g;
+    std::vector<double> v;
+    double sn = 0.0, st = 0.0, rs = 0.0;
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      if (!rows[i].ok || job_arm[i] != arm) continue;
+      const uint32_t r = job_rep[i];
+      if (r < rlo || r >= rhi) continue;
+      double cn[2][kK] = {}, cg[2][kK] = {};
+      for (uint32_t b = lo; b < hi; ++b)
+        for (uint32_t o = 0; o < 2; ++o)
+          for (uint32_t s = 0; s < kK; ++s) {
+            cn[o][s] += rows[i].cn[b][o][s];
+            cg[o][s] += rows[i].cg[b][o][s];
+          }
+      // §58's minimum, 6 scorable probes per eighth of width. §59a measured
+      // that this rule at width 8 returns §53's pooled table exactly, so the
+      // whole-session row is a cell of the same table and no second rule
+      // enters this run.
+      const SmCell c = sm_from_cells(cn, cg, 6.0 * double(hi - lo));
+      if (!c.ok) continue;
+      v.push_back(c.slot);
+      sn += c.slot * c.total;
+      st += c.total;
+      rs += c.resid;
+      g.worst_ident = std::max(g.worst_ident, sw_abs(c.ident));
+      g.worst_resid = std::max(g.worst_resid, sw_abs(c.resid));
+    }
+    g.n = uint32_t(v.size());
+    if (g.n == 0) return g;
+    for (double x : v) g.mean += x;
+    g.mean /= double(g.n);
+    g.resid = rs / double(g.n);
+    g.ratio = st > 0.0 ? sn / st : 0.0;
+    if (g.n >= 2) {
+      double s2 = 0.0;
+      for (double x : v) s2 += (x - g.mean) * (x - g.mean);
+      g.se = std::sqrt(s2 / double(g.n - 1)) / std::sqrt(double(g.n));
+    }
+    return g;
+  };
+
+  bool fatal = false;
+  const bool force_gates = std::getenv("AIBABY_SLOTEXP_FORCE_GATES") != nullptr;
+  const bool gates_read = ticks >= 900000 || force_gates;
+  uint32_t live = 0;
+  for (uint32_t i = 0; i < kJobs; ++i) live += rows[i].ok ? 1u : 0u;
+  std::printf("\n  creatures live  %u/%u\n", live, kJobs);
+  if (force_gates && ticks < 900000) {
+    std::printf("\n  *** AIBABY_SLOTEXP_FORCE_GATES is set and the budget is SHORT. G0 is\n"
+                "  being read against §53's and §58's 900k figures on a %llu-tick run, so it\n"
+                "  SHOULD differ. A branch exercise, NOT a measurement. ***\n",
+                (unsigned long long)ticks);
+  }
+
+  // --- THE CLASSIFIER'S BRANCHES, BEFORE ANY REAL NUMBER -------------------
+  std::printf("\n  THE VERDICT FUNCTION'S SIX BRANCHES, exercised on synthetic input at this\n"
+              "  run's own A = %+.5f before any real row reaches it. It is §58's\n"
+              "  `sw_classify` called as code, so this also checks that reuse compiled to\n"
+              "  the same thing (`deferral-note-is-untested-code`: real rows cannot test a\n"
+              "  branch they never take, and UNDEFINED has a registered 8.2%% chance here).\n",
+              kA);
+  {
+    const double E = 0.0266;  // the projected SE, used ONLY to place these probes
+    struct T { double S, E; SwVerdict want; const char* why; };
+    const T ts[6] = {
+        {-4.0 * E, E, kSwArtefact, "well below -2E"},
+        {+0.0, E, kSwNull, "zero"},
+        {+2.5 * E, E, kSwPartial, "above 2E, below A - 2E"},
+        {kA, E, kSwExpress, "exactly averaging's prediction"},
+        {kA + 3.0 * E, E, kSwOver, "above A + 2E"},
+        {kA / 4.0 + 0.001, kA / 4.0 + 0.001, kSwUndefined, "A < 4E: the models are too close"},
+    };
+    uint32_t pass = 0;
+    for (uint32_t k = 0; k < 6; ++k) {
+      const SwVerdict got = sw_classify(ts[k].S, ts[k].E, kA);
+      const bool ok = got == ts[k].want;
+      pass += ok ? 1u : 0u;
+      std::printf("    S %+.4f  E %.4f  -> %-33s %s  (%s)\n", ts[k].S, ts[k].E, sw_name(got),
+                  ok ? "ok" : "*** WRONG ***", ts[k].why);
+    }
+    std::printf("    branches reachable  %u/6  %s\n", pass, pass == 6 ? "PASS" : "*** FAIL ***");
+    if (pass != 6) fatal = true;
+  }
+
+  // --- G0: TRANSFER, READ FIRST --------------------------------------------
+  std::printf("\n  G0 -- TRANSFER, READ FIRST. The ARCHIVE subset of each arm (r < its own\n"
+              "  published count) must reproduce §53's whole-session table and §58's phase\n"
+              "  windows to four decimals INCLUDING the SE. Thirteen windows over all four\n"
+              "  arms. The scorer is §59a's and the reps are §53's, so what is being tested\n"
+              "  is that a DIFFERENT ENCLOSING EXPERIMENT over a DIFFERENT rep range still\n"
+              "  produces the archived session -- if it does not, the fresh numbers below\n"
+              "  are a different experiment and nothing here is readable. A 900k\n"
+              "  comparison: UNDEFINED below that budget, never failed there.\n");
+  {
+    uint32_t okc = 0, unchecked_n = 0;
+    bool all = true;
+    for (uint32_t k = 0; k < kArch; ++k) {
+      const SeAgg g = score(kAr[k].arm, 0u, arms[kAr[k].arm].arch, kAr[k].lo, kAr[k].hi);
+      const bool nok = kAr[k].n == 0u || g.n == kAr[k].n;
+      if (kAr[k].n == 0u) ++unchecked_n;
+      const bool ok = sw_abs(g.mean - kAr[k].slot) < 5e-5 && sw_abs(g.se - kAr[k].se) < 5e-5 && nok;
+      if (ok) ++okc; else all = false;
+      std::printf("    %-18s %+.4f +- %.4f (n%2u)   archive %+.4f +- %.4f (%s)   %s\n",
+                  kAr[k].name, g.mean, g.se, g.n, kAr[k].slot, kAr[k].se,
+                  kAr[k].n ? "n checked" : "n UNCHECKED", gates_read ? (ok ? "match" : "*** DIFFERS ***") : "n/a");
+    }
+    std::printf("    %u of %u windows reproduced; %u rows carry no published n and their\n"
+                "    count is NOT checked -- stated, not hidden in a blank column.\n",
+                okc, kArch, unchecked_n);
+    if (!gates_read) {
+      std::printf("    NOT READ AT THIS BUDGET (%llu < 900000): the archive is a 900k\n"
+                  "    measurement and a shorter session's eighths cover different ticks.\n",
+                  (unsigned long long)ticks);
+    } else if (!all) {
+      fatal = true;
+      std::printf("    THE ARCHIVE DOES NOT REPRODUCE. Everything below is a different\n"
+                  "    experiment from §53's and CANNOT be read against its null.\n");
+    }
+  }
+
+  // --- G1: THE IDENTITY, RE-EARNED IN THE PRIMARY WINDOW -------------------
+  std::printf("\n  G1 -- THE DECOMPOSITION'S IDENTITY, re-earned in the window this section\n"
+              "  reads. gap - (slot + resid) over every scored creature in e%u-e%u on every\n"
+              "  arm. The count compared is printed and an EMPTY SET IS A FAILURE OF THE\n"
+              "  GATE, not a pass of the identity -- §58's clause 1 could have passed on\n"
+              "  zero cells and the smoke is what caught it\n"
+              "  (`vacuity-gate-cannot-guard-a-rejection`).\n", kTgtLo + 1, kTgtHi);
+  {
+    double worst = 0.0;
+    uint32_t cmp = 0;
+    for (uint32_t a = 0; a < kArms; ++a) {
+      const SeAgg g = score(a, 0u, kSeReps, kTgtLo, kTgtHi);
+      worst = std::max(worst, g.worst_ident);
+      cmp += g.n;
+      std::printf("    %-12s identity %.2e   worst |resid| %.2e   over %u creatures%s\n",
+                  arms[a].name, g.worst_ident, g.worst_resid, g.n,
+                  arms[a].pinned ? "   (pinned: resid is identically 0 by arithmetic)" : "");
+      // A pinned index makes the cells diagonal, so its residual is zero as
+      // arithmetic and not as a result. Checked anyway: if it is not zero the
+      // cell table is not diagonal and the pin is not doing what source says.
+      if (arms[a].pinned && g.n > 0 && g.worst_resid >= 1e-12) {
+        fatal = true;
+        std::printf("      *** A PINNED ARM HAS A NON-ZERO RESIDUAL: the cells are not\n"
+                    "      diagonal, so the probe is not setting the oracle pin. ***\n");
+      }
+    }
+    std::printf("    worst identity %.2e over %u creature-windows   %s\n", worst, cmp,
+                (cmp > 0 && worst < 1e-12) ? "PASS"
+                : cmp == 0 ? "*** FAIL -- EMPTY SET ***" : "*** FAIL ***");
+    if (cmp == 0 || worst >= 1e-12) fatal = true;
+  }
+
+  // --- G2: VACUITY ON THE POSITIVE CONTROL ---------------------------------
+  std::printf("\n  G2 -- VACUITY, ON THE ARM THAT IS KNOWN TO EXPRESS AND AT THE PRIMARY'S\n"
+              "  GRANULARITY. Can a two-eighth window carry a large slot term at all? A\n"
+              "  vacuity gate on the DERIVED arm cannot answer that, because its reading is\n"
+              "  the thing in question. Required: T1.ORACLE's FRESH e%u-e%u >= its own FRESH\n"
+              "  whole-session value, both at this budget -- budget-relative on purpose,\n"
+              "  since an absolute 900k threshold is the `baseprobe-gate` defect §58 hit.\n",
+              kTgtLo + 1, kTgtHi);
+  {
+    const SeAgg win = score(3u, kSePrimLo, kSeReps, kTgtLo, kTgtHi);
+    const SeAgg all = score(3u, kSePrimLo, kSeReps, 0u, kSmE);
+    const bool ok = win.n >= 2u && all.n >= 2u && win.mean >= all.mean;
+    std::printf("    T1.ORACLE fresh e%u-e%u   %+.4f +- %.4f (n%2u)\n", kTgtLo + 1, kTgtHi,
+                win.mean, win.se, win.n);
+    std::printf("    T1.ORACLE fresh e1-e8   %+.4f +- %.4f (n%2u)\n", all.mean, all.se, all.n);
+    std::printf("    window >= whole session   %s\n",
+                (win.n < 2u || all.n < 2u) ? "*** FAIL -- EMPTY OR SINGLETON SET ***"
+                                           : (ok ? "PASS" : "*** FAIL ***"));
+    if (!ok) fatal = true;
+  }
+
+  // --- G3: DISJOINTNESS, AND IT IS ARITHMETIC ------------------------------
+  std::printf("\n  G3 -- DISJOINTNESS. `seed + r * 7919` is injective in r, so the primary's\n"
+              "  reps cannot collide with the archive's. **THIS IS ARITHMETIC AND NOT A\n"
+              "  GATE** -- it cannot fail for a measured reason, so it is printed as a\n"
+              "  derivation and claims nothing (`open-is-unfalsifiable-on-an-instrument`).\n");
+  {
+    uint64_t alo = 0, ahi = 0, plo = 0, phi = 0;
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      if (job_arm[i] != 0u) continue;
+      if (job_rep[i] == 0u) alo = rows[i].seed;
+      if (job_rep[i] == 35u) ahi = rows[i].seed;
+      if (job_rep[i] == kSePrimLo) plo = rows[i].seed;
+      if (job_rep[i] == kSeReps - 1u) phi = rows[i].seed;
+    }
+    std::printf("    ARCHIVE r 0..35    seeds %016llx .. %016llx\n", (unsigned long long)alo,
+                (unsigned long long)ahi);
+    std::printf("    PRIMARY r %u..%u   seeds %016llx .. %016llx   gap %llu\n", kSePrimLo,
+                kSeReps - 1u, (unsigned long long)plo, (unsigned long long)phi,
+                (unsigned long long)(plo > ahi ? plo - ahi : 0ull));
+    std::printf("    The primary's lowest seed exceeds the archive's highest by one stride\n"
+                "    of 7919, so the two sets share no creature.\n");
+  }
+
+  // --- THE PRIMARY ---------------------------------------------------------
+  const SeAgg P = score(0u, kSePrimLo, kSeReps, kTgtLo, kTgtHi);
+  const SwVerdict V = sw_classify(P.mean, P.se, kA);
+  const SeAgg C5a = score(1u, kSePrimLo, kSeReps, kTgtLo, kTgtHi);
+  const SeAgg C5b = score(2u, kSePrimLo, kSeReps, kTgtLo, kTgtHi);
+  // A CONTROL THAT CANNOT BE READ HAS NOT PASSED. The 60k branch run printed
+  // "does not clear +2E" for an arm with n 0, which reads as the control
+  // clearing the primary when in fact nothing was measured -- the exact shape
+  // of `vacuity-gate-cannot-guard-a-rejection`. So scorability is tracked
+  // separately from the reading, and an unscorable 5a is FATAL: clause 4's
+  // verdict rests on that arm being negative, and an empty set is not negative.
+  const bool read_5a = C5a.n >= 2u, read_5b = C5b.n >= 2u;
+  const bool void_5a = read_5a && C5a.mean > 2.0 * C5a.se;
+  const bool qual_5b = read_5b && C5b.mean > 2.0 * C5b.se;
+
+  std::printf("\n  ================= THE REGISTERED PRIMARY =================\n");
+  std::printf("  T1.RET, r %u..%u, e%u-e%u -- creatures no earlier section has scored.\n",
+              kSePrimLo, kSeReps - 1u, kTgtLo + 1, kTgtHi);
+  std::printf("    S %+.4f +- %.4f   n %u scored of %u run   A %+.5f\n", P.mean, P.se, P.n,
+              kSeReps - kSePrimLo, kA);
+  if (P.se > 0.0) {
+    std::printf("    %.2f SE above zero      %.2f SE %s averaging      separation A/E %.2f SE\n",
+                P.mean / P.se, sw_abs(P.mean - kA) / P.se, P.mean < kA ? "below" : "above",
+                kA / P.se);
+    std::printf("    bands at this E:  ARTEFACT <= %+.4f | NULL < %+.4f | PARTIAL [%+.4f,"
+                " %+.4f) | EXPRESSES [%+.4f, %+.4f]\n",
+                -2.0 * P.se, 2.0 * P.se, 2.0 * P.se, kA - 2.0 * P.se, kA - 2.0 * P.se,
+                kA + 2.0 * P.se);
+    // When A < 4E the PARTIAL band's bounds cross and the interval printed above
+    // is INVERTED, hence empty. That is not a formatting fault: it is the
+    // geometry of the refusal, and saying so is cheaper than letting a reader
+    // decide a malformed interval is a bug.
+    if (kA - 2.0 * P.se <= 2.0 * P.se) {
+      std::printf("    PARTIAL's bounds have CROSSED, so that band is EMPTY and the five-way\n"
+                  "    split has no interior. This inversion IS the A < 4E refusal, seen in\n"
+                  "    the bands rather than in the ratio.\n");
+    }
+  }
+  std::printf("    %.3f of the pooled pinned ceiling   %.3f of averaging's prediction\n",
+              kCeiling > 0.0 ? P.mean / kCeiling : 0.0, kA > 0.0 ? P.mean / kA : 0.0);
+  std::printf("    ratio-of-sums pooling %+.4f (the per-creature mean is the registered\n"
+              "    estimator; `mean-of-ratios` says expect these to differ under skew)\n",
+              P.ratio);
+  std::printf("    object residual %+.4f -- reported beside the slot term and NEVER added\n"
+              "    in: it is what bias_ctx_ cannot produce.\n", P.resid);
+  std::printf("\n    VERDICT: %s%s\n", qual_5b ? "QUALIFIED -- " : "", sw_name(V));
+  if (V == kSwUndefined) {
+    std::printf("    The registered refusal fired: A < 4E, so the two competing models are\n"
+                "    closer than the estimator can separate. Registered consequence: THIS\n"
+                "    IS THE RESULT and the arm is NOT re-run at a larger n -- sizing until\n"
+                "    the classifier stops refusing is fitting the design to the verdict.\n");
+  }
+
+  std::printf("\n  CLAUSE 5 -- BOTH LABEL-DESTROYED ARMS, on the same fresh reps.\n");
+  std::printf("    5a  T1.RET.D     %+.4f +- %.4f (n%2u)   %.2f SE   %s\n", C5a.mean, C5a.se,
+              C5a.n, C5a.se > 0.0 ? C5a.mean / C5a.se : 0.0,
+              !read_5a ? "*** UNSCORABLE -- NOT A PASS ***"
+              : void_5a ? "*** CLEARS +2E: THE PRIMARY IS VOID ***"
+                        : "measured, does not clear +2E");
+  std::printf("    5b  T1.ORACLE.D  %+.4f +- %.4f (n%2u)   %.2f SE   %s\n", C5b.mean, C5b.se,
+              C5b.n, C5b.se > 0.0 ? C5b.mean / C5b.se : 0.0,
+              !read_5b ? "*** UNSCORABLE -- NOT A PASS ***"
+              : qual_5b ? "*** CLEARS +2E: THE VERDICT IS QUALIFIED ***"
+                        : "measured, does not clear +2E");
+  if (!read_5a) {
+    fatal = true;
+    std::printf("    5a IS THE LOAD-BEARING CONTROL AND IT COULD NOT BE READ. Clause 4's\n"
+                "    verdict rests on this arm being negative, and an empty or singleton\n"
+                "    set is not negative -- it is nothing\n"
+                "    (`vacuity-gate-cannot-guard-a-rejection`).\n");
+  }
+  if (!read_5b) {
+    std::printf("    5b could not be read either, so §58's caution is neither confirmed\n"
+                "    nor cleared on this sample and travels forward unresolved.\n");
+  }
+  if (void_5a) {
+    fatal = true;
+    std::printf("    5a is the registered load-bearing control: a positive slot term in\n"
+                "    this window WITHOUT a label-paired lesson makes clause 4 unreadable\n"
+                "    (`null-is-not-a-control`).\n");
+  }
+  if (qual_5b) {
+    std::printf("    THE SENTENCE THAT NOW TRAVELS WITH THE VERDICT: the estimator's null\n"
+                "    in this window is not demonstrably zero, measured at %+.4f +- %.4f on\n"
+                "    a label-destroyed PINNED arm. Not a void -- that arm differs from\n"
+                "    T1.RET in two ways at once, so a difference against it would contain\n"
+                "    the lesson AND the pin, which is the composition §58 refused to claim.\n",
+                C5b.mean, C5b.se);
+  } else if (read_5b) {
+    std::printf("    5b did not fire. §58 read this arm at +0.0725 in CLEAN and +0.1403 in\n"
+                "    LATE, and §59a at +0.0928 in e%u-e%u itself, so the registered chance of\n"
+                "    it firing was between 2%% and 42%%. It did not, on %u creatures, so the\n"
+                "    primary's zero is a measured zero on this arm AT THIS n -- which is a\n"
+                "    narrowing and not a clearance.\n", kTgtLo + 1, kTgtHi, C5b.n);
+  }
+
+  // --- SECONDARY 1: THE WINDOW-MATCHED CEILING -----------------------------
+  std::printf("\n  SECONDARY 1 -- AVERAGING'S PREDICTION AT THE OPERATING POINT, and it was\n"
+              "  declared before the run WITH the direction it pushes. A carries §53's\n"
+              "  POOLED ceiling (n 12). The pinned arm in THIS window is a different and\n"
+              "  better-measured number, so `match-at-the-operating-point` says to evaluate\n"
+              "  (1 - 2w) x Ceiling_window as well. §59a's discovery sample put that at\n"
+              "  ~+0.161, against which its own +0.0772 reads PARTIAL and not EXPRESSES --\n"
+              "  so this row is declared against the exciting outcome, not for it. THE\n"
+              "  REGISTERED PRIMARY REMAINS THE ROW ABOVE.\n");
+  {
+    const SeAgg ceil_w = score(3u, kSePrimLo, kSeReps, kTgtLo, kTgtHi);
+    const double k = 1.0 - 2.0 * wbar(kTgtLo, kTgtHi);
+    const double aw = k * ceil_w.mean;
+    const double aw_se = k * ceil_w.se;
+    std::printf("    Ceiling_window (T1.ORACLE fresh e%u-e%u)   %+.4f +- %.4f (n%2u)\n",
+                kTgtLo + 1, kTgtHi, ceil_w.mean, ceil_w.se, ceil_w.n);
+    std::printf("    A_window = %.6f x Ceiling_window        %+.4f +- %.4f\n", k, aw, aw_se);
+    const SwVerdict vw = sw_classify(P.mean, P.se, aw);
+    std::printf("    row 1  registered A %+.5f, E %.4f           -> %s\n", kA, P.se, sw_name(V));
+    std::printf("    row 2  A_window %+.5f, E %.4f (same rule)  -> %s\n", aw, P.se,
+                sw_name(vw));
+    const double ep = std::sqrt(P.se * P.se + aw_se * aw_se);
+    const SwVerdict vp = sw_classify(P.mean, ep, aw);
+    std::printf("    row 3  A_window %+.5f, E' %.4f propagated  -> %s\n", aw, ep, sw_name(vp));
+    std::printf("    Row 3 adds the ceiling's own SE in quadrature, which §58 disclosed as\n"
+                "    unpropagated and never printed. Its separation is %.2f SE, so this row\n"
+                "    can legitimately return UNDEFINED where the other two do not.\n",
+                ep > 0.0 ? aw / ep : 0.0);
+    // AND A SHARPER CEILING THAT COSTS NOTHING. T1.ORACLE has only ever been
+    // run at r = 0..11 -- §53, §58 and §59a all stopped there -- so r = 12..79
+    // are ALSO creatures no section has scored, and they run anyway because the
+    // rep range is uniform across arms. The registered row above uses r 36..79;
+    // this one uses every unseen rep and is a strictly better measurement of a
+    // DISCLOSED SECONDARY, not a second reading of the primary.
+    const SeAgg ceil_all = score(3u, 12u, kSeReps, kTgtLo, kTgtHi);
+    std::printf("    EXTRA: every T1.ORACLE rep no section has scored, r 12..%u\n"
+                "      Ceiling_window %+.4f +- %.4f (n%2u)   A_window %+.5f   -> %s\n",
+                kSeReps - 1u, ceil_all.mean, ceil_all.se, ceil_all.n, k * ceil_all.mean,
+                sw_name(sw_classify(P.mean, P.se, k * ceil_all.mean)));
+  }
+
+  // --- SECONDARIES 2 AND 3 -------------------------------------------------
+  std::printf("\n  SECONDARY 2 -- THE POOLED 80, WHICH CONTAINS THE DISCOVERY SAMPLE. Read\n"
+              "  with that in mind: 36 of these 80 creatures are the ones whose e%u-e%u cell\n"
+              "  §59a printed and this section was designed around.\n", kTgtLo + 1, kTgtHi);
+  {
+    const SeAgg g = score(0u, 0u, kSeReps, kTgtLo, kTgtHi);
+    const SeAgg arc = score(0u, 0u, kSePrimLo, kTgtLo, kTgtHi);
+    std::printf("    pooled  r 0..%u    %+.4f +- %.4f (n%2u)   -> %s\n", kSeReps - 1u, g.mean,
+                g.se, g.n, sw_name(sw_classify(g.mean, g.se, kA)));
+    std::printf("    archive r 0..35    %+.4f +- %.4f (n%2u)   §59a measured +0.0772 +- 0.0293 (n34)\n",
+                arc.mean, arc.se, arc.n);
+    const double d = P.mean - arc.mean;
+    const double ds = std::sqrt(P.se * P.se + arc.se * arc.se);
+    std::printf("    fresh - archive    %+.4f +- %.4f   %.2f SE -- a consistency check on\n"
+                "    two independent draws from one generator, NOT a test of anything.\n",
+                d, ds, ds > 0.0 ? sw_abs(d) / ds : 0.0);
+  }
+  std::printf("\n  SECONDARY 3 -- e%u-e%u, §59a's DECLARED FALLBACK WINDOW. A robustness row.\n"
+              "  The window decision was taken in §59a from §58's ramp and is NOT reopened\n"
+              "  here: if these two rows disagree, the registered one is the result.\n",
+              kFbLo + 1, kFbHi);
+  {
+    const SeAgg g = score(0u, kSePrimLo, kSeReps, kFbLo, kFbHi);
+    const double af = apred(kFbLo, kFbHi);
+    std::printf("    T1.RET fresh e%u-e%u   %+.4f +- %.4f (n%2u)   A %+.5f   -> %s\n",
+                kFbLo + 1, kFbHi, g.mean, g.se, g.n, af, sw_name(sw_classify(g.mean, g.se, af)));
+  }
+
+  // --- SECONDARY 4: THE RAMP, REPLICATED ON FRESH CREATURES ---------------
+  std::printf("\n  SECONDARY 4 -- §58's RAMP ON CREATURES THAT DID NOT PRODUCE IT. Per\n"
+              "  eighth, with the SEs §58 could not print and §59a added. Descriptive; the\n"
+              "  only registered reading is whether the monotone e3->e7 rise is present.\n");
+  {
+    for (uint32_t a = 0; a < kArms; ++a) {
+      std::printf("    %-12s", arms[a].name);
+      for (uint32_t b = 0; b < kSmE; ++b) {
+        const SeAgg g = score(a, kSePrimLo, kSeReps, b, b + 1);
+        if (g.n) std::printf(" e%u:%+.4f+-%.4f(%2u)", b + 1, g.mean, g.se, g.n);
+        else std::printf(" e%u:%-20s", b + 1, "--");
+      }
+      std::printf("\n");
+    }
+    std::printf("    %-12s", "averaging");
+    for (uint32_t b = 0; b < kSmE; ++b)
+      std::printf(" e%u:%+.4f            ", b + 1, apred(b, b + 1));
+    std::printf("\n");
+    uint32_t rise = 0, steps = 0;
+    double prev = 0.0;
+    bool have = false;
+    for (uint32_t b = 2; b < kSmE - 1; ++b) {
+      const SeAgg g = score(0u, kSePrimLo, kSeReps, b, b + 1);
+      if (!g.n) continue;
+      if (have) { ++steps; if (g.mean > prev) ++rise; }
+      prev = g.mean;
+      have = true;
+    }
+    std::printf("    T1.RET e3->e7 monotone rise: %u of %u steps up   %s\n", rise, steps,
+                (steps > 0 && rise == steps) ? "the ramp REPLICATES"
+                : steps == 0 ? "not scorable" : "the ramp does NOT fully replicate");
+  }
+
+  // --- SECONDARY 5: THE DROP LEDGER ---------------------------------------
+  std::printf("\n  SECONDARY 5 -- §59a's SILENCE CLIFF, SECOND WITNESS ON A DISJOINT SAMPLE.\n"
+              "  `nov` is probes with no voiced frame; `badf` was identically 0 over §59a's\n"
+              "  960 creature-eighths, so the split is effectively two-way. Free with this\n"
+              "  run and not a test of anything.\n");
+  for (uint32_t a = 0; a < kArms; ++a) {
+    uint32_t pn[kSmE] = {}, kp[kSmE] = {}, dk[kSmE] = {}, nv[kSmE] = {}, bf[kSmE] = {};
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      if (!rows[i].ok || job_arm[i] != a || job_rep[i] < kSePrimLo) continue;
+      for (uint32_t b = 0; b < kSmE; ++b) {
+        pn[b] += rows[i].pn[b]; kp[b] += rows[i].kept[b]; dk[b] += rows[i].dark[b];
+        nv[b] += rows[i].novoice[b]; bf[b] += rows[i].badf[b];
+      }
+    }
+    std::printf("    %-12s kept  ", arms[a].name);
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf("%6u", kp[b]);
+    std::printf("\n                 nov   ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf("%6u", nv[b]);
+    std::printf("\n                 dark  ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf("%6u", dk[b]);
+    std::printf("   (probes %u, badf %u over the eight)\n",
+                pn[0] + pn[1] + pn[2] + pn[3] + pn[4] + pn[5] + pn[6] + pn[7],
+                bf[0] + bf[1] + bf[2] + bf[3] + bf[4] + bf[5] + bf[6] + bf[7]);
+  }
+  {
+    uint32_t offs = 0;
+    for (uint32_t i = 0; i < kJobs; ++i) offs += rows[i].ok ? rows[i].offslot : 0u;
+    std::printf("    kept probes outside slots 0-1 over all %u creatures: %u   %s\n", live, offs,
+                offs == 0u ? "the matrix dump below is lossless" : "*** THE DUMP IS LOSSY ***");
+    if (offs) fatal = true;
+  }
+
+  // --- THE MATRIX ---------------------------------------------------------
+  std::printf("\n  THE MATRIX, same format as §59a's so the two are greppable together. One\n"
+              "  line per creature-eighth: arm, rep, eighth, the four cell COUNTS, the four\n"
+              "  cell SUMS, then the ledger. §59a's G0 proved these cells additive, so any\n"
+              "  window and any estimator can be re-derived from this table offline rather\n"
+              "  than by spending the budget again.\n");
+  std::printf("  MAT arm rep e  n00 n01 n10 n11  g00 g01 g10 g11  probes kept dark nov badf\n");
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    if (!rows[i].ok) continue;
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      std::printf("  MAT %-12s %2u %u  %3.0f %3.0f %3.0f %3.0f  %+9.4f %+9.4f %+9.4f %+9.4f"
+                  "  %3u %3u %3u %3u %3u\n",
+                  arms[job_arm[i]].name, job_rep[i], b + 1, rows[i].cn[b][0][0],
+                  rows[i].cn[b][0][1], rows[i].cn[b][1][0], rows[i].cn[b][1][1],
+                  rows[i].cg[b][0][0], rows[i].cg[b][0][1], rows[i].cg[b][1][0],
+                  rows[i].cg[b][1][1], rows[i].pn[b], rows[i].kept[b], rows[i].dark[b],
+                  rows[i].novoice[b], rows[i].badf[b]);
+    }
+  }
+
+  std::printf("\n  THE REGISTERED PRIMARY WAS: T1.RET e%u-e%u on r %u..%u against A %+.5f.\n",
+              kTgtLo + 1, kTgtHi, kSePrimLo, kSeReps - 1u, kA);
+  std::printf("  VERDICT: %s%s\n", qual_5b ? "QUALIFIED -- " : "", sw_name(V));
+  std::printf("  %s\n", fatal ? "ONE OR MORE GATES FAILED -- the verdict above is NOT readable."
+                              : "All gates passed.");
+  (void)verbose;
+  return true;
+}
 }  // namespace aibaby_host

@@ -1,0 +1,209 @@
+experiment: slotexp
+  SHORT RUN — 60000 ticks against a minimum of 900000. derived: §59b. THE TEST §58 NAMED AND §59a SIZED. Does the derived visual index
+  express a conditional lesson on §58's expression RAMP PLATEAU (e6-e7), where
+  §56 proves the index is clean AND §58 found the lesson has had time to land?
+  §53 read NULL pooled over a session whose first two eighths have no index at
+  all, and §58 read NULL over a window cut from §56's DEGENERACY profile --
+  which says where an assignment EXISTS, not where the lesson has LANDED, and
+  those differ by most of the window. The primary is T1.RET's e6-e7 slot term
+  against averaging's prediction A = (1 - 2w) x 0.1293 = +0.12280, read by §58's
+  five-way sw_classify REUSED AS CODE, with its A >= 4E refusal branch intact.
+  THE SAMPLE IS THE DESIGN'S FIRST CONSTRAINT: §59a's log carries this cell for
+  r = 0..35, so the answer is already known on those creatures, and rep seeds
+  are seed + r*7919. Every arm therefore runs r = 0..79 split into three roles
+  fixed in advance -- r < arch is ARCHIVE and feeds G0 alone, r >= 36 is the
+  PRIMARY (44 run to score the 40 §59a's formula asked for, since its n counts
+  creatures that SCORED), and the union is a secondary that says in the log that
+  it contains the discovery sample. G0 reproduces §53's whole-session table and
+  §58's phase windows -- thirteen windows, all four arms, four decimals
+  INCLUDING the SEs -- so a failure means this is a different experiment from
+  §53's and nothing below it is readable. Clause 5 reads BOTH label-destroyed
+  arms: T1.RET.D voids the primary if it clears +2E, and T1.ORACLE.D qualifies
+  it, which is §58's own unresolved caution promoted to a registered branch.
+  Five secondaries are declared before the run, the first of them AGAINST the
+  exciting outcome: averaging evaluated at the window-matched ceiling rather
+  than §53's pooled one. No core change, no new genome field, no RNG draw.
+  kRead: all five verdicts are results and the exit status encodes none of
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §59b. THE TEST. Does the derived visual index express a
+                    conditional lesson on §58's ramp PLATEAU (e6-e7), where
+                    §56 says the index is clean and §58 says the lesson has
+                    had time to land? §53 and §58 both read NULL over windows
+                    chosen by other criteria; §59a measured the SE so this
+                    one can be sized.
+  and the catch     §59a's log CARRIES the e6-e7 cell for r = 0..35, so the
+                    answer is known on those creatures. The PRIMARY here runs
+                    r = 36..79 -- DISJOINT -- and r < arch is read by G0 only.
+  the primary       T1.RET e6-e7 slot term vs A = +0.12280, §58's five-way
+                    sw_classify REUSED AS CODE. A = (1 - 2w) x 0.1293 at §56's
+                    w = 0.025150 for these eighths.
+  session           60.0 s of simulated life x 320 sessions, 4 arms x 80 reps
+  instrument        slotexp   trial seed 0000000001357e79   320 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  creatures live  0/320
+
+  THE VERDICT FUNCTION'S SIX BRANCHES, exercised on synthetic input at this
+  run's own A = +0.12280 before any real row reaches it. It is §58's
+  `sw_classify` called as code, so this also checks that reuse compiled to
+  the same thing (`deferral-note-is-untested-code`: real rows cannot test a
+  branch they never take, and UNDEFINED has a registered 8.2% chance here).
+    S -0.1064  E 0.0266  -> ARTEFACT DOMINATES                ok  (well below -2E)
+    S +0.0000  E 0.0266  -> §53's NULL SURVIVES              ok  (zero)
+    S +0.0665  E 0.0266  -> PARTIAL                           ok  (above 2E, below A - 2E)
+    S +0.1228  E 0.0266  -> EXPRESSES AS AVERAGING PREDICTS   ok  (exactly averaging's prediction)
+    S +0.2026  E 0.0266  -> OVER-EXPRESSES                    ok  (above A + 2E)
+    S +0.0317  E 0.0317  -> UNDEFINED -- the models are closer than 4 SE ok  (A < 4E: the models are too close)
+    branches reachable  6/6  PASS
+
+  G0 -- TRANSFER, READ FIRST. The ARCHIVE subset of each arm (r < its own
+  published count) must reproduce §53's whole-session table and §58's phase
+  windows to four decimals INCLUDING the SE. Thirteen windows over all four
+  arms. The scorer is §59a's and the reps are §53's, so what is being tested
+  is that a DIFFERENT ENCLOSING EXPERIMENT over a DIFFERENT rep range still
+  produces the archived session -- if it does not, the fresh numbers below
+  are a different experiment and nothing here is readable. A 900k
+  comparison: UNDEFINED below that budget, never failed there.
+    T1.RET      e1-e8  +0.0000 +- 0.0000 (n 0)   archive +0.0081 +- 0.0170 (n checked)   n/a
+    T1.RET      e1-e2  +0.0000 +- 0.0000 (n 0)   archive +0.0060 +- 0.0076 (n checked)   n/a
+    T1.RET      e3     +0.0000 +- 0.0000 (n 0)   archive -0.0550 +- 0.0338 (n checked)   n/a
+    T1.RET      e4-e7  +0.0000 +- 0.0000 (n 0)   archive +0.0442 +- 0.0297 (n checked)   n/a
+    T1.RET      e8     +0.0000 +- 0.0000 (n 0)   archive -0.0377 +- 0.0446 (n checked)   n/a
+    T1.RET.D    e1-e8  +0.0000 +- 0.0000 (n 0)   archive -0.0947 +- 0.0306 (n checked)   n/a
+    T1.RET.D    e4-e7  +0.0000 +- 0.0000 (n 0)   archive -0.1235 +- 0.0468 (n UNCHECKED)   n/a
+    T1.ORACLE.D e1-e8  +0.0000 +- 0.0000 (n 0)   archive +0.0211 +- 0.0327 (n checked)   n/a
+    T1.ORACLE.D e4-e7  +0.0000 +- 0.0000 (n 0)   archive +0.0725 +- 0.0478 (n UNCHECKED)   n/a
+    T1.ORACLE.D e8     +0.0000 +- 0.0000 (n 0)   archive +0.1403 +- 0.0557 (n checked)   n/a
+    T1.ORACLE   e1-e8  +0.0000 +- 0.0000 (n 0)   archive +0.1293 +- 0.0478 (n checked)   n/a
+    T1.ORACLE   e1-e2  +0.0000 +- 0.0000 (n 0)   archive +0.1280 +- 0.0378 (n UNCHECKED)   n/a
+    T1.ORACLE   e4-e7  +0.0000 +- 0.0000 (n 0)   archive +0.1289 +- 0.0473 (n checked)   n/a
+    0 of 13 windows reproduced; 3 rows carry no published n and their
+    count is NOT checked -- stated, not hidden in a blank column.
+    NOT READ AT THIS BUDGET (60000 < 900000): the archive is a 900k
+    measurement and a shorter session's eighths cover different ticks.
+
+  G1 -- THE DECOMPOSITION'S IDENTITY, re-earned in the window this section
+  reads. gap - (slot + resid) over every scored creature in e6-e7 on every
+  arm. The count compared is printed and an EMPTY SET IS A FAILURE OF THE
+  GATE, not a pass of the identity -- §58's clause 1 could have passed on
+  zero cells and the smoke is what caught it
+  (`vacuity-gate-cannot-guard-a-rejection`).
+    T1.RET       identity 0.00e+00   worst |resid| 0.00e+00   over 0 creatures
+    T1.RET.D     identity 0.00e+00   worst |resid| 0.00e+00   over 0 creatures
+    T1.ORACLE.D  identity 0.00e+00   worst |resid| 0.00e+00   over 0 creatures   (pinned: resid is identically 0 by arithmetic)
+    T1.ORACLE    identity 0.00e+00   worst |resid| 0.00e+00   over 0 creatures   (pinned: resid is identically 0 by arithmetic)
+    worst identity 0.00e+00 over 0 creature-windows   *** FAIL -- EMPTY SET ***
+
+  G2 -- VACUITY, ON THE ARM THAT IS KNOWN TO EXPRESS AND AT THE PRIMARY'S
+  GRANULARITY. Can a two-eighth window carry a large slot term at all? A
+  vacuity gate on the DERIVED arm cannot answer that, because its reading is
+  the thing in question. Required: T1.ORACLE's FRESH e6-e7 >= its own FRESH
+  whole-session value, both at this budget -- budget-relative on purpose,
+  since an absolute 900k threshold is the `baseprobe-gate` defect §58 hit.
+    T1.ORACLE fresh e6-e7   +0.0000 +- 0.0000 (n 0)
+    T1.ORACLE fresh e1-e8   +0.0000 +- 0.0000 (n 0)
+    window >= whole session   *** FAIL -- EMPTY OR SINGLETON SET ***
+
+  G3 -- DISJOINTNESS. `seed + r * 7919` is injective in r, so the primary's
+  reps cannot collide with the archive's. **THIS IS ARITHMETIC AND NOT A
+  GATE** -- it cannot fail for a measured reason, so it is printed as a
+  derivation and claims nothing (`open-is-unfalsifiable-on-an-instrument`).
+    ARCHIVE r 0..35    seeds 00000000013527c9 .. 0000000001396276
+    PRIMARY r 36..79   seeds 0000000001398165 .. 00000000013eb38a   gap 7919
+    The primary's lowest seed exceeds the archive's highest by one stride
+    of 7919, so the two sets share no creature.
+
+  ================= THE REGISTERED PRIMARY =================
+  T1.RET, r 36..79, e6-e7 -- creatures no earlier section has scored.
+    S +0.0000 +- 0.0000   n 0 scored of 44 run   A +0.12280
+    0.000 of the pooled pinned ceiling   0.000 of averaging's prediction
+    ratio-of-sums pooling +0.0000 (the per-creature mean is the registered
+    estimator; `mean-of-ratios` says expect these to differ under skew)
+    object residual +0.0000 -- reported beside the slot term and NEVER added
+    in: it is what bias_ctx_ cannot produce.
+
+    VERDICT: UNDEFINED -- the models are closer than 4 SE
+    The registered refusal fired: A < 4E, so the two competing models are
+    closer than the estimator can separate. Registered consequence: THIS
+    IS THE RESULT and the arm is NOT re-run at a larger n -- sizing until
+    the classifier stops refusing is fitting the design to the verdict.
+
+  CLAUSE 5 -- BOTH LABEL-DESTROYED ARMS, on the same fresh reps.
+    5a  T1.RET.D     +0.0000 +- 0.0000 (n 0)   0.00 SE   does not clear +2E
+    5b  T1.ORACLE.D  +0.0000 +- 0.0000 (n 0)   0.00 SE   does not clear +2E
+    5b did not fire. §58 read this arm at +0.0725 in CLEAN and +0.1403 in
+    LATE, and §59a at +0.0928 in e6-e7 itself, so the registered chance of
+    it firing was between 2% and 42%. It did not, and the primary's zero
+    stands as a measured zero on this arm at this n.
+
+  SECONDARY 1 -- AVERAGING'S PREDICTION AT THE OPERATING POINT, and it was
+  declared before the run WITH the direction it pushes. A carries §53's
+  POOLED ceiling (n 12). The pinned arm in THIS window is a different and
+  better-measured number, so `match-at-the-operating-point` says to evaluate
+  (1 - 2w) x Ceiling_window as well. §59a's discovery sample put that at
+  ~+0.161, against which its own +0.0772 reads PARTIAL and not EXPRESSES --
+  so this row is declared against the exciting outcome, not for it. THE
+  REGISTERED PRIMARY REMAINS THE ROW ABOVE.
+    Ceiling_window (T1.ORACLE fresh e6-e7)   +0.0000 +- 0.0000 (n 0)
+    A_window = 0.949700 x Ceiling_window        +0.0000 +- 0.0000
+    row 1  registered A +0.12280, E 0.0000           -> UNDEFINED -- the models are closer than 4 SE
+    row 2  A_window +0.00000, E 0.0000 (same rule)  -> UNDEFINED -- the models are closer than 4 SE
+    row 3  A_window +0.00000, E' 0.0000 propagated  -> UNDEFINED -- the models are closer than 4 SE
+    Row 3 adds the ceiling's own SE in quadrature, which §58 disclosed as
+    unpropagated and never printed. Its separation is 0.00 SE, so this row
+    can legitimately return UNDEFINED where the other two do not.
+
+  SECONDARY 2 -- THE POOLED 80, WHICH CONTAINS THE DISCOVERY SAMPLE. Read
+  with that in mind: 36 of these 80 creatures are the ones whose e6-e7 cell
+  §59a printed and this section was designed around.
+    pooled  r 0..79    +0.0000 +- 0.0000 (n 0)   -> UNDEFINED -- the models are closer than 4 SE
+    archive r 0..35    +0.0000 +- 0.0000 (n 0)   §59a measured +0.0772 +- 0.0293 (n34)
+    fresh - archive    +0.0000 +- 0.0000   0.00 SE -- a consistency check on
+    two independent draws from one generator, NOT a test of anything.
+
+  SECONDARY 3 -- e5-e7, §59a's DECLARED FALLBACK WINDOW. A robustness row.
+  The window decision was taken in §59a from §58's ramp and is NOT reopened
+  here: if these two rows disagree, the registered one is the result.
+    T1.RET fresh e5-e7   +0.0000 +- 0.0000 (n 0)   A +0.12205   -> UNDEFINED -- the models are closer than 4 SE
+
+  SECONDARY 4 -- §58's RAMP ON CREATURES THAT DID NOT PRODUCE IT. Per
+  eighth, with the SEs §58 could not print and §59a added. Descriptive; the
+  only registered reading is whether the monotone e3->e7 rise is present.
+    T1.RET       e1:--                   e2:--                   e3:--                   e4:--                   e5:--                   e6:--                   e7:--                   e8:--                  
+    T1.RET.D     e1:--                   e2:--                   e3:--                   e4:--                   e5:--                   e6:--                   e7:--                   e8:--                  
+    T1.ORACLE.D  e1:--                   e2:--                   e3:--                   e4:--                   e5:--                   e6:--                   e7:--                   e8:--                  
+    T1.ORACLE    e1:--                   e2:--                   e3:--                   e4:--                   e5:--                   e6:--                   e7:--                   e8:--                  
+    averaging's +0.0140        +0.0449              +0.0984              +0.1173              +0.1206              +0.1210              +0.1246              +0.0486      
+    T1.RET e3->e7 monotone rise: 0 of 0 steps up   not scorable
+
+  SECONDARY 5 -- §59a's SILENCE CLIFF, SECOND WITNESS ON A DISJOINT SAMPLE.
+  `nov` is probes with no voiced frame; `badf` was identically 0 over §59a's
+  960 creature-eighths, so the split is effectively two-way. Free with this
+  run and not a test of anything.
+    T1.RET       kept       0     0     0     0     0     0     0     0
+                 nov        0     0     0     0     0     0     0     0
+                 dark       0     0     0     0     0     0     0     0   (probes 0, badf 0 over the eight)
+    T1.RET.D     kept       0     0     0     0     0     0     0     0
+                 nov        0     0     0     0     0     0     0     0
+                 dark       0     0     0     0     0     0     0     0   (probes 0, badf 0 over the eight)
+    T1.ORACLE.D  kept       0     0     0     0     0     0     0     0
+                 nov        0     0     0     0     0     0     0     0
+                 dark       0     0     0     0     0     0     0     0   (probes 0, badf 0 over the eight)
+    T1.ORACLE    kept       0     0     0     0     0     0     0     0
+                 nov        0     0     0     0     0     0     0     0
+                 dark       0     0     0     0     0     0     0     0   (probes 0, badf 0 over the eight)
+    kept probes outside slots 0-1 over all 0 creatures: 0   the matrix dump below is lossless
+
+  THE MATRIX, same format as §59a's so the two are greppable together. One
+  line per creature-eighth: arm, rep, eighth, the four cell COUNTS, the four
+  cell SUMS, then the ledger. §59a's G0 proved these cells additive, so any
+  window and any estimator can be re-derived from this table offline rather
+  than by spending the budget again.
+  MAT arm rep e  n00 n01 n10 n11  g00 g01 g10 g11  probes kept dark nov badf
+
+  THE REGISTERED PRIMARY WAS: T1.RET e6-e7 on r 36..79 against A +0.12280.
+  VERDICT: UNDEFINED -- the models are closer than 4 SE
+  ONE OR MORE GATES FAILED -- the verdict above is NOT readable.
