@@ -11790,3 +11790,170 @@ that — but "does the slot term carry anything about the label once the
 object-presentation imbalance is removed, and why does a pinned label-destroyed
 arm read positive at all". The second half of that is the part nothing in §53,
 §58, §59a or §59b explains.
+
+## §59c PRE-REGISTRATION — IS THE REP INDEX EXCHANGEABLE? THE CONTROL THREE SECTIONS LEAN ON MOVES WITH IT (2026-11-11)
+
+**Written before any code, as §58, §59a and §59b were.**
+
+### THE DIAGNOSTIC THAT MOTIVATED THIS, AND IT IS POST-HOC
+
+§59b's result section is closed and this does not reopen it. But an offline scan
+of `results/n59b-slotexp-900k.log` — free, no compute — turned up something about
+**clause 5a**, the label-destroyed control that §53, §58, §59a and §59b all lean
+on. On `T1.RET.D`'s whole-session window, the one §53 published:
+
+| `T1.RET.D`, e1-e8 | |
+|---|---|
+| r 0..35 — the reps §53/§58/§59a scored | **−0.0857 ± 0.0310** (§53 published −0.0947 ± 0.0306) |
+| r 36..95 — the reps §59b scored | **−0.0014 ± 0.0231** |
+| difference | **+0.0843 ± 0.0387 = 2.18 SE** |
+
+In blocks of 24 reps on `e6-e7` it is monotone: **−0.144, −0.032, +0.028,
++0.070.** Scanning all 144 arm × window slices, **30 of `T1.RET.D`'s 36 windows
+exceed 2.0 SE, every one positive**, against **5 / 1 / 0** for `T1.RET`,
+`T1.ORACLE.D` and `T1.ORACLE` on identical windows with identical nesting and
+comparable n. It is present in **e1 alone** (t = +2.77), where no lesson has
+accumulated, so it is not learning.
+
+**Two candidate mechanisms are already refuted.** It is not the
+object-presentation imbalance confound — the drift survives the `imb × Gbar`
+correction at 2.53 SE while the imbalance itself drifts only 0.92 SE. And it is
+not a weak coin: `coin = int(rng.next() & 1u)` draws from **xoshiro256++ seeded
+through splitmix64** (`core/include/aibaby/rng.h`), whose low bits are sound and
+whose nearby seeds are properly decorrelated. **The cause is unidentified.**
+
+**Why it cannot be ignored.** `seed = dna.header().seed + r * 7919` is injective,
+so creatures are independent draws and the rep index should carry no
+information. If it does, then every comparison this project has made **between
+different rep ranges** is confounded, §53's "the drawn arm is pushed NEGATIVE by
+an unequal-dose artefact" is a low-rep value rather than a property of the arm,
+and §59b's clause 5a — *"does not clear +2E, so the primary is not voided"* —
+was evaluated where this arm happens to sit near zero.
+
+**And it blocks the successor §59b named.** That design carries `T1.RET.D` as
+its control on reps r ≥ 96. If the drift continues, the control arrives above
+the +2E void threshold and voids the primary for a reason that is not about the
+science.
+
+### THE DESIGN CHANGED FROM THE ONE PROPOSED, AND THIS IS WHY
+
+The test first proposed was 48 fresh reps against §53's archived constant. **It
+is underpowered and would have been §59b's mistake repeated.** §53's published
+SE is 0.0306 and it is a fixed archived number, so a contrast against it is
+capped at `0.0843 / 0.0306 = 2.75 SE` **no matter how many fresh creatures
+run** — and at 48 reps the fresh SE alone puts it near 1.8 SE. A registered test
+that cannot clear its own gate must not be run; that is the rule §59b paid for.
+
+So the primary becomes **a slope within fresh territory**, which buys lever arm
+instead of buying creatures.
+
+### THE REGISTERED PRIMARY
+
+**The slope of `T1.RET.D`'s e1-e8 slot term on rep index `r`, over `r 96..287`
+— 192 creatures no section has scored.** Null: slope = 0, which is what
+exchangeable creatures must give.
+
+Three-way verdict, with the refusal written as the code's branches:
+
+- **CONFIRMED** — slope ≥ +2 SE. The rep index carries information and every
+  between-rep-range comparison in §52–§59b needs re-reading.
+- **REFUTED** — |slope| < 2 SE. §59b's scan was multiplicity over 144 slices and
+  the corrected successor proceeds.
+- **REVERSED** — slope ≤ −2 SE. The drift's sign is not stable, which also sends
+  the scan to multiplicity but says the estimator wanders, not that it trends.
+
+**The one thing this design cannot do, stated now.** The four-block table
+decelerates (+0.112, +0.060, +0.042 per step), so the drift may have **saturated**
+before r 96. A REFUTED verdict is therefore *"no slope in r 96..287"* and **not**
+*"the r 0..95 drift was noise"* — those are different claims and the result
+section must not merge them. Secondary 2 is what makes saturation visible rather
+than assumed.
+
+### THE POWER PRE-FLIGHT, IN CLAIM UNITS, WITH RULE 5 APPLIED
+
+`calibrate-the-estimator-in-claim-units` rule 5 says take both power inputs from
+a **fresh** arm, never a discovery sample. §59b's own matrix gives both for this
+arm and window: fresh (r 36..95) SE 0.0231 at n 66 → **SD 0.188**; discovery
+(r 0..35) SE 0.0310 at n 30 → SD 0.170. The fresh figure is larger, as rule 5
+predicts, so the plan uses **SD 0.21** — the fresh value inflated, because three
+measurements of this estimator have gone 0.1714 → 0.2048 → 0.2264 as the sample
+got less selected and no unselected figure has ever been seen.
+
+At 192 reps with 90% scoring, n ≈ 173 and `SD_r = 192/sqrt(12) = 55.4`:
+
+> `SE_slope = 0.21 / (sqrt(173) × 55.4) = 0.000288` per rep
+
+The drift measured on e1-e8 is `+0.0843 / 48 reps = +0.00176` per rep, so the
+expectation is **6.1 SE** and the 2 SE detection threshold is **+0.000576 per
+rep — 33% of the measured rate.** The test still has power if the drift has
+slowed by two thirds.
+
+**The scoring rate and the SD are MEASURED IN THE SMOKE BEFORE THE 900k RUN
+COMMITS, and if either is worse the rep count goes UP before the run, not
+after.** §59b's amendment was correct in kind and short in degree; this one has
+the arithmetic above to plug the smoke's numbers into.
+
+### GATE A — ORDER-INDEPENDENCE, BITWISE, READ BEFORE ANYTHING ELSE
+
+The only mechanism by which creature `r` could depend on `r` beyond its own seed
+is **state surviving between reps inside a process.** That is testable exactly,
+with no statistics: run `r 96..287` as one sweep, and `r 192..287` alone in a
+separate process, then compare the 96 overlapping creatures' slot terms
+**bitwise**. Independent creatures must agree to the last bit. Run at 60k.
+
+**A single differing creature is the finding and nothing below is readable** — it
+would be a harness defect touching every experiment in the project, not a fact
+about this arm. `parallel_reps` also assigns jobs to cores differently when the
+job count changes, so this exercises scheduling dependence at the same time.
+
+This is the hypothesis most worth refuting first because it is the one that
+would matter most, and `control-on-a-different-code-path` says to suspect the
+harness when a result is big, clean and reverses a milestone.
+
+### G0 — TRANSFER
+
+The same binary must reproduce `T1.RET.D` e1-e8 on **r 0..35** to four decimals
+including the SE and exactly on `n`: §53's published **−0.0947 ± 0.0306, n 36**,
+which §59b's G0 already reproduced through a different enclosing experiment. If
+it does not, this is a different experiment and nothing below is readable.
+
+### THE SECONDARIES, DECLARED NOW
+
+1. **Level against the archive** — `r 96..287`'s mean vs §53's **−0.0947 ±
+   0.0306**, with both SEs propagated. **Capped at ~2.75 SE by the archive's own
+   SE**, stated before the run so the cap cannot be presented later as a result.
+2. **The four-block table over `r 96..287`** (48 reps each), so saturation is
+   visible. This is what distinguishes "no drift" from "drift already finished".
+3. **Arm specificity, on the two extreme blocks only** — `T1.RET` at `r 96..143`
+   and `r 240..287`. §59b established arm specificity on r 0..95; this asks
+   whether it holds in fresh territory, at 96 sessions instead of 192.
+   **Disclosed: a null here is weak**, since the comparison arm gets half the
+   creatures and no lever arm.
+4. **The descriptive slope over `r 0..287`**, which contains the discovery
+   sample and therefore **cannot be the result** — printed so the shape is on
+   the record, labelled in the log as containing it.
+
+### WHAT EACH OUTCOME BUYS
+
+**CONFIRMED** is the expensive answer and the valuable one: it says the project's
+unit of analysis is not exchangeable, and it puts a re-reading of §52's, §53's
+and §58's control values ahead of any further expression work.
+
+**REFUTED** costs ~55 minutes and clears the way for the corrected successor
+with a control known to be stable in the territory that successor will use —
+which is worth more than the 55 minutes, because that successor is otherwise
+built on a control whose value at r ≥ 96 nobody has measured.
+
+### DISCLOSED BEFORE THE RUN
+
+- The motivating scan is **post-hoc** over 144 slices. The load-bearing evidence
+  is the **between-arm contrast on identical windows** (30 vs 5 / 1 / 0), which
+  shares the nesting and is immune to the window-correlation objection, plus the
+  presence of the drift in **e1 alone**.
+- My ad-hoc offline filter is **slightly stricter** than the binary's window
+  minimum — it returned n 30 for a window the binary scores at n 36 — so the
+  figures in the table above are indicative. **G0 is what puts the binary's own
+  numbers on the record.**
+- Budget **~55 minutes**, more than the eight first proposed. The increase is
+  the power pre-flight above and is a pre-run decision.
+- `core/` is not touched. No genome field, no RNG draw, no mechanism.

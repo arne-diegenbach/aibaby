@@ -366,6 +366,37 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"repdrift", 900000, Expect::kRead, Tier::kLong,
+     "derived: §59c. IS THE REP INDEX EXCHANGEABLE? `seed = dna.seed + r * 7919` is\n"
+     "  injective, so creature r is an independent draw and the rep index must carry\n"
+     "  NO information about anything. §59b's archived per-creature matrix says\n"
+     "  otherwise for exactly ONE arm: T1.RET.D -- the label-destroyed control that\n"
+     "  §53, §58, §59a and §59b all lean on -- drifts UPWARD with r in 30 of its 36\n"
+     "  windows, every one positive, while T1.RET, T1.ORACLE.D and T1.ORACLE read\n"
+     "  5 / 1 / 0 on identical windows with identical nesting. It is present in e1\n"
+     "  ALONE (t +2.77), where no lesson has accumulated, so it is not learning; the\n"
+     "  object-presentation imbalance is refuted as the cause (the drift survives the\n"
+     "  imb x Gbar correction at 2.53 SE) and so is a weak coin (the generator is\n"
+     "  xoshiro256++ seeded through splitmix64, whose low bits are sound). If r really\n"
+     "  carries information then every comparison this project has made BETWEEN REP\n"
+     "  RANGES is confounded, §53's `the drawn arm is pushed negative by unequal\n"
+     "  dose` is a low-rep value rather than a property of the arm, and §59b's clause\n"
+     "  5a was evaluated where that arm happens to sit near zero.\n"
+     "  THE PRIMARY is the OLS slope of T1.RET.D's e1-e8 slot term on r over\n"
+     "  r 96..287 -- 192 creatures no section has scored -- against a null slope of\n"
+     "  zero, which is what exchangeable creatures must give. Buying LEVER ARM rather\n"
+     "  than creatures is deliberate: a contrast against §53's archived constant is\n"
+     "  capped at 2.75 SE by that constant's own SE however many creatures run, so\n"
+     "  the first design proposed for this was unrunnable and was replaced BEFORE any\n"
+     "  code existed. GATE A comes first and needs no statistics: the per-creature\n"
+     "  dump prints `%a`, so this run and a second over a DIFFERENT range must agree\n"
+     "  BITWISE on every overlapping creature. A single differing creature is a\n"
+     "  harness defect touching every experiment, not a fact about this arm.\n"
+     "  AIBABY_REPDRIFT_LO / _HI set the fresh range, _G0 and _ARM2 switch off the\n"
+     "  transfer gate and the comparison arm for a Gate A half. Instrumentation only:\n"
+     "  core/ untouched, no genome field, no RNG draw, the scorer is §59a's and the\n"
+     "  session call is §53's argument for argument.\n"
+     "  kRead: all four verdicts are results and the exit status encodes none of"},
     {"slotexp", 900000, Expect::kRead, Tier::kLong,
      "derived: §59b. THE TEST §58 NAMED AND §59a SIZED. Does the derived visual index\n"
      "  express a conditional lesson on §58's expression RAMP PLATEAU (e6-e7), where\n"
@@ -1662,6 +1693,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
   else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
   else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
+  else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);
   else if (name == "burstprobe") ok = run_burstprobe(dna_blob, ticks, verbose);

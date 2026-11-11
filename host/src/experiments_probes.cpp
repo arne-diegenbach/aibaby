@@ -16827,4 +16827,393 @@ bool run_slotexp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
   (void)verbose;
   return true;
 }
+// ===================== §59c -- IS THE REP INDEX EXCHANGEABLE? ===============
+//
+// `seed = dna.header().seed + r * 7919` is injective, so creature r is an
+// independent draw and the rep index must carry NO information. §59b's archived
+// matrix says otherwise for ONE arm: `T1.RET.D`, the label-destroyed control
+// §53/§58/§59a/§59b all lean on, drifts upward with r in 30 of its 36 windows
+// while no other arm does. This measures it on creatures no section has scored.
+//
+// Scope: the scorer is §59a's `sm_from_cells`, the session call is §53's
+// argument for argument, `core/` is untouched and no new RNG draw exists.
+
+constexpr uint32_t kRdArch = 36u;     // G0's domain: §53's reps, r 0..35
+constexpr uint32_t kRdBlock = 48u;    // secondary 2's block, and arm 2's two
+
+// §53's PUBLISHED T1.RET.D whole-session value. G0 must reproduce it and
+// secondary 1 tests the fresh level against it; its SE is what caps that test.
+constexpr double kRdArchSlot = -0.0947;
+constexpr double kRdArchSe = 0.0306;
+
+static uint32_t rd_env(const char* key, uint32_t dflt) {
+  const char* v = std::getenv(key);
+  if (v == nullptr || *v == '\0') return dflt;
+  char* end = nullptr;
+  const unsigned long x = std::strtoul(v, &end, 10);
+  return (end != nullptr && *end == '\0') ? uint32_t(x) : dflt;
+}
+
+struct RdRow {
+  bool ok = false;
+  uint32_t arm = 0, rep = 0;
+  uint64_t seed = 0;
+  double cn[kSmE][2][aibaby::kMaxContextSlots] = {};
+  double cg[kSmE][2][aibaby::kMaxContextSlots] = {};
+};
+
+struct RdFit {
+  bool ok = false;
+  uint32_t n = 0, run = 0;
+  double slope = 0.0, se = 0.0;   // OLS, SE from the residual MSE
+  double mean = 0.0, mse = 0.0;   // (mean of the window, residual MSE)
+  double sd = 0.0;                // per-creature SD -- the power input
+  double sxx = 0.0;               // the regressor's spread: IDENTIFICATION, measured
+  uint32_t rlo = 0, rhi = 0;
+};
+
+// The verdict's branches, three plus a refusal. `sxx == 0` is a CONSTANT
+// REGRESSOR, which cannot fail a slope test -- so identification is MEASURED
+// and refused on, never asserted (`vacuity-gate-cannot-guard-a-rejection`).
+enum RdVerdict { kRdConfirm = 0, kRdRefute, kRdReverse, kRdUndef };
+
+static RdVerdict rd_classify(double slope, double se, uint32_t n, double sxx) {
+  if (n < 4u || !(se > 0.0) || !(sxx > 0.0)) return kRdUndef;
+  if (slope >= 2.0 * se) return kRdConfirm;
+  if (slope <= -2.0 * se) return kRdReverse;
+  return kRdRefute;
+}
+
+static const char* rd_name(RdVerdict v) {
+  switch (v) {
+    case kRdConfirm: return "CONFIRMED -- the rep index carries information";
+    case kRdRefute: return "REFUTED -- no slope in this range";
+    case kRdReverse: return "REVERSED -- the drift's sign is not stable";
+    default: return "UNDEFINED -- unidentified or too few creatures";
+  }
+}
+
+bool run_repdrift(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  constexpr uint32_t kObjects = 2;
+  constexpr uint32_t kK = aibaby::kMaxContextSlots;
+
+  const uint32_t rlo = rd_env("AIBABY_REPDRIFT_LO", 96u);
+  const uint32_t rhi = rd_env("AIBABY_REPDRIFT_HI", 288u);
+  const bool do_g0 = rd_env("AIBABY_REPDRIFT_G0", 1u) != 0u;
+  const bool do_arm2 = rd_env("AIBABY_REPDRIFT_ARM2", 1u) != 0u;
+  if (rhi <= rlo + 8u) {
+    std::printf("  usage: AIBABY_REPDRIFT_HI must exceed LO by more than 8\n");
+    return false;
+  }
+
+  struct Arm { const char* name; int pin, pairing; const char* what; };
+  const Arm arms[2] = {
+      {"T1.RET.D", 0, 1, "derived + drawn -- clause 5a, THE PRIMARY"},
+      {"T1.RET", 0, 0, "derived + paired -- secondary 3, arm specificity"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t r = rlo; r < rhi; ++r) { job_arm.push_back(0u); job_rep.push_back(r); }
+  if (do_g0)
+    for (uint32_t r = 0; r < kRdArch; ++r) { job_arm.push_back(0u); job_rep.push_back(r); }
+  // Secondary 3's two blocks must be DISJOINT and must both lie inside the
+  // fresh range. The naive `rhi - kRdBlock` does neither on a narrow range: at
+  // r 96..111 it yields r 64..111, which both DUPLICATES every arm-2 job (so a
+  // creature would be weighted twice in the fit) and reaches into the discovery
+  // sample. The 60k smoke printed `r 64..111` and that is what caught it.
+  const bool arm2_ok = do_arm2 && (rhi - rlo) >= 2u * kRdBlock;
+  const uint32_t a2lo2 = rhi - kRdBlock;  // valid only when arm2_ok
+  if (arm2_ok) {
+    for (uint32_t r = rlo; r < rlo + kRdBlock; ++r) { job_arm.push_back(1u); job_rep.push_back(r); }
+    for (uint32_t r = a2lo2; r < rhi; ++r) { job_arm.push_back(1u); job_rep.push_back(r); }
+  }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §59c. Is the REP INDEX exchangeable? `seed + r * 7919` is\n"
+              "                    injective, so creature r is an independent draw and r must\n"
+              "                    carry NO information. §59b's archived matrix says otherwise\n"
+              "                    for ONE arm: T1.RET.D drifts upward with r in 30 of its 36\n"
+              "                    windows, in e1 alone (t +2.77, where nothing is learned yet),\n"
+              "                    while T1.RET / T1.ORACLE.D / T1.ORACLE read 5 / 1 / 0 on the\n"
+              "                    same windows. Imbalance is refuted as the cause (survives at\n"
+              "                    2.53 SE) and so is a weak coin (xoshiro256++ via splitmix64).\n");
+  std::printf("  the primary       the OLS slope of T1.RET.D's e1-e8 slot term on r, over\n"
+              "                    r %u..%u -- creatures NO section has scored. Null: slope = 0.\n",
+              rlo, rhi - 1u);
+  std::printf("  what it cannot    the four-block trend DECELERATES, so the drift may have\n"
+              "   do               SATURATED before r %u. REFUTED here means `no slope in this\n"
+              "                    range`, NOT `the r 0..95 drift was noise`. Secondary 2 is\n"
+              "                    what makes saturation visible rather than assumed.\n", rlo);
+  std::printf("  session           %.1f s of simulated life x %u sessions\n",
+              double(ticks) * double(dna.header().sim.dt_ms) / 1000.0, kJobs);
+  std::printf("  range             fresh r %u..%u   G0 %s   arm2 %s\n\n",
+              rlo, rhi - 1u, do_g0 ? "on (r 0..35)" : "OFF", do_arm2 ? "on" : "OFF");
+
+  // ---- the verdict's four branches, on synthetic input, before any real row
+  std::printf("  THE VERDICT'S FOUR BRANCHES, exercised before any real row reaches it\n"
+              "  (`deferral-note-is-untested-code`: real rows cannot test a branch they\n"
+              "  never take, and a CONSTANT REGRESSOR cannot fail a slope test at all).\n");
+  {
+    struct T { double sl, se; uint32_t n; double sxx; RdVerdict want; const char* why; };
+    const T t[4] = {
+        {+0.00300, 0.000288, 170u, 5.0e5, kRdConfirm, "slope >= +2 SE"},
+        {+0.00020, 0.000288, 170u, 5.0e5, kRdRefute, "|slope| < 2 SE"},
+        {-0.00300, 0.000288, 170u, 5.0e5, kRdReverse, "slope <= -2 SE"},
+        {+0.00300, 0.000288, 170u, 0.0, kRdUndef, "CONSTANT regressor: sxx = 0"},
+    };
+    bool all = true;
+    for (uint32_t i = 0; i < 4u; ++i) {
+      const RdVerdict got = rd_classify(t[i].sl, t[i].se, t[i].n, t[i].sxx);
+      const bool ok = got == t[i].want;
+      all = all && ok;
+      std::printf("    slope %+0.5f  se %0.6f  sxx %7.1e -> %-48s %s  (%s)\n",
+                  t[i].sl, t[i].se, t[i].sxx, rd_name(got), ok ? "ok" : "*** WRONG ***", t[i].why);
+    }
+    std::printf("    branches reachable  %u/4  %s\n\n", 4u, all ? "PASS" : "*** FAIL ***");
+    if (!all) return false;
+  }
+
+  const std::vector<RdRow> rows = parallel_reps<RdRow>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    RdRow row;
+    row.arm = a;
+    row.rep = r;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    row.seed = seed;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // IDENTICAL to §53's, §58's, §59a's and §59b's call, argument for argument.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return row;
+    row.ok = true;
+    size_t np = std::min(run.ctx_label.size(), run.ctx_slot.size());
+    np = std::min(np, std::min(run.probe_g.size(), run.probe_g_ok.size()));
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      const size_t lo = np * b / kSmE, hi = np * (b + 1) / kSmE;
+      for (size_t k = lo; k < hi; ++k) {
+        const int s = run.ctx_slot[k];
+        const int o = run.ctx_label[k];
+        if (s < 0 || s >= int(kK) || run.probe_g_ok[k] == 0 || o < 0 || o > 1) continue;
+        row.cn[b][o][s] += 1.0;
+        row.cg[b][o][s] += run.probe_g[k];
+      }
+    }
+    return row;
+  });
+
+  // ---- one scorer: the e1-e8 slot term per creature, §59a's estimator -------
+  auto cell = [&](const RdRow& R, SmCell* out) {
+    double cn[2][kK] = {}, cg[2][kK] = {};
+    for (uint32_t b = 0; b < kSmE; ++b)
+      for (uint32_t o = 0; o < 2; ++o)
+        for (uint32_t s = 0; s < kK; ++s) { cn[o][s] += R.cn[b][o][s]; cg[o][s] += R.cg[b][o][s]; }
+    *out = sm_from_cells(cn, cg, 6.0 * double(kSmE));
+    return out->ok;
+  };
+
+  auto fit = [&](uint32_t arm, uint32_t lo, uint32_t hi) {
+    RdFit f;
+    f.rlo = lo;
+    f.rhi = hi;
+    std::vector<double> rr, vv;
+    for (size_t i = 0; i < rows.size(); ++i) {
+      if (rows[i].arm != arm) continue;
+      const uint32_t r = rows[i].rep;
+      if (r < lo || r >= hi) continue;
+      ++f.run;
+      if (!rows[i].ok) continue;
+      SmCell c;
+      if (!cell(rows[i], &c)) continue;
+      rr.push_back(double(r));
+      vv.push_back(c.slot);
+    }
+    f.n = uint32_t(vv.size());
+    if (f.n < 2u) return f;
+    double mr = 0.0, mv = 0.0;
+    for (uint32_t i = 0; i < f.n; ++i) { mr += rr[i]; mv += vv[i]; }
+    mr /= double(f.n);
+    mv /= double(f.n);
+    f.mean = mv;
+    double s2 = 0.0;
+    for (uint32_t i = 0; i < f.n; ++i) s2 += (vv[i] - mv) * (vv[i] - mv);
+    f.sd = (f.n > 1u) ? std::sqrt(s2 / double(f.n - 1u)) : 0.0;
+    double sxy = 0.0;
+    for (uint32_t i = 0; i < f.n; ++i) {
+      f.sxx += (rr[i] - mr) * (rr[i] - mr);
+      sxy += (rr[i] - mr) * (vv[i] - mv);
+    }
+    if (f.n < 4u || !(f.sxx > 0.0)) return f;  // unidentified: refuse, do not assert
+    f.slope = sxy / f.sxx;
+    double rss = 0.0;
+    for (uint32_t i = 0; i < f.n; ++i) {
+      const double e = vv[i] - (mv + f.slope * (rr[i] - mr));
+      rss += e * e;
+    }
+    f.mse = rss / double(f.n - 2u);
+    f.se = std::sqrt(f.mse / f.sxx);
+    f.ok = true;
+    return f;
+  };
+
+  bool fatal = false;
+
+  // ---- the per-creature dump, which is what GATE A diffs bitwise -----------
+  std::printf("  THE PER-CREATURE DUMP. `%%a` is the exact bit pattern, so two runs over\n"
+              "  DIFFERENT rep ranges can be compared with `diff` and no tolerance. GATE A\n"
+              "  is that comparison: independent creatures must agree to the last bit, and\n"
+              "  a single differing creature is a harness defect touching every experiment.\n");
+  for (size_t i = 0; i < rows.size(); ++i) {
+    SmCell c;
+    const bool ok = rows[i].ok && cell(rows[i], &c);
+    std::printf("  CRE %-9s %4u  %a  %.17g  %s\n", arms[rows[i].arm].name, rows[i].rep,
+                ok ? c.slot : 0.0, ok ? c.slot : 0.0, ok ? "scored" : "UNSCORED");
+  }
+  std::printf("\n");
+
+  // ---- G0: transfer --------------------------------------------------------
+  if (do_g0) {
+    const RdFit g = fit(0u, 0u, kRdArch);
+    const double se = (g.n > 1u) ? g.sd / std::sqrt(double(g.n)) : 0.0;
+    const bool ok = sw_abs(g.mean - kRdArchSlot) < 5e-5 && sw_abs(se - kRdArchSe) < 5e-5 &&
+                    g.n == kRdArch;
+    std::printf("  G0 -- TRANSFER, READ FIRST. The same binary must reproduce §53's PUBLISHED\n"
+                "  T1.RET.D whole-session value on r 0..35 to four decimals INCLUDING the SE\n"
+                "  and exactly on n. If it does not, this is a different experiment and\n"
+                "  nothing below is readable.\n");
+    std::printf("    T1.RET.D e1-e8  %+0.4f +- %0.4f (n%u)   archive %+0.4f +- %0.4f (n%u)   %s\n",
+                g.mean, se, g.n, kRdArchSlot, kRdArchSe, kRdArch, ok ? "match" : "*** DIFFERS ***");
+    if (!ok) {
+      fatal = true;
+      std::printf("    THE ARCHIVE DOES NOT REPRODUCE. Nothing below is readable.\n");
+    }
+    std::printf("\n");
+  } else {
+    std::printf("  G0 -- SKIPPED (AIBABY_REPDRIFT_G0=0). This run is a GATE A half, not a\n"
+                "  readable measurement: no transfer check ran, so its primary is not a result.\n\n");
+  }
+
+  // ---- THE REGISTERED PRIMARY ---------------------------------------------
+  const RdFit P = fit(0u, rlo, rhi);
+  const RdVerdict V = rd_classify(P.slope, P.se, P.n, P.sxx);
+  std::printf("  ================= THE REGISTERED PRIMARY =================\n");
+  std::printf("  T1.RET.D e1-e8, OLS slope on rep index, r %u..%u\n", rlo, rhi - 1u);
+  std::printf("    slope %+0.6f +- %0.6f per rep    n %u scored of %u run\n",
+              P.slope, P.se, P.n, P.run);
+  if (P.se > 0.0) std::printf("    %0.2f SE from zero\n", P.slope / P.se);
+  std::printf("    identification: sxx %0.4g over r span %u   (a CONSTANT regressor would\n"
+              "      make this 0 and the verdict UNDEFINED -- measured, not asserted)\n",
+              P.sxx, rhi - rlo);
+  std::printf("    per-creature SD %0.4f   (the power input; §59b's fresh e1-e8 gave 0.188,\n"
+              "      its discovery 0.170, and the plan assumed a pessimistic 0.21)\n", P.sd);
+  std::printf("    2 SE detection threshold %+0.6f per rep = %0.0f%% of the drift measured\n"
+              "      on r 0..95 (+0.00176 per rep on this window)\n",
+              2.0 * P.se, P.se > 0.0 ? 100.0 * 2.0 * P.se / 0.00176 : 0.0);
+  std::printf("    scored fraction %0.1f%%   (the OTHER power input rule 5 says to take from\n"
+              "      a FRESH arm, never a discovery sample)\n",
+              P.run ? 100.0 * double(P.n) / double(P.run) : 0.0);
+  std::printf("\n    VERDICT: %s\n\n", rd_name(V));
+
+  // ---- secondary 1: the level against the archive --------------------------
+  {
+    const double se = (P.n > 1u) ? P.sd / std::sqrt(double(P.n)) : 0.0;
+    const double d = P.mean - kRdArchSlot;
+    const double de = std::sqrt(se * se + kRdArchSe * kRdArchSe);
+    std::printf("  SECONDARY 1 -- THE LEVEL, against §53's archived constant. DECLARED BEFORE\n"
+                "  THE RUN AS CAPPED: the archive's own SE is %0.4f, so this contrast cannot\n"
+                "  exceed %0.2f SE however many creatures run. The cap is not a result.\n",
+                kRdArchSe, sw_abs(0.0843) / kRdArchSe);
+    std::printf("    fresh r %u..%u  %+0.4f +- %0.4f (n%u)   archive %+0.4f +- %0.4f (n%u)\n",
+                rlo, rhi - 1u, P.mean, se, P.n, kRdArchSlot, kRdArchSe, kRdArch);
+    // An EMPTY fresh set must not print a difference against the archive: with
+    // n 0 the mean is 0.0 and the contrast reads a confident +3.09 SE out of
+    // nothing, which is `vacuity-gate-cannot-guard-a-rejection` exactly -- the
+    // defect §59b caught in its clause 5 and the 60k smoke caught here.
+    if (P.n < 2u)
+      std::printf("    difference      *** UNSCORABLE (n %u) -- NOT A RESULT ***\n\n", P.n);
+    else
+      std::printf("    difference      %+0.4f +- %0.4f = %0.2f SE\n\n", d, de,
+                  de > 0.0 ? d / de : 0.0);
+  }
+
+  // ---- secondary 2: the block table, so saturation is VISIBLE --------------
+  {
+    // The block width is the SMALLER of the registered 48 and the range, so the
+    // header can never advertise a width the loop did not use.
+    const uint32_t bw = std::min(kRdBlock, rhi - rlo);
+    std::printf("  SECONDARY 2 -- THE BLOCK TABLE over r %u..%u, %u reps each. This is what\n"
+                "  distinguishes `no drift` from `drift already finished` -- the distinction\n"
+                "  the primary cannot make on its own.\n", rlo, rhi - 1u, bw);
+    for (uint32_t b = rlo; b < rhi; b += bw) {
+      const uint32_t e = std::min(b + bw, rhi);
+      const RdFit g = fit(0u, b, e);
+      const double se = (g.n > 1u) ? g.sd / std::sqrt(double(g.n)) : 0.0;
+      if (g.n < 2u)
+        std::printf("    r %3u..%3u   *** UNSCORABLE (n%u of %u) ***\n", b, e - 1u, g.n, g.run);
+      else
+        std::printf("    r %3u..%3u   %+0.4f +- %0.4f (n%u of %u)\n", b, e - 1u, g.mean, se, g.n, g.run);
+    }
+    std::printf("\n");
+  }
+
+  // ---- secondary 3: arm specificity in fresh territory ---------------------
+  if (arm2_ok) {
+    const RdFit a = fit(1u, rlo, rlo + kRdBlock);
+    const RdFit b = fit(1u, a2lo2, rhi);
+    const double sea = (a.n > 1u) ? a.sd / std::sqrt(double(a.n)) : 0.0;
+    const double seb = (b.n > 1u) ? b.sd / std::sqrt(double(b.n)) : 0.0;
+    const double d = b.mean - a.mean, de = std::sqrt(sea * sea + seb * seb);
+    std::printf("  SECONDARY 3 -- ARM SPECIFICITY in fresh territory, on the two extreme\n"
+                "  blocks only, which are DISJOINT by construction. §59b established\n"
+                "  specificity on r 0..95; this asks whether it holds here. DISCLOSED BEFORE\n"
+                "  THE RUN: a null is WEAK -- half the creatures and no lever arm.\n");
+    std::printf("    T1.RET  r %3u..%3u  %+0.4f +- %0.4f (n%u of %u)\n", rlo, rlo + kRdBlock - 1u,
+                a.mean, sea, a.n, a.run);
+    std::printf("    T1.RET  r %3u..%3u  %+0.4f +- %0.4f (n%u of %u)\n", a2lo2, rhi - 1u,
+                b.mean, seb, b.n, b.run);
+    if (a.n < 2u || b.n < 2u)
+      std::printf("    difference          *** UNSCORABLE (n %u and %u) -- NOT A RESULT ***\n\n", a.n, b.n);
+    else
+      std::printf("    difference          %+0.4f +- %0.4f = %0.2f SE\n\n", d, de, de > 0.0 ? d / de : 0.0);
+  } else if (do_arm2) {
+    std::printf("  SECONDARY 3 -- NOT RUN. The range r %u..%u is narrower than two disjoint\n"
+                "  blocks of %u, so arm 2 has no non-overlapping extremes to compare and was\n"
+                "  not scheduled at all. Stated rather than silently reaching outside the\n"
+                "  fresh range, which is what the naive block arithmetic did.\n\n",
+                rlo, rhi - 1u, kRdBlock);
+  }
+
+  // ---- secondary 4: the descriptive slope that CONTAINS the discovery sample
+  if (do_g0) {
+    const RdFit g = fit(0u, 0u, rhi);
+    std::printf("  SECONDARY 4 -- THE SLOPE OVER r 0..%u, WHICH CONTAINS THE DISCOVERY SAMPLE\n"
+                "  (r 0..35 motivated this test), so it CANNOT be the result. Printed so the\n"
+                "  shape is on the record, labelled here rather than left to a reader.\n", rhi - 1u);
+    if (!g.ok)
+      std::printf("    *** UNSCORABLE (n %u, sxx %0.4g) -- NOT A RESULT ***\n\n", g.n, g.sxx);
+    else
+      std::printf("    slope %+0.6f +- %0.6f per rep   n %u   sxx %0.4g   %0.2f SE\n\n",
+                  g.slope, g.se, g.n, g.sxx, g.se > 0.0 ? g.slope / g.se : 0.0);
+  }
+
+  std::printf("  THE REGISTERED PRIMARY WAS: T1.RET.D e1-e8 slope on r over r %u..%u.\n",
+              rlo, rhi - 1u);
+  std::printf("  VERDICT: %s\n", rd_name(V));
+  std::printf("  %s\n", fatal ? "ONE OR MORE GATES FAILED" : "All gates passed.");
+  return !fatal;
+}
+
 }  // namespace aibaby_host
