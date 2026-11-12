@@ -1,0 +1,45 @@
+experiment: echopred
+
+  §66 — CAN AN EFFERENCE COPY CANCEL A MATCHING WORD?
+
+  the question    §65 named a COMBINER as the next build. This prices the
+                  one the architecture can cheaply support, BEFORE the
+                  genome is touched.
+  the mechanism   DNA v15's rectified per-channel subtraction in hear(),
+                  but sourced from the ARTICULATORS instead of central --
+                  central was refuted as a prediction source, and the
+                  shipped previous-frame predictor sees only silence
+                  across the gap.
+  how             a SECOND VowelSource renders the creature's own posture
+                  and a SECOND Cochlea turns it into mel. No genome change.
+  the prediction  rendered at a FIXED amplitude (0.50): quietecho measured
+                  the posture identical at 94% and 0% phonation, so it is
+                  a shape that exists whether or not it is being voiced.
+  the bar         0.650, three-way.
+  creatures       12
+
+  THE GATES
+
+    sessions that ran            12 of 12                PASS
+    rows == labels               0 misaligned           PASS
+    slept trials                 536 of 4800 = 0.1117      PASS
+    gap-cells scored             48                      PASS
+    CONTROL posture-shuffled     0.5087 +- 0.0091         PASS
+    REFERENCE raw mel, no subtr  0.5071 +- 0.0063         PASS
+
+  THE RESIDUAL — same/different off the creature's own cancellation
+
+    gap   PRIMARY         vector   ctrl-tot ctrl-vec  raw-mel  live-tot live-vec  norm-tot norm-vec  postureA
+     200  0.5444+-0.0263  0.5615   0.4943   0.4943    0.5076   0.5483    0.5594    0.5346   0.5459    0.6707
+     800  0.5403+-0.0286  0.5270   0.5343   0.5117    0.5060   0.5479    0.5172    0.5209   0.5134    0.5419
+    2000  0.5138+-0.0202  0.5136   0.5172   0.5194    0.5023   0.5022    0.5136    0.5117   0.5292    0.5655
+    5000  0.5235+-0.0243  0.5377   0.4892   0.5238    0.5124   0.5529    0.5123    0.5144   0.5395    0.5400
+
+  THE VERDICT (best gap 200ms): 0.5444 +- 0.0263
+    -> REFUSED — the cancellation does not separate same from different; do NOT change the genome
+
+  A REFUSAL IS THE USEFUL OUTCOME AND WAS PRE-COMMITTED TO: it kills the
+  combiner for one instrument instead of for a genome change, a
+  recalibration and a determinism re-pin. Read `postureA` first -- if the
+  posture does not carry A in these units, the refusal is about the
+  POSTURE and not about the subtraction.

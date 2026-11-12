@@ -13587,3 +13587,75 @@ unchanged from §63-§65.
 **If this refuses, the efference-copy combiner is dead for one instrument
 instead of for a genome change, a recalibration and a determinism re-pin.** That
 is the whole point of running it first.
+
+## §66 RESULT — REFUSED, AND A DECODABLE TRACE IS NOT A CANCELLABLE ONE
+
+`--experiment echopred`, 1,680,000 ticks, 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934`. `results/n66-echopred-1680k.log`.
+**No genome change was made and none is now licensed.**
+
+    THE VERDICT (best gap 200 ms)   0.5444 +- 0.0263
+      -> REFUSED — the cancellation does not separate same from different
+
+`best + 2 SE = 0.597`, clear of the 0.650 bar. Both registered gates are clean:
+
+    CONTROL  posture drawn from another trial   0.5087 +- 0.0091
+    REFERENCE raw mel, no subtraction at all    0.5071 +- 0.0063
+
+**Every form of the subtraction agrees.** Residual vector 0.5615, frame-wise
+(faithful to `hear()`) 0.5483, L1-normalised shape-only 0.5346. Not one of them
+reaches the bar. This is not a near miss on one parameterisation.
+
+### THE REFUSAL IS ATTRIBUTABLE, AND THAT IS WHAT THE `postureA` COLUMN IS FOR
+
+    postureA, gap 200   0.6707
+
+**The posture does carry the first word in these very units.** Rendered through
+the creature's own synthesiser and its own cochlea, the predicted frame decodes
+A at 0.6707. So the refusal is about the **subtraction**, not about a posture
+that was empty — which is the one ambiguity that would have made this null
+useless.
+
+### THE FINDING, AND IT GENERALISES
+
+> **A decodable trace is not a cancellable one.**
+
+§65 measured the first word at **0.7727** from the articulators, and §66
+measures the same posture at **0.6707** once rendered to a spectrum — both
+comfortably above chance. Yet subtracting that rendered spectrum from the
+incoming one yields **0.5444**.
+
+A *fitted linear decoder* only needs the trace to be **discriminable**: any
+reliable difference between the two words, anywhere in the code, will do. A
+*cancellation* needs the trace to be **quantitatively right** — the correct
+energy in the correct channels — and the rectification then discards the half
+where the prediction overshoots. The echo posture is a weak, partial copy of A:
+correlated enough to decode, nowhere near equal enough to cancel.
+
+This is the mirror of §63's XOR argument, one layer out. §63: information being
+present does not make it *linearly* available. §66: information being
+*recoverable* does not make it available **to a particular physically
+realisable operation**.
+
+**So §65's "present and recoverable" needs its companion sentence, and this is
+it:** recoverable by a fitted decoder with host knowledge, and **not** recoverable
+by the one cheap mechanism this architecture offers.
+
+### WHAT THIS COSTS AND WHAT IT SAVES
+
+One instrument, no genome change, no recalibration, no determinism re-pin — and
+the determinism hash is unmoved because nothing in the creature was touched.
+That was the entire design intent, in `coderprobe`'s pattern: a gate whose only
+interesting outcome is a refusal.
+
+Not claimed: the primary sits **1.7 SE above chance** (0.5444 against 0.500).
+That is the same size as §63's unclaimed short-gap residual and has the same
+mundane account available. It is reported and not interpreted.
+
+### WHAT A COMBINER WOULD NOW HAVE TO BE
+
+Not a subtraction in **sensory** space. The remaining shape is a comparison in
+**neural** space — an operation on the two population codes rather than on the
+two spectra, which does not require the trace to be quantitatively equal to the
+input, only reliably related to it. That is a larger build than §66 was pricing,
+and it is not licensed by anything measured yet.
