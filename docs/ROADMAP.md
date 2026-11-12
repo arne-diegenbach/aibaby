@@ -12292,3 +12292,167 @@ gate with a real failure mode, not an assertion, and it fails the run.
   regulator is where it would have to be. **Neither result licenses a
   mechanism change**, and the successor would have to be structural rather than
   a constant — `refractory-sigma-v73` records the constants as exhausted.
+
+## §60 RESULT — THE GATE NEVER OPENS, THE REGULATOR IS SATURATED, AND NEITHER OF THEM HAS THE CLIFF'S SHAPE
+
+`--experiment hush --ticks 900000`, 4 arms × 36 reps = 144 sessions, §53/§58/
+§59a's protocol and genome. `results/n60-hush-900k.log`.
+
+### THE GATES, FIRST
+
+    G0  §59a's ledger reproduced on the overlapping creatures   160 of 160   PASS
+    G1  `why == 1` is exactly `lframes == 0`, every probe         0 bad      PASS
+    G1  SIL + QUIET + NOFRAME == nov, every cell              0 of 1152      PASS
+        NOFRAME over the whole run                                  0        PASS
+        determinism, `--experiment verify`      hash ad96f882becbee92        PASS
+
+**G0 is the strongest control this section has**, and stronger than the pinned
+hash for this particular claim: 160 integers out of the sessions themselves,
+reproducing §59a's `probes`/`kept`/`dark`/`nov`/`badf` exactly. The
+instrumentation is *measured* to be pure, not asserted to be.
+
+### THE PRIMARY — VOICING, ON ALL FOUR ARMS
+
+    arm           SIL   QUIET      n        q     per-creature q    verdict
+    T1.RET        378     25      403   0.0620   0.0595 ± 0.0224    VOICING
+    T1.RET.D      361     47      408   0.1152   0.1057 ± 0.0317    VOICING
+    T1.ORACLE.D   434     45      479   0.0939   0.0931 ± 0.0239    VOICING
+    T1.ORACLE     466     31      497   0.0624   0.0647 ± 0.0201    VOICING
+    POOLED       1639    148     1787   0.0828 ± 0.0065             VOICING
+
+**The late cliff is a gate that never opens.** Pooled and per-creature agree
+within a fraction of an SE on every arm, and every one of the 36 creatures
+carries the reading, so `mean-of-ratios` does not bite here. The bound was 0.20
+and the largest arm reads 0.1057 — **2.97 SE clear** on the conservative
+per-creature estimator, and 4.47 / 6.27 / 6.73 on the other three.
+
+**§59a was nearly right, and now it is measured.** On its own twelve creatures
+this run reproduces `nov 182` exactly, and splits it **175 SIL / 7 QUIET**: its
+gloss *"no voiced frame at all"* was **96.15%** true, not 100%. The arithmetic
+was right; the wording collapsed a conjunction, and the residual is 3.85 points.
+
+### THE CONTROL WINDOW REVERSES IT — AND THAT IS THE SURPRISE
+
+    window   T1.RET   T1.RET.D   T1.ORACLE.D   T1.ORACLE
+    e1-e2    0.6812    0.4762       0.8929       0.7143     QUIET-dominated
+    e8       0.0620    0.1152       0.0939       0.0624     SIL-dominated
+
+**Early silence and late silence are different failures.** Early, the creature
+voices and is too quiet to score; late, it does not voice at all. The
+composition inverts by roughly a factor of ten.
+
+And `QUIET` does not merely shrink as a *share* — its absolute count falls.
+On `T1.RET` it runs 10, 37, 24, 29, 33, 44, **61**, then **25**: it rises for
+seven eighths and drops at e8, while `SIL` goes 42 → **378**. The intermediate
+state is being consumed by the terminal one.
+
+The e1–e2 window is thin — only 7 to 15 creatures have any silent probe there,
+which is why two arms read NO VERDICT under the registered gate — so this is
+reported as a reading and not as a verdict, exactly as registered.
+
+### SECONDARY 1 — SATURATED, AND IT REPLICATES `ipctx` ACROSS PROTOCOL AND BUDGET
+
+`T1.RET`, per eighth:
+
+    thr    1.2498  1.7051  2.0754  2.3432  2.5131  2.6196  2.6972  2.7418
+    pin    0.0001  0.0019  0.0321  0.0969  0.1611  0.2031  0.2308  0.2165
+    rate  12.7418 11.0820 10.5751  9.7377  9.1983  9.1970  9.0466  8.6357
+    ref    0.6709  0.7230  0.7532  0.7698  0.7786  0.7824  0.7834  0.7612
+
+The pinned share at e8 is **0.2165 / 0.2149 / 0.2612 / 0.2789** across the
+arms. `ipctx` measured **0.31** at drive gain 0.10 over 3.4M ticks on a
+different protocol; the threshold drift there was **+1.263** and here it is
+**+1.49 to +1.69**. Two protocols, two budgets, the same regulator running out
+of range — this is a replication, and `ipctx`'s own instrument lesson is why
+the 450k smoke was declared unable to pre-judge it.
+
+The regulator is also **task-local**: the larynx threshold moves **+1.492**
+while `kAssociation` moves **+0.090** on the same creatures, a factor of
+**16.5**.
+
+### THE FINDING — THE REGULATOR'S TRAJECTORY CANNOT PRODUCE THE CLIFF'S SHAPE
+
+    e      thr     d(thr)    vfrac   d(vfrac)
+    1   1.2498        --    0.9285        --
+    2   1.7051   +0.4554    0.8921   -0.0363
+    3   2.0754   +0.3702    0.9102   +0.0180
+    4   2.3432   +0.2678    0.8602   -0.0500
+    5   2.5131   +0.1699    0.8310   -0.0293
+    6   2.6196   +0.1066    0.8377   +0.0068
+    7   2.6972   +0.0775    0.8545   +0.0168
+    8   2.7418   +0.0446    0.3713   -0.4832
+
+**The threshold's e7→e8 step is the SMALLEST of the session** — a tenth of its
+first — and it is monotonically decelerating into its clamp. **The voicing
+drop at e8 is 9.7× the largest drop anywhere before it.** The implied
+sensitivity `d(vfrac)/d(thr)` runs at −0.19 over e3–e4 and **−10.83** over
+e7–e8: a factor of **58**.
+
+Three further columns say the same thing:
+
+- **`pin` plateaus and then FALLS** at e8 on both derived arms (0.2308 →
+  0.2165, 0.2278 → 0.2149). The share of the pool on the clamp is not what
+  moves at e8.
+- **The larynx is still firing 73% ABOVE its homeostatic target at e8** —
+  8.64 Hz against `target_rate_hz` 5.00 — on a smooth decline. The pool has
+  not gone quiet.
+- **`ref` turns DOWN at e8 on every arm** after rising monotonically for seven
+  eighths (0.7834 → 0.7612). Whatever happens at e8 reaches a module the task
+  does not drive.
+
+**It is not a mixture.** 35 of 36 creatures fall together: the e8 `vfrac`
+distribution is unimodal near 0.37, with one creature below 0.05 and four above
+0.60. §55's trap was checked and is not present — this is a population-wide
+shift, not a subset dying.
+
+### WHAT THIS LICENSES, AND WHAT IT DOES NOT
+
+**Licensed.** The late cliff is lost *voicing*, measured and no longer glossed.
+The homeostat is at the scene and is saturated, with a quarter of the larynx on
+its clamp, replicated against `ipctx`. The amplitude branch is closed for e8 —
+and *opened* for e1–e2, which nothing had looked at.
+
+**Not licensed.** "The homeostat silenced the larynx" is **not** established,
+and this section is the reason to doubt the simple form of it: the pool still
+fires well above target, the mean threshold decelerates into e8, and the pinned
+share flattens, while the output falls off a cliff. A gate crossing on a
+smoothly declining drive could still do it, but it would need a sensitivity 58×
+anything this session shows elsewhere. **Something other than the pool-mean
+threshold changes at e8**, and `ref`'s turn says it is not confined to the
+larynx.
+
+**No mechanism change is licensed either way.** `ip_rate` is a refused knob and
+the constants are exhausted; a successor has to be structural or a finer
+instrument, not a sweep.
+
+### THE SUCCESSOR, NAMED NOT BELIEVED
+
+The resolution here is **one eighth** — about 113k ticks — so "cliff" means
+"inside one eighth" and nothing in this run dates it more precisely. The
+obvious next instrument is the same four columns on a **finer time grid** with
+the per-neuron threshold *distribution* rather than its mean, since a mean that
+decelerates while a quarter of the pool sits on a clamp is exactly the shape
+that can hide a fast-moving tail. That is one accumulator pair and no mechanism.
+
+### DISCLOSED
+
+- **I ran two `verify` processes redirected to the same path and they
+  interleaved** — 280 lines where a clean log is 936, binary garbage in the
+  file, and no final-hash line. This is the §51 defect `verify_gate.sh` was
+  written to catch, and it caught it. Re-run once to a unique path.
+- **The first `hush` invocation was refused for want of `--ticks`.** The
+  table's 900000 is a MINIMUM, not a default; the smoke had passed `--ticks`
+  and the real command did not. `smoke-the-exact-command` again — the binary is
+  not the invocation — and the refusal cost one wasted launch, not a result.
+- **The 60k plumbing smoke caught a misleading disclosure.**
+  `disclose_index_source` reads the BASE genome and printed *"INDEX SOURCE 0,
+  inherited from the genome and NOT set by hush"* over a run whose every job
+  overrides it to 5. `slotexp` and `slotmat` omit that call for this reason.
+- The registered per-creature reading was derived from the `HMAT` dump by
+  `tools/hush_percreature.py` rather than printed by the instrument, with a
+  self-check against the instrument's own pooled counts. That it was derivable
+  at all with **no new compute** is the §59c lesson paying for itself in the
+  next section.
+- The e1–e2 control carries 7–15 creatures per arm and two of the four arms
+  read NO VERDICT under the registered vacuity gate. The reversal is reported
+  on that basis and is not a verdict.
