@@ -13221,3 +13221,92 @@ and before any scoreable run.** It moves the rule in the safe direction only: it
 can turn a MET into a NO VERDICT and can never turn a NOT MET into anything
 else. Recording it here because a rule changed after a glimpse of data is the
 `verdict-fitted-to-data` shape even when the change is a tightening.
+
+## §64 RESULT — THEY DO COEXIST, AND THE COMPARISON IS STILL NOT FORMED
+
+`--experiment samediff`, 1,680,000 ticks, 3 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934`. `results/n64-samediff-1680k.log`. Budget,
+gaps, folds and gates identical to §63.
+
+### THE OVERLAP WINDOW DOES NOT RESCUE M6
+
+    §64 PRIMARY   central @ overlap   best gap 800 ms   0.5180 +- 0.0226   NOT MET
+    §64 CO-PRIM   artic9  @ overlap   best gap 200 ms   0.5130 +- 0.0217   NOT MET
+    §63 window    central @ post-B    best gap 200 ms   0.5338 +- 0.0159   NOT MET
+    §63 window    artic9  @ post-B    best gap 200 ms   0.5491 +- 0.0193   NOT MET
+
+Every space, every gap, both windows: chance. The 300k smoke read **0.6250** on
+the primary and that was noise at an SE of 0.0555 — a plain demonstration of why
+a smoke cannot pre-judge a verdict.
+
+### BUT §63'S CENTRAL CONCLUSION IS REFUTED BY ITS OWN SUCCESSOR
+
+§63 concluded *"the ingredients never coexist — by the time B is available, A is
+gone."* **That is wrong, and it was an artefact of the window §63 chose.** At
+the overlap window both words are present at once:
+
+    at B's first 400 ms   auditory  central  vocal   artic9  artic7
+    A, the first word     0.5006    0.5029   0.5451  0.7727  0.7305
+    B, the second word    1.0000    0.6973   0.9234  0.5360  0.5339
+
+At gap 200 the first word reads **0.7727** and the second **1.0000**,
+simultaneously. The correct statement is the stronger one:
+
+> **The creature holds both words at once and does not compare them.**
+
+That is the exact claim M6 was written to test, and §63 could not make it
+because it only ever showed one ingredient missing.
+
+### OVERWRITE — REGISTERED, AND IT CARRIES ITS OWN CONTROL
+
+A's identity at the scoring window, **B-omitted minus B-present**, paired by
+creature (the arms share a seed):
+
+    gap      auditory           artic9             artic7
+     200   -0.0203 +- 0.0265  +0.0979 +- 0.0258  +0.1028 +- 0.0312
+     800   +0.0114 +- 0.0362  +0.0967 +- 0.0198  +0.1042 +- 0.0290
+    2000   +0.0430 +- 0.0282  +0.0181 +- 0.0324  +0.0008 +- 0.0318
+    5000   +0.0159 +- 0.0472  -0.0008 +- 0.0221  -0.0107 +- 0.0306
+
+**Registered verdict: OVERWRITE.** `artic9` +0.0967 ± 0.0198 at gap 800, **4.9
+SE**, and +0.0979 ± 0.0258 at gap 200.
+
+**The control is internal and it is the convincing part.** The effect exists at
+200 and 800 ms and **vanishes at 2000 and 5000** — exactly where §63 measured
+that A's trace is already dead and there is nothing left for B to destroy. The
+ear shows no effect at any gap, which is consistent for the same reason: its
+trace is gone by 800 ms either way. An artefact of the arm would not switch off
+precisely where the thing it acts on stops existing.
+
+**What overwrite means here, precisely:** the motor echo carries one word, and
+the newer one displaces the older. This joins `capacity`'s finding that
+capacity in this creature is pure overwrite — now measured on the input side.
+
+### THE LIMITATION, AND IT IS FIRST-CLASS
+
+**No single feature space carries both words.** Reading the overlap table down
+its columns: A is legible only on the motor spaces, B only on the sensory ones.
+Every readout in §63 and §64 is **per module**, so none of them was ever handed
+both ingredients at once.
+
+A per-module readout therefore **cannot express the comparison even in
+principle**, and the null is to that extent about the instrument rather than
+about the creature.
+
+This does not dissolve the result — a linear readout cannot compute XOR from a
+concatenation either, so a joint readout reading chance would still mean the
+creature does not combine them. But it changes what chance *licenses*: with
+per-module readouts, chance is consistent both with "no comparison is formed"
+and with "the pieces are in different modules and nothing looked at both."
+
+**The successor removes one of those: a JOINT readout over concatenated spaces
+at the overlap window.** The features are already collected; it is a scoring
+change with no new session.
+
+### WHAT STANDS
+
+- **M6 is not met** at either window, on any space, at any gap.
+- **The two words are simultaneously represented**, in different modules.
+- **B overwrites A's motor trace**, 4.9 SE, with an internal control that
+  switches off where the trace does.
+- §63's "the ingredients never coexist" is **withdrawn**.
