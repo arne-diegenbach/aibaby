@@ -13659,3 +13659,15 @@ Not a subtraction in **sensory** space. The remaining shape is a comparison in
 two spectra, which does not require the trace to be quantitatively equal to the
 input, only reliably related to it. That is a larger build than §66 was pricing,
 and it is not licensed by anything measured yet.
+
+### THE GATES
+
+    sessions that ran                      12 of 12            PASS
+    rows == labels                         0 misaligned        PASS
+    slept trials                           536 of 4800         11.2%
+    posture-shuffled control               0.5087 +- 0.0091    PASS
+    raw-mel reference, no subtraction      0.5071 +- 0.0063    PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
+
+The determinism hash is unmoved **because nothing in the creature was touched**
+— which is the point of the section, not an incidental property of it.
