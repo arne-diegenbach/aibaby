@@ -12810,3 +12810,140 @@ with brain-wide firing rate and not with the eighth index.
   of the original error is reported rather than quietly fixed.
 - The 150k smoke segfaulted on `vfrac[bstar - 1]` when no cliff exists. No
   cliff is now a reported VOID outcome, and that branch is exercised.
+
+## §63 PRE-REGISTRATION — M6 RUN ONE, AND IT REVISES TWO CLAUSES OF §61
+
+§61 wrote M6, "it tells same from different": word, gap, word, and a held-out
+readout of whether the second was the same word as the first. This is its first
+run. **Two of §61's own clauses are revised here, before any data, and both
+revisions are argued from measurements already in the archive.** They are
+written out in full because a registered design that is quietly loosened later
+is the `verdict-fitted-to-data` failure, and the only defence is to move the
+clause before the run and say why.
+
+### REVISION 1 — §61'S LARYNX-SILENCED ARM DOES NOT CUT THE CARRIER IT NAMES
+
+§61 requires a larynx-silenced arm because the echo is a live confound: *"a
+creature that solves same/different by re-saying the first word and comparing
+its own voice has done something real through the production path this
+milestone was written to avoid."*
+
+`quietecho` has already measured what that knob does. Driving
+`voicing_threshold` 0.42 → 1.15 takes the voiced fraction **0.773 → 0.000**,
+and the articulator echo **does not move**: 0.823 → 0.835, with a creature
+phonating 94% and one phonating 0% scoring an identical echo (+0.0000 ±
+0.0000, same brain). What the knob does cut is the acoustic self-loop — the
+creature's own ear drops 0.639 → 0.495.
+
+**So the arm cuts the acoustic route and leaves the motor trace untouched.** It
+is still run, and it is still the right control, but for the loop it actually
+severs. It is renamed here to **the acoustic-silenced arm** so that no later
+section can read "larynx-silenced" and believe the motor carrier was removed.
+
+### REVISION 2 — §61'S DECAY GATE IS AIMED AT THE WRONG MODULE, AND IS TOO STRONG
+
+§61 makes the gate voiding: prove the first word is no longer readable before
+the second arrives, *"or the result is persistence and not comparison."* Two
+problems, in order of severity.
+
+**(a) It would be measured on the wrong module.** §61 motivates the gate with
+central's **0.503** at word offset. But `ctxsrc` measured, on the same trials
+and the same windows, the **articulators** at **0.818** (900-1300) and
+**0.742** (1300-1700), still **0.632** at 1700-2800. The trace lives in the
+motor system. A decay gate read on central would pass trivially while the real
+trace sat at 0.818 — `guard-measures-the-wrong-quantity`, inside the gate
+written to prevent exactly that class of error.
+
+**(b) A readable trace does not make the milestone trivial, because of the
+readout's algebra.** `holdout_accuracy` is a standardised nearest-centroid
+classifier: it is linear. Same-versus-different is the **XOR** of the two word
+identities. A linear readout of a superposition of `trace(A)` and `response(B)`
+cannot produce XOR at all. A perfectly preserved trace of A therefore buys the
+classifier nothing on its own — **something inside the creature still has to
+combine the two, and combining them is precisely what M6 asks.** Holding a
+trace and comparing it is not the trivial solution; it is the capability.
+
+The failure mode genuinely worth excluding is **physical mixing** — the
+creature still sounding A into its own ear while B plays, which would give
+same/different a low-level acoustic correlate with no comparison anywhere. That
+is cut by the acoustic-silenced arm of Revision 1, not by a neural decay gate.
+
+**So the decay column is reported and interpretive, not voiding**, and it is
+read on the articulators as well as on central. This is a weakening of a
+registered clause and it is recorded as one.
+
+### ADDITION 1 — THE ASSEMBLED ORACLE, WHICH IS FULL SCALE IN THE TASK'S UNITS
+
+§61 asked for an oracle ceiling "converted into this task's units". A host
+readout handed both identities returns 1.000 and prices nothing. The ceiling
+that prices this task is built from the creature's own activity:
+
+> Decode A from A's own window. Decode B from B's own window. **XOR the two
+> decodes.** That is what the creature would score if its ingredients were
+> perfectly available and perfectly combined.
+
+With per-word accuracy near the ear's 0.981 this lands near **0.96**, and
+`p_A·p_B + (1-p_A)(1-p_B)` is the exact conversion. The **0.650** bar is read
+against this, not against 1.000 — `calibrate-the-estimator-in-claim-units`.
+
+### ADDITION 2 — THE INGREDIENTS COLUMN, WHICH IS WHAT MAKES A NULL SHARP
+
+At the scoring window, three readouts are taken off the same activity: A's
+identity, B's identity, and same/different. §61 argued a null would be
+informative; this is what makes it so. **If A and B are each decodable there
+and same/different is at chance, the statement is exact: the ingredients are
+present and the comparison is not formed.** That bounds accumulation
+mechanistically and points the next build at a combiner rather than at a store,
+four stores having already been refused.
+
+### THE DESIGN
+
+Trial: **word A (900 ms) | gap G | word B (900 ms) | scoring window (400 ms)**.
+A and B each drawn uniformly and independently from `kWords[0..1]`, so all four
+cells are equiprobable, "same" is 50/50, and **B's identity carries nothing
+about the label by construction**. Trial order shuffled, never alternating
+(`audprobe`'s rule: alternation makes the label equal to trial parity).
+
+Gap swept **within** the session as a trial type, so every gap is measured on
+the same creature with one budget: **G ∈ {200, 800, 2000, 5000} ms**. The low
+end sits inside M1b's echo window, the high end is well past `ctxsrc`'s last
+measured bin (0.632 at 1700-2800).
+
+Arms:
+
+    shipped              the creature as it ships
+    acoustic-silenced    voicing_threshold 1.15 — quietecho's 0.000-voiced rung
+    label-destroyed      same trials, same/different labels shuffled
+
+Readouts, all held-out, all off `auditory` / `central` / `vocal` spikes /
+articulator groups: same-vs-different at the scoring window (the milestone);
+A's identity and B's identity at the same window (Addition 2); A's identity in
+the gap immediately before B (the decay column, Revision 2).
+
+### THE BAR
+
+Held-out same-vs-different at **>= 0.650** against chance 0.500, on a majority
+of creatures, at a gap whose decay column is reported alongside it, with the
+acoustic-silenced arm agreeing. Read against the assembled oracle of
+Addition 1.
+
+### THE GATES, AND EACH CAN REALLY FAIL
+
+    assembled oracle below 0.80            the trials cannot support the question   VOID
+    label-destroyed outside [0.42, 0.58]   the readout is not honest                VOID
+    feature rows != label count            ctxsrc's own historical misalignment      VOID
+    any of the 4 cells absent in a fold    the split cannot score XOR                VOID
+    slept trials above 20%                 §62's budget lesson, applied up front    VOID
+
+Slept trials are discarded as `ctxsrc` already discards them, and the discard
+count is printed — §62 established that sleep arrives inside every long
+session, so this is a reported quantity and not an assumption.
+
+### STATED UP FRONT
+
+- **No mechanism, no genome field, no RNG draw** beyond the arm's
+  `voicing_threshold` override, which `quietecho` has already characterised.
+- The estimator's SE is projected from a **measured** smoke window of the
+  scoring width, never from a scaling law.
+- A null is a result and is pre-committed to as one. It bounds accumulation and
+  names the next build; it does not license a second pass at a larger budget.
