@@ -12947,3 +12947,43 @@ session, so this is a reported quantity and not an assumption.
   scoring width, never from a scaling law.
 - A null is a result and is pre-committed to as one. It bounds accumulation and
   names the next build; it does not license a second pass at a larger budget.
+
+### ADDENDUM, BEFORE ANY SCOREABLE RUN — THE PRIMARY SPACE, NAMED
+
+The first §63 commit set the bar without saying which feature space carries it,
+which would have left five chances to clear 0.650 and a free choice afterwards.
+Named now, with only `--allow-short` smokes run (those print under a banner and
+cannot pass whatever they read):
+
+- **PRIMARY: `central`.** The non-motor route, and the module M6 is really
+  about — the one measured at **0.503**, chance, once the word stops.
+- **CO-PRIMARY: `artic9`,** labelled the MOTOR route. A pass there means
+  something different from a pass on central, and its reading depends on the
+  acoustic-silenced arm.
+- `auditory`, `vocal` and `artic7` are **secondary and reported**. `artic7`
+  exists so the decay column is comparable with `ctxsrc`'s 0.818 / 0.742 /
+  0.632, which were measured on exactly those seven groups.
+
+### THE TWO SMOKE-DRIVEN CORRECTIONS, BOTH CAUGHT BY REGISTERED GATES
+
+**(1) The four cells were balanced globally, not per gap.** The trial list was
+balanced across the whole session and then dealt out to gaps, so each gap
+received a random draw. At 17 trials a gap can draw a cell once, which leaves
+that cell absent from the test fold and makes the XOR unscoreable there. The
+cells-in-both-folds gate read **16 gap-cells short of 96** and voided the run.
+Each gap now carries its own balanced list, and the round count is rounded down
+to a multiple of four.
+
+**(2) The label-destroyed control was biased DOWNWARD, and that flatters the
+milestone.** Shuffling the labels across the whole vector moves them between
+folds. The multiset is fixed, so a surplus of "same" in training is a deficit in
+test — the two compositions are negatively correlated by construction. A
+nearest-centroid classifier trained on no signal estimates the majority class's
+centroid better and over-predicts it, straight into a test fold short of exactly
+that class. The control read **0.3906 ± 0.0177**, six SE under chance, and the
+registered [0.42, 0.58] gate voided the run. It is now permuted **within each
+fold**, which leaves both compositions as the real design has them and destroys
+only the association. It reads **0.4948 ± 0.0252**.
+
+This is `null-is-not-a-control` from the other side: a null biased *downward* is
+not a neutral error, because every contrast drawn against it is inflated.

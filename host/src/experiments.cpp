@@ -366,6 +366,20 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"samediff", 672000, Expect::kRead, Tier::kLong,
+     "derived: §63, M6 run one. Word A, a gap, word B, and a held-out readout\n"
+     "  asked whether B was the SAME word as A -- the smallest operation that\n"
+     "  cannot be done without holding something. A and B come from a BALANCED\n"
+     "  four-cell list, so 'same' is 50/50 and B's identity carries nothing about\n"
+     "  the label by construction. One round is 16800 ticks (four gaps: 200, 800,\n"
+     "  2000, 5000 ms), and 40 rounds is the floor for a held-out split at every\n"
+     "  gap. §61's decay gate is demoted to INTERPRETIVE here: the readout is a\n"
+     "  linear nearest-centroid and same/different is XOR, which a linear readout\n"
+     "  of a superposition cannot produce -- so a surviving trace of A does not\n"
+     "  make the milestone trivial. §61's larynx-silenced arm is renamed\n"
+     "  ACOUSTIC-silenced: quietecho took the voiced fraction 0.773 -> 0.000 with\n"
+     "  the articulator echo UNMOVED, so the knob cuts the self-heard loop only.\n"
+     "  Arms move `voicing_threshold` and nothing else."},
     {"hushgate", 900000, Expect::kRead, Tier::kLong,
      "derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's\n"
      "  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --\n"
@@ -1723,6 +1737,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
   else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
   else if (name == "hushgate") ok = run_hushgate(dna_blob, ticks, verbose);
+  else if (name == "samediff") ok = run_samediff(dna_blob, ticks, verbose);
   else if (name == "hush") ok = run_hush(dna_blob, ticks, verbose);
   else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);

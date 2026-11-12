@@ -18458,4 +18458,620 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return !fatal;
 }
 
+
+// --- samediff (§63): M6 run one — does the creature tell same from different?
+//
+// ROADMAP §63, and it is M6's first run. Word A, a gap, word B, and a held-out
+// readout asked whether B was the SAME word as A. §61 named this the smallest
+// operation that cannot be done without holding something, and the atom under
+// every accumulation the goal asks for.
+//
+// THE CONTROL IS BY CONSTRUCTION, which is the design's whole economy. The
+// trial list is a balanced set of the four cells (AA, AB, BA, BB), so "same"
+// is exactly 50/50, A's identity is 50/50, B's identity is 50/50, and **B's
+// identity carries nothing about the label**. A readout handed only the second
+// word is at chance by design rather than by a control arm. Anything above
+// chance crossed the gap.
+//
+// THE READOUT IS LINEAR AND THAT IS THE POINT, and it is why §63 demoted §61's
+// decay gate from voiding to interpretive. `holdout_accuracy` is a standardised
+// nearest-centroid classifier. Same-versus-different is the XOR of two word
+// identities, and a linear readout of a SUPERPOSITION of trace(A) and
+// response(B) cannot produce XOR at all. A surviving trace of A therefore buys
+// this classifier nothing on its own — something inside the creature still has
+// to COMBINE the two, and combining them is exactly what M6 asks. Holding a
+// trace and comparing it is not the trivial solution; it is the capability.
+//
+// What a trace COULD do trivially is mix acoustically: the creature still
+// sounding A into its own ear while B plays would give same/different a
+// low-level spectral correlate with no comparison anywhere. That is what the
+// acoustic-silenced arm is for, and `quietecho` already measured that this is
+// the route `voicing_threshold` actually cuts (its own ear 0.639 -> 0.495)
+// while leaving the articulator trace untouched (0.823 -> 0.835).
+
+constexpr uint64_t kSdWord = 900;    // word duration; matches vocallearn's, but
+                                     // nothing must AGREE with it — this probe
+                                     // owns its trial, so this is not the
+                                     // shared-constant hazard.
+constexpr uint64_t kSdScore = 400;   // the scoring window, after B's offset
+constexpr uint64_t kSdPre = 400;     // the decay window, ending at B's onset
+constexpr uint64_t kSdGaps[] = {200, 800, 2000, 5000};
+constexpr uint32_t kSdGapCount = sizeof(kSdGaps) / sizeof(kSdGaps[0]);
+constexpr const char* kSdGapName[kSdGapCount] = {"200", "800", "2000", "5000"};
+
+// Five feature spaces. `artic7` excludes the F1 and F2 groups so that the decay
+// column is comparable with `ctxsrc`'s 0.818/0.742/0.632, which were measured
+// on exactly those seven; `artic9` keeps all nine, because the words differ ON
+// F1 and F2 and excluding them would hide the echo this section is about.
+constexpr uint32_t kSdSpaces = 5;
+constexpr const char* kSdSpaceName[kSdSpaces] = {"auditory", "central", "vocal",
+                                                 "artic9", "artic7"};
+// THE PRIMARY SPACE, NAMED BEFORE THE RUN. `central` is the non-motor route and
+// the module M6 is really about — it is the one measured at 0.503, chance, once
+// the word stops. `artic9` is a CO-PRIMARY and is labelled the motor route: a
+// pass there means something different, and its reading depends on the
+// acoustic-silenced arm. The other three are secondary and reported.
+constexpr uint32_t kSdPrimary = 1;    // central
+constexpr uint32_t kSdCoPrimary = 3;  // artic9
+
+constexpr double kSdBar = 0.650;          // §61's bar
+constexpr double kSdOracleFloor = 0.80;   // below this the trials cannot support it
+constexpr double kSdNullLo = 0.42, kSdNullHi = 0.58;
+constexpr double kSdSleepMax = 0.20;
+constexpr uint32_t kSdMinTrials = 16;     // ctxsrc's floor for a held-out split
+constexpr uint64_t kSdRoundTicks =
+    kSdGapCount * (2 * kSdWord + kSdScore) + 200 + 800 + 2000 + 5000;
+
+// The four windows a trial is cut into.
+enum SdWin { kSdWA = 0, kSdWG, kSdWB, kSdWS, kSdWinCount };
+
+struct SdGapRow {
+  double milestone[kSdSpaces] = {};  // same/different at the scoring window
+  double nulled[kSdSpaces] = {};     // ...with the labels destroyed
+  double decay[kSdSpaces] = {};      // A's identity in the gap, before B
+  double ing_a[kSdSpaces] = {};      // A's identity AT the scoring window
+  double ing_b[kSdSpaces] = {};      // B's identity at the scoring window
+  double orac_a[kSdSpaces] = {};     // A's identity during A
+  double orac_b[kSdSpaces] = {};     // B's identity during B
+  double assembled[kSdSpaces] = {};  // pA*pB + (1-pA)(1-pB) — full scale
+  uint32_t trials = 0;
+  uint32_t cell_min_train = 0, cell_min_test = 0;
+  bool scored = false;
+};
+
+struct SdOut {
+  SdGapRow gap[kSdGapCount];
+  uint32_t attempted = 0, slept = 0;
+  uint64_t first_sleep_tick = 0;  // 0 means the creature never slept
+  bool align_bad = false;         // ctxsrc's own historical misalignment
+  bool ok = false;
+};
+
+// Reorder a feature matrix by a permutation, so that `holdout_accuracy`'s
+// first-half/second-half split lands on the folds this probe chose.
+inline void sd_reorder(std::vector<std::vector<double>>& m,
+                       const std::vector<uint32_t>& perm) {
+  std::vector<std::vector<double>> out;
+  out.reserve(perm.size());
+  for (uint32_t i : perm) out.push_back(m[i]);
+  m.swap(out);
+}
+
+// THE FOLD SPLIT, AND IT IS NOT `holdout_accuracy`'S DEFAULT.
+//
+// That helper trains on the first half of the trials and tests on the second,
+// and its own comment says why that is unsafe here: the creature is not
+// stationary, per-module homeostasis retunes gains as the session runs, and a
+// classifier can lock onto session time instead of the label. Eight creatures
+// once printed exactly 0.500 on `vocal` for that reason.
+//
+// So the split is taken WITHIN each cell, alternating in time order. Every one
+// of the four cells is then present in both folds in near-equal number (which
+// the gate checks rather than assumes) and both folds span the whole session,
+// so a slow drift hits train and test equally instead of separating them.
+inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
+                                           const std::vector<int>& yb,
+                                           uint32_t& train_count,
+                                           uint32_t& cell_min_train,
+                                           uint32_t& cell_min_test) {
+  std::vector<uint32_t> train, test;
+  uint32_t ntr[4] = {}, nte[4] = {};
+  uint32_t seen[4] = {};
+  for (uint32_t i = 0; i < ya.size(); ++i) {
+    const uint32_t cell = uint32_t(ya[i] * 2 + yb[i]);
+    if ((seen[cell]++ % 2) == 0) { train.push_back(i); ++ntr[cell]; }
+    else { test.push_back(i); ++nte[cell]; }
+  }
+  cell_min_train = ntr[0]; cell_min_test = nte[0];
+  for (uint32_t c = 1; c < 4; ++c) {
+    if (ntr[c] < cell_min_train) cell_min_train = ntr[c];
+    if (nte[c] < cell_min_test) cell_min_test = nte[c];
+  }
+  train_count = uint32_t(train.size());
+  std::vector<uint32_t> perm = train;
+  perm.insert(perm.end(), test.begin(), test.end());
+  return perm;
+}
+
+SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
+                           uint32_t rep, float voicing_override) {
+  SdOut out;
+  std::vector<uint8_t> local = blob;
+  {
+    const uint64_t seed = reinterpret_cast<const aibaby::DnaHeader*>(local.data())->seed +
+                          uint64_t(rep) * 7919ull;
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    if (voicing_override > 0.0f) {
+      std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
+                      offsetof(aibaby::DnaVocal, voicing_threshold),
+                  &voicing_override, sizeof(voicing_override));
+    }
+  }
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return out;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return out;
+  const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  const int32_t voc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (aud < 0 || cen < 0 || voc < 0) return out;
+  const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
+  const aibaby::ModuleState& ms_c = s.brain.network().module(uint32_t(cen));
+  const aibaby::ModuleState& ms_v = s.brain.network().module(uint32_t(voc));
+  const uint32_t wa = ms_a.count, wc = ms_c.count, wv = ms_v.count;
+
+  const double dt = double(s.dna.header().sim.dt_ms);
+  const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+  VowelSource voice(acfg.sample_rate);
+  std::vector<float> pcm(spt);
+
+  aibaby::Rng rng;
+  rng.seed(s.dna.header().seed ^ 0x5D1FFu);
+
+  // Rounded DOWN to a multiple of four, so that each gap's cell list is exactly
+  // balanced rather than nearly so.
+  const uint64_t rounds = (ticks / kSdRoundTicks) / 4u * 4u;
+  if (rounds == 0) return out;
+
+  // Per gap: four windows x five spaces of features, plus the two label columns.
+  std::vector<std::vector<double>> feat[kSdGapCount][kSdWinCount][kSdSpaces];
+  std::vector<int> lab_a[kSdGapCount], lab_b[kSdGapCount];
+
+  // A BALANCED LIST OF THE FOUR CELLS, shuffled — never cycled. Strict cycling
+  // would make the label a function of round parity, which is `audprobe`'s rule
+  // and the reason that probe shuffles.
+  // ONE BALANCED LIST PER GAP, and that is the correction the 300k smoke
+  // forced. The first version balanced the four cells across the WHOLE session
+  // and then dealt them out to gaps, so each gap received a random draw rather
+  // than a balanced one -- and at 17 trials a gap could draw a cell once, which
+  // leaves that cell absent from the test fold. The registered cells-in-both-
+  // folds gate caught it and voided the run: 16 gap-cells short of 96.
+  std::vector<uint8_t> cells[kSdGapCount];
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    cells[g].assign(size_t(rounds), 0);
+    for (size_t i = 0; i < cells[g].size(); ++i) cells[g][i] = uint8_t(i % 4u);
+    for (size_t i = cells[g].size(); i > 1; --i)
+      std::swap(cells[g][i - 1], cells[g][rng.next() % i]);
+  }
+  // ...and the GAP order inside a round is shuffled too, so that a gap is not
+  // confounded with position within the round.
+  std::vector<uint32_t> gorder(kSdGapCount);
+  for (uint32_t g = 0; g < kSdGapCount; ++g) gorder[g] = g;
+
+  size_t cell_at[kSdGapCount] = {};
+  uint64_t tick_now = 0;
+  for (uint64_t r = 0; r < rounds; ++r) {
+    for (size_t i = gorder.size(); i > 1; --i)
+      std::swap(gorder[i - 1], gorder[rng.next() % i]);
+    for (uint32_t gi = 0; gi < kSdGapCount; ++gi) {
+      const uint32_t g = gorder[gi];
+      const uint64_t gap = kSdGaps[g];
+      const uint8_t cell = cells[g][cell_at[g]++];
+      const int a = int(cell >> 1), b = int(cell & 1u);
+      const uint64_t b_on = kSdWord + gap;
+      const uint64_t b_off = b_on + kSdWord;
+      const uint64_t len = b_off + kSdScore;
+      const uint64_t pre_from = b_on - (gap < kSdPre ? gap : kSdPre);
+
+      std::vector<std::vector<double>> bins(
+          kSdWinCount, std::vector<double>(size_t(wa) + wc + wv, 0.0));
+      double gsum[kSdWinCount][aibaby::kVocalGroups] = {};
+      uint32_t gn[kSdWinCount] = {};
+      bool slept = false;
+      ++out.attempted;
+
+      for (uint64_t t = 0; t < len; ++t) {
+        const bool in_a = t < kSdWord;
+        const bool in_b = t >= b_on && t < b_off;
+        const Word& wa_ = kWords[a];
+        const Word& wb_ = kWords[b];
+        if (in_a) voice.render(wa_.f0, wa_.f1, wa_.f2, 0.5f, pcm.data(), spt);
+        else if (in_b) voice.render(wb_.f0, wb_.f1, wb_.f2, 0.5f, pcm.data(), spt);
+        else voice.render(0.0f, wa_.f1, wa_.f2, 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        ++tick_now;
+        if (s.brain.asleep()) {
+          slept = true;
+          if (out.first_sleep_tick == 0) out.first_sleep_tick = tick_now;
+        }
+
+        uint32_t win = kSdWinCount;
+        if (in_a) win = kSdWA;
+        else if (t >= pre_from && t < b_on) win = kSdWG;
+        else if (in_b) win = kSdWB;
+        else if (t >= b_off) win = kSdWS;
+        if (win == kSdWinCount) continue;
+
+        const aibaby::Scalar* gp = s.brain.vocal_groups();
+        for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[win][q] += double(gp[q]);
+        ++gn[win];
+
+        const aibaby::Network& net = s.brain.network();
+        for (uint32_t i = 0; i < net.spike_count(); ++i) {
+          const uint32_t idx = net.spikes()[i];
+          if (idx >= ms_a.begin && idx < ms_a.begin + wa) bins[win][idx - ms_a.begin] += 1.0;
+          else if (idx >= ms_c.begin && idx < ms_c.begin + wc)
+            bins[win][size_t(wa) + (idx - ms_c.begin)] += 1.0;
+          else if (idx >= ms_v.begin && idx < ms_v.begin + wv)
+            bins[win][size_t(wa) + wc + (idx - ms_v.begin)] += 1.0;
+        }
+      }
+
+      // §62's lesson applied up front: a slept trial is discarded, and the
+      // discard is COUNTED and reported rather than assumed away.
+      if (slept) { ++out.slept; continue; }
+
+      for (uint32_t win = 0; win < kSdWinCount; ++win) {
+        std::vector<double> va(bins[win].begin(), bins[win].begin() + wa);
+        std::vector<double> vc(bins[win].begin() + wa, bins[win].begin() + wa + wc);
+        std::vector<double> vv(bins[win].begin() + wa + wc, bins[win].end());
+        feat[g][win][0].push_back(va);
+        feat[g][win][1].push_back(vc);
+        feat[g][win][2].push_back(vv);
+        std::vector<double> g9, g7;
+        for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) {
+          const double v = gn[win] ? gsum[win][q] / double(gn[win]) : 0.0;
+          g9.push_back(v);
+          if (q != 2 && q != 3) g7.push_back(v);
+        }
+        feat[g][win][3].push_back(g9);
+        feat[g][win][4].push_back(g7);
+      }
+      lab_a[g].push_back(a);
+      lab_b[g].push_back(b);
+    }
+  }
+
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    SdGapRow& row = out.gap[g];
+    row.trials = uint32_t(lab_a[g].size());
+    // THE ALIGNMENT CHECK. `ctxsrc` once ran a feature space AHEAD of its labels
+    // by the number of slept trials, pairing row i with the wrong word and
+    // indexing past the end of `labels` — undefined behaviour, not a wrong
+    // number, and latent in every run short enough never to sleep.
+    for (uint32_t win = 0; win < kSdWinCount; ++win)
+      for (uint32_t sp = 0; sp < kSdSpaces; ++sp)
+        if (feat[g][win][sp].size() != row.trials) out.align_bad = true;
+    if (row.trials < kSdMinTrials) continue;
+
+    uint32_t train = 0;
+    const std::vector<uint32_t> perm =
+        sd_fold_split(lab_a[g], lab_b[g], train, row.cell_min_train, row.cell_min_test);
+    if (train == 0 || train >= row.trials) continue;
+
+    std::vector<int> ya, yb, ysame;
+    for (uint32_t i : perm) {
+      ya.push_back(lab_a[g][i]);
+      yb.push_back(lab_b[g][i]);
+      ysame.push_back(lab_a[g][i] == lab_b[g][i] ? 1 : 0);
+    }
+    // THE LABEL-DESTROYED CONTROL IS SHUFFLED WITHIN EACH FOLD, NOT ACROSS
+    // THEM, and the 300k smoke is why.
+    //
+    // Shuffling the whole vector moves labels between the training and test
+    // halves. The multiset is fixed, so any surplus of "same" the training fold
+    // gains is a DEFICIT the test fold suffers -- the two compositions are
+    // negatively correlated by construction. A nearest-centroid classifier
+    // trained on no signal estimates the majority class's centroid better and
+    // therefore over-predicts it, straight into a test fold that is short of
+    // exactly that class. The control then reads SYSTEMATICALLY BELOW CHANCE:
+    // the smoke measured 0.3906 +- 0.0177, six SE under 0.500, and the
+    // registered [0.42, 0.58] gate voided the run.
+    //
+    // That mattered beyond tidiness. A null biased DOWNWARD flatters the
+    // milestone it is the control for -- `null-is-not-a-control`, from the
+    // other side. Permuting within each fold leaves both compositions exactly
+    // as the real design has them and destroys only the association.
+    std::vector<int> yshuf = ysame;
+    for (size_t i = train; i > 1; --i)
+      std::swap(yshuf[i - 1], yshuf[rng.next() % i]);
+    for (size_t i = yshuf.size(); i > train + 1; --i)
+      std::swap(yshuf[i - 1], yshuf[train + (rng.next() % (i - train))]);
+
+    for (uint32_t win = 0; win < kSdWinCount; ++win)
+      for (uint32_t sp = 0; sp < kSdSpaces; ++sp) sd_reorder(feat[g][win][sp], perm);
+
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      row.milestone[sp] = holdout_accuracy(feat[g][kSdWS][sp], ysame, train);
+      row.nulled[sp] = holdout_accuracy(feat[g][kSdWS][sp], yshuf, train);
+      row.decay[sp] = holdout_accuracy(feat[g][kSdWG][sp], ya, train);
+      row.ing_a[sp] = holdout_accuracy(feat[g][kSdWS][sp], ya, train);
+      row.ing_b[sp] = holdout_accuracy(feat[g][kSdWS][sp], yb, train);
+      row.orac_a[sp] = holdout_accuracy(feat[g][kSdWA][sp], ya, train);
+      row.orac_b[sp] = holdout_accuracy(feat[g][kSdWB][sp], yb, train);
+      // FULL SCALE IN THE TASK'S OWN UNITS: what this creature would score if
+      // its own ingredients were perfectly combined. Not a host oracle handed
+      // both labels — that returns 1.000 and prices nothing.
+      const double pa = row.orac_a[sp], pb = row.orac_b[sp];
+      row.assembled[sp] = pa * pb + (1.0 - pa) * (1.0 - pb);
+    }
+    row.scored = true;
+  }
+  out.ok = true;
+  return out;
+}
+
+constexpr uint32_t kSdReps = 12;
+struct SdArm { const char* name; float vthr; const char* what; };
+// `quietecho` drove this ladder to 1.15 and measured the voiced fraction at
+// 0.000 with the articulator echo UNMOVED. That is the rung, and that is why
+// this arm is called acoustic-silenced and not larynx-silenced.
+constexpr SdArm kSdArms[2] = {
+    {"shipped", 0.0f, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+};
+
+// mean and standard error over creatures, which are the independent unit here.
+inline void sd_stat(const std::vector<double>& v, double& m, double& se) {
+  m = 0.0; se = 0.0;
+  if (v.empty()) return;
+  for (double x : v) m += x;
+  m /= double(v.size());
+  if (v.size() < 2) return;
+  double s = 0.0;
+  for (double x : v) s += (x - m) * (x - m);
+  se = std::sqrt(s / double(v.size() - 1)) / std::sqrt(double(v.size()));
+}
+
+bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::printf("\n  M6 RUN ONE — DOES THE CREATURE TELL SAME FROM DIFFERENT? (ROADMAP §63)\n\n"
+              "  trial             word A %llu ms | gap G | word B %llu ms | score %llu ms\n"
+              "  gaps              200 / 800 / 2000 / 5000 ms, interleaved in one session\n"
+              "  the control       A and B drawn from a BALANCED four-cell list, so\n"
+              "                    'same' is 50/50 and B's identity carries nothing\n"
+              "                    about the label BY CONSTRUCTION\n"
+              "  the bar           %.3f, read against the ASSEMBLED oracle (decode A\n"
+              "                    from A's window, B from B's, XOR the decodes)\n"
+              "  primary           %s (the non-motor route)\n"
+              "  co-primary        %s (the MOTOR route — reads differently)\n"
+              "  round             %llu ticks; %llu rounds at this budget\n"
+              "  creatures         %u per arm, 2 arms\n\n",
+              (unsigned long long)kSdWord, (unsigned long long)kSdWord,
+              (unsigned long long)kSdScore, kSdBar,
+              kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary],
+              (unsigned long long)kSdRoundTicks,
+              (unsigned long long)(ticks / kSdRoundTicks), kSdReps);
+
+  std::vector<SdOut> res[2];
+  for (uint32_t a = 0; a < 2; ++a) {
+    const float vt = kSdArms[a].vthr;
+    res[a] = parallel_reps<SdOut>(kSdReps, [&](uint32_t r) {
+      return run_samediff_session(blob, ticks, r, vt);
+    });
+  }
+
+  // ---- THE GATES, AND THEY RETURN BEFORE ANYTHING IS COMPUTED ----
+  //
+  // §62's instrument printed a primary ABOVE the line declaring its run void.
+  // That is the `plausible-wrong-number` hazard and it is not repeated: a
+  // failed gate returns here, having computed no verdict at all.
+  uint32_t n_ok = 0, n_align = 0, attempted = 0, slept = 0;
+  uint64_t first_sleep = 0;
+  uint32_t cell_empty = 0;
+  for (uint32_t a = 0; a < 2; ++a)
+    for (const SdOut& o : res[a]) {
+      if (o.ok) ++n_ok;
+      if (o.align_bad) ++n_align;
+      attempted += o.attempted;
+      slept += o.slept;
+      if (o.first_sleep_tick && (first_sleep == 0 || o.first_sleep_tick < first_sleep))
+        first_sleep = o.first_sleep_tick;
+      for (uint32_t g = 0; g < kSdGapCount; ++g)
+        if (o.gap[g].scored && o.gap[g].cell_min_test == 0) ++cell_empty;
+    }
+  const double slept_frac = attempted ? double(slept) / double(attempted) : 1.0;
+
+  // Pooled per-space columns, built once and used by both the gates and the
+  // report, so the gate and the verdict cannot read different numbers.
+  std::vector<double> mile[2][kSdGapCount][kSdSpaces];
+  std::vector<double> nul[2][kSdGapCount][kSdSpaces];
+  std::vector<double> dec[2][kSdGapCount][kSdSpaces];
+  std::vector<double> ia[2][kSdGapCount][kSdSpaces], ib[2][kSdGapCount][kSdSpaces];
+  std::vector<double> asm_[2][kSdGapCount][kSdSpaces];
+  uint32_t scored_cells = 0;
+  for (uint32_t a = 0; a < 2; ++a)
+    for (const SdOut& o : res[a])
+      for (uint32_t g = 0; g < kSdGapCount; ++g) {
+        if (!o.gap[g].scored) continue;
+        ++scored_cells;
+        for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+          mile[a][g][sp].push_back(o.gap[g].milestone[sp]);
+          nul[a][g][sp].push_back(o.gap[g].nulled[sp]);
+          dec[a][g][sp].push_back(o.gap[g].decay[sp]);
+          ia[a][g][sp].push_back(o.gap[g].ing_a[sp]);
+          ib[a][g][sp].push_back(o.gap[g].ing_b[sp]);
+          asm_[a][g][sp].push_back(o.gap[g].assembled[sp]);
+        }
+      }
+
+  double best_oracle = 0.0;
+  for (uint32_t g = 0; g < kSdGapCount; ++g)
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      double m = 0.0, se = 0.0;
+      sd_stat(asm_[0][g][sp], m, se);
+      if (m > best_oracle) best_oracle = m;
+    }
+  double null_m = 0.0, null_se = 0.0;
+  {
+    std::vector<double> all;
+    for (uint32_t g = 0; g < kSdGapCount; ++g)
+      for (double x : nul[0][g][kSdPrimary]) all.push_back(x);
+    sd_stat(all, null_m, null_se);
+  }
+
+  std::printf("  THE GATES\n\n");
+  const bool g_sessions = (n_ok == 2 * kSdReps);
+  const bool g_align = (n_align == 0);
+  const bool g_sleep = (slept_frac <= kSdSleepMax);
+  const bool g_cells = (cell_empty == 0);
+  const bool g_scored = (scored_cells > 0);
+  const bool g_oracle = g_scored && (best_oracle >= kSdOracleFloor);
+  const bool g_null = g_scored && (null_m >= kSdNullLo && null_m <= kSdNullHi);
+  std::printf("    sessions that ran          %u of %u                      %s\n",
+              n_ok, 2 * kSdReps, g_sessions ? "PASS" : "FAIL");
+  std::printf("    feature rows == labels     %u misaligned                 %s\n",
+              n_align, g_align ? "PASS" : "FAIL");
+  std::printf("    slept trials               %u of %u = %.4f  (<= %.2f)  %s\n",
+              slept, attempted, slept_frac, kSdSleepMax, g_sleep ? "PASS" : "FAIL");
+  if (first_sleep)
+    std::printf("    first sleep at tick        %llu\n", (unsigned long long)first_sleep);
+  else
+    std::printf("    first sleep at tick        never, in this budget\n");
+  std::printf("    all 4 cells in both folds  %u gap-cells short            %s\n",
+              cell_empty, g_cells ? "PASS" : "FAIL");
+  std::printf("    gap-cells scored           %u                            %s\n",
+              scored_cells, g_scored ? "PASS" : "FAIL");
+  std::printf("    assembled oracle, best     %.4f  (>= %.2f)             %s\n",
+              best_oracle, kSdOracleFloor, g_oracle ? "PASS" : "FAIL");
+  std::printf("    label-destroyed, primary   %.4f +- %.4f  in [%.2f,%.2f]  %s\n",
+              null_m, null_se, kSdNullLo, kSdNullHi, g_null ? "PASS" : "FAIL");
+
+  if (!(g_sessions && g_align && g_sleep && g_cells && g_scored && g_oracle && g_null)) {
+    std::printf("\n  RUN VOID — a registered gate failed. No verdict is computed and none\n"
+                "  is printed. The registered consequence is that this run is archived\n"
+                "  void and the budget or the instrument is corrected before a re-run.\n");
+    return true;
+  }
+
+  // ---- THE PRIMARY ----
+  std::printf("\n  THE PRIMARY — SAME vs DIFFERENT AT THE SCORING WINDOW, pooled over %u creatures\n\n",
+              kSdReps);
+  for (uint32_t a = 0; a < 2; ++a) {
+    std::printf("  arm %s (%s)\n", kSdArms[a].name, kSdArms[a].what);
+    std::printf("    gap   n   %-9s      %-9s      assembled   decay(A)   ing(A)  ing(B)\n",
+                kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary]);
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      double pm = 0, ps = 0, cm = 0, cs = 0, am = 0, as = 0, dm = 0, ds = 0;
+      double iam = 0, ias = 0, ibm = 0, ibs = 0;
+      sd_stat(mile[a][g][kSdPrimary], pm, ps);
+      sd_stat(mile[a][g][kSdCoPrimary], cm, cs);
+      sd_stat(asm_[a][g][kSdCoPrimary], am, as);
+      sd_stat(dec[a][g][kSdCoPrimary], dm, ds);
+      sd_stat(ia[a][g][kSdCoPrimary], iam, ias);
+      sd_stat(ib[a][g][kSdCoPrimary], ibm, ibs);
+      std::printf("   %5s %3u  %.4f+-%.4f  %.4f+-%.4f  %.4f     %.4f     %.4f  %.4f\n",
+                  kSdGapName[g], unsigned(mile[a][g][kSdPrimary].size()),
+                  pm, ps, cm, cs, am, dm, iam, ibm);
+    }
+    std::printf("\n");
+  }
+
+  std::printf("  EVERY SPACE, shipped arm, same/different only\n\n    gap  ");
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-10s", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    std::printf("   %5s ", kSdGapName[g]);
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      double m = 0, se = 0;
+      sd_stat(mile[0][g][sp], m, se);
+      std::printf("%.4f    ", m);
+    }
+    std::printf("\n");
+  }
+
+  std::printf("\n  THE ASSEMBLED ORACLE — FULL SCALE IN THIS TASK'S OWN UNITS, per space.\n"
+              "  Decode A from A's window, B from B's, XOR the two decodes: what this\n"
+              "  creature would score if its own ingredients were perfectly combined.\n"
+              "  THE %.3f BAR IS READ AGAINST THIS COLUMN, never against 1.000.\n\n    gap  ",
+              kSdBar);
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-10s", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    std::printf("   %5s ", kSdGapName[g]);
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      double m = 0, se = 0;
+      sd_stat(asm_[0][g][sp], m, se);
+      std::printf("%.4f    ", m);
+    }
+    std::printf("\n");
+  }
+
+  std::printf("\n  THE INGREDIENTS — A's and B's identity AT the scoring window. If these\n"
+              "  are high while same/different is at chance, the statement is exact:\n"
+              "  the ingredients are present and the comparison is NOT FORMED.\n\n"
+              "    gap   ");
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-9s ", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t which = 0; which < 2; ++which) {
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      std::printf("   %5s %s ", kSdGapName[g], which == 0 ? "A" : "B");
+      for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        double m = 0, se = 0;
+        sd_stat(which == 0 ? ia[0][g][sp] : ib[0][g][sp], m, se);
+        std::printf("%.4f   ", m);
+      }
+      std::printf("\n");
+    }
+  }
+
+  std::printf("\n  THE DECAY COLUMN — A's identity just before B arrives (INTERPRETIVE, not\n"
+              "  voiding: §63 Revision 2. ctxsrc read the articulators at 0.818 / 0.742 /\n"
+              "  0.632 across its own windows, so this is where the trace lives.)\n\n    gap  ");
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-10s", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    std::printf("   %5s ", kSdGapName[g]);
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      double m = 0, se = 0;
+      sd_stat(dec[0][g][sp], m, se);
+      std::printf("%.4f    ", m);
+    }
+    std::printf("\n");
+  }
+
+  // ---- THE VERDICT, THREE-WAY ----
+  std::printf("\n  THE VERDICT\n\n");
+  for (uint32_t which = 0; which < 2; ++which) {
+    const uint32_t sp = which == 0 ? kSdPrimary : kSdCoPrimary;
+    double best = 0.0, best_se = 0.0;
+    uint32_t best_g = 0;
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      double m = 0, se = 0;
+      sd_stat(mile[0][g][sp], m, se);
+      if (m > best) { best = m; best_se = se; best_g = g; }
+    }
+    const char* label = which == 0 ? "PRIMARY  central" : "CO-PRIM  artic9 (MOTOR)";
+    const char* verdict = (best - 2.0 * best_se > 0.5 && best >= kSdBar)
+                              ? "MET"
+                              : (best + 2.0 * best_se < kSdBar ? "NOT MET" : "NO VERDICT");
+    std::printf("    %-24s best gap %sms: %.4f +- %.4f   ->  %s\n",
+                label, kSdGapName[best_g], best, best_se, verdict);
+  }
+  std::printf("\n    Read against the assembled oracle above, not against 1.000.\n"
+              "    A null here is a RESULT and was pre-committed to as one: if the\n"
+              "    ingredient columns are high and the milestone is at chance, the\n"
+              "    statement is that the ingredients are present and the comparison\n"
+              "    is NOT FORMED — which bounds accumulation and names a combiner,\n"
+              "    not another store, as the next build.\n");
+  return true;
+}
 }  // namespace aibaby_host
