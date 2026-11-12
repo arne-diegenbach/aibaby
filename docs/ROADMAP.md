@@ -12456,3 +12456,111 @@ that can hide a fast-moving tail. That is one accumulator pair and no mechanism.
 - The e1–e2 control carries 7–15 creatures per arm and two of the four arms
   read NO VERDICT under the registered vacuity gate. The reversal is reported
   on that basis and is not a verdict.
+
+## §61 — THE INPUT-SIDE SPECIFICATION, AND THE MILESTONE IT IS MISSING
+
+Not a result. A specification, written because the project does not have one for
+the half of the goal it has not been aiming at.
+
+### WHY THIS DOCUMENT EXISTS
+
+`docs/CONCLUSION.md` records six capabilities and the archive's specification
+prices seven clauses. **Every clause of both is about what the creature
+EMITS** — signals per formant axis, held vowels, derived conditions, fixed
+targets, Hz per distinction, rhythm, inheritance. Not one is about recognising
+a word somebody else said, segmenting it, **holding** it, or relating it to
+anything.
+
+The goal is *"learn speech, recognize words, and build intelligence out of what
+it hears and what it is told."* Two of its four parts are already met and were
+being treated as background; one is ceilinged and fully characterised; **one is
+unmet and has no milestone to aim at.** A specification that prices only
+production cannot price the unmet one, and using it to refuse input-side work is
+a category error the archive already flags.
+
+So the gap is not a missing mechanism. **It is a missing target.**
+
+### WHAT IS ALREADY MEASURED ON THE INPUT SIDE — each clause a result
+
+| the input-side code | what fixes it |
+|---|---|
+| **reads one of eight words at 0.981** against a 1.000 signal ceiling | `coderprobe` — the ear is not the bottleneck and never was |
+| **which-word at 0.940 on 1.2 s of integration**, 0.700 at 200 ms, chance 0.500 | the association module INTEGRATES across a word |
+| **and at 0.503 — chance — once the word stops** | `ctxsrc`: central does not hold. 0.514 in the reward windows |
+| **the voice carries which word at 0.890 for 200–600 ms after**, ear already at 0.534 | M1b's echo. The only carrier past offset that is measured to work |
+| **a context index off the ear's own rate EMA, no latch, no gate** | `ema`: recovers 49–79% of the oracle lift, +23.6 ± 6.6 Hz, 16/18 |
+| **and the oracle it does not reach is +17.2 Hz (3.3 SE) away** | the boundary-DETECTOR approach is closed; the GAP is not |
+
+**Read that as one sentence: recognition is strong and momentary.** The creature
+hears well, integrates well while a sound lasts, and has nothing that survives
+its end except its own voice repeating it.
+
+### THE MILESTONE — M6, "IT TELLS SAME FROM DIFFERENT"
+
+> **Present a word, leave a gap, present a second word. The creature's own
+> activity reports whether the second was the same word as the first.**
+
+This is the smallest operation that cannot be done without holding something,
+and it is the atom under every accumulation the goal asks for: comparing,
+counting, noticing that this is the one from before. It targets the single
+measured deficit above — 0.503 at offset — rather than a mechanism anyone has
+guessed at.
+
+**THE BAR.** Held-out accuracy on same-versus-different, read off a module's
+population activity at the second word's offset, **≥ 0.650** against chance
+0.500, on a majority of creatures, with the separation sized from a smoke at
+the operating point and not from a scaling law.
+
+**THE CONTROL THAT MAKES IT MEAN ANYTHING, and it is by construction.** The
+first word is **drawn uniformly per trial**. "Same" therefore carries no
+information about *which* word the second one is, so a readout given only the
+second word's activity is at chance **by the design**, not by an argument. Any
+accuracy above chance has to have crossed the gap.
+
+Two further arms, both already standard here:
+
+- **LABEL-DESTROYED**: shuffle which trials are "same". Must read chance. A
+  `null-is-not-a-control` requirement — only a label-destroyed arm says the
+  result is about the comparison.
+- **THE ORACLE CEILING**: a host readout that is given both identities. Says
+  what full compliance is worth in this task's own units before anything is
+  scored against it.
+
+**THE GATE THAT COMES FIRST, AND THE MILESTONE IS VOID WITHOUT IT.** The gap
+must be one where the first word is **no longer readable** — measured in the
+same run, on the same creatures, by a classifier reading the pre-second-word
+activity for the first word's identity. If that reads above chance, the task is
+being solved by a trace that has not decayed and the run has measured
+persistence, not comparison. **Measure the identification; do not assert it.**
+
+**WHAT WOULD REFUSE IT.** Held-out accuracy at chance with the oracle ceiling at
+1.000 and the decay gate passing. That is a clean negative and an informative
+one: it would say the creature has **no cross-item comparison at all**, which
+bounds accumulation mechanistically rather than by a production ceiling, and it
+would point the next build at a carrier rather than at a store — four stores
+having already been refused.
+
+**WHAT THIS MILESTONE DOES NOT ASK FOR.** No production: the readout is off a
+module, so a ceilinged larynx cannot refuse it. No naming, no referent, no
+sequence. It does not ask the creature to *report* same-or-different, only to
+**represent** it — reporting is a production question and production is closed.
+
+### WHY THIS ONE AND NOT A BINDING MILESTONE
+
+Binding a word to a referent is the more exciting target and it is the wrong
+next one: §49–§53 already ran that line on a visual index, and the creature's
+**own derived index does not drive the lesson into the voice**. That is an
+expression result, and it would be inherited whole by any binding milestone
+written today. Same-versus-different is upstream of it, needs no expression,
+and its null — if it is a null — explains the §53 result rather than repeating
+it.
+
+### THE HONEST CAVEAT
+
+Two carriers past offset already exist: the **echo** (the voice at 0.890) and
+the **ear's rate EMA**. If M6 passes, the first question is **which carrier**,
+and the echo is the awkward one — a creature that solves same/different by
+re-saying the first word and comparing its own voice has done something real,
+but it has done it through the production path this milestone was written to
+avoid. **That arm must be run** (probe with the larynx silenced, as
+`imitate`'s articulator-only control did) or the result is unattributable.
