@@ -12673,3 +12673,133 @@ run — this is a bookkeeping identity, not a tolerance.
 - EXPLAINED would close the silence line, not open one. That is the expected
   outcome and it is worth saying before the run, so the section is not read as
   having gone looking for a surprise.
+
+## §62 RESULT — THE SILENCE CLIFF IS THE CREATURE FALLING ASLEEP, AND MY OWN REGISTERED HYPOTHESIS IS REFUTED
+
+`--experiment hushgate --ticks 900000`, 4 arms × 36 reps = 144 sessions.
+`results/n62-hushgate-900k.log`; genome md5
+`9f6faac320210cc8e9f5830adf066934`, unchanged since §53.
+
+### THE REGISTERED PRIMARY RETURNED **NOT EXPLAINED**, AND IT REFUTES THE ARITHMETIC THAT MOTIVATED THE SECTION
+
+    mean g1 crosses 0.42 at bin        NEVER
+    z at b* (bin 61 of 64, ticks 843750..857812), over 59 pre-cliff steps:
+      voiced fraction (defines b*)        -5.82
+      g1, the gate's own quantity         -0.52
+      group 1 fast rate                   -0.63
+      POOL mean rate (what §60 read)      -0.39
+      POOL mean threshold                 -0.02
+
+**Group 1 sits at 7.31 Hz at the cliff, against a gate at 4.20 Hz, and never
+goes near it.** The pre-registration's derivation — that the gate sits 0.8 Hz
+below the homeostat's setpoint, so the creature is voiced only while IP has not
+finished — is **a true statement about the constants and false as an
+explanation of the cliff.** The homeostat never drives group 1 down to the
+gate; it levels off at 7.3 Hz, 74% above it.
+
+That is the registered test doing its job on the person who registered it.
+
+### THE CAUSE, FOUND BY THE IDENTITY GATE FAILING
+
+The first pass registered `vframes == count(g1 > gate)` as exact. It **failed on
+1291 of 20304 probes** at 900k while passing all 2880 at 150k, and the
+registered consequence voided that run. The diagnosis is three lines of
+`VocalDecoder::update`:
+
+    if (!awake) { params_.voicing = kZero;
+                  params_.amplitude += gate_smooth_ * (kZero - params_.amplitude);
+                  ++frame_; return; }
+
+**Asleep the glottis is shut outright**, `group_activity_` is not updated, and
+the frame counter still advances. The corrected identity
+`vframes == count(awake && g1 > gate)` passes **0 bad of 20304**.
+
+    bin   ticks     vfrac   AWAKE    fat      g1   g1Hz    g1thr   poolHz
+     48  618750    0.8135  1.0000  0.7088  0.7279  7.28    2.712    9.012
+     56  787500    0.8260  1.0000  0.8633  0.7415  7.41    2.782    9.040
+     59  815625    0.5904  0.7226  0.8739  0.7317  7.32    2.792    8.843
+     60  829687    0.3878  0.4811  0.8638  0.7411  7.41    2.794    8.750
+     61  843750    0.1764  0.2393  0.8392  0.7309  7.31    2.793    8.519  <- b*
+     63  871875    0.0192  0.0356  0.7774  0.7277  7.28    2.782    8.188
+     64  885937    0.0000  0.0000  0.7318  0.7315  7.32    2.772    8.070
+
+`z(AWAKE) = -6.13`, larger than the voiced fraction's own `-5.82`. Fatigue
+climbs monotonically to **0.8739** and then **falls** — the discharge that only
+sleep performs.
+
+### THE CONFIRMATION, AND IT IS QUANTITATIVE
+
+Conditioned on being awake, the creature keeps voicing at its ordinary rate
+straight through the cliff:
+
+    bin                 48      56      57      58      59      60      61
+    vfrac            0.8135  0.8260  0.8123  0.7251  0.5904  0.3878  0.1764
+    awake fraction   1.0000  1.0000  0.9802  0.8895  0.7226  0.4811  0.2393
+    vfrac | AWAKE    0.8135  0.8260  0.8288  0.8152  0.8171  0.8060  0.7372
+
+Taking bin 56 as the awake baseline, sleep alone predicts
+`0.8260 × 0.2393 = 0.1976` at b* against an observed **0.1764**:
+
+> **SLEEP ACCOUNTS FOR 96.7% OF THE CLIFF.**
+
+A residual decline appears in the last three bins (0.737, 0.631, 0.539), but on
+932–6271 awake frames out of 26208, and the creatures still awake there are by
+construction the atypical ones — **a selection effect is not excluded and this
+residual is not claimed.**
+
+### IT EXPLAINS EVERY ANOMALY §60 LEFT OPEN
+
+| §60 observation | why |
+|---|---|
+| `SIL` dominates e8 (q = 0.083), `QUIET` dominates e1–e2 | asleep there are no voiced frames **at all**; awake-and-quiet is a genuinely different failure |
+| the threshold's e7→e8 step is the *smallest* of the session | the homeostat is not the cause, so nothing requires it to move |
+| `pin` plateaus and falls at e8 | same |
+| the larynx still fires 73% above target | it does — the pool is fine, the glottis is shut upstream of it |
+| **`ref` turns DOWN at e8 on every arm** | sleep scales plasticity differently (`ip_sleep_scale`), and it reaches modules the task does not drive |
+| amplitude collapses with voicing | the **same three lines** ramp amplitude down |
+| 35 of 36 creatures fall together | they tire at similar rates |
+| keyed to ABSOLUTE ticks; 7.4% at 450k vs 84% at 900k | fatigue integrates in absolute time and only crosses 0.90 late |
+
+### THE ARCHIVE CORRECTION
+
+§57 recorded sleep as *"killed from source (~1.04M ticks, never reached in a
+900k session)"*. **That is wrong.** Fatigue rises as
+`fatigue_rate * dt * activity` with `activity = spike_count / live_neurons`, so
+1.04M is the right answer **for an assumed 5 Hz brain-wide rate**; crossing 0.90
+at 844k needs only **6.27 Hz**. The figure was a derivation from an assumed
+operating point, never measured — `match-at-the-operating-point` inside a claim
+used to close a candidate. **Sleep begins at ~780–790k and the creature is 100%
+asleep by 886k, inside every 900k session this project has run since §49.**
+
+### WHAT IT DOES *NOT* OVERTURN
+
+`silence-is-the-homeostat` measured `ipoff` against the **delivery curve** over
+13.6M ticks on a different protocol, and that result stands. What §62 overturns
+is the attribution of **§60's e8 cliff** specifically. One caveat worth naming
+and not claiming: `ipoff` raises firing, firing drives fatigue, so part of that
+15.8 SE effect could itself be sleep-mediated. That is a testable question and
+is not answered here.
+
+### THE STATUS OF THIS FINDING, STATED PLAINLY
+
+The sleep column was **found by a registered gate failing, not pre-registered
+as the primary**, and the output labels it as carrying no verdict. It is not a
+post-hoc correlation, though: it is a mechanism read from source, plus a state
+variable that goes 1.0000 → 0.0000 exactly across the cliff, plus a conditional
+rate that stays flat. **A registered confirmation is still worth one run** —
+the cheapest is a budget arm, since the sleep account predicts the cliff moves
+with brain-wide firing rate and not with the eighth index.
+
+### DISCLOSED
+
+- **My pre-registered arithmetic was refuted by its own test.** The 4.2 Hz gate
+  against a 5.0 Hz setpoint is real and is not what closes the glottis.
+- The first 900k run is archived as
+  `results/n62-hushgate-900k-VOID-first-pass.log` and **is void** — its primary
+  printed above the line declaring it void, which is the
+  `plausible-wrong-number` hazard. The instrument now **returns before
+  computing anything** when the identity gate fails.
+- The sleep-blind identity is still counted and printed (**6.36%**) so the size
+  of the original error is reported rather than quietly fixed.
+- The 150k smoke segfaulted on `vfrac[bstar - 1]` when no cliff exists. No
+  cliff is now a reported VOID outcome, and that branch is exercised.

@@ -1,0 +1,66 @@
+experiment: hushgate
+  SHORT RUN — 150000 ticks against a minimum of 900000. derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's
+  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --
+  `voicing = group_activity_[1] > voicing_threshold`, where group 1 is one of
+  nine contiguous slices of the vocal module and the reading is its FAST rate
+  over `rate_norm_hz`. From the genome alone: 0.42 x 10.0 Hz means the glottis
+  opens only above 4.2 Hz, while the vocal `target_rate_hz` is 5.0 -- THE GATE
+  SITS 16% BELOW THE HOMEOSTAT'S OWN SETPOINT, so the creature is voiced only
+  while IP has not yet finished. That inverts `silence-is-the-homeostat`: IP
+  may silence the larynx by SUCCEEDING rather than by running out of range.
+  Scored on 64 bins. An identity gate checks that frames above the gate equal
+  §60's voiced-frame count exactly, since that is voicing's definition.
+  Measures only: no arm moves a genome constant.
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §62. §60 measured the POOL. The gate reads ONE GROUP:
+                    `voicing = group_activity_[1] > voicing_threshold`.
+  THE ARITHMETIC    derived from the genome before this ran:
+                      gate      0.42 x 10.0 Hz = 4.20 Hz of group-1 rate
+                      setpoint  vocal target_rate_hz = 5.00 Hz
+                    The gate sits 0.80 Hz (16%) BELOW the setpoint, so
+                    the creature is voiced only while IP has NOT finished.
+  the primary       b* is the bin of the largest drop in voiced fraction.
+                    EXPLAINED if mean g1 crosses 0.42 within +-2 bins of b*
+                    AND z(g1) <= 2; NOT EXPLAINED if no crossing near b* or
+                    z(g1) >= 3; PARTIAL otherwise.
+  what each means   EXPLAINED closes the silence line with a mechanism and
+                    makes §60's 58x sensitivity an artefact of thresholding.
+                    NOT EXPLAINED moves the question off the homeostat. The
+                    arithmetic PREDICTS the first, so the second is the
+                    surprise -- the bands are written that way round.
+  THE IDENTITY GATE `voicing` IS `g1 > 0.42`, so frames above the gate must
+                    equal §60's voiced-frame count EXACTLY on every probe.
+                    One mismatch voids the run. Reading `vocal_groups()`
+                    instead of `vocal_activities()` breaks it.
+  measures only     `voicing_threshold`, `rate_norm_hz` and `target_rate_hz`
+                    are genome constants and no arm here moves one.
+  session           150.0 s of simulated life x 144 sessions, 4 arms x 36 reps,
+                    scored on 64 bins
+  instrument        hushgate   trial seed 0000000001354569   144 sessions
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+
+  LIVENESS. completed sessions per arm:  T1.RET 36/36  T1.RET.D 36/36  T1.ORACLE.D 36/36  T1.ORACLE 36/36
+
+  THE IDENTITY GATE. `voicing` is `g1 > 0.42` ONLY WHILE AWAKE --
+  `VocalDecoder::update` shuts the glottis outright when asleep and
+  does not touch `group_activity_`. So the identity is
+  `vframes == count(awake && g1 > gate)`.
+    vectors of disagreeing length        0 sessions   PASS
+    probes where (awake && g1>gate) != vframes   0 of 2880   PASS
+    the SLEEP-BLIND form this section first registered failed on
+    0 of 2880 probes (0.00%) -- the size of that error, reported
+    rather than quietly fixed.
+
+  NO CLIFF IN THIS RUN. The voiced fraction never falls between
+  consecutive bins, so b* is undefined and the primary cannot be
+  scored. At a short budget this is EXPECTED -- §59a measured the
+  cliff as keyed to ABSOLUTE ticks (7.4% at 450k against 84% at
+  900k) -- and it is not a failure of the instrument.
+    voiced fraction, first bin nan, last bin 0.9228
+
+    VERDICT   VOID          -- the series could not be scored
+
+  Gates passed; the primary is unscorable at this budget.
