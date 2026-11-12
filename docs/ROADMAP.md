@@ -13139,3 +13139,68 @@ the same absolute times. It separates the two accounts this run cannot —
 whether B destroys A's trace, or A simply dies on schedule — and it is the
 difference between "the creature overwrites" and "the creature forgets". No
 mechanism, no genome field, one branch in the trial loop.
+
+## §64 PRE-REGISTRATION — DID I LOOK 400 ms TOO LATE, AND DOES B DESTROY A?
+
+§63 refused M6 and located the failure: at the scoring window the second word
+is carried and the first is at chance. Two things in its own numbers say that
+conclusion may be about the WINDOW rather than about the creature.
+
+    A's identity just before B arrives (gap 200)      0.8269
+    A's identity 400 ms after B ends                  0.5645
+
+**There is a moment when both words are present, and it is DURING B, not after
+it.** §63 scored same-versus-different only after B's offset and never decoded
+A during B at all. The `wB` features were collected and those readouts were
+simply never run.
+
+### THE THREE CHANGES
+
+**(1) A new overlap window, `wBE` — the first 400 ms of the second word.** B is
+legible there (`audprobe`: the ear classifies a word within 50 ms, 0.916) and
+A's trace is at its freshest. Same-versus-different and A's identity are both
+read there. **This is §64's primary.**
+
+**(2) A B-OMITTED arm.** Silence where the second word goes, trial length and
+timing unchanged, so A's trace is read at the same absolute times with and
+without B. That separates the two accounts §63 could not:
+
+    ing(A) at the scoring window, B-omitted MINUS B-present
+      clearly positive    B DESTROYS A's trace          -> OVERWRITE
+      within noise        A dies on schedule            -> ORDINARY DECAY
+      clearly negative    not predicted; would void the account
+
+Pre-committing the third branch because a refusal clause with two arms is not a
+refusal clause — `verdict-fitted-to-data`.
+
+**(3) The assembled oracle is repaired, and §63 disclosed why it needed it.**
+The bar sat ABOVE `artic9`'s own ceiling because the oracle decoded both words
+from their during-word windows, while `ctxsrc` had already measured that the
+articulators carry a word BETTER AFTER IT STOPS (0.818 / 0.742 after, 0.510 /
+0.742 during). The window is now assigned per space family, **before the run and
+from `ctxsrc` rather than from this run's numbers**:
+
+    sensory  auditory, central, vocal   A from wA, B from wB   (during)
+    motor    artic9, artic7             A from wG, B from wS   (after)
+
+Not a maximum over windows — that would be selection dressed as a ceiling.
+
+### THE BAR, THE PRIMARY, AND WHAT IS UNCHANGED
+
+Primary: same-versus-different at **`wBE`** on **`central`**, bar **0.650**
+against chance 0.500, read against the repaired oracle. Co-primary `artic9`,
+still labelled the motor route. Three-way verdict as §63.
+
+**Budget, genome, gaps, cell balance, fold split and every gate are UNCHANGED
+from §63 at 1,680,000 ticks**, so the two sections are comparable and the budget
+is not re-chosen after seeing a result. Sleep arrives at 1.088M here and 11.2%
+of trials are discarded; that is carried forward, not re-measured.
+
+### STATED UP FRONT
+
+- The B-omitted arm contributes **only** the A-trace columns. Same-versus-
+  different is undefined there and is not computed, not computed-and-hidden.
+- If `wBE` also reads chance, §63's null hardens rather than repeats: the
+  ingredients would then have been shown not to coexist in the one window where
+  they most plausibly could.
+- No mechanism, no genome field. The arm changes what is rendered, nothing else.
