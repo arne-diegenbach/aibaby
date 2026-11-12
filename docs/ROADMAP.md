@@ -12564,3 +12564,112 @@ re-saying the first word and comparing its own voice has done something real,
 but it has done it through the production path this milestone was written to
 avoid. **That arm must be run** (probe with the larynx silenced, as
 `imitate`'s articulator-only control did) or the result is unattributable.
+
+## §62 PRE-REGISTRATION — THE GATE IS 0.8 Hz ABOVE THE SETPOINT, AND THAT MAY BE THE WHOLE CLIFF
+
+§60's named successor, and it changed shape at the desk for a reason worth
+recording.
+
+### §60 MEASURED THE POOL. THE GATE DOES NOT READ THE POOL.
+
+§60 reported the larynx's **module-wide** mean rate (8.64 Hz at e8, 73% above
+`target_rate_hz` 5.00) and its **module-wide** mean threshold. The voicing gate
+reads neither:
+
+    params_.voicing = group_activity_[1] > Scalar(cfg_.voicing_threshold)
+
+`group_activity_[g]` is `clamp((mean rate_fast over group g) / rate_norm_hz)`,
+smoothed at `gate_smoothing_ms`. **Group 1 is one of nine contiguous slices of
+the vocal module**, and the gate is on its *fast* rate, not the pool's slow EMA.
+
+So §60's rate column is a `guard-measures-the-wrong-quantity` instance in my own
+section. It does not falsify anything §60 claimed — "the pool has not gone
+quiet" is true and was stated of the pool — but **it is the wrong statistic for
+the gate**, and the correction is the reason this successor is not the one §60
+named. The threshold-distribution instrument it proposed would have measured the
+pool again, one decimal finer.
+
+### THE ARITHMETIC THAT MOTIVATES THIS, DERIVED BEFORE THE RUN
+
+From the genome alone, no simulation:
+
+    voicing_threshold   0.42        rate_norm_hz   10.0
+    => the glottis opens only while group 1's mean fast rate exceeds   4.2 Hz
+    vocal target_rate_hz                                               5.0 Hz
+
+**The voicing gate sits 0.8 Hz — 16% — below the homeostat's own setpoint.**
+Intrinsic plasticity is `threshold += ip_rate * (rate_ema - target)`, so IP
+drives this pool toward 5.0 Hz from above (§60 measured 12.74 → 8.64 and still
+falling). The creature is voiced only while the homeostat has **not yet
+finished**.
+
+That is a candidate explanation of the entire cliff in one line, and it inverts
+how `silence-is-the-homeostat` reads: **IP does not silence the larynx by
+exhausting its threshold range — it silences it by SUCCEEDING**, onto a setpoint
+that is barely above the gate.
+
+**It is derived, not measured, and this section measures it.** `derive-the-
+constant` says do the algebra first; `verdict-fitted-to-data` says the algebra
+is a prediction and not a result.
+
+### THE DESIGN
+
+`--experiment hushgate`. §53/§58/§59a/§60's protocol, genome and session call,
+4 arms × 36 reps at 900k. Per probe, pushed index-aligned beside §60's vectors:
+mean and spread of `vocal_activities()[1]`, the frame count above
+`voicing_threshold`, the same for group 8 (amplitude), and group 1's **own**
+mean threshold, pinned share, fast rate and membrane margin `v − threshold`.
+All pure reads. **Scored on 64 bins, not 8**, and dumped per creature per bin so
+any coarser grid — §60's eighths included — is re-derivable offline.
+
+### THE PRIMARY
+
+`b*` is the bin of the largest single-bin drop in voiced fraction: the cliff. For
+a series X, `z(X)` is its change at `b*` in units of the SD of its own bin-to-bin
+changes before `b*`.
+
+    EXPLAINED       mean g1 crosses 0.42 within ±2 bins of b*, AND z(g1) <= 2
+    NOT EXPLAINED   no crossing near b*, OR z(g1) >= 3
+    PARTIAL         otherwise
+
+**EXPLAINED means the cliff is a smooth decline meeting a hard gate** — §60's
+58× sensitivity becomes an artefact of thresholding, and the silence line closes
+with a mechanism. **NOT EXPLAINED means group 1 itself breaks**, and the
+question moves off the homeostat onto whatever does that. Both are results; the
+first is the one the arithmetic predicts, which is why the second is the
+surprise and the bands are written this way round.
+
+### THE IDENTITY GATE, AND IT CAN REALLY FAIL
+
+`voicing` is **defined** as `g1 > 0.42`, so the per-probe count of frames with
+`vocal_activities()[1] > voicing_threshold` must equal §60's `probe_vframes`
+**exactly, on every probe**. Reading the wrong group, the unsmoothed value, or
+`groups()` instead of `activities()` all break it. A single mismatch voids the
+run — this is a bookkeeping identity, not a tolerance.
+
+### SECONDARIES
+
+1. **Which side moved.** Group 1's mean threshold and its membrane margin
+   `v − threshold`. A falling margin with a flat threshold means the drive went;
+   a rising threshold means IP did it.
+2. **The sharpening prediction.** If IP concentrates the pool onto its setpoint,
+   the *spread* of g1 across frames narrows, so a constant drift converts into a
+   steeper change in the fraction above the gate. Report the spread per bin.
+   **Descriptive — no verdict rides on it.**
+3. **Amplitude.** Group 8 drives loudness through the jaw. §60 found `amp`
+   collapsing with voicing; this says whether that is one failure or two.
+4. **The free control.** §60's own ledger (`probes`/`kept`/`dark`/`nov`/`badf`,
+   160 integers) re-checked, since the session call is unchanged.
+
+### STATED UP FRONT
+
+- **Measures only.** `voicing_threshold`, `rate_norm_hz` and `target_rate_hz`
+  are genome constants and no arm here moves one. If the finding is that the
+  gate sits too close to the setpoint, **that is a design observation, not a
+  licensed sweep** — `refractory-sigma-v73` records the constants as exhausted
+  and a one-constant fix would have to be registered on its own.
+- The 450k smoke cannot pre-judge this for `ipctx`'s reason: the threshold needs
+  a full session to walk, and at 450k the gate has not been approached.
+- EXPLAINED would close the silence line, not open one. That is the expected
+  outcome and it is worth saying before the run, so the section is not read as
+  having gone looking for a surprise.
