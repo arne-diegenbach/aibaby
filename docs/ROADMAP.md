@@ -13119,3 +13119,23 @@ store**. The result refines that and the refinement is the finding:
 So the next build is neither a longer store nor a better carrier. It is
 whatever holds A **across B's presentation** — and whether B actively destroys
 A, or A simply dies on schedule, is the one-arm question §63 leaves open.
+
+### THE GATES
+
+    sessions that ran                      24 of 24            PASS
+    feature rows == labels                 0 misaligned        PASS
+    slept trials                           1075 of 9600        11.2%
+    all 4 cells in both folds              0 short of 96       PASS
+    label-destroyed, primary               0.5016 +- 0.0101    PASS
+    assembled oracle, best                 1.0000              PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
+
+`samediff` is `Tier::kLong`, so `verify`'s fast-tier count is untouched at 24.
+
+### THE SUCCESSOR, AND IT IS ONE ARM
+
+**A B-OMITTED arm**: silence where the second word goes, A's identity read at
+the same absolute times. It separates the two accounts this run cannot —
+whether B destroys A's trace, or A simply dies on schedule — and it is the
+difference between "the creature overwrites" and "the creature forgets". No
+mechanism, no genome field, one branch in the trial loop.
