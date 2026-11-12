@@ -12102,3 +12102,193 @@ arm.**
   and the gate is why it cost a re-run and not a false PASS.
 - Secondary 3 was declared WEAK before the run (half the creatures, no lever
   arm) and its 1.41 SE between-block reading is reported as such.
+
+## §60 PRE-REGISTRATION — WHAT CLOSES THE LARYNX? THE SILENCE CLIFF, AND A CONJUNCTION THE ARCHIVE READ AS ONE TERM
+
+Written before any code, as §59c's was.
+
+### WHY THIS AND NOT THE EXPRESSION LINE
+
+§58, §59a and §59b each landed within 0.3 SE of the classifier's 4.00 gate
+(4.07, 4.18, 3.95). That is not three unlucky runs; it is an estimator whose
+effect and noise are matched, and a fourth section there would buy another
+2–3 SE ambiguity. The cliff is the opposite kind of target: **a 55–80% loss of
+probes between e7 and e8, on every arm, keyed to absolute ticks, reproduced on
+two disjoint samples — and unexplained.**
+
+### WHAT IS ALREADY KNOWN, AND WHAT IT LEAVES OPEN
+
+§59a's ledger (`results/n59a-slotmat-900k.log`), `nov` per eighth:
+
+    T1.RET        11   58   51   71   89   90  103  403
+    T1.RET.D       4   59   70   82  132  136  173  408
+    T1.ORACLE.D    1   27   60  114  138  168  175  479
+    T1.ORACLE      2    1   12   16   22   34   42  182
+
+A pinned index cannot collapse, and the pinned arm falls silent hardest in
+proportion, so the index is already ruled out as the cause. `badf` is
+identically 0, so the split is two-way. The cliff is keyed to absolute ticks:
+7.4% at 450k against 84% at 900k, and §59a's own 900k e4 column reads 16/216 =
+7.4% — the same number at the same tick count, by two routes.
+
+Two archived results name a mechanism:
+
+- **`silence-is-the-homeostat`**: `ipoff` keeps only 29% of the delivery decay
+  (15.8 SE). IP is `threshold_[i] += ip_rate * (rate_ema_[i] - target)`; the
+  larynx fires above target, the threshold climbs, the voicing gate stops
+  opening. **`ip_rate` is a REFUSED knob** — the arm that answers 2.7× more
+  trials learns 6× less — so this section measures and does not intervene.
+- **`ipctx-saturation`**: under context drive at gain 0.10 the larynx threshold
+  climbs **+1.263** into a `[0.20, 4.00]` clamp with **31% of the module
+  pinned** at `threshold_max`. That was 3.4M ticks on a different protocol.
+  **Nobody has measured it at 900k on §53's protocol.**
+
+### THE GAP THAT MAKES THIS A TEST AND NOT A RULER
+
+`probe_why == 1` is set when `probe_fn == 0`, and `probe_fn` counts frames that
+are **both** voiced **and** above the amplitude floor:
+
+    if (s.brain.voice().voicing   > aibaby::Scalar(0.5) &&
+        s.brain.voice().amplitude > aibaby::Scalar(kAmplitudeFloor)) { ... ++probe_fn; }
+
+`kAmplitudeFloor` is 0.45. **That is a conjunction, and §59a's log reads it as
+one term**: it prints *"100.0% of e8's drops are probes with no voiced frame at
+all"*, and the memory repeats it. The run never separated **a gate that never
+opened** from **a gate that opened on a sound too quiet to score.** The two have
+different mechanisms and different successors, and the homeostat chain predicts
+only the first.
+
+The separating counters are already accumulated in the probe loop (`voiced`,
+`amp`, `frames`) and are merely not pushed.
+
+### THE DESIGN
+
+`--experiment hush`. `Tier::kLong`, `Expect::kRead`, 900k, **4 arms × 36 reps =
+144 sessions**. §53/§58/§59a's protocol, genome (md5
+`9f6faac320210cc8e9f5830adf066934`), budget and session call, argument for
+argument. **No mechanism change, no genome field, no RNG draw** — seven
+index-aligned per-probe vectors pushed beside `probe_why`, and two pure reads
+(`Network::threshold`, `ModuleState::mean_rate`) that touch no state.
+
+### THE PRIMARY — IS THE CLIFF A CLOSED GATE OR A QUIET VOICE?
+
+Per probe, with `frames` the vocal frames that advanced, `vframes` those with
+`voicing > 0.5`, and `lframes` those also above the amplitude floor
+(`lframes == probe_fn`, so `why == 1` is exactly `lframes == 0`), every silent
+probe falls in exactly one of:
+
+    SIL      vframes == 0                    the voicing gate never opened
+    QUIET    vframes > 0 && lframes == 0     it opened; every frame too quiet
+    NOFRAME  frames == 0                     the vocal clock never advanced
+
+`q = QUIET / (SIL + QUIET)` in **e8**, per arm and pooled, classified by bounds
+fixed here:
+
+    q <= 0.20   VOICING     the gate never opens. The homeostat chain
+                            (threshold -> firing -> voicing) stays live.
+    q >= 0.80   AMPLITUDE   the gate opens and the sound is too quiet. The
+                            chain AS STATED is wrong and the question moves
+                            to the amplitude path.
+    otherwise   MIXED       both, and e8 is two failures. A finding, not a
+                            failed run.
+
+**Vacuity gate, measured and not asserted**: an arm with `SIL + QUIET < 30` in
+e8 reads **NO VERDICT**. §59a's ledger says these counts are 182–479, so the
+gate is live but should not fire; the count is printed either way.
+
+**NOFRAME is expected to be 0** and is a self-test, not a result: a non-zero
+count means the vocal clock stalled and the instrument is reporting on
+something other than voicing. It is printed, and a non-zero value voids the
+primary.
+
+**The refusal probability, as a number.** At the smallest arm's e8 count
+(n = 182), a share's binomial SE is at worst `sqrt(0.25/182) = 0.0371`, so the
+bounds sit **8.1 SE** from 0.5. Under a true `q` of 0.05 or 0.95 the
+probability of MIXED is below 1e-6; MIXED therefore fires only if the quantity
+genuinely is a mixture. This classifier is **not power-limited**, which is why
+the bands are wide and not a hedge.
+
+### THE SAME QUESTION ASKED OF THE CONTROL
+
+`q` in **e1–e2**, where silence is rare but not absent (§59a: 69 probes on
+`T1.RET`, 28 on `T1.ORACLE.D`). If early silence has the same composition as
+late silence, the cliff is more of the same; if it differs, the cliff is a
+distinct failure mode. **Reported either way, and no verdict rides on it.**
+`T1.ORACLE` has 3 such probes and will read NO VERDICT on this control — said
+before the run, not after.
+
+### SECONDARY 1 — IS THE REGULATOR OUT OF RANGE?
+
+Per creature per eighth: mean threshold over the `kVocal` module and the share
+at `>= 0.999 × threshold_max`.
+
+    pinned(e8) >= 0.05   SATURATED        `ipctx`'s shape, at this budget
+    pinned(e8) <  0.05   NOT SATURATED    the clamp is not the gate
+
+**Written before the run so it cannot be fitted afterwards: NOT SATURATED does
+NOT refute the homeostat.** A threshold that rises without reaching its clamp
+can close the voicing gate on its own; only the *saturation* story dies. The
+0.05 floor is "distinguishable from none", not a power calculation.
+
+**`ipctx`'s instrument lesson binds here**: at 200k that probe read `pinned
+0.00` at every drive level and granted a licence the 3.4M run refused. **The
+450k smoke therefore cannot size or pre-judge this secondary** — the threshold
+needs a full session to walk. The smoke verifies plumbing and the primary's
+counters only.
+
+### SECONDARY 2 — THE RULER, AND IT IS DUMPED PER CELL
+
+Per arm per eighth: mean larynx threshold, pinned share, larynx `mean_rate`
+against its `target_rate_hz`, mean `kAssociation` threshold as the scale §51
+used, mean `vframes/frames`, mean amplitude, and §59a's ledger columns.
+
+**Plus a per-creature per-eighth `HMAT` dump.** §59c's `repdrift` recorded only
+a whole-session scalar, so its 190 fresh creatures cannot be re-windowed
+offline and the e6–e7 control it could have given for free needs new compute.
+§59a's `MAT` had it right. **Every cell this section measures is dumped, so any
+later window is re-derivable without running it again.**
+
+### SECONDARY 3 AND 4 — DESCRIPTIVE, AND SAID SO NOW
+
+S3: silence rate against threshold level across the eighths — **n = 8, no
+verdict rides on it.** S4: the association module's threshold rise beside the
+larynx's; similar rises mean the regulator is global rather than task-specific.
+
+### THE FREE CONTROL — 160 INTEGERS
+
+The seed is `header().seed + r * 7919`, independent of the rep and arm counts,
+and `parallel_reps` seeds nothing by job index, so this run's sessions are
+bit-identical to §59a's on the overlapping creatures. §59a's published
+`probes` / `kept` / `dark` / `nov` / `badf` per eighth is hardcoded here and
+compared:
+
+- `T1.RET`, `T1.RET.D`, `T1.ORACLE.D` on r 0..35 — 3 arms × 8 eighths × 5
+  integers = **120**
+- `T1.ORACLE` on r 0..11, the subset §59a ran — **40**
+
+**Any perturbation of the session by this instrumentation breaks it.** It is a
+gate with a real failure mode, not an assertion, and it fails the run.
+
+### PRE-FLIGHTS, STATED
+
+- **Power** is not at issue for the primary (8.1 SE to the nearest bound) and
+  is not claimed for S1, whose floor is a visibility threshold.
+- **The noise model** for the primary is binomial over probes within an arm;
+  probes within a creature are not independent, so the per-arm share is also
+  reported **per creature** with a jackknife SE, and a disagreement between the
+  pooled and per-creature readings is reported as such (`mean-of-ratios`).
+- **The refusal clause fires** at a probability below 1e-6 unless the truth is
+  a genuine mixture, written above as a number.
+- **No absolute acoustic threshold is quoted**: the archive's ear was measured
+  3.3× too loud, and `kAmplitudeFloor` is read here only as the gate the code
+  actually applies, never converted to a loudness claim.
+
+### STATED UP FRONT
+
+- This section **measures and does not intervene.** `ip_rate` is a refused
+  knob and no arm here touches it.
+- A VOICING verdict does **not** prove the homeostat closed the gate. It keeps
+  the chain alive and kills the amplitude branch; S1 then asks whether the
+  regulator is where it would have to be. **Neither result licenses a
+  mechanism change**, and the successor would have to be structural rather than
+  a constant — `refractory-sigma-v73` records the constants as exhausted.
