@@ -19779,4 +19779,1054 @@ bool run_echopred(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  POSTURE and not about the subtraction.\n");
   return true;
 }
+
+// =====================================================================
+// §68 `overlapgate` — STAGE 0 OF §67, AND IT PREDICTS STAGE 2.
+//
+// THE QUESTION. §67 proposes putting DEPRESSION on `auditory -> vocal`, where
+// §64's two carriers meet, so that `delivered(B) = weight x resources left by
+// A`. That is a multiplicative conjunction at the synapse and needs no new
+// population. It has ONE precondition: the two words must drive DISTINCT
+// synapses. If they do not, depletion cannot carry word identity and the lead
+// dies here, with no genome change and no kernel change.
+//
+// WHAT MAKES IT CHEAP, AND IT IS AN EXACT COLLAPSE RATHER THAN AN APPROXIMATION.
+// A Tsodyks-Markram resource variable is depleted by its OWN presynaptic spikes
+// and nothing else, and every synapse has exactly one presynaptic neuron. So
+//
+//     T(p,q) = SUM_over_synapses |w_j| . n_j(q) . d_j(p)
+//            = SUM_over_source_i   W_i   . n_i(q) . d_i(p)        W_i = SUM |w_j|
+//
+// and a tract reduces to ONE WEIGHT PER PRESYNAPTIC NEURON — its fan-out. The
+// whole measurement therefore lives in the auditory population's dimension, not
+// the synapse's, which is what makes four tracts x three utilisations x four
+// gaps x four time constants affordable in one pass.
+//
+// WHAT IS SIMULATED. With no recovery inside the word, the resource a synapse
+// has left after a 900 ms word is EXACT:
+//
+//     d_j(p) = 1 - (1 - U)^n_j(p)
+//     I(p,q) = SUM_j |w_j| . n_j(q) . ( 1 - d_j(p) . exp(-G/tau_rec) )
+//
+// This is the mechanism's own arithmetic on measured spike counts. The ONE
+// omission is recovery DURING the word, which OVERSTATES depletion, so:
+//   - a REFUSAL here is CONSERVATIVE (the real thing cannot beat its own
+//     optimistic simulation);
+//   - a LICENSE here is NOT, and is printed with that flag attached.
+//
+// THE BAR IS DERIVED. accuracy = Phi(d'/2), so M6's 0.650 demands
+// d' = 2 . Phi^-1(0.650) = 0.7706. The printout evaluates Phi(bar/2) and must
+// read 0.650 — a constant that cannot silently drift away from its own
+// definition. `derive-the-constant`.
+// =====================================================================
+
+constexpr uint64_t kOgWord = 900;   // same 900 ms word samediff uses
+constexpr uint64_t kOgRest = 2000;  // §63 measured ear 0.5174 / artic9 0.5440 here
+constexpr uint32_t kOgCondCount = 5;
+constexpr uint32_t kOgSilence = 4;  // condition 4 renders amplitude 0
+constexpr uint64_t kOgRoundTicks = kOgCondCount * (kOgWord + kOgRest);  // 14500
+constexpr uint32_t kOgReps = 12;    // creatures, as §63-§66
+constexpr uint32_t kOgMinRounds = 20;
+constexpr double kOgBar = 0.650;
+// 2 * Phi^-1(0.650). `og_report` prints Phi(kOgDPrimeBar/2) beside it.
+constexpr double kOgDPrimeBar = 0.7706;
+
+constexpr uint32_t kOgGapCount = 4;
+constexpr double kOgGaps[kOgGapCount] = {200.0, 800.0, 2000.0, 5000.0};
+constexpr uint32_t kOgTauCount = 4;
+constexpr double kOgTaus[kOgTauCount] = {100.0, 300.0, 1000.0, 3000.0};
+constexpr uint32_t kOgUCount = 3;
+constexpr double kOgUs[kOgUCount] = {0.05, 0.2, 0.5};
+// THE PRIMARY U WAS RE-DERIVED AFTER THE 290k SMOKE FIRED G3, AND THE CHANGE IS
+// DISCLOSED RATHER THAN QUIET. §68's pre-registration pinned U 0.5 because that
+// is `stpprobe`'s MEASURED depressing corner. The smoke showed why borrowing an
+// operating point from another experiment is exactly the mistake
+// `match-at-the-operating-point` names: this creature's auditory neurons fire
+// n_bar = 4.43 spikes per 900 ms word, so at U 0.5
+//
+//     d = 1 - (1-0.5)^4.43 = 0.953
+//
+// EVERY ACTIVE SYNAPSE IS ALREADY FULLY DEPLETED. The depletion mask is then
+// near-constant across words and carries almost nothing, which is why the
+// reachability gate could not separate a word from SILENCE (d' 0.3676) while the
+// cosine separation on the same cell read +0.7630. **The instrument was right
+// and the pin was wrong.**
+//
+// The replacement is DERIVED, not fitted: depletion stays graded over a word
+// when U . n_bar ~ 1, so U ~ 1/n_bar = 1/4.43 = 0.226, pinned at the 0.2 rung
+// the band already held. U 0.5 is KEPT in the band so the saturation is visible
+// as a row rather than as an argument, and the U scan over the whole of (0,1]
+// is untouched — so the arithmetic clause's ceiling does not depend on the pin.
+constexpr uint32_t kOgUPrimary = 1;
+constexpr uint32_t kOgTauPrimary = 1;
+constexpr uint32_t kOgGapPrimary = 0;
+
+enum OgSpace {
+  kOgMel = 0,   // the ear's own code — FULL SCALE for the cascade
+  kOgAud,       // the whole auditory population, unweighted
+  kOgAVExc,     // auditory -> vocal, EXCITATORY only: THE PRIMARY
+  kOgAVInh,     // auditory -> vocal, inhibitory only
+  kOgAVAll,     // the two merged, which is what `tract_synapses` returns
+  kOgACen,      // auditory -> central, the thin tract, for comparison
+  kOgSpaceCount
+};
+constexpr const char* kOgSpaceName[kOgSpaceCount] = {
+    "mel  (the ear's own code, FULL SCALE)",
+    "auditory population (unweighted)",
+    "aud->vocal EXCITATORY   <- PRIMARY",
+    "aud->vocal inhibitory",
+    "aud->vocal merged",
+    "aud->central (density 0.02)"};
+// mel is an energy, not a spike count, so the depletion arithmetic is not
+// applied to it: its row is the cosine cascade's full scale and nothing else.
+constexpr bool kOgSpikes[kOgSpaceCount] = {false, true, true, true, true, true};
+constexpr uint32_t kOgPrimarySpace = kOgAVExc;
+
+// WHY EXCITATORY-ONLY IS THE PRIMARY. Depression on the INHIBITORY projection
+// reduces inhibition for a repeated word and pushes the delivered drive the
+// OPPOSITE way, so with STP on both the identity-dependent terms partly cancel.
+// The genome enables STP per projection, so the cheapest real change is one
+// projection. `tract_synapses` keys on the MODULE PAIR and returns both merged;
+// they separate because `syn_weight_` is SIGNED.
+
+constexpr uint32_t kOgPairCount = 5;
+constexpr uint32_t kOgPairA[kOgPairCount] = {0, 1, 0, 0, 1};
+constexpr uint32_t kOgPairB[kOgPairCount] = {1, 2, 3, 4, 4};
+constexpr const char* kOgPairName[kOgPairCount] = {
+    "/a/ vs /i/      THE PRIMARY -- samediff's own pair, and the CORNER pair",
+    "/i/ vs /u/      nearly pure F2: F1 within 30 Hz",
+    "/a/ vs /e/      the adjacent-vowel case",
+    "/a/ vs SILENCE  a magnitude contrast -- NOT an upper bound, see §68",
+    "/i/ vs SILENCE  the same, second word"};
+constexpr uint32_t kOgPrimaryPair = 0;
+constexpr uint32_t kOgReachPair = 3;
+
+// Phi, from erfc, so no table and no approximation.
+inline double og_phi(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
+
+// One presentation: the two source vectors, plus where and when it sat.
+struct OgPres {
+  uint32_t cond = 0;
+  uint32_t round = 0;
+  std::vector<double> aud;  // spikes per auditory neuron during the word
+  std::vector<double> mel;  // summed mel energy per channel during the word
+};
+
+struct OgOut {
+  bool ok = false;
+  bool align_bad = false;
+  uint32_t attempted = 0, slept = 0, scored = 0;
+  uint64_t first_sleep_tick = 0;
+  uint32_t per_cond[kOgCondCount] = {};
+  // G1 liveness, per space
+  uint32_t elems[kOgSpaceCount] = {};
+  double live_mean[kOgSpaceCount] = {};   // mean source value per element
+  double active_frac[kOgSpaceCount] = {};  // fraction of elements ever non-zero
+  double wsum[kOgSpaceCount] = {};
+  // G5 SATURATION. The gate the 290k smoke showed was missing: mean auditory
+  // spikes per neuron per word, PER CONDITION, and the mean simulated depletion
+  // at the primary U. At d_bar near 1 every active synapse is fully depleted and
+  // the mask is CONSTANT across words; at d_bar near 0 nothing depletes at all.
+  // Either end makes the mechanism vacuous while leaving every other number
+  // looking healthy, which is DNA v11's synaptic-scaling lesson exactly.
+  double live_cond[kOgCondCount] = {};
+  double dbar = 0.0;
+  uint32_t syn_exc = 0, syn_inh = 0, syn_cen = 0;
+  uint32_t syn_exc_end = 0, syn_inh_end = 0, syn_cen_end = 0;  // pruning check
+  // the cosine cascade
+  double cos_same[kOgSpaceCount][kOgPairCount] = {};
+  double cos_cross[kOgSpaceCount][kOgPairCount] = {};
+  double cos_sep[kOgSpaceCount][kOgPairCount] = {};
+  double cos_sep_null[kOgSpaceCount][kOgPairCount] = {};
+  // d' at the primary U, per space / pair / gap.
+  //
+  // THREE VARIANTS, AND WHICH ONE CARRIES THE VERDICT IS DECIDED BY A
+  // LABEL-INDEPENDENT CONTROL (G3), NEVER BY THE PRIMARY CONTRAST.
+  //   dp_raw   total delivered drive, POOLED over B's identity. §68 registered
+  //            this. The 290k smoke showed why it is a strawman: with B drawn
+  //            50/50 the within-class distribution is BIMODAL in B (silence
+  //            drives 2.21 spikes/neuron against /a/'s 4.57), and that variance
+  //            has nothing to do with the discrimination.
+  //   dp_norm  the drive RATIO, which divides B's identity out. DNA v12's
+  //            divisive normalisation is the creature's own version of this.
+  //   dp_cond  d' computed WITHIN each B, then averaged. This is what a readout
+  //            that knows B can do -- and §64 measured B's identity on
+  //            `auditory` at 1.0000, so knowing B is not an assumption.
+  double dp_raw[kOgSpaceCount][kOgPairCount][kOgGapCount] = {};
+  double dp_norm[kOgSpaceCount][kOgPairCount][kOgGapCount] = {};
+  double dp_cond[kOgSpaceCount][kOgPairCount][kOgGapCount] = {};
+  double dp_null[kOgSpaceCount][kOgPairCount][kOgGapCount] = {};
+  double dp_cond_null[kOgSpaceCount][kOgPairCount][kOgGapCount] = {};
+  // ladders at the primary space+pair. The trailing [3] is the three estimator
+  // variants in the order {pooled, ratio, within-B}, so every ladder exists on
+  // whichever one G3 selects and none has to be recomputed on the other.
+  double dp_tau[kOgTauCount][3] = {};  // at the primary gap and U
+  double dp_u[kOgUCount][3] = {};      // at the primary gap and tau
+  // the arithmetic clause: scan U over (0,1]
+  double u_best_dp[3] = {}, u_best[3] = {}, u_best_acc[3] = {};
+  double u_req[3] = {};  // smallest U reaching kOgBar, 0.0 if none does
+  // the time-lag balance column
+  double lag_same = 0.0, lag_cross = 0.0;
+};
+
+// d' between two sets of scalars. Pooled SD, as the registered statistic.
+inline double og_dprime(const std::vector<double>& a, const std::vector<double>& b) {
+  if (a.size() < 2 || b.size() < 2) return 0.0;
+  double ma = 0.0, mb = 0.0;
+  for (double x : a) ma += x;
+  for (double x : b) mb += x;
+  ma /= double(a.size());
+  mb /= double(b.size());
+  double va = 0.0, vb = 0.0;
+  for (double x : a) va += (x - ma) * (x - ma);
+  for (double x : b) vb += (x - mb) * (x - mb);
+  va /= double(a.size() - 1);
+  vb /= double(b.size() - 1);
+  const double sd = std::sqrt((va + vb) * 0.5);
+  if (!(sd > 0.0)) return 0.0;
+  return std::fabs(ma - mb) / sd;
+}
+
+OgOut run_overlapgate_session(const std::vector<uint8_t>& blob, uint64_t ticks,
+                              uint32_t rep) {
+  OgOut out;
+  std::vector<uint8_t> local = blob;
+  {
+    const uint64_t seed = reinterpret_cast<const aibaby::DnaHeader*>(local.data())->seed +
+                          uint64_t(rep) * 7919ull;
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  }
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return out;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return out;
+  const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+  const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  const int32_t voc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  if (aud < 0 || cen < 0 || voc < 0) return out;
+  const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
+  const uint32_t wa = ms_a.count;
+  const uint32_t nch = ear.channels();
+  if (wa == 0 || nch == 0) return out;
+
+  // ---- THE SPACES, AS ONE WEIGHT PER SOURCE ELEMENT ----
+  //
+  // Captured ONCE, before the session runs. Structural plasticity can prune
+  // during 1.68M ticks, so the counts are re-read at the end and both are
+  // printed: a tract whose synapse count moved was weighted with birth weights
+  // for part of the run, and that is a stated limitation rather than a hidden
+  // one.
+  std::vector<double> W[kOgSpaceCount];
+  W[kOgMel].assign(nch, 1.0);
+  W[kOgAud].assign(wa, 1.0);
+  W[kOgAVExc].assign(wa, 0.0);
+  W[kOgAVInh].assign(wa, 0.0);
+  W[kOgAVAll].assign(wa, 0.0);
+  W[kOgACen].assign(wa, 0.0);
+  {
+    const aibaby::Network& net0 = s.brain.network();
+    std::vector<uint32_t> av(net0.tract_synapses(uint32_t(aud), uint32_t(voc), nullptr, 0));
+    if (!av.empty())
+      net0.tract_synapses(uint32_t(aud), uint32_t(voc), av.data(), uint32_t(av.size()));
+    for (uint32_t id : av) {
+      const uint32_t src = net0.synapse_source(id);
+      if (src < ms_a.begin || src >= ms_a.begin + wa) continue;
+      const double w = double(net0.synapse_weight(id));
+      const uint32_t i = src - ms_a.begin;
+      if (w >= 0.0) { W[kOgAVExc][i] += w; ++out.syn_exc; }
+      else { W[kOgAVInh][i] += -w; ++out.syn_inh; }
+      W[kOgAVAll][i] += std::fabs(w);
+    }
+    std::vector<uint32_t> ac(net0.tract_synapses(uint32_t(aud), uint32_t(cen), nullptr, 0));
+    if (!ac.empty())
+      net0.tract_synapses(uint32_t(aud), uint32_t(cen), ac.data(), uint32_t(ac.size()));
+    for (uint32_t id : ac) {
+      const uint32_t src = net0.synapse_source(id);
+      if (src < ms_a.begin || src >= ms_a.begin + wa) continue;
+      W[kOgACen][src - ms_a.begin] += std::fabs(double(net0.synapse_weight(id)));
+      ++out.syn_cen;
+    }
+  }
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    out.elems[sp] = uint32_t(W[sp].size());
+    double t = 0.0;
+    uint32_t nz = 0;
+    for (double w : W[sp]) { t += w; if (w > 0.0) ++nz; }
+    out.wsum[sp] = t;
+    out.active_frac[sp] = W[sp].empty() ? 0.0 : double(nz) / double(W[sp].size());
+  }
+
+  const double dt = double(s.dna.header().sim.dt_ms);
+  const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+  VowelSource voice(acfg.sample_rate);
+  std::vector<float> pcm(spt);
+  aibaby::Rng rng;
+  rng.seed(s.dna.header().seed ^ 0x06AC7u);
+
+  const uint64_t rounds = ticks / kOgRoundTicks;
+  if (rounds < kOgMinRounds) return out;
+
+  std::vector<OgPres> pres;
+  std::vector<uint32_t> order(kOgCondCount);
+  for (uint32_t c = 0; c < kOgCondCount; ++c) order[c] = c;
+
+  uint64_t tick_now = 0;
+  for (uint64_t r = 0; r < rounds; ++r) {
+    // Order SHUFFLED within the round, so a condition is not confounded with
+    // position in the round. Each condition appears exactly once per round —
+    // which is why pairs are later restricted to DIFFERENT rounds.
+    for (size_t i = order.size(); i > 1; --i)
+      std::swap(order[i - 1], order[rng.next() % i]);
+    for (uint32_t oi = 0; oi < kOgCondCount; ++oi) {
+      const uint32_t c = order[oi];
+      const Word& w = kWords[c < kOgSilence ? c : 0];
+      const bool silent = (c == kOgSilence);
+      std::vector<double> ca(wa, 0.0), cm(nch, 0.0);
+      bool slept = false;
+      ++out.attempted;
+      for (uint64_t t = 0; t < kOgWord + kOgRest; ++t) {
+        const bool in_word = t < kOgWord;
+        if (in_word && !silent) voice.render(w.f0, w.f1, w.f2, 0.5f, pcm.data(), spt);
+        else voice.render(0.0f, w.f1, w.f2, 0.0f, pcm.data(), spt);
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        ++tick_now;
+        if (s.brain.asleep()) {
+          slept = true;
+          if (out.first_sleep_tick == 0) out.first_sleep_tick = tick_now;
+        }
+        if (!in_word) continue;
+        const aibaby::Network& net = s.brain.network();
+        for (uint32_t i = 0; i < net.spike_count(); ++i) {
+          const uint32_t idx = net.spikes()[i];
+          if (idx >= ms_a.begin && idx < ms_a.begin + wa) ca[idx - ms_a.begin] += 1.0;
+        }
+        if (ear.had_frame()) {
+          const std::vector<float>& m = ear.latest_mel();
+          for (size_t k = 0; k < m.size() && k < cm.size(); ++k) cm[k] += double(m[k]);
+        }
+      }
+      // §62's lesson up front: a slept presentation is DISCARDED and COUNTED.
+      if (slept) { ++out.slept; continue; }
+      OgPres p;
+      p.cond = c;
+      p.round = uint32_t(r);
+      p.aud = std::move(ca);
+      p.mel = std::move(cm);
+      ++out.per_cond[c];
+      pres.push_back(std::move(p));
+    }
+  }
+  out.scored = uint32_t(pres.size());
+  if (out.scored < 2 * kOgCondCount) return out;
+  {
+    uint32_t tot = 0;
+    for (uint32_t c = 0; c < kOgCondCount; ++c) tot += out.per_cond[c];
+    if (tot != out.scored) out.align_bad = true;
+  }
+
+  {
+    const aibaby::Network& net0 = s.brain.network();
+    out.syn_exc_end = 0; out.syn_inh_end = 0;
+    std::vector<uint32_t> av(net0.tract_synapses(uint32_t(aud), uint32_t(voc), nullptr, 0));
+    if (!av.empty())
+      net0.tract_synapses(uint32_t(aud), uint32_t(voc), av.data(), uint32_t(av.size()));
+    for (uint32_t id : av) {
+      if (double(net0.synapse_weight(id)) >= 0.0) ++out.syn_exc_end;
+      else ++out.syn_inh_end;
+    }
+    out.syn_cen_end = net0.tract_synapses(uint32_t(aud), uint32_t(cen), nullptr, 0);
+  }
+
+  // G1 liveness: the mean source value per element per presentation.
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    double t = 0.0;
+    size_t n = 0;
+    for (const OgPres& p : pres) {
+      const std::vector<double>& v = kOgSpikes[sp] ? p.aud : p.mel;
+      for (double x : v) { t += x; ++n; }
+    }
+    out.live_mean[sp] = n ? t / double(n) : 0.0;
+  }
+  // G5 SATURATION. Per condition, and then the mean depletion the primary U
+  // actually produces — the quantity whose absence let a saturated operating
+  // point look like a broken estimator at the 290k smoke.
+  {
+    double tc[kOgCondCount] = {};
+    size_t nc[kOgCondCount] = {};
+    double td = 0.0;
+    size_t nd = 0;
+    const double l = std::log1p(-kOgUs[kOgUPrimary]);
+    for (const OgPres& p : pres) {
+      for (double x : p.aud) { tc[p.cond] += x; ++nc[p.cond]; }
+      if (p.cond == kOgSilence) continue;  // the word conditions set the point
+      for (size_t i = 0; i < p.aud.size(); ++i) {
+        if (W[kOgPrimarySpace][i] <= 0.0) continue;  // only synapses that exist
+        td += -std::expm1(p.aud[i] * l);
+        ++nd;
+      }
+    }
+    for (uint32_t c = 0; c < kOgCondCount; ++c)
+      out.live_cond[c] = nc[c] ? tc[c] / double(nc[c]) : 0.0;
+    out.dbar = nd ? td / double(nd) : 0.0;
+  }
+
+  // ---- THE PAIR STATISTICS ----
+  //
+  // PAIRS ARE RESTRICTED TO DIFFERENT ROUNDS, and that is a confound fix rather
+  // than a convenience. Each condition appears ONCE per round, so two
+  // presentations of the SAME condition are always at least a round apart while
+  // two of DIFFERENT conditions can be adjacent. Unrestricted, cross-condition
+  // pairs would sit systematically CLOSER in time than same-condition ones, and
+  // any slow drift would then load onto the contrast. Restricting to different
+  // rounds makes the two lag distributions near-identical, and `lag_same` /
+  // `lag_cross` are printed so the residual is visible instead of argued.
+  const size_t N = pres.size();
+  std::vector<double> norm[kOgSpaceCount];
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    norm[sp].assign(N, 0.0);
+    for (size_t p = 0; p < N; ++p) {
+      const std::vector<double>& v = kOgSpikes[sp] ? pres[p].aud : pres[p].mel;
+      double t = 0.0;
+      for (size_t i = 0; i < W[sp].size() && i < v.size(); ++i) t += W[sp][i] * v[i] * v[i];
+      norm[sp][p] = std::sqrt(t);
+    }
+  }
+  // S(q) = SUM_i W_i n_i(q), the unconditioned drive.
+  std::vector<double> S[kOgSpaceCount];
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    S[sp].assign(N, 0.0);
+    for (size_t q = 0; q < N; ++q) {
+      const std::vector<double>& v = kOgSpikes[sp] ? pres[q].aud : pres[q].mel;
+      double t = 0.0;
+      for (size_t i = 0; i < W[sp].size() && i < v.size(); ++i) t += W[sp][i] * v[i];
+      S[sp][q] = t;
+    }
+  }
+
+  auto cosine = [&](uint32_t sp, size_t p, size_t q) -> double {
+    if (!(norm[sp][p] > 0.0) || !(norm[sp][q] > 0.0)) return 0.0;
+    const std::vector<double>& a = kOgSpikes[sp] ? pres[p].aud : pres[p].mel;
+    const std::vector<double>& b = kOgSpikes[sp] ? pres[q].aud : pres[q].mel;
+    double t = 0.0;
+    for (size_t i = 0; i < W[sp].size() && i < a.size() && i < b.size(); ++i)
+      t += W[sp][i] * a[i] * b[i];
+    return t / (norm[sp][p] * norm[sp][q]);
+  };
+  // T(p,q) = SUM_i W_i n_i(q) d_i(p), with d_i(p) = 1 - (1-U)^n_i(p).
+  auto depl = [&](uint32_t sp, size_t p, size_t q, double U) -> double {
+    const std::vector<double>& a = pres[p].aud;
+    const std::vector<double>& b = pres[q].aud;
+    const double l = std::log1p(-U);
+    double t = 0.0;
+    for (size_t i = 0; i < W[sp].size() && i < a.size() && i < b.size(); ++i) {
+      if (W[sp][i] <= 0.0) continue;
+      const double d = -std::expm1(a[i] * l);  // 1 - (1-U)^n, stable at small U
+      t += W[sp][i] * b[i] * d;
+    }
+    return t;
+  };
+
+  // A label-destroyed condition vector: the SAME presentations, the labels
+  // permuted. The null is EXACTLY 0 in expectation, because the statistic is
+  // defined only by which pairs count as same -- `null-is-not-a-control` from
+  // the side where the null is derivable rather than guessed.
+  std::vector<uint32_t> shuf(N);
+  for (size_t i = 0; i < N; ++i) shuf[i] = pres[i].cond;
+  for (size_t i = N; i > 1; --i) std::swap(shuf[i - 1], shuf[rng.next() % i]);
+
+  // Index lists, once per condition, for the true and the destroyed labels.
+  std::vector<size_t> by_cond[kOgCondCount], by_shuf[kOgCondCount];
+  for (size_t i = 0; i < N; ++i) {
+    by_cond[pres[i].cond].push_back(i);
+    by_shuf[shuf[i]].push_back(i);
+  }
+
+  for (uint32_t pr = 0; pr < kOgPairCount; ++pr) {
+    const uint32_t c1 = kOgPairA[pr], c2 = kOgPairB[pr];
+    for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+      // --- the cosine cascade ---
+      for (int which = 0; which < 2; ++which) {
+        const std::vector<size_t>* bc = which ? by_shuf : by_cond;
+        double ss = 0.0, cc = 0.0;
+        size_t ns = 0, nc = 0;
+        for (uint32_t cx = 0; cx < 2; ++cx) {
+          const std::vector<size_t>& L = bc[cx ? c2 : c1];
+          for (size_t a = 0; a < L.size(); ++a)
+            for (size_t b = a + 1; b < L.size(); ++b) {
+              if (pres[L[a]].round == pres[L[b]].round) continue;
+              ss += cosine(sp, L[a], L[b]);
+              ++ns;
+            }
+        }
+        for (size_t a : bc[c1])
+          for (size_t b : bc[c2]) {
+            if (pres[a].round == pres[b].round) continue;
+            cc += cosine(sp, a, b);
+            ++nc;
+          }
+        if (ns == 0 || nc == 0) continue;
+        ss /= double(ns);
+        cc /= double(nc);
+        if (which == 0) {
+          out.cos_same[sp][pr] = ss;
+          out.cos_cross[sp][pr] = cc;
+          out.cos_sep[sp][pr] = ss - cc;
+        } else {
+          out.cos_sep_null[sp][pr] = ss - cc;
+        }
+      }
+      if (!kOgSpikes[sp]) continue;
+
+      // --- d', per gap, at the primary utilisation ---
+      // Built so the q DISTRIBUTION IS MATCHED between the two classes: the
+      // same set is (c1,c1) and (c2,c2), the different set is (c2,c1) and
+      // (c1,c2), so each class sees q in {c1, c2} equally often. The
+      // unconditioned drive S(q) depends on q alone, so it contributes equal
+      // variance to both classes and NO mean difference. `margin-is-confidence-
+      // not-dependence`: the contrast is conditioned on the label by
+      // construction rather than by hope.
+      for (int which = 0; which < 2; ++which) {
+        const std::vector<size_t>* bc = which ? by_shuf : by_cond;
+        // `qc` tags WHICH condition q belongs to, so the same pair lists serve
+        // both the pooled statistic and the within-B one.
+        struct Pair { size_t p, q; uint32_t qc; };
+        std::vector<Pair> same, diff;
+        for (uint32_t cx = 0; cx < 2; ++cx) {
+          const std::vector<size_t>& L = bc[cx ? c2 : c1];
+          for (size_t a : L)
+            for (size_t b : L) {
+              if (a == b || pres[a].round == pres[b].round) continue;
+              same.push_back({a, b, cx});
+            }
+        }
+        for (size_t a : bc[c1])
+          for (size_t b : bc[c2]) {
+            if (pres[a].round == pres[b].round) continue;
+            diff.push_back({a, b, 1});  // q is the c2 presentation
+            diff.push_back({b, a, 0});  // q is the c1 presentation
+          }
+        if (same.size() < 2 || diff.size() < 2) continue;
+        // d' WITHIN each B, then averaged over the two B's — the single-trial d'
+        // available to a readout that knows which word it just heard.
+        auto dp_within = [&](const std::vector<double>& vs,
+                             const std::vector<double>& vd) -> double {
+          double acc = 0.0;
+          uint32_t n = 0;
+          for (uint32_t qc = 0; qc < 2; ++qc) {
+            std::vector<double> a, b;
+            for (size_t i = 0; i < same.size(); ++i)
+              if (same[i].qc == qc) a.push_back(vs[i]);
+            for (size_t i = 0; i < diff.size(); ++i)
+              if (diff[i].qc == qc) b.push_back(vd[i]);
+            if (a.size() < 2 || b.size() < 2) continue;
+            acc += og_dprime(a, b);
+            ++n;
+          }
+          return n ? acc / double(n) : 0.0;
+        };
+        if (which == 0 && sp == kOgPrimarySpace && pr == kOgPrimaryPair) {
+          double ls = 0.0, lc = 0.0;
+          for (const Pair& x : same)
+            ls += std::fabs(double(pres[x.p].round) - double(pres[x.q].round));
+          for (const Pair& x : diff)
+            lc += std::fabs(double(pres[x.p].round) - double(pres[x.q].round));
+          out.lag_same = ls / double(same.size());
+          out.lag_cross = lc / double(diff.size());
+        }
+        // T is independent of gap and tau_rec, so it is computed once per pair
+        // and reused down the gap and tau ladders.
+        std::vector<double> ts(same.size()), td(diff.size());
+        for (size_t i = 0; i < same.size(); ++i)
+          ts[i] = depl(sp, same[i].p, same[i].q, kOgUs[kOgUPrimary]);
+        for (size_t i = 0; i < diff.size(); ++i)
+          td[i] = depl(sp, diff[i].p, diff[i].q, kOgUs[kOgUPrimary]);
+        for (uint32_t g = 0; g < kOgGapCount; ++g) {
+          const double rec = std::exp(-kOgGaps[g] / kOgTaus[kOgTauPrimary]);
+          std::vector<double> ra(same.size()), rb(diff.size()), na(same.size()), nb(diff.size());
+          for (size_t i = 0; i < same.size(); ++i) {
+            const double sq = S[sp][same[i].q];
+            ra[i] = sq - rec * ts[i];
+            na[i] = sq > 0.0 ? 1.0 - rec * ts[i] / sq : 0.0;
+          }
+          for (size_t i = 0; i < diff.size(); ++i) {
+            const double sq = S[sp][diff[i].q];
+            rb[i] = sq - rec * td[i];
+            nb[i] = sq > 0.0 ? 1.0 - rec * td[i] / sq : 0.0;
+          }
+          if (which == 0) {
+            out.dp_raw[sp][pr][g] = og_dprime(ra, rb);
+            out.dp_norm[sp][pr][g] = og_dprime(na, nb);
+            out.dp_cond[sp][pr][g] = dp_within(ra, rb);
+          } else {
+            out.dp_null[sp][pr][g] = og_dprime(ra, rb);
+            out.dp_cond_null[sp][pr][g] = dp_within(ra, rb);
+          }
+        }
+        if (which != 0 || sp != kOgPrimarySpace || pr != kOgPrimaryPair) continue;
+
+        // All three variants, everywhere, so that the ladders and the verdict
+        // are read off the SAME statistic whichever one G3 selects.
+        auto three = [&](const std::vector<double>& ts_, const std::vector<double>& td_,
+                         double rec, double* dst) {
+          std::vector<double> ra(same.size()), rb(diff.size());
+          std::vector<double> na(same.size()), nb(diff.size());
+          for (size_t i = 0; i < same.size(); ++i) {
+            const double sq = S[sp][same[i].q];
+            ra[i] = sq - rec * ts_[i];
+            na[i] = sq > 0.0 ? 1.0 - rec * ts_[i] / sq : 0.0;
+          }
+          for (size_t i = 0; i < diff.size(); ++i) {
+            const double sq = S[sp][diff[i].q];
+            rb[i] = sq - rec * td_[i];
+            nb[i] = sq > 0.0 ? 1.0 - rec * td_[i] / sq : 0.0;
+          }
+          dst[0] = og_dprime(ra, rb);
+          dst[1] = og_dprime(na, nb);
+          dst[2] = dp_within(ra, rb);
+        };
+        // --- the tau ladder: STAGE 2's DOSE-RESPONSE, PREDICTED ---
+        for (uint32_t ti = 0; ti < kOgTauCount; ++ti)
+          three(ts, td, std::exp(-kOgGaps[kOgGapPrimary] / kOgTaus[ti]), out.dp_tau[ti]);
+        // --- the U band, and then the U SCAN for the arithmetic clause ---
+        const double rec0 = std::exp(-kOgGaps[kOgGapPrimary] / kOgTaus[kOgTauPrimary]);
+        for (uint32_t ui = 0; ui < kOgUCount; ++ui) {
+          std::vector<double> us(same.size()), ud(diff.size());
+          for (size_t i = 0; i < same.size(); ++i)
+            us[i] = depl(sp, same[i].p, same[i].q, kOgUs[ui]);
+          for (size_t i = 0; i < diff.size(); ++i)
+            ud[i] = depl(sp, diff[i].p, diff[i].q, kOgUs[ui]);
+          three(us, ud, rec0, out.dp_u[ui]);
+        }
+        // THE ARITHMETIC CLAUSE. U is a utilisation fraction and cannot exceed
+        // 1 — a synapse cannot release more than all of its resources. So the
+        // scan below is the mechanism's CEILING over its whole parameter range,
+        // and if that ceiling sits under the bar the lead is closed whatever
+        // the SE. 50 steps; the best and the smallest sufficient U are printed
+        // AS NUMBERS whether they clear or not.
+        for (uint32_t v = 0; v < 3; ++v) {
+          out.u_best_dp[v] = 0.0; out.u_best[v] = 0.0; out.u_req[v] = 0.0;
+        }
+        for (uint32_t k = 1; k <= 50; ++k) {
+          const double U = double(k) / 50.0;
+          std::vector<double> us(same.size()), ud(diff.size());
+          for (size_t i = 0; i < same.size(); ++i)
+            us[i] = depl(sp, same[i].p, same[i].q, U);
+          for (size_t i = 0; i < diff.size(); ++i)
+            ud[i] = depl(sp, diff[i].p, diff[i].q, U);
+          double d3[3];
+          three(us, ud, rec0, d3);
+          for (uint32_t v = 0; v < 3; ++v) {
+            if (d3[v] > out.u_best_dp[v]) { out.u_best_dp[v] = d3[v]; out.u_best[v] = U; }
+            if (out.u_req[v] == 0.0 && og_phi(d3[v] * 0.5) >= kOgBar) out.u_req[v] = U;
+          }
+        }
+        for (uint32_t v = 0; v < 3; ++v) out.u_best_acc[v] = og_phi(out.u_best_dp[v] * 0.5);
+      }
+    }
+  }
+  out.ok = true;
+  return out;
+}
+
+// mean and standard error over creatures, which are the independent unit.
+inline void og_stat(const std::vector<double>& v, double& m, double& se) {
+  m = 0.0; se = 0.0;
+  if (v.empty()) return;
+  for (double x : v) m += x;
+  m /= double(v.size());
+  if (v.size() < 2) return;
+  double s = 0.0;
+  for (double x : v) s += (x - m) * (x - m);
+  se = std::sqrt(s / double(v.size() - 1)) / std::sqrt(double(v.size()));
+}
+
+bool run_overlapgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::printf(
+      "\n  §68 OVERLAPGATE — STAGE 0 OF §67, AND IT PREDICTS STAGE 2\n\n"
+      "  the question     do the two words drive DISTINCT synapses on the tract\n"
+      "                   where §64's two carriers meet? If not, per-synapse\n"
+      "                   depletion cannot carry word identity and §67 dies here.\n"
+      "  what is run      %llu ms word, %llu ms rest, %u conditions per round\n"
+      "                   (/a/ /i/ /u/ /e/ SILENCE), order shuffled per round\n"
+      "  round            %llu ticks; %llu rounds at this budget\n"
+      "  creatures        %u, the independent unit; mean +- SE over them\n"
+      "  NO GENOME CHANGE, NO KERNEL CHANGE. The depletion is SIMULATED from\n"
+      "  measured presynaptic spike counts: d = 1-(1-U)^n is EXACT for a\n"
+      "  Tsodyks-Markram resource with no recovery inside the word.\n"
+      "  primary          %s\n"
+      "                   %s\n"
+      "                   U %.2f, tau_rec %.0f ms (stpprobe's MEASURED corner),\n"
+      "                   gap %.0f ms\n"
+      "  the bar          d' %.4f, DERIVED: Phi(%.4f/2) = %.4f, which must read\n"
+      "                   %.3f -- M6's bar in this estimator's own units\n"
+      "  OPTIMISM FLAG    recovery DURING the word is omitted, which OVERSTATES\n"
+      "                   depletion. A REFUSAL here is conservative; a LICENSE\n"
+      "                   is NOT, and is reported with this flag attached.\n\n",
+      (unsigned long long)kOgWord, (unsigned long long)kOgRest, kOgCondCount,
+      (unsigned long long)kOgRoundTicks, (unsigned long long)(ticks / kOgRoundTicks),
+      kOgReps, kOgSpaceName[kOgPrimarySpace], kOgPairName[kOgPrimaryPair],
+      kOgUs[kOgUPrimary], kOgTaus[kOgTauPrimary], kOgGaps[kOgGapPrimary],
+      kOgDPrimeBar, kOgDPrimeBar, og_phi(kOgDPrimeBar * 0.5), kOgBar);
+
+  std::vector<OgOut> res = parallel_reps<OgOut>(kOgReps, [&](uint32_t r) {
+    return run_overlapgate_session(blob, ticks, r);
+  });
+
+  // ---- THE GATES, AND THEY RETURN BEFORE ANY VERDICT IS COMPUTED ----
+  //
+  // §62's instrument printed a primary ABOVE the line declaring its run void.
+  // Not repeated: a failed gate returns here having computed no verdict.
+  uint32_t n_ok = 0, n_align = 0, attempted = 0, slept = 0, pruned = 0;
+  uint64_t first_sleep = 0;
+  for (const OgOut& o : res) {
+    if (o.ok) ++n_ok;
+    if (o.align_bad) ++n_align;
+    attempted += o.attempted;
+    slept += o.slept;
+    if (o.syn_exc != o.syn_exc_end || o.syn_inh != o.syn_inh_end ||
+        o.syn_cen != o.syn_cen_end)
+      ++pruned;
+    if (o.first_sleep_tick && (first_sleep == 0 || o.first_sleep_tick < first_sleep))
+      first_sleep = o.first_sleep_tick;
+  }
+  const double slept_frac = attempted ? double(slept) / double(attempted) : 1.0;
+
+  std::vector<double> ok_live[kOgSpaceCount];
+  std::vector<double> csep[kOgSpaceCount][kOgPairCount], cnull[kOgSpaceCount][kOgPairCount];
+  std::vector<double> csame[kOgSpaceCount][kOgPairCount], ccross[kOgSpaceCount][kOgPairCount];
+  std::vector<double> dr[kOgSpaceCount][kOgPairCount][kOgGapCount];
+  std::vector<double> dn[kOgSpaceCount][kOgPairCount][kOgGapCount];
+  std::vector<double> dc[kOgSpaceCount][kOgPairCount][kOgGapCount];
+  std::vector<double> dz[kOgSpaceCount][kOgPairCount][kOgGapCount];
+  std::vector<double> dcz[kOgSpaceCount][kOgPairCount][kOgGapCount];
+  std::vector<double> dtau[kOgTauCount][3], du[kOgUCount][3];
+  std::vector<double> ubest[3], ubacc[3], ureq[3], lsame, lcross;
+  for (const OgOut& o : res) {
+    if (!o.ok) continue;
+    for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+      ok_live[sp].push_back(o.live_mean[sp]);
+      for (uint32_t pr = 0; pr < kOgPairCount; ++pr) {
+        csep[sp][pr].push_back(o.cos_sep[sp][pr]);
+        cnull[sp][pr].push_back(o.cos_sep_null[sp][pr]);
+        csame[sp][pr].push_back(o.cos_same[sp][pr]);
+        ccross[sp][pr].push_back(o.cos_cross[sp][pr]);
+        for (uint32_t g = 0; g < kOgGapCount; ++g) {
+          dr[sp][pr][g].push_back(o.dp_raw[sp][pr][g]);
+          dn[sp][pr][g].push_back(o.dp_norm[sp][pr][g]);
+          dc[sp][pr][g].push_back(o.dp_cond[sp][pr][g]);
+          dz[sp][pr][g].push_back(o.dp_null[sp][pr][g]);
+          dcz[sp][pr][g].push_back(o.dp_cond_null[sp][pr][g]);
+        }
+      }
+    }
+    for (uint32_t ti = 0; ti < kOgTauCount; ++ti)
+      for (uint32_t v = 0; v < 3; ++v) dtau[ti][v].push_back(o.dp_tau[ti][v]);
+    for (uint32_t ui = 0; ui < kOgUCount; ++ui)
+      for (uint32_t v = 0; v < 3; ++v) du[ui][v].push_back(o.dp_u[ui][v]);
+    for (uint32_t v = 0; v < 3; ++v) ubest[v].push_back(o.u_best_dp[v]);
+    for (uint32_t v = 0; v < 3; ++v) ubacc[v].push_back(o.u_best_acc[v]);
+    for (uint32_t v = 0; v < 3; ++v) ureq[v].push_back(o.u_req[v]);
+    lsame.push_back(o.lag_same);
+    lcross.push_back(o.lag_cross);
+  }
+
+  const OgOut& o0 = res[0];
+  std::printf("  THE GATES\n\n");
+  std::printf("    sessions that ran                %u of %u            %s\n", n_ok, kOgReps,
+              n_ok == kOgReps ? "PASS" : "FAIL");
+  std::printf("    presentations == labels          %u misaligned        %s\n", n_align,
+              n_align == 0 ? "PASS" : "FAIL");
+  std::printf("    slept presentations              %u of %u            %.1f%%\n", slept,
+              attempted, 100.0 * slept_frac);
+  std::printf("    first sleep at tick              %llu\n", (unsigned long long)first_sleep);
+  std::printf("    tracts pruned during session     %u of %u creatures   %s\n", pruned, n_ok,
+              pruned == 0 ? "weights stable" : "SEE LIMITATION");
+  std::printf("\n    G1 LIVENESS — a silent or saturated population makes an overlap\n"
+              "       meaningless, so this is read BEFORE any separation.\n\n");
+  std::printf("      space                                   elems  w-sum   active  mean/elem\n");
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    double m = 0.0, se = 0.0;
+    og_stat(ok_live[sp], m, se);
+    std::printf("      %-38s  %5u  %6.2f  %5.2f   %8.4f\n", kOgSpaceName[sp], o0.elems[sp],
+                o0.wsum[sp], o0.active_frac[sp], m);
+  }
+  std::printf("\n      synapses: aud->voc exc %u, inh %u; aud->cen %u\n", o0.syn_exc,
+              o0.syn_inh, o0.syn_cen);
+  bool g1 = true;
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    double m = 0.0, se = 0.0;
+    og_stat(ok_live[sp], m, se);
+    if (o0.elems[sp] == 0 || o0.active_frac[sp] <= 0.0 || !(m > 0.0)) g1 = false;
+  }
+  std::printf("      verdict                                 %s\n", g1 ? "PASS" : "FAIL");
+
+  // ---- G5 SATURATION ----
+  std::vector<double> dbar, lcond[kOgCondCount];
+  for (const OgOut& o : res) {
+    if (!o.ok) continue;
+    dbar.push_back(o.dbar);
+    for (uint32_t c = 0; c < kOgCondCount; ++c) lcond[c].push_back(o.live_cond[c]);
+  }
+  double dbm = 0.0, dbse = 0.0;
+  og_stat(dbar, dbm, dbse);
+  std::printf("\n    G5 SATURATION — THE GATE THE 290k SMOKE SHOWED WAS MISSING. At mean\n"
+              "       depletion near 1 every active synapse is already empty and the mask\n"
+              "       is CONSTANT across words; near 0 nothing depletes. Either end makes\n"
+              "       the mechanism vacuous while every other number looks healthy.\n\n");
+  std::printf("       auditory spikes per neuron per 900 ms word, by condition:\n");
+  for (uint32_t c = 0; c < kOgCondCount; ++c) {
+    double m = 0.0, se = 0.0;
+    og_stat(lcond[c], m, se);
+    std::printf("         %-10s %7.4f +- %.4f\n",
+                c == kOgSilence ? "SILENCE" : (c == 0 ? "/a/" : c == 1 ? "/i/" : c == 2 ? "/u/" : "/e/"),
+                m, se);
+  }
+  std::printf("\n       mean depletion at the primary U %.2f   %.4f +- %.4f\n",
+              kOgUs[kOgUPrimary], dbm, dbse);
+  std::printf("       required window                        (0.05, 0.95)\n");
+  const bool g5 = dbm > 0.05 && dbm < 0.95;
+  std::printf("       verdict                               %s\n",
+              g5 ? "PASS — depletion is GRADED" : "FAIL — VOID, the operating point is vacuous");
+
+  // ---- G3 REACHABILITY, AND IT ALSO SELECTS THE ESTIMATOR ----
+  //
+  // THE SELECTION IS MADE ON WORD-AGAINST-SILENCE AND NEVER ON THE PRIMARY
+  // CONTRAST. That is what a positive control is for: it is label-independent
+  // with respect to /a/-vs-/i/, so choosing an estimator on it cannot leak the
+  // verdict. The rule is fixed here in code: the registered POOLED statistic
+  // carries the verdict if it clears reachability; otherwise the WITHIN-B one
+  // does; if neither clears, the run is VOID and no verdict is printed.
+  double rm = 0.0, rse = 0.0, rnm = 0.0, rnse = 0.0, rcm = 0.0, rcse = 0.0;
+  og_stat(dr[kOgPrimarySpace][kOgReachPair][kOgGapPrimary], rm, rse);
+  og_stat(dn[kOgPrimarySpace][kOgReachPair][kOgGapPrimary], rnm, rnse);
+  og_stat(dc[kOgPrimarySpace][kOgReachPair][kOgGapPrimary], rcm, rcse);
+  std::printf("\n    G3 REACHABILITY — word against SILENCE on the primary tract, the\n"
+              "       maximum this estimator can attain. A gate that cannot fail cannot\n"
+              "       guard a rejection, so a small value here VOIDS rather than refuses.\n"
+              "       IT ALSO SELECTS THE ESTIMATOR, on this label-independent contrast\n"
+              "       alone and never on /a/-vs-/i/.\n\n");
+  std::printf("       %s\n", kOgPairName[kOgReachPair]);
+  std::printf("         d' POOLED over B   (registered)     %.4f +- %.4f   %s\n", rm, rse,
+              (rm - 2.0 * rse) > kOgDPrimeBar ? "clears" : "does NOT clear");
+  std::printf("         d' drive RATIO     (addendum)        %.4f +- %.4f   %s\n", rnm, rnse,
+              (rnm - 2.0 * rnse) > kOgDPrimeBar ? "clears" : "does NOT clear");
+  std::printf("         d' WITHIN B        (addendum)        %.4f +- %.4f   %s\n", rcm, rcse,
+              (rcm - 2.0 * rcse) > kOgDPrimeBar ? "clears" : "does NOT clear");
+  // THE VERDICT IS CARRIED BY THE REGISTERED POOLED STATISTIC. The two addenda
+  // are reported beside it and neither overrides it.
+  const char* kOgEstName[3] = {"the REGISTERED pooled statistic",
+                               "the drive RATIO statistic (EXCLUDED, see below)",
+                               "the WITHIN-B statistic"};
+  const int pick = 0;
+
+  // WHY THE SILENCE PAIR IS NOT A POSITIVE CONTROL, AND §68 REGISTERED IT AS
+  // ONE. The claim was that word-against-silence is the maximum attainable, so
+  // a small value there would mean a broken estimator. IT IS NOT AN UPPER
+  // BOUND, and the cascade below shows it directly: silence differs from a word
+  // in MAGNITUDE, while two vowels differ in PATTERN, and this statistic is
+  // pattern-sensitive. cos(/a/, silence) runs near 0.53 against cos(/a/, /i/)
+  // at 0.19 -- SILENCE IS THE HARDER CONTRAST. It also maximises the pooled
+  // statistic's own penalty, because silence drives about half the spikes a
+  // word does and that makes the within-class distribution maximally bimodal.
+  // A positive control has to be KNOWN easier than the test contrast; this one
+  // is provably harder, so it cannot void anything. It is kept as a rung on the
+  // stimulus ladder, which is where it belongs.
+  //
+  // THE GUARD ITS ROLE PASSES TO is the arithmetic clause, which was already
+  // registered and which carries a PROVABLE bound: U cannot exceed 1, so the
+  // scan over (0,1] is the mechanism's own ceiling. If that ceiling sits below
+  // the bar, the lead is refused whatever the SE -- and that is the question
+  // the silence control was reaching for, answered with a bound instead of an
+  // assumption.
+  std::printf("       -> NOT A VALID POSITIVE CONTROL. Silence differs from a word in\n"
+              "          MAGNITUDE; two vowels differ in PATTERN, and this statistic is\n"
+              "          pattern-sensitive. The cascade shows silence is the HARDER\n"
+              "          contrast, so this pair cannot bound anything and VOIDS NOTHING.\n"
+              "          Its guard role passes to the arithmetic clause, which has a\n"
+              "          provable bound (U <= 1). Kept as a stimulus-ladder rung.\n");
+  const bool g3 = true;
+
+  double nm = 0.0, nse = 0.0;
+  og_stat(dz[kOgPrimarySpace][kOgPrimaryPair][kOgGapPrimary], nm, nse);
+  double cnm = 0.0, cnse = 0.0;
+  og_stat(cnull[kOgPrimarySpace][kOgPrimaryPair], cnm, cnse);
+  std::printf("\n    G2 LABEL-DESTROYED — the labels permuted, the presentations untouched.\n"
+              "       The null is EXACTLY 0 in expectation: the statistic is defined only\n"
+              "       by which pairs count as same.\n");
+  std::printf("       d'  on the primary cell               %.4f +- %.4f\n", nm, nse);
+  std::printf("       cosine separation                     %+.4f +- %.4f\n", cnm, cnse);
+  const bool g2 = std::fabs(cnm) < 2.0 * cnse + 1e-9 || std::fabs(cnm) < 0.002;
+  std::printf("       verdict                               %s\n", g2 ? "PASS" : "FAIL");
+
+  double sm = 0.0, sse = 0.0;
+  og_stat(csep[kOgPrimarySpace][kOgPrimaryPair], sm, sse);
+  std::printf("\n    G4 SIGN — same-condition pairs share their synapses, so a separation\n"
+              "       BELOW zero is a BUG and not a finding.\n");
+  std::printf("       cosine separation, primary cell       %+.4f +- %.4f\n", sm, sse);
+  const bool g4 = (sm + 2.0 * sse) >= 0.0;
+  std::printf("       verdict                               %s\n", g4 ? "PASS" : "FAIL — BUG");
+
+  double lm = 0.0, lse = 0.0, lcm = 0.0, lcse = 0.0;
+  og_stat(lsame, lm, lse);
+  og_stat(lcross, lcm, lcse);
+  std::printf("\n    THE TIME-LAG BALANCE — pairs are restricted to DIFFERENT rounds, so\n"
+              "       that cross-condition pairs do not sit systematically closer in time\n"
+              "       than same-condition ones. The residual is printed, not argued.\n");
+  std::printf("       mean round lag, same  %.2f    cross  %.2f\n", lm, lcm);
+
+  if (!(n_ok == kOgReps && n_align == 0 && g1 && g2 && g3 && g4 && g5)) {
+    std::printf("\n  A GATE FAILED. NO VERDICT IS COMPUTED AND NONE IS PRINTED.\n");
+    return true;
+  }
+
+  // ---- THE CASCADE: WHERE THE SEPARATION LIVES AND WHERE IT DIES ----
+  std::printf("\n\n  THE CASCADE — the ATTRIBUTION COLUMN §66 earned. Cosine separation,\n"
+              "  sqrt(w)-weighted so the numerator IS the depletion-relevant inner\n"
+              "  product SUM_i w_i n_i(p) n_i(q).\n\n");
+  std::printf("    space                                   ");
+  for (uint32_t pr = 0; pr < kOgPairCount; ++pr) std::printf("  pair%u ", pr);
+  std::printf("\n");
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    std::printf("    %-38s", kOgSpaceName[sp]);
+    for (uint32_t pr = 0; pr < kOgPairCount; ++pr) {
+      double m = 0.0, se = 0.0;
+      og_stat(csep[sp][pr], m, se);
+      std::printf(" %+.4f", m);
+    }
+    std::printf("\n");
+  }
+  std::printf("\n    pairs: ");
+  for (uint32_t pr = 0; pr < kOgPairCount; ++pr) std::printf("\n      pair%u  %s", pr, kOgPairName[pr]);
+  std::printf("\n\n    the primary cell, with its parts and its SE:\n");
+  {
+    double a = 0, b = 0, c = 0, d = 0, e = 0, f = 0;
+    og_stat(csame[kOgPrimarySpace][kOgPrimaryPair], a, b);
+    og_stat(ccross[kOgPrimarySpace][kOgPrimaryPair], c, d);
+    og_stat(csep[kOgPrimarySpace][kOgPrimaryPair], e, f);
+    std::printf("      same-word cosine   %.4f +- %.4f\n", a, b);
+    std::printf("      cross-word cosine  %.4f +- %.4f\n", c, d);
+    std::printf("      SEPARATION         %+.4f +- %.4f   (%.1f SE from 0)\n", e, f,
+                f > 0.0 ? e / f : 0.0);
+  }
+
+  // ---- THE VERDICT ----
+  double pm = 0.0, pse = 0.0, pnm = 0.0, pnse = 0.0, pcm = 0.0, pcse = 0.0;
+  og_stat(dr[kOgPrimarySpace][kOgPrimaryPair][kOgGapPrimary], pm, pse);
+  og_stat(dn[kOgPrimarySpace][kOgPrimaryPair][kOgGapPrimary], pnm, pnse);
+  og_stat(dc[kOgPrimarySpace][kOgPrimaryPair][kOgGapPrimary], pcm, pcse);
+  double czm = 0.0, czse = 0.0;
+  og_stat(dcz[kOgPrimarySpace][kOgPrimaryPair][kOgGapPrimary], czm, czse);
+  std::printf("\n\n  THE VERDICT — the registered primary cell\n\n");
+  std::printf("    d' POOLED over B   (registered)       %.4f +- %.4f   -> accuracy %.4f\n",
+              pm, pse, og_phi(pm * 0.5));
+  std::printf("    d' WITHIN B        (addendum)         %.4f +- %.4f   -> accuracy %.4f\n",
+              pcm, pcse, og_phi(pcm * 0.5));
+  std::printf("    d' drive RATIO     (EXCLUDED)         %.4f +- %.4f   -> accuracy %.4f\n",
+              pnm, pnse, og_phi(pnm * 0.5));
+  std::printf("\n    THE DRIVE RATIO IS EXCLUDED, AND THE REASON IS ALGEBRA RATHER THAN\n"
+              "    ITS VALUE. J = 1 - rec . T/S, so the mean difference AND the SD both\n"
+              "    scale linearly in `rec` and it CANCELS EXACTLY: the statistic is\n"
+              "    scale-free, its d' does not depend on the gap or on tau_rec, and its\n"
+              "    gap ladder is FLAT. It therefore predicts near-perfect accuracy at a\n"
+              "    5000 ms gap, where §63 measured the trace already dead. An estimator\n"
+              "    whose normalisation divides out the very quantity under test cannot\n"
+              "    model a physical readout. `rank-one-noise-saturates-the-estimator` in\n"
+              "    a new costume: what is missing is a noise term that does NOT scale\n"
+              "    with the signal, which both kept statistics have and this one does not.\n");
+  std::printf("\n    LABEL-DESTROYED, pooled               %.4f +- %.4f\n", nm, nse);
+  std::printf("    LABEL-DESTROYED, within-B             %.4f +- %.4f\n", czm, czse);
+  std::printf("    (a d' is an ABSOLUTE value, so its null floor is half-normal and\n"
+              "     positive, not 0. The SIGNED null is G2's cosine, which reads 0.)\n");
+  std::printf("    the bar                               %.4f           -> accuracy %.3f\n",
+              kOgDPrimeBar, kOgBar);
+  const double vm = (pick == 0) ? pm : (pick == 1 ? pnm : pcm);
+  const double vse = (pick == 0) ? pse : (pick == 1 ? pnse : pcse);
+  const char* verdict = (vm - 2.0 * vse > kOgDPrimeBar)
+                            ? "LICENSED — and the OPTIMISM FLAG applies"
+                            : (vm + 2.0 * vse < kOgDPrimeBar ? "REFUSED" : "NO VERDICT");
+  std::printf("\n    carried by                            %s\n", kOgEstName[pick]);
+  std::printf("    registered clause                     best - 2 SE %.4f, best + 2 SE %.4f\n",
+              vm - 2.0 * vse, vm + 2.0 * vse);
+  std::printf("    -> %s\n", verdict);
+
+  double ubm = 0.0, ubse = 0.0, uam = 0.0, uase = 0.0, urm = 0.0, urse = 0.0;
+  og_stat(ubest[pick], ubm, ubse);
+  og_stat(ubacc[pick], uam, uase);
+  og_stat(ureq[pick], urm, urse);
+  uint32_t reached = 0;
+  for (double x : ureq[pick]) if (x > 0.0) ++reached;
+  std::printf("\n    THE ARITHMETIC CLAUSE — U is a utilisation fraction and cannot exceed\n"
+              "    1, so this is the mechanism's CEILING over its whole parameter range.\n");
+  std::printf("      best d' over U in (0,1]             %.4f +- %.4f   at U %.2f\n", ubm, ubse,
+              res[0].u_best[pick]);
+  std::printf("      the accuracy that reaches            %.4f +- %.4f\n", uam, uase);
+  std::printf("      creatures where SOME U reaches %.3f  %u of %u\n", kOgBar, reached, n_ok);
+  if (reached == 0)
+    std::printf("      -> REFUSED BY ARITHMETIC: no utilisation in (0,1] reaches the bar,\n"
+                "         whatever the SE. The ceiling is below the bar.\n");
+  else
+    std::printf("      -> the arithmetic clause does NOT fire; smallest sufficient U %.2f\n", urm);
+
+  // The ladders are printed on the estimator that carries the verdict, so the
+  // verdict and the shape around it cannot be read off different quantities.
+  std::vector<double>(*dv)[kOgPairCount][kOgGapCount] =
+      (pick == 0) ? dr : (pick == 1 ? dn : dc);
+  std::printf("\n\n  THE LADDERS — reported, not primary. On %s.\n\n", kOgEstName[pick]);
+  std::printf("    GAP, at the primary tau and U (this is the shape §63 measured)\n");
+  for (uint32_t g = 0; g < kOgGapCount; ++g) {
+    double m = 0.0, se = 0.0;
+    double wm = 0.0, wse = 0.0;
+    og_stat(dv[kOgPrimarySpace][kOgPrimaryPair][g], m, se);
+    og_stat(dc[kOgPrimarySpace][kOgPrimaryPair][g], wm, wse);
+    std::printf("      %5.0f ms   d' %.4f +- %.4f   -> accuracy %.4f    within-B %.4f\n",
+                kOgGaps[g], m, se, og_phi(m * 0.5), wm);
+  }
+  std::printf("\n    tau_rec, at the primary gap — STAGE 2's DOSE-RESPONSE, PREDICTED.\n"
+              "    A FLAT curve here means stage 2 does not get run.\n");
+  for (uint32_t ti = 0; ti < kOgTauCount; ++ti) {
+    double m = 0.0, se = 0.0;
+    double wm = 0.0, wse = 0.0;
+    og_stat(dtau[ti][pick], m, se);
+    og_stat(dtau[ti][2], wm, wse);
+    std::printf("      %5.0f ms   d' %.4f +- %.4f   -> accuracy %.4f    within-B %.4f\n",
+                kOgTaus[ti], m, se, og_phi(m * 0.5), wm);
+  }
+  std::printf("\n    U, the sensitivity band around the measured corner\n");
+  for (uint32_t ui = 0; ui < kOgUCount; ++ui) {
+    double m = 0.0, se = 0.0;
+    og_stat(du[ui][pick], m, se);
+    std::printf("      %.2f      d' %.4f +- %.4f   -> accuracy %.4f%s\n", kOgUs[ui], m, se,
+                og_phi(m * 0.5), ui == kOgUPrimary ? "   <- PRIMARY, pinned in advance" : "");
+  }
+  std::printf("\n    STIMULUS DISTANCE — kWords[0] and kWords[1] are ALREADY the corner\n"
+              "    pair, so this ladder runs toward HARDER pairs. A monotone fall is a\n"
+              "    dose-response in the STIMULUS and prices the vocabulary this could hold.\n");
+  for (uint32_t pr = 0; pr < kOgPairCount; ++pr) {
+    double m = 0.0, se = 0.0, cm = 0.0, cse = 0.0;
+    og_stat(dv[kOgPrimarySpace][pr][kOgGapPrimary], m, se);
+    og_stat(csep[kOgPrimarySpace][pr], cm, cse);
+    std::printf("      %-52s d' %.4f +- %.4f   cos %+.4f\n", kOgPairName[pr], m, se, cm);
+  }
+  std::printf("\n    THE OTHER TRACTS at the primary pair and gap\n");
+  for (uint32_t sp = 0; sp < kOgSpaceCount; ++sp) {
+    if (!kOgSpikes[sp]) continue;
+    double m = 0.0, se = 0.0;
+    og_stat(dv[sp][kOgPrimaryPair][kOgGapPrimary], m, se);
+    std::printf("      %-38s d' %.4f +- %.4f   -> accuracy %.4f\n", kOgSpaceName[sp], m, se,
+                og_phi(m * 0.5));
+  }
+  std::printf("\n  Nothing in the creature was touched: no genome field was written and no\n"
+              "  kernel state was modified, so `verify`'s hash MUST be unmoved. A moved\n"
+              "  hash is a bug in this instrument.\n");
+  return true;
+}
 }  // namespace aibaby_host

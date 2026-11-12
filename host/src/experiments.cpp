@@ -366,6 +366,17 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"overlapgate", 290000, Expect::kRead, Tier::kLong,
+     "derived: §68, stage 0 of §67's lead. A GATE on a genome change, not the\n"
+     "  change. §67 proposes DEPRESSION on `auditory->vocal`, where §64's two\n"
+     "  carriers meet, so that delivered(B) = weight x resources left by A -- a\n"
+     "  multiplicative conjunction at the synapse, needing no new population and\n"
+     "  no XOR. Its one precondition is that the two words drive DISTINCT\n"
+     "  synapses. Depletion is SIMULATED from measured presynaptic spike counts\n"
+     "  (d = 1-(1-U)^n is EXACT for a Tsodyks-Markram resource with no recovery\n"
+     "  inside the word), so NO GENOME CHANGE and NO KERNEL CHANGE. The bar is\n"
+     "  DERIVED: 2*Phi^-1(0.650) = 0.7706. It also predicts stage 2's tau_rec\n"
+     "  dose-response, and a flat predicted curve means stage 2 is not run."},
     {"echopred", 672000, Expect::kRead, Tier::kLong,
      "derived: §66. A GATE on a genome change, not the change. §65 named a\n"
      "  combiner as the next build; this prices the one the architecture can\n"
@@ -1750,6 +1761,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "hushgate") ok = run_hushgate(dna_blob, ticks, verbose);
   else if (name == "samediff") ok = run_samediff(dna_blob, ticks, verbose);
   else if (name == "echopred") ok = run_echopred(dna_blob, ticks, verbose);
+  else if (name == "overlapgate") ok = run_overlapgate(dna_blob, ticks, verbose);
   else if (name == "hush") ok = run_hush(dna_blob, ticks, verbose);
   else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);

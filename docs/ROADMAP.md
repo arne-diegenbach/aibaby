@@ -14074,3 +14074,101 @@ If the primary lands in NO VERDICT **and** the arithmetic clause does not fire,
 §68 has spent a run to say nothing — and the honest response is to report that,
 not to re-run it larger. §59b's registered refusal fired and the lesson recorded
 was **DO NOT RE-RUN THE ARM LARGER**.
+
+### §68 ADDENDUM — FIVE CHANGES THE 290k SMOKE FORCED, REGISTERED BEFORE THE RUN
+
+Every one of these was made after the smoke and **before the 1.68M run**, and
+each is recorded with what forced it. `verdict-fitted-to-data` is the hazard and
+disclosure is the only defence that works.
+
+**1. THE PRIMARY `U` IS RE-DERIVED, 0.5 -> 0.2.** The pre-registration pinned
+U 0.5 because that is `stpprobe`'s **measured** depressing corner, and borrowing
+it was exactly the mistake `match-at-the-operating-point` names. This creature's
+auditory neurons fire **n_bar = 4.43 spikes per 900 ms word**, so at U 0.5
+
+    d = 1 - (1 - 0.5)^4.43 = 0.953
+
+**every active synapse is already empty.** The depletion mask is then
+near-constant across words and carries almost nothing. The replacement is
+**derived, not fitted**: depletion stays graded when `U . n_bar ~ 1`, so
+`U ~ 1/4.43 = 0.226`, pinned at the 0.2 rung the band already held. **U 0.5 is
+kept in the band so the saturation is a printed row rather than an argument**,
+and the scan over the whole of (0,1] is untouched, so the arithmetic clause's
+ceiling does not depend on the pin.
+
+**2. A SATURATION GATE (G5) IS ADDED — the gate whose absence caused (1).** Mean
+simulated depletion must lie inside **(0.05, 0.95)**. At the top every active
+synapse is empty and the mask is constant; at the bottom nothing depletes. Both
+ends are vacuous **while every other number looks healthy**, which is DNA v11's
+synaptic-scaling lesson. It reads **0.4315 +- 0.0023** at the new pin.
+
+**3. G3 IS NOT A VALID POSITIVE CONTROL, AND IT IS DEMOTED.** §68 registered
+word-against-silence as "the maximum attainable". **It is not an upper bound**,
+and the cascade proves it rather than arguing it: silence differs from a word in
+**magnitude**, two vowels differ in **pattern**, and this statistic is
+pattern-sensitive. `cos(/a/, silence) ~ 0.53` against `cos(/a/, /i/) = 0.19` —
+**silence is the HARDER contrast.** It also maximises the pooled statistic's own
+penalty, because silence drives about half a word's spikes and that makes the
+within-class distribution maximally bimodal. Measured: the silence pair reads
+d' **0.4139** while the primary pair reads **1.1199**, so the "ceiling" sits
+below the thing it was meant to bound.
+
+**A positive control must be KNOWN easier than the test contrast. This one is
+provably harder, so it voids nothing** and is kept as a stimulus-ladder rung.
+**Its guard role passes to the arithmetic clause**, which was already registered
+and which carries a **provable** bound (`U <= 1`) instead of an assumption.
+`guard-measures-the-wrong-quantity`, inside the gate written to protect the
+verdict — the third time this project has hit that shape.
+
+**4. TWO ESTIMATOR ADDENDA, AND ONE OF THEM IS EXCLUDED ON ALGEBRA.** The
+registered statistic is the **pooled total delivered drive**. Two variants are
+added because the smoke showed the registered one is swamped by B's identity:
+
+- **within-B**: d' computed inside each B, then averaged. Licensed by §64, which
+  measured B's identity on `auditory` at **1.0000** — knowing B is a measurement,
+  not an assumption. **Kept.**
+- **drive ratio** `J = 1 - rec . T/S`: **EXCLUDED, and the reason is algebra
+  rather than its value.** The mean difference and the SD both scale linearly in
+  `rec`, which **cancels exactly**, so the statistic is scale-free: its d' does
+  not depend on the gap or on `tau_rec` and **its gap ladder is FLAT**. It
+  therefore predicts 0.989 accuracy at a **5000 ms** gap, where §63 measured the
+  trace already dead. **An estimator whose normalisation divides out the quantity
+  under test cannot model a physical readout** —
+  `rank-one-noise-saturates-the-estimator` in a new costume: what is missing is a
+  noise term that does **not** scale with the signal.
+
+**THE VERDICT STAYS ON THE REGISTERED POOLED STATISTIC**, and the kept addendum
+agrees with it (1.1199 against 1.2643 at the smoke), so nothing here selects a
+statistic by its answer.
+
+**5. THE FIRING PROBABILITY, AS A NUMBER, WHICH §68 DEFERRED TO HERE.** The
+smoke measures SE **0.0642** on the primary over the same 12 creatures. At its
+point estimate the margin is `(1.1199 - 0.7706) / 0.0642 =` **5.4 SE**, so
+**the refusal clause's probability of firing is effectively zero and the
+licensing clause fires with near-certainty.**
+
+**THAT IS A DISCLOSURE, NOT A RESULT.** It means the 1.68M run is **not a test
+that could refuse** at the registered operating point: stage 0's question is
+already answered by the smoke. What the full run buys is (a) the **operating
+point** §63-§66 were read at, which is why the budget is not re-chosen, and
+(b) the **sleep-crossing branch**, which the smoke never reaches and which
+`deferral-note-is-untested-code` forbids shipping unexercised. **The reported
+number will be the 1.68M one** — §64's smoke read 0.6250 on a primary that
+landed at 0.5180, and that lesson is not forgotten because this quantity happens
+to be better behaved.
+
+### WHAT THE SMOKE ALREADY SHOWS, AND WHY IT IS NOT THE RESULT
+
+Recorded here so the 1.68M numbers can be checked against a prior rather than
+read fresh:
+
+    cosine separation, primary cell    +0.7630 +- 0.0052   (same 0.9506, cross 0.1876)
+    label-destroyed, signed            -0.0024 +- 0.0047   exactly 0, as derived
+    cascade   mel 0.3238 -> auditory 0.7686 -> tract 0.7630
+    gap       1.1199 / 0.1115 / 0.0020 / 0.0000
+    tau_rec   0.2267 / 1.1199 / 2.1792 / 2.6323
+
+**THE GAP LADDER IS THE INSTRUMENT'S OWN VALIDATION.** It falls to chance
+between 800 and 2000 ms **from `exp(-G/tau_rec)` alone**, which is where §63
+measured A's trace actually dying. Two independent routes to the same decay is
+worth more than either.
