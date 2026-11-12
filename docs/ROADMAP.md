@@ -14298,11 +14298,32 @@ which is also the cheapest genome change.
     /a/ vs SILENCE                 d' 0.4425 +- 0.0069   cos +0.4428
     /i/ vs SILENCE                 d' 0.4998 +- 0.0046   cos +0.5387
 
-Monotone in both columns. **Only the corner pair clears the bar**: the near-F2
-pair reaches accuracy 0.6886 and the adjacent-vowel pair 0.6350, both under
-0.650 or at it. So the mechanism as priced supports **a two-word
-same/different judgement on well-separated vowels and not a vocabulary**, which
-is a limit to state in advance rather than discover in stage 2.
+Monotone in both columns. Converted into the milestone's units:
+
+    /a/ vs /i/   corner      accuracy 0.7434   CLEARS
+    /i/ vs /u/   near-F2     accuracy 0.6876   CLEARS
+    /a/ vs /e/   adjacent    accuracy 0.6355   under the 0.650 bar
+    vs SILENCE               accuracy 0.5876 / 0.5987
+
+**TWO PAIRS CLEAR, NOT ONE — and this paragraph's first draft said otherwise.**
+It claimed "only the corner pair clears", from two accuracies computed by hand
+off the d' column (0.6886 and 0.6350 against the true 0.6876 and 0.6355). The
+arithmetic slip was small; **the conclusion drawn from it was wrong in
+substance**, because 0.6876 is *above* 0.650 and was recorded as below it.
+`plausible-wrong-number`: the figures were close enough to pass a glance and the
+verdict built on them was not.
+
+**What is actually true is stronger.** The near-F2 pair is a *nearly pure F2
+discrimination* with F1 within 30 Hz — the pair `kWords`' own comment calls the
+one that exposes a creature transmitting only "how bright is this sound" — and
+the mechanism clears it. So depletion is not reading a single loud spectral
+axis. **The limit is the adjacent-vowel case**: /a/ against /e/, which sits
+between /a/ and /i/ on both formants, falls under the bar at 0.6355.
+
+So the mechanism as priced supports **same/different on vowels that are
+genuinely distinct, including on one formant alone, and fails on adjacent
+vowels.** That is a sharper limit than "two words only", and it is still a limit
+to state in advance rather than discover in stage 2. Cf. `aibaby-ctxvocab`.
 
 ### THE GATES
 
@@ -14352,6 +14373,6 @@ registered shape.
 **Still not licensed: stage 3** (series depression). Nothing here bears on it.
 
 **And the honest frame for stage 2:** §68 predicts a *repetition detector* that
-works at one gap on one well-separated pair. That is a newborn-grade ability and
-it is what §67 argued for — **not** the comparator §65 named, and not a
-vocabulary.
+works **at one gap**, on vowels that are genuinely distinct — including on one
+formant alone — and **fails on adjacent vowels**. That is a newborn-grade
+ability and it is what §67 argued for. It is **not** the comparator §65 named.
