@@ -13129,6 +13129,7 @@ A, or A simply dies on schedule, is the one-arm question §63 leaves open.
     label-destroyed, primary               0.5016 +- 0.0101    PASS
     assembled oracle, best                 1.0000              PASS
     determinism, `--experiment verify`     ad96f882becbee92    PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
 
 `samediff` is `Tier::kLong`, so `verify`'s fast-tier count is untouched at 24.
 
@@ -13321,6 +13322,7 @@ change with no new session.
     label-destroyed, overlap window        0.4924 +- 0.0118    PASS
     assembled oracle, best                 1.0000              PASS
     determinism, `--experiment verify`     ad96f882becbee92    PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
 
 Sleep onset reproduced to the tick at **1,087,801**, on a run with a third arm
 and a different RNG draw order — the number is a property of the protocol, not
@@ -13502,6 +13504,7 @@ not a longer carrier, and not a better readout.
     label-destroyed, post-B window         0.5016 +- 0.0101    PASS
     label-destroyed, the assembled readout 0.5072              PASS
     assembled oracle, best                 1.0000              PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
 
 §63, §64 and §65 reproduce every shared column to the digit — the §63 and §64
 verdict rows, the gate figures and sleep onset at 1,087,801 — because the
