@@ -13204,3 +13204,20 @@ of trials are discarded; that is carried forward, not re-measured.
   ingredients would then have been shown not to coexist in the one window where
   they most plausibly could.
 - No mechanism, no genome field. The arm changes what is rendered, nothing else.
+
+### A FOURTH CHANGE, MADE AFTER THE SMOKE AND DISCLOSED AS SUCH
+
+§63's verdict took the **best of four gaps** and tested it at 2 SE. Those two
+branches are not symmetric about that selection. If the maximum fails the bar
+then every gap failed it, so **NOT MET on the max is conservative and valid** —
+which is why §63 did not need this. **MET on the max is not valid**: selecting
+the largest of four and then testing it at 2 SE inflates the false-pass rate.
+
+The MET branch now carries a **2.5 SE** lower bound, the Bonferroni-corrected
+two-sided level for four gaps.
+
+**This was decided after a 300k smoke showed the primary might clear the bar,
+and before any scoreable run.** It moves the rule in the safe direction only: it
+can turn a MET into a NO VERDICT and can never turn a NOT MET into anything
+else. Recording it here because a rule changed after a glimpse of data is the
+`verdict-fitted-to-data` shape even when the change is a tightening.

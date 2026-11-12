@@ -18523,7 +18523,13 @@ constexpr uint64_t kSdRoundTicks =
     kSdGapCount * (2 * kSdWord + kSdScore) + 200 + 800 + 2000 + 5000;
 
 // The four windows a trial is cut into.
-enum SdWin { kSdWA = 0, kSdWG, kSdWB, kSdWS, kSdWinCount };
+// §64 adds `kSdWBE`, the first 400 ms of the SECOND word. §63 scored
+// same-versus-different only after B's offset, where A is at chance — but A is
+// at 0.8269 just BEFORE B arrives, so the one moment both words are present is
+// DURING B. `audprobe` measured the ear classifying a word within 50 ms
+// (0.916), so B is legible in this window and A's trace is at its freshest.
+enum SdWin { kSdWA = 0, kSdWG, kSdWBE, kSdWB, kSdWS, kSdWinCount };
+constexpr uint64_t kSdOverlap = 400;  // width of kSdWBE
 
 struct SdGapRow {
   double milestone[kSdSpaces] = {};  // same/different at the scoring window
@@ -18534,6 +18540,11 @@ struct SdGapRow {
   double orac_a[kSdSpaces] = {};     // A's identity during A
   double orac_b[kSdSpaces] = {};     // B's identity during B
   double assembled[kSdSpaces] = {};  // pA*pB + (1-pA)(1-pB) — full scale
+  // §64: the OVERLAP window, the first 400 ms of B.
+  double mile_be[kSdSpaces] = {};    // same/different DURING B — §64's primary
+  double null_be[kSdSpaces] = {};    // ...with the labels destroyed
+  double ing_a_be[kSdSpaces] = {};   // A's identity during B
+  double ing_b_be[kSdSpaces] = {};   // B's identity during B
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
   bool scored = false;
@@ -18594,7 +18605,7 @@ inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
 }
 
 SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
-                           uint32_t rep, float voicing_override) {
+                           uint32_t rep, float voicing_override, bool omit_b) {
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
@@ -18688,7 +18699,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         const Word& wa_ = kWords[a];
         const Word& wb_ = kWords[b];
         if (in_a) voice.render(wa_.f0, wa_.f1, wa_.f2, 0.5f, pcm.data(), spt);
-        else if (in_b) voice.render(wb_.f0, wb_.f1, wb_.f2, 0.5f, pcm.data(), spt);
+        else if (in_b && !omit_b) voice.render(wb_.f0, wb_.f1, wb_.f2, 0.5f, pcm.data(), spt);
         else voice.render(0.0f, wa_.f1, wa_.f2, 0.0f, pcm.data(), spt);
         ear.tick(s.brain, pcm.data(), spt);
         s.brain.step();
@@ -18698,25 +18709,35 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           if (out.first_sleep_tick == 0) out.first_sleep_tick = tick_now;
         }
 
-        uint32_t win = kSdWinCount;
-        if (in_a) win = kSdWA;
-        else if (t >= pre_from && t < b_on) win = kSdWG;
-        else if (in_b) win = kSdWB;
-        else if (t >= b_off) win = kSdWS;
-        if (win == kSdWinCount) continue;
+        // A TICK CAN BELONG TO TWO WINDOWS, and that is deliberate. `kSdWBE`
+        // OVERLAPS the front of `kSdWB` rather than carving it up: making the
+        // overlap window out of B's first 400 ms would leave `kSdWB` only 500 ms
+        // wide and silently weaken the assembled oracle relative to §63, which
+        // is a change §64 did not register. `kSdWB` stays the whole of B.
+        uint32_t wins[2];
+        uint32_t nwin = 0;
+        if (in_a) wins[nwin++] = kSdWA;
+        else if (t >= pre_from && t < b_on) wins[nwin++] = kSdWG;
+        else if (in_b) {
+          wins[nwin++] = kSdWB;
+          if (t < b_on + kSdOverlap) wins[nwin++] = kSdWBE;
+        } else if (t >= b_off) wins[nwin++] = kSdWS;
+        if (nwin == 0) continue;
 
         const aibaby::Scalar* gp = s.brain.vocal_groups();
-        for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[win][q] += double(gp[q]);
-        ++gn[win];
-
         const aibaby::Network& net = s.brain.network();
-        for (uint32_t i = 0; i < net.spike_count(); ++i) {
-          const uint32_t idx = net.spikes()[i];
-          if (idx >= ms_a.begin && idx < ms_a.begin + wa) bins[win][idx - ms_a.begin] += 1.0;
-          else if (idx >= ms_c.begin && idx < ms_c.begin + wc)
-            bins[win][size_t(wa) + (idx - ms_c.begin)] += 1.0;
-          else if (idx >= ms_v.begin && idx < ms_v.begin + wv)
-            bins[win][size_t(wa) + wc + (idx - ms_v.begin)] += 1.0;
+        for (uint32_t wi = 0; wi < nwin; ++wi) {
+          const uint32_t win = wins[wi];
+          for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[win][q] += double(gp[q]);
+          ++gn[win];
+          for (uint32_t i = 0; i < net.spike_count(); ++i) {
+            const uint32_t idx = net.spikes()[i];
+            if (idx >= ms_a.begin && idx < ms_a.begin + wa) bins[win][idx - ms_a.begin] += 1.0;
+            else if (idx >= ms_c.begin && idx < ms_c.begin + wc)
+              bins[win][size_t(wa) + (idx - ms_c.begin)] += 1.0;
+            else if (idx >= ms_v.begin && idx < ms_v.begin + wv)
+              bins[win][size_t(wa) + wc + (idx - ms_v.begin)] += 1.0;
+          }
         }
       }
 
@@ -18805,7 +18826,23 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // FULL SCALE IN THE TASK'S OWN UNITS: what this creature would score if
       // its own ingredients were perfectly combined. Not a host oracle handed
       // both labels — that returns 1.000 and prices nothing.
-      const double pa = row.orac_a[sp], pb = row.orac_b[sp];
+      // §64's OVERLAP WINDOW — the first 400 ms of B, where A's trace is
+      // freshest and B is already legible.
+      row.mile_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], ysame, train);
+      row.null_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], yshuf, train);
+      row.ing_a_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], ya, train);
+      row.ing_b_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], yb, train);
+      // THE ORACLE, REPAIRED, AND THE WINDOW IS ASSIGNED PER SPACE FAMILY FROM
+      // `ctxsrc` RATHER THAN FROM THIS RUN. §63 decoded both words from their
+      // during-word windows and so put the 0.650 bar ABOVE `artic9`'s own
+      // ceiling of 0.56-0.58. `ctxsrc` had already measured that the
+      // articulators carry a word BETTER AFTER IT STOPS (0.818 / 0.742 after,
+      // 0.510 / 0.742 during) — the motor code is a delayed copy. So the motor
+      // spaces are priced on their post-word windows. NOT a maximum over
+      // windows: that is selection dressed up as a ceiling.
+      const bool motor = (sp == 3 || sp == 4);
+      const double pa = motor ? row.decay[sp] : row.orac_a[sp];
+      const double pb = motor ? row.ing_b[sp] : row.orac_b[sp];
       row.assembled[sp] = pa * pb + (1.0 - pa) * (1.0 - pb);
     }
     row.scored = true;
@@ -18815,14 +18852,20 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 }
 
 constexpr uint32_t kSdReps = 12;
-struct SdArm { const char* name; float vthr; const char* what; };
 // `quietecho` drove this ladder to 1.15 and measured the voiced fraction at
 // 0.000 with the articulator echo UNMOVED. That is the rung, and that is why
 // this arm is called acoustic-silenced and not larynx-silenced.
-constexpr SdArm kSdArms[2] = {
-    {"shipped", 0.0f, "the creature as it ships"},
-    {"acoustic-silenced", 1.15f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+// §64's third arm renders SILENCE where the second word goes, with the trial's
+// length and timing untouched, so A's trace is read at the same absolute times
+// with and without B. It contributes ONLY the A-trace columns: same-versus-
+// different is undefined there and is not computed.
+struct SdArmDef { const char* name; float vthr; bool omit_b; const char* what; };
+constexpr SdArmDef kSdArms[3] = {
+    {"shipped", 0.0f, false, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, false, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+    {"B-omitted", 0.0f, true, "silence where the second word goes — overwrite vs decay"},
 };
+constexpr uint32_t kSdArmCount = 3;
 
 // mean and standard error over creatures, which are the independent unit here.
 inline void sd_stat(const std::vector<double>& v, double& m, double& se) {
@@ -18861,11 +18904,12 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               (unsigned long long)kSdRoundTicks,
               (unsigned long long)(ticks / kSdRoundTicks), kSdReps);
 
-  std::vector<SdOut> res[2];
-  for (uint32_t a = 0; a < 2; ++a) {
+  std::vector<SdOut> res[kSdArmCount];
+  for (uint32_t a = 0; a < kSdArmCount; ++a) {
     const float vt = kSdArms[a].vthr;
+    const bool ob = kSdArms[a].omit_b;
     res[a] = parallel_reps<SdOut>(kSdReps, [&](uint32_t r) {
-      return run_samediff_session(blob, ticks, r, vt);
+      return run_samediff_session(blob, ticks, r, vt, ob);
     });
   }
 
@@ -18877,7 +18921,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   uint32_t n_ok = 0, n_align = 0, attempted = 0, slept = 0;
   uint64_t first_sleep = 0;
   uint32_t cell_empty = 0;
-  for (uint32_t a = 0; a < 2; ++a)
+  for (uint32_t a = 0; a < kSdArmCount; ++a)
     for (const SdOut& o : res[a]) {
       if (o.ok) ++n_ok;
       if (o.align_bad) ++n_align;
@@ -18892,13 +18936,16 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   // Pooled per-space columns, built once and used by both the gates and the
   // report, so the gate and the verdict cannot read different numbers.
-  std::vector<double> mile[2][kSdGapCount][kSdSpaces];
-  std::vector<double> nul[2][kSdGapCount][kSdSpaces];
-  std::vector<double> dec[2][kSdGapCount][kSdSpaces];
-  std::vector<double> ia[2][kSdGapCount][kSdSpaces], ib[2][kSdGapCount][kSdSpaces];
-  std::vector<double> asm_[2][kSdGapCount][kSdSpaces];
+  std::vector<double> mile[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> nul[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> dec[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> ia[kSdArmCount][kSdGapCount][kSdSpaces], ib[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> asm_[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> mbe[kSdArmCount][kSdGapCount][kSdSpaces];   // §64 overlap window
+  std::vector<double> nbe[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> iabe[kSdArmCount][kSdGapCount][kSdSpaces], ibbe[kSdArmCount][kSdGapCount][kSdSpaces];
   uint32_t scored_cells = 0;
-  for (uint32_t a = 0; a < 2; ++a)
+  for (uint32_t a = 0; a < kSdArmCount; ++a)
     for (const SdOut& o : res[a])
       for (uint32_t g = 0; g < kSdGapCount; ++g) {
         if (!o.gap[g].scored) continue;
@@ -18910,6 +18957,10 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
           ia[a][g][sp].push_back(o.gap[g].ing_a[sp]);
           ib[a][g][sp].push_back(o.gap[g].ing_b[sp]);
           asm_[a][g][sp].push_back(o.gap[g].assembled[sp]);
+          mbe[a][g][sp].push_back(o.gap[g].mile_be[sp]);
+          nbe[a][g][sp].push_back(o.gap[g].null_be[sp]);
+          iabe[a][g][sp].push_back(o.gap[g].ing_a_be[sp]);
+          ibbe[a][g][sp].push_back(o.gap[g].ing_b_be[sp]);
         }
       }
 
@@ -18929,7 +18980,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   std::printf("  THE GATES\n\n");
-  const bool g_sessions = (n_ok == 2 * kSdReps);
+  const bool g_sessions = (n_ok == kSdArmCount * kSdReps);
   const bool g_align = (n_align == 0);
   const bool g_sleep = (slept_frac <= kSdSleepMax);
   const bool g_cells = (cell_empty == 0);
@@ -18937,7 +18988,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const bool g_oracle = g_scored && (best_oracle >= kSdOracleFloor);
   const bool g_null = g_scored && (null_m >= kSdNullLo && null_m <= kSdNullHi);
   std::printf("    sessions that ran          %u of %u                      %s\n",
-              n_ok, 2 * kSdReps, g_sessions ? "PASS" : "FAIL");
+              n_ok, kSdArmCount * kSdReps, g_sessions ? "PASS" : "FAIL");
   std::printf("    feature rows == labels     %u misaligned                 %s\n",
               n_align, g_align ? "PASS" : "FAIL");
   std::printf("    slept trials               %u of %u = %.4f  (<= %.2f)  %s\n",
@@ -18965,7 +19016,8 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // ---- THE PRIMARY ----
   std::printf("\n  THE PRIMARY — SAME vs DIFFERENT AT THE SCORING WINDOW, pooled over %u creatures\n\n",
               kSdReps);
-  for (uint32_t a = 0; a < 2; ++a) {
+  for (uint32_t a = 0; a < kSdArmCount; ++a) {
+    if (kSdArms[a].omit_b) continue;  // same/different is undefined with no B
     std::printf("  arm %s (%s)\n", kSdArms[a].name, kSdArms[a].what);
     std::printf("    gap   n   %-9s      %-9s      assembled   decay(A)   ing(A)  ing(B)\n",
                 kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary]);
@@ -19048,22 +19100,123 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("\n");
   }
 
+  // ---- §64: THE OVERLAP WINDOW ----
+  std::printf("\n  THE OVERLAP WINDOW (§64) — same/different during B's first %llu ms,\n"
+              "  which is the one moment BOTH words can be present. §63 scored only\n"
+              "  AFTER B's offset, where A is at chance.\n\n    gap  ",
+              (unsigned long long)kSdOverlap);
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-10s", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    std::printf("   %5s ", kSdGapName[g]);
+    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      double m = 0, se = 0;
+      sd_stat(mbe[0][g][sp], m, se);
+      std::printf("%.4f    ", m);
+    }
+    std::printf("\n");
+  }
+  std::printf("\n  ...and what is legible THERE (A's trace, and B itself)\n\n    gap   ");
+  for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-9s ", kSdSpaceName[sp]);
+  std::printf("\n");
+  for (uint32_t which = 0; which < 2; ++which)
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      std::printf("   %5s %s ", kSdGapName[g], which == 0 ? "A" : "B");
+      for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        double m = 0, se = 0;
+        sd_stat(which == 0 ? iabe[0][g][sp] : ibbe[0][g][sp], m, se);
+        std::printf("%.4f   ", m);
+      }
+      std::printf("\n");
+    }
+  {
+    double m = 0, se = 0;
+    std::vector<double> all;
+    for (uint32_t g = 0; g < kSdGapCount; ++g)
+      for (double x : nbe[0][g][kSdPrimary]) all.push_back(x);
+    sd_stat(all, m, se);
+    std::printf("\n    label-destroyed in this window, primary: %.4f +- %.4f\n", m, se);
+  }
+
+  // ---- §64: OVERWRITE OR ORDINARY DECAY? ----
+  //
+  // PAIRED BY CREATURE. Arm 0 and arm 2 share a seed, so rep r is the same
+  // creature hearing the same first word at the same time; only the second
+  // word differs. Pairing removes the between-creature variance that would
+  // otherwise swamp a difference this size.
+  std::printf("\n  OVERWRITE OR ORDINARY DECAY? — A's identity at the scoring window,\n"
+              "  B-OMITTED minus B-PRESENT, paired by creature.\n\n"
+              "    gap    %-9s %-9s %-9s\n",
+              kSdSpaceName[0], kSdSpaceName[kSdCoPrimary], kSdSpaceName[4]);
+  // Selected on the LOWER BOUND, and seeded from -inf rather than from zero:
+  // a zero seed would leave `0.0000 +- 0.0000` printed whenever no gap clears
+  // the line, which is a sentinel masquerading as a measurement. An SE of 0.00
+  // over n > 1 is a bug, not a result.
+  double ow_best = 0.0, ow_best_se = 0.0;
+  double ow_best_lb = -1e300;
+  uint32_t ow_g = 0;
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    std::printf("   %5s  ", kSdGapName[g]);
+    for (uint32_t k = 0; k < 3; ++k) {
+      const uint32_t sp = (k == 0) ? 0u : ((k == 1) ? kSdCoPrimary : 4u);
+      std::vector<double> d;
+      for (uint32_t r = 0; r < kSdReps; ++r) {
+        if (r >= res[0].size() || r >= res[2].size()) continue;
+        if (!res[0][r].gap[g].scored || !res[2][r].gap[g].scored) continue;
+        d.push_back(res[2][r].gap[g].ing_a[sp] - res[0][r].gap[g].ing_a[sp]);
+      }
+      double m = 0, se = 0;
+      sd_stat(d, m, se);
+      std::printf("%+.4f+-%.4f  ", m, se);
+      if (sp == kSdCoPrimary && (m - 2.0 * se) > ow_best_lb) {
+        ow_best_lb = m - 2.0 * se; ow_best = m; ow_best_se = se; ow_g = g;
+      }
+    }
+    std::printf("\n");
+  }
+  {
+    const char* v = (ow_best - 2.0 * ow_best_se > 0.0)
+                        ? "OVERWRITE — B destroys A's trace"
+                        : ((ow_best + 2.0 * ow_best_se < 0.0)
+                               ? "NOT PREDICTED — B-omitted reads LOWER; the account is void"
+                               : "ORDINARY DECAY — A dies on schedule, B is not the cause");
+    std::printf("\n    verdict (%s, best gap %sms): %+.4f +- %.4f  ->  %s\n",
+                kSdSpaceName[kSdCoPrimary], kSdGapName[ow_g], ow_best, ow_best_se, v);
+  }
+
   // ---- THE VERDICT, THREE-WAY ----
   std::printf("\n  THE VERDICT\n\n");
-  for (uint32_t which = 0; which < 2; ++which) {
-    const uint32_t sp = which == 0 ? kSdPrimary : kSdCoPrimary;
+  for (uint32_t which = 0; which < 4; ++which) {
+    const uint32_t sp = (which % 2 == 0) ? kSdPrimary : kSdCoPrimary;
+    const bool overlap = which < 2;   // §64's primary window first
     double best = 0.0, best_se = 0.0;
     uint32_t best_g = 0;
     for (uint32_t g = 0; g < kSdGapCount; ++g) {
       double m = 0, se = 0;
-      sd_stat(mile[0][g][sp], m, se);
+      sd_stat(overlap ? mbe[0][g][sp] : mile[0][g][sp], m, se);
       if (m > best) { best = m; best_se = se; best_g = g; }
     }
-    const char* label = which == 0 ? "PRIMARY  central" : "CO-PRIM  artic9 (MOTOR)";
-    const char* verdict = (best - 2.0 * best_se > 0.5 && best >= kSdBar)
+    const char* label =
+        overlap ? (which == 0 ? "§64 PRIMARY  central @ overlap"
+                              : "§64 CO-PRIM  artic9 @ overlap")
+                : (which == 2 ? "§63 window   central @ post-B"
+                              : "§63 window   artic9 @ post-B");
+    // THE BEST OF FOUR GAPS IS A SELECTED NUMBER, and the two branches are not
+    // symmetric about that. If the MAXIMUM fails the bar then every gap failed
+    // it, so NOT MET on the max is conservative and valid. MET on the max is
+    // not: selecting the largest of four and then testing it at 2 SE inflates
+    // the false-pass rate. The MET branch therefore carries a 2.5 SE lower
+    // bound, which is the Bonferroni-corrected two-sided level for four gaps.
+    //
+    // DISCLOSED: this tightening was made after a 300k smoke showed the primary
+    // might clear the bar, and before any scoreable run. It moves the rule in
+    // the SAFE direction only -- it can turn a MET into a NO VERDICT and can
+    // never turn a NOT MET into anything else. §63 shipped without it and did
+    // not need it, every verdict there being a refusal.
+    const char* verdict = (best - 2.5 * best_se > 0.5 && best >= kSdBar)
                               ? "MET"
                               : (best + 2.0 * best_se < kSdBar ? "NOT MET" : "NO VERDICT");
-    std::printf("    %-24s best gap %sms: %.4f +- %.4f   ->  %s\n",
+    std::printf("    %-31s best gap %sms: %.4f +- %.4f   ->  %s\n",
                 label, kSdGapName[best_g], best, best_se, verdict);
   }
   std::printf("\n    Read against the assembled oracle above, not against 1.000.\n"
