@@ -366,6 +366,22 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"hush", 900000, Expect::kRead, Tier::kLong,
+     "derived: §60. WHAT CLOSES THE LARYNX? §59a found every arm losing 55-80% of\n"
+     "  its probes between e7 and e8, keyed to ABSOLUTE ticks, with the PINNED arms\n"
+     "  -- whose index cannot collapse -- falling silent hardest. It read the cause\n"
+     "  off `probe_why == 1` and published \"no voiced frame at all\". But that flag\n"
+     "  is `probe_fn == 0`, and `probe_fn` counts frames that are BOTH voiced AND\n"
+     "  above kAmplitudeFloor: a gate that never opened and a voice too quiet to\n"
+     "  score are different mechanisms, and the published reading asserts one\n"
+     "  conjunct of two. The primary splits them -- q = QUIET / (SIL + QUIET) in e8,\n"
+     "  bounds 0.20 and 0.80 fixed before the run, 8.1 SE of binomial headroom.\n"
+     "  Secondary 1 asks whether the larynx threshold has reached its clamp, as\n"
+     "  `ipctx` measured at 3.4M on another protocol, and records up front that NOT\n"
+     "  SATURATED refutes only the saturation story and not the homeostat.\n"
+     "  INSTRUMENTATION ONLY: seven per-probe vectors and two pure reads. `ip_rate`\n"
+     "  is a refused knob and no arm here touches it. The free control hardcodes\n"
+     "  §59a's ledger and checks 160 integers, so any perturbation breaks the run."},
     {"repdrift", 900000, Expect::kRead, Tier::kLong,
      "derived: §59c. IS THE REP INDEX EXCHANGEABLE? `seed = dna.seed + r * 7919` is\n"
      "  injective, so creature r is an independent draw and the rep index must carry\n"
@@ -1693,6 +1709,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
   else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
   else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
+  else if (name == "hush") ok = run_hush(dna_blob, ticks, verbose);
   else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
   else if (name == "stpprobe") ok = run_stpprobe(dna_blob, ticks, verbose);

@@ -4,6 +4,7 @@
 // Shared scaffolding is in experiments_common.h.
 
 #include <cstring>
+#include <limits>  // §60: quiet_NaN, so a missing module is never averaged as 0
 
 #include "experiments_common.h"
 
@@ -877,6 +878,41 @@ bool run_m3probe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
 // the object. That is what separates "a teacher can shape this voice per
 // object" from "dense reward makes any voice more classifiable", and without it
 // the ceiling would be unreadable in the same way the milestone is.
+// §60. Mean adaptive threshold over a module, and the share of it sitting on
+// the clamp. `experiments_milestones.cpp` has a `mean_threshold` of its own;
+// this is a second, local one rather than a shared declaration because it
+// returns BOTH quantities from one pass and this file needs the pinned share
+// on every probe, where that one takes it through an out-parameter and a
+// separately supplied `t_max`. Dead neurons are included: their threshold does
+// not move, so they dilute the mean by a constant that is identical across
+// arms of the same creature.
+//
+// A module index of -1 yields NaN in both, never 0 — see `probe_thr`.
+struct HushPool {
+  double thr = std::numeric_limits<double>::quiet_NaN();
+  double pin = std::numeric_limits<double>::quiet_NaN();
+};
+static HushPool hush_pool(const aibaby::Network& net, int32_t module, float t_max) {
+  HushPool hp;
+  if (module < 0) return hp;
+  const aibaby::ModuleState& ms = net.module(uint32_t(module));
+  if (ms.count == 0) return hp;
+  double sum = 0.0;
+  uint32_t at_clamp = 0;
+  for (uint32_t n = ms.begin; n < ms.begin + ms.count; ++n) {
+    const double t = double(net.threshold(n));
+    sum += t;
+    // `t_max > 0` guards a genome that does not set the clamp: without it
+    // every neuron would read "pinned" against a ceiling of zero, which is a
+    // plausible-looking 1.00 for a module that is not pinned at all.
+    if (t_max > 0.0f && t >= double(t_max) * 0.999) ++at_clamp;
+  }
+  hp.thr = sum / double(ms.count);
+  hp.pin = t_max > 0.0f ? double(at_clamp) / double(ms.count)
+                        : std::numeric_limits<double>::quiet_NaN();
+  return hp;
+}
+
 struct G3Probe {
   bool ok = false;
   double vocal = 0;      // held-out accuracy on the probe voice — the ceiling
@@ -937,6 +973,42 @@ struct G3Probe {
   // `ctx_slot < 0`, and a probe can be dark AND silent, so the two are counted
   // independently rather than ordered into one enum.
   std::vector<char> probe_why;
+  // §60. WHY A SILENT PROBE WAS SILENT, index-aligned with `probe_why` and
+  // pushed on EVERY probe that reached the push site -- including the scorable
+  // ones -- for §58's reason: the drop rules belong to the scorer, and a vector
+  // that applied them would be one window's answer baked into the instrument.
+  //
+  // `probe_why == 1` is `probe_fn == 0`, and `probe_fn` counts frames that are
+  // BOTH voiced AND above `kAmplitudeFloor`. §59a's log read that conjunction
+  // as one term ("100.0% of e8's drops are probes with no voiced frame at
+  // all"). These three counters separate it:
+  //
+  //   probe_frames   vocal frames that advanced in the scored window
+  //   probe_vframes  of those, frames with voicing > 0.5
+  //   probe_lframes  of those, frames also above the floor (== probe_fn)
+  //
+  // so `lframes == 0 && vframes == 0` is a gate that never opened, and
+  // `lframes == 0 && vframes > 0` is a voice too quiet to score. `frames == 0`
+  // is a stalled vocal clock and must not occur; the scorer treats a non-zero
+  // count as voiding, not as a third reason.
+  std::vector<uint16_t> probe_frames, probe_vframes, probe_lframes;
+  std::vector<float> probe_amp;  // mean amplitude over `probe_frames`
+  // §60. THE LARYNX'S HOMEOSTATIC STATE while that probe was scored, which is
+  // what makes the silence answerable rather than merely countable. All four
+  // are PURE READS -- `Network::threshold` and `ModuleState::mean_rate` draw
+  // no random number and change no state, so no existing arm can move by them.
+  //
+  //   probe_thr   mean adaptive threshold over the kVocal module
+  //   probe_pin   share of that module at >= 0.999 * homeo.threshold_max
+  //   probe_rate  the module's one-second rate EMA, in Hz -- the quantity IP
+  //               is driving toward `target_rate_hz`
+  //   probe_ref   the same mean threshold over kAssociation, as the scale §51
+  //               used: a module the task does not drive, so a rise in BOTH is
+  //               a global regulator and a rise in one is a local one.
+  //
+  // NaN where the genome has no such module, never 0: a missing module
+  // averaged as a real threshold is `plausible-wrong-number` exactly.
+  std::vector<float> probe_thr, probe_pin, probe_rate, probe_ref;
   double ctx_present_frac = 0;   // scored ticks with the index live, over all of them
   uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
   // §50 clause 3. The same pairing over the TEACHING windows rather than the
@@ -1198,6 +1270,13 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       uint64_t(1000.0f / vcfg.frame_hz / s.dna.header().sim.dt_ms + 0.5f);
   const uint32_t plasticity = s.dna.header().sim.plasticity_interval_ticks;
 
+  // §60. Resolved once, before any tick. Module roles do not change over a
+  // session, and resolving them per probe would put a genome lookup inside the
+  // scored loop for no gain.
+  const int32_t hush_vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t hush_am = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  const float hush_tmax = s.dna.header().homeo.threshold_max;
+
   aibaby::Rng rng;
   rng.seed((s.dna.header().seed ^ seed_shift) + 0x6D3Bu);
   // §50. A PRIVATE stream for the label-destroyed arm's coin. Drawing it from
@@ -1370,6 +1449,24 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // "say less" the winning strategy.
   double probe_f1 = 0, probe_f2 = 0;
   uint32_t probe_fn = 0;
+  // §60. THE SEPARATING COUNTERS FOR THE SILENCE CLIFF. `probe_fn` above is a
+  // CONJUNCTION -- voiced AND above `kAmplitudeFloor` -- and `probe_why == 1`
+  // is exactly `probe_fn == 0`. §59a read that as one term and published
+  // "no voiced frame at all", which is the stronger of the two conjuncts and
+  // was never separately measured. These three say which one failed:
+  //
+  //   probe_wn   vocal frames that ADVANCED in the scored window
+  //   probe_vn   of those, frames with voicing > 0.5        (the gate opened)
+  //   probe_fn   of those, frames also above the floor       (and were loud)
+  //
+  // so a silent probe with `probe_vn == 0` is a gate that never opened, and
+  // one with `probe_vn > 0` is a voice too quiet to score. OUTER rather than
+  // lambda-local, for `probe_fn`'s own reason: the probe loop reads them after
+  // `observe` returns, and the lambda's `frames` / `voiced` do not survive it.
+  // Reset beside `probe_fn` on every call, so a stale count cannot be
+  // attributed to the next probe.
+  uint32_t probe_wn = 0, probe_vn = 0;
+  double probe_ampsum = 0.0;
 
   // Reads the vocal tract over a stretch of ticks, optionally with a word
   // playing and optionally with a toy in view, and returns the mean of the nine
@@ -1394,6 +1491,10 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     probe_f1 = 0;
     probe_f2 = 0;
     probe_fn = 0;
+    // §60. Cleared on the same line as `probe_fn` and for the same reason.
+    probe_wn = 0;
+    probe_vn = 0;
+    probe_ampsum = 0.0;
     // §49: the jittered draw happens EITHER WAY, so every later random number in
     // the session is identical between the held and jittered arms and the two
     // differ only in where the toy is. Skipping the draw would shift the stream
@@ -1690,6 +1791,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       amp += double(s.brain.voice().amplitude);
       voiced += s.brain.voice().voicing > aibaby::Scalar(0.5) ? 1.0 : 0.0;
       ++frames;
+      // §60. The SAME two quantities the two lines above accumulate, kept in
+      // outer counters that outlive this lambda. Deliberately written as a
+      // mirror of them rather than derived from them afterwards: the probe
+      // loop needs the raw COUNTS, and `frames`/`voiced` are returned only as
+      // a ratio, which cannot distinguish "no voiced frame" from "no frame".
+      ++probe_wn;
+      if (s.brain.voice().voicing > aibaby::Scalar(0.5)) ++probe_vn;
+      probe_ampsum += double(s.brain.voice().amplitude);
       // §51's secondary. Voiced frames only, and accumulated for every window --
       // the probe loop is what reads it, and it reads it right after the call.
       // Adding an unprinted accumulator touches no random stream and no existing
@@ -1994,6 +2103,35 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // `probe_g_ok == 1`, which §59a's bookkeeping gate checks per probe
       // rather than trusting this line.
       out.probe_why.push_back(why);
+      // §60. Index-aligned with all four above, and pushed here rather than
+      // under any drop rule so the scorer owns the drops. `probe_lframes` is
+      // `probe_fn` itself, so `why == 1` must be exactly `lframes == 0` --
+      // which §60's bookkeeping gate checks per probe rather than assuming it
+      // from this line's adjacency to the one above.
+      //
+      // Counts are clamped into uint16 rather than wrapped. A probe's scored
+      // window holds a few hundred vocal frames, so the clamp is unreachable;
+      // wrapping would turn an impossible count into a small plausible one.
+      auto cap16 = [](uint32_t v) -> uint16_t {
+        return v > 65535u ? uint16_t(65535) : uint16_t(v);
+      };
+      out.probe_frames.push_back(cap16(probe_wn));
+      out.probe_vframes.push_back(cap16(probe_vn));
+      out.probe_lframes.push_back(cap16(probe_fn));
+      out.probe_amp.push_back(probe_wn ? float(probe_ampsum / double(probe_wn))
+                                       : std::numeric_limits<float>::quiet_NaN());
+      // The regulator's state at the END of this probe's scored window. The
+      // rate EMA is a one-second window and the scored part of a probe is
+      // about that long, so these are its state WHILE the probe ran, which is
+      // the same reasoning the `pool()` calls above are placed on.
+      const HushPool hv = hush_pool(s.brain.network(), hush_vm, hush_tmax);
+      const HushPool ha = hush_pool(s.brain.network(), hush_am, hush_tmax);
+      out.probe_thr.push_back(float(hv.thr));
+      out.probe_pin.push_back(float(hv.pin));
+      out.probe_ref.push_back(float(ha.thr));
+      out.probe_rate.push_back(
+          hush_vm >= 0 ? float(s.brain.network().module(uint32_t(hush_vm)).mean_rate)
+                       : std::numeric_limits<float>::quiet_NaN());
       // §53's cells. A probe whose index never went live, or that produced no
       // voiced frame, enters NEITHER -- the same drop rule the columns above
       // use, for `vocallearn`'s reason: a silent probe is missing data and not a
@@ -17213,6 +17351,563 @@ bool run_repdrift(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               rlo, rhi - 1u);
   std::printf("  VERDICT: %s\n", rd_name(V));
   std::printf("  %s\n", fatal ? "ONE OR MORE GATES FAILED" : "All gates passed.");
+  return !fatal;
+}
+
+// ===========================================================================
+// §60. WHAT CLOSES THE LARYNX? THE SILENCE CLIFF.
+//
+// §59a found every arm losing 55-80% of its probes between e7 and e8, keyed to
+// ABSOLUTE TICKS (7.4% at 450k against 84% at 900k), with the pinned arms --
+// whose index cannot collapse -- falling silent hardest. It read the cause off
+// `probe_why == 1` and reported "100.0% of e8's drops are probes with no voiced
+// frame at all".
+//
+// THAT READING ASSERTS ONE CONJUNCT OF TWO. `probe_why == 1` is `probe_fn == 0`,
+// and `probe_fn` counts frames that are BOTH voiced AND above `kAmplitudeFloor`.
+// A gate that never opened and a voice too quiet to score are different
+// mechanisms with different successors, and nothing has separated them. The
+// counters that do were already being accumulated in the probe loop and were
+// merely not pushed; §60 pushes them, and reads the larynx's homeostat beside
+// them.
+//
+// INSTRUMENTATION ONLY. No mechanism, no genome field, no RNG draw: seven
+// index-aligned per-probe vectors and two pure reads (`Network::threshold`,
+// `ModuleState::mean_rate`). The free control below is what proves that claim
+// rather than asserting it.
+// ===========================================================================
+
+constexpr uint32_t kHuReps = 36u;  // per arm, all four -- §59a ran 36/36/36/12
+constexpr uint32_t kHuArms = 4u;
+
+// §60's vacuity gate: an arm with fewer than this many silent probes in the
+// scored window reads NO VERDICT rather than a share computed on a handful.
+// Registered at 30. §59a's ledger says the e8 counts are 182-479, so this
+// should not fire -- which is why the count is printed either way.
+constexpr uint32_t kHuMinSilent = 30u;
+
+// The registered classifier's bounds, fixed in the pre-registration.
+constexpr double kHuVoicing = 0.20;    // q <= this -> VOICING
+constexpr double kHuAmplitude = 0.80;  // q >= this -> AMPLITUDE
+
+enum HuVerdict { kHuVoice = 0, kHuAmp, kHuMixed, kHuNoVerdict };
+
+// THREE-WAY, and the fourth value is the vacuity gate rather than a verdict.
+// `n` is the DENOMINATOR the share was computed on, so the gate measures the
+// identification rather than assuming it (`vacuity-gate-cannot-guard-a-
+// rejection`).
+static HuVerdict hu_classify(double q, uint32_t n) {
+  if (n < kHuMinSilent) return kHuNoVerdict;
+  if (!(q >= 0.0) || !(q <= 1.0)) return kHuNoVerdict;  // NaN is not a verdict
+  if (q <= kHuVoicing) return kHuVoice;
+  if (q >= kHuAmplitude) return kHuAmp;
+  return kHuMixed;
+}
+
+static const char* hu_verdict_name(HuVerdict v) {
+  switch (v) {
+    case kHuVoice: return "VOICING   -- the gate never opened";
+    case kHuAmp: return "AMPLITUDE -- it opened on a voice too quiet to score";
+    case kHuMixed: return "MIXED     -- e8 holds BOTH failures";
+    default: return "NO VERDICT -- too few silent probes to identify a share";
+  }
+}
+
+// §59a's PUBLISHED LEDGER, transcribed from `results/n59a-slotmat-900k.log` and
+// hardcoded so the free control is an equality and not a re-derivation. Arm
+// order matches `arms[]` below. `arch` is how many reps §59a ran on that arm,
+// which is the subset this run must reproduce; the seed is
+// `header().seed + r * 7919` and `parallel_reps` seeds nothing by job index, so
+// a larger rep count here leaves those creatures bit-identical.
+struct HuArch {
+  uint32_t arch;
+  uint32_t probes[kSmE], kept[kSmE], dark[kSmE], nov[kSmE], badf[kSmE];
+};
+static const HuArch kHuArch[kHuArms] = {
+    // T1.RET
+    {36u,
+     {612, 648, 612, 648, 648, 612, 648, 648},
+     {601, 590, 561, 577, 559, 522, 545, 245},
+     {0, 0, 0, 0, 0, 0, 0, 0},
+     {11, 58, 51, 71, 89, 90, 103, 403},
+     {0, 0, 0, 0, 0, 0, 0, 0}},
+    // T1.RET.D
+    {36u,
+     {612, 648, 612, 648, 648, 612, 648, 648},
+     {608, 589, 542, 566, 516, 476, 475, 240},
+     {0, 0, 0, 0, 0, 0, 0, 0},
+     {4, 59, 70, 82, 132, 136, 173, 408},
+     {0, 0, 0, 0, 0, 0, 0, 0}},
+    // T1.ORACLE.D
+    {36u,
+     {612, 648, 612, 648, 648, 612, 648, 648},
+     {611, 621, 552, 534, 510, 444, 473, 169},
+     {0, 0, 0, 0, 0, 0, 0, 0},
+     {1, 27, 60, 114, 138, 168, 175, 479},
+     {0, 0, 0, 0, 0, 0, 0, 0}},
+    // T1.ORACLE -- §59a ran TWELVE reps on this arm, so the control covers
+    // r 0..11 only and the remaining 24 are new creatures.
+    {12u,
+     {204, 216, 204, 216, 216, 204, 216, 216},
+     {202, 215, 192, 200, 194, 170, 174, 34},
+     {0, 0, 0, 0, 0, 0, 0, 0},
+     {2, 1, 12, 16, 22, 34, 42, 182},
+     {0, 0, 0, 0, 0, 0, 0, 0}},
+};
+
+bool run_hush(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  struct Arm {
+    const char* name;
+    int pin, pairing;
+    const char* what;
+  };
+  const Arm arms[kHuArms] = {
+      {"T1.RET", 0, 0, "derived + paired"},
+      {"T1.RET.D", 0, 1, "derived + drawn"},
+      {"T1.ORACLE.D", 1, 1, "pinned  + drawn"},
+      {"T1.ORACLE", 1, 0, "pinned  + paired -- the index CANNOT collapse here"},
+  };
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kHuArms; ++a)
+    for (uint32_t r = 0; r < kHuReps; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §60. The e7->e8 silence cliff. `probe_why == 1` is\n"
+              "                    `probe_fn == 0`, and `probe_fn` counts frames that are\n"
+              "                    BOTH voiced AND above kAmplitudeFloor (%.2f). §59a read\n"
+              "                    that conjunction as one term and published \"no voiced\n"
+              "                    frame at all\". WHICH CONJUNCT FAILS?\n",
+              double(kAmplitudeFloor));
+  std::printf("  the primary       q = QUIET / (SIL + QUIET) in e8, where SIL is a probe\n"
+              "                    with no voiced frame and QUIET one with voiced frames\n"
+              "                    that were all too soft. q <= %.2f VOICING, q >= %.2f\n"
+              "                    AMPLITUDE, between MIXED. Bounds fixed before the run.\n",
+              kHuVoicing, kHuAmplitude);
+  std::printf("  not power-bound   at §59a's smallest e8 count (n 182) a share's binomial\n"
+              "                    SE is at worst 0.0371, so the bounds sit 8.1 SE from\n"
+              "                    0.5 and MIXED fires below 1e-6 unless the quantity IS a\n"
+              "                    mixture. The bands are wide because they can afford to\n"
+              "                    be, not as a hedge.\n");
+  std::printf("  secondary 1       is the regulator out of range? pinned share of the\n"
+              "                    larynx at >= 0.999 x threshold_max (%.2f) in e8.\n"
+              "                    `ipctx` read 0.31 at gain 0.10 over 3.4M on another\n"
+              "                    protocol. >= 0.05 SATURATED, < 0.05 NOT SATURATED.\n",
+              double(dna.header().homeo.threshold_max));
+  std::printf("  AND ITS LIMIT     registered before the run: NOT SATURATED does NOT\n"
+              "                    refute the homeostat. A threshold that rises without\n"
+              "                    reaching its clamp can close the voicing gate on its\n"
+              "                    own; only the SATURATION story dies.\n");
+  std::printf("  the free control  §59a's ledger is hardcoded here. 3 arms x 8 eighths x 5\n"
+              "                    integers on r 0..35, plus T1.ORACLE on r 0..11 -- 160\n"
+              "                    integers that ANY perturbation of the session breaks.\n");
+  std::printf("  measures only     `ip_rate` is a REFUSED knob (the arm that answers 2.7x\n"
+              "                    more trials learns 6x less). No arm here touches it.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms x %u reps\n",
+              double(ticks) * dt / 1000.0, kJobs, kHuArms, kHuReps);
+  instrument("hush", dna.header().seed ^ 0x60A0u, kJobs, "sessions");
+  // NOT `disclose_index_source`, and the 60k plumbing smoke is why. That helper
+  // reads the BASE genome, which carries `context_source = 0`, while every job
+  // below overrides the header to 5 before the session starts -- so it printed
+  // "INDEX SOURCE 0, inherited from the genome and NOT set by hush", which is
+  // plausible, authoritative and wrong about the run it heads. `slotexp` and
+  // `slotmat` omit it for the same reason. The override is stated instead.
+  std::printf("  INDEX SOURCE      5 (vision-derived), set PER JOB below together with\n"
+              "                    context_slots = %u and ctx_proto_gate = 2. The base\n"
+              "                    genome's own `context_source` is %u and is NOT what\n"
+              "                    these arms run.\n",
+              kObjects, unsigned(dna.header().exploration.context_source));
+
+  struct Row {
+    bool ok = false;
+    uint32_t probes = 0;
+    // §59a's ledger columns, recomputed so the control is an equality.
+    uint32_t pn[kSmE] = {}, kept[kSmE] = {}, dark[kSmE] = {};
+    uint32_t nov[kSmE] = {}, badf[kSmE] = {};
+    // §60's split of `nov`.
+    uint32_t sil[kSmE] = {}, quiet[kSmE] = {}, noframe[kSmE] = {};
+    // The regulator and the voice, summed over the eighth's probes with their
+    // own counts, so the host can pool as a ratio of sums OR per creature.
+    double thr[kSmE] = {}, pin[kSmE] = {}, rate[kSmE] = {}, ref[kSmE] = {};
+    double vfrac[kSmE] = {}, amp[kSmE] = {};
+    uint32_t sn[kSmE] = {};
+    uint32_t badlen = 0;  // vectors that disagreed in length: a broken run
+    uint32_t badwhy = 0;  // probes where `why == 1` != `lframes == 0`
+  };
+
+  const std::vector<Row> rows = parallel_reps<Row>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Row row;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    // IDENTICAL to §53's, §58's, §59a's and §59b's call, argument for argument.
+    // This is what makes the free control an equality rather than a comparison
+    // of two similar things.
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return row;
+    row.ok = true;
+    row.probes = run.probes;
+
+    // §59a's np chain EXACTLY, so the eighth boundaries are its boundaries.
+    size_t np = std::min(run.ctx_label.size(), run.ctx_slot.size());
+    np = std::min(np, std::min(run.probe_g.size(), run.probe_g_ok.size()));
+    np = std::min(np, run.probe_why.size());
+    // §60's vectors must already be that long. If they are not, the push site
+    // is wrong and every column below is mis-paired, so this is counted and
+    // fails the run rather than being silently absorbed by a `min`.
+    if (run.probe_frames.size() != run.probe_why.size() ||
+        run.probe_vframes.size() != run.probe_why.size() ||
+        run.probe_lframes.size() != run.probe_why.size() ||
+        run.probe_amp.size() != run.probe_why.size() ||
+        run.probe_thr.size() != run.probe_why.size() ||
+        run.probe_pin.size() != run.probe_why.size() ||
+        run.probe_rate.size() != run.probe_why.size() ||
+        run.probe_ref.size() != run.probe_why.size()) {
+      ++row.badlen;
+      return row;
+    }
+
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      const size_t lo = np * b / kSmE, hi = np * (b + 1) / kSmE;
+      for (size_t k = lo; k < hi; ++k) {
+        ++row.pn[b];
+        const int sl = run.ctx_slot[k];
+        const int o = run.ctx_label[k];
+        const bool ok = run.probe_g_ok[k] != 0;
+        const bool is_dark = sl < 0 || sl >= int(aibaby::kMaxContextSlots);
+        if (is_dark) ++row.dark[b];
+        if (run.probe_why[k] == 1) ++row.nov[b];
+        if (run.probe_why[k] == 2) ++row.badf[b];
+        if (!is_dark && ok && o >= 0 && o <= 1) ++row.kept[b];
+
+        // §60's split. `why == 1` must be exactly `lframes == 0`; checked here
+        // per probe rather than inferred from the push site's adjacency.
+        const uint32_t wn = run.probe_frames[k];
+        const uint32_t vn = run.probe_vframes[k];
+        const uint32_t ln = run.probe_lframes[k];
+        if ((run.probe_why[k] == 1) != (ln == 0u)) ++row.badwhy;
+        if (ln == 0u) {
+          if (wn == 0u) ++row.noframe[b];
+          else if (vn == 0u) ++row.sil[b];
+          else ++row.quiet[b];
+        }
+
+        // The regulator, over EVERY probe in the eighth -- scorable or not.
+        // Conditioning it on a scorable probe would measure the threshold only
+        // where the creature happened to vocalise, which is the confound the
+        // index sampling site is placed above the vocal-frame guard to avoid.
+        const double th = double(run.probe_thr[k]);
+        if (th == th) {  // NaN check: a genome with no such module
+          row.thr[b] += th;
+          row.pin[b] += double(run.probe_pin[k]);
+          row.rate[b] += double(run.probe_rate[k]);
+          row.ref[b] += double(run.probe_ref[k]);
+          row.amp[b] += wn ? double(run.probe_amp[k]) : 0.0;
+          row.vfrac[b] += wn ? double(vn) / double(wn) : 0.0;
+          ++row.sn[b];
+        }
+      }
+    }
+    return row;
+  });
+
+  std::vector<std::vector<uint32_t>> live(kHuArms);
+  for (uint32_t i = 0; i < kJobs; ++i)
+    if (rows[i].ok) live[job_arm[i]].push_back(job_rep[i]);
+
+  std::printf("\n  LIVENESS. completed sessions per arm:");
+  for (uint32_t a = 0; a < kHuArms; ++a)
+    std::printf("  %s %zu/%u", arms[a].name, live[a].size(), kHuReps);
+  std::printf("\n");
+
+  bool fatal = false;
+
+  // --- G0: the instrument did not perturb the session ----------------------
+  // A REAL gate with a REAL failure mode: the reads added for §60 are claimed
+  // to be pure, and this is what tests the claim. 160 integers.
+  std::printf("\n  G0 -- THE FREE CONTROL. §59a's published ledger, reproduced on the\n"
+              "  overlapping creatures. Any perturbation of the session by §60's\n"
+              "  instrumentation breaks it.\n");
+  {
+    uint32_t checked = 0, bad = 0;
+    for (uint32_t a = 0; a < kHuArms; ++a) {
+      const uint32_t arch = kHuArch[a].arch;
+      uint32_t pn[kSmE] = {}, kp[kSmE] = {}, dk[kSmE] = {}, nv[kSmE] = {}, bf[kSmE] = {};
+      uint32_t have = 0;
+      for (uint32_t i = 0; i < kJobs; ++i) {
+        if (job_arm[i] != a || job_rep[i] >= arch || !rows[i].ok) continue;
+        ++have;
+        for (uint32_t b = 0; b < kSmE; ++b) {
+          pn[b] += rows[i].pn[b];
+          kp[b] += rows[i].kept[b];
+          dk[b] += rows[i].dark[b];
+          nv[b] += rows[i].nov[b];
+          bf[b] += rows[i].badf[b];
+        }
+      }
+      // A missing creature changes the sums, so an incomplete subset cannot be
+      // compared and says so rather than reporting a mismatch it caused.
+      if (have != arch) {
+        std::printf("    %-12s r 0..%-3u  *** %u of %u creatures present -- NOT COMPARABLE ***\n",
+                    arms[a].name, arch - 1, have, arch);
+        fatal = true;
+        continue;
+      }
+      uint32_t armbad = 0;
+      for (uint32_t b = 0; b < kSmE; ++b) {
+        checked += 5;
+        if (pn[b] != kHuArch[a].probes[b]) ++armbad;
+        if (kp[b] != kHuArch[a].kept[b]) ++armbad;
+        if (dk[b] != kHuArch[a].dark[b]) ++armbad;
+        if (nv[b] != kHuArch[a].nov[b]) ++armbad;
+        if (bf[b] != kHuArch[a].badf[b]) ++armbad;
+      }
+      bad += armbad;
+      std::printf("    %-12s r 0..%-3u  %u integers  %s\n", arms[a].name, arch - 1,
+                  5u * kSmE, armbad == 0 ? "PASS" : "*** DIFFERS ***");
+      if (armbad != 0) {
+        std::printf("      got  nov  ");
+        for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", nv[b]);
+        std::printf("\n      want nov  ");
+        for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", kHuArch[a].nov[b]);
+        std::printf("\n      got  kept ");
+        for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", kp[b]);
+        std::printf("\n      want kept ");
+        for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", kHuArch[a].kept[b]);
+        std::printf("\n");
+      }
+    }
+    std::printf("    TOTAL  %u integers checked, %u differ   %s\n", checked, bad,
+                bad == 0 ? "PASS" : "*** FAIL ***");
+    if (bad != 0) fatal = true;
+  }
+
+  // --- G1: the split is a partition of `nov`, and the vectors line up ------
+  std::printf("\n  G1 -- BOOKKEEPING. `why == 1` must be exactly `lframes == 0`, and\n"
+              "  SIL + QUIET + NOFRAME must equal `nov` in every cell.\n");
+  {
+    uint32_t badlen = 0, badwhy = 0, badsum = 0, cells = 0;
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      if (!rows[i].ok && rows[i].badlen) { ++badlen; continue; }
+      if (!rows[i].ok) continue;
+      badwhy += rows[i].badwhy;
+      for (uint32_t b = 0; b < kSmE; ++b) {
+        ++cells;
+        if (rows[i].sil[b] + rows[i].quiet[b] + rows[i].noframe[b] != rows[i].nov[b])
+          ++badsum;
+      }
+    }
+    std::printf("    vectors of disagreeing length        %u sessions   %s\n", badlen,
+                badlen == 0 ? "PASS" : "*** FAIL ***");
+    std::printf("    probes where why==1 != lframes==0    %u            %s\n", badwhy,
+                badwhy == 0 ? "PASS" : "*** FAIL ***");
+    std::printf("    cells where the split != nov         %u of %u     %s\n", badsum, cells,
+                badsum == 0 ? "PASS" : "*** FAIL ***");
+    if (badlen || badwhy || badsum) fatal = true;
+  }
+
+  // --- the ledger, with §60's split ----------------------------------------
+  // Pooled per arm per eighth. `SIL` and `QUIET` are the two conjuncts of
+  // `probe_fn == 0`; `NOFR` is the stalled-clock self-test and must stay 0.
+  std::printf("\n  THE LEDGER, with `nov` SPLIT. `SIL` = no voiced frame (the gate never\n"
+              "  opened); `QUIET` = voiced frames, all below the amplitude floor; `NOFR`\n"
+              "  = no vocal frame advanced at all, which must be 0.\n");
+  uint32_t pool_sil[kHuArms][kSmE] = {}, pool_quiet[kHuArms][kSmE] = {};
+  uint32_t pool_nofr[kHuArms][kSmE] = {}, pool_nov[kHuArms][kSmE] = {};
+  uint32_t pool_pn[kHuArms][kSmE] = {};
+  double pool_thr[kHuArms][kSmE] = {}, pool_pin[kHuArms][kSmE] = {};
+  double pool_rate[kHuArms][kSmE] = {}, pool_ref[kHuArms][kSmE] = {};
+  double pool_vf[kHuArms][kSmE] = {}, pool_amp[kHuArms][kSmE] = {};
+  uint32_t pool_sn[kHuArms][kSmE] = {};
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    if (!rows[i].ok) continue;
+    const uint32_t a = job_arm[i];
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      pool_sil[a][b] += rows[i].sil[b];
+      pool_quiet[a][b] += rows[i].quiet[b];
+      pool_nofr[a][b] += rows[i].noframe[b];
+      pool_nov[a][b] += rows[i].nov[b];
+      pool_pn[a][b] += rows[i].pn[b];
+      pool_thr[a][b] += rows[i].thr[b];
+      pool_pin[a][b] += rows[i].pin[b];
+      pool_rate[a][b] += rows[i].rate[b];
+      pool_ref[a][b] += rows[i].ref[b];
+      pool_vf[a][b] += rows[i].vfrac[b];
+      pool_amp[a][b] += rows[i].amp[b];
+      pool_sn[a][b] += rows[i].sn[b];
+    }
+  }
+  for (uint32_t a = 0; a < kHuArms; ++a) {
+    std::printf("    %-12s", arms[a].name);
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf("   e%u", b + 1);
+    std::printf("\n                 probes");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", pool_pn[a][b]);
+    std::printf("\n                 nov   ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", pool_nov[a][b]);
+    std::printf("\n                 SIL   ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", pool_sil[a][b]);
+    std::printf("\n                 QUIET ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", pool_quiet[a][b]);
+    std::printf("\n                 NOFR  ");
+    for (uint32_t b = 0; b < kSmE; ++b) std::printf(" %5u", pool_nofr[a][b]);
+    std::printf("\n");
+  }
+
+  // NOFRAME is a self-test, not a third reason. A non-zero count means the
+  // vocal clock stalled and the primary is reporting on something other than
+  // the voicing gate, so it VOIDS rather than being folded in.
+  {
+    uint32_t nofr = 0;
+    for (uint32_t a = 0; a < kHuArms; ++a)
+      for (uint32_t b = 0; b < kSmE; ++b) nofr += pool_nofr[a][b];
+    std::printf("\n    NOFRAME over the whole run   %u   %s\n", nofr,
+                nofr == 0 ? "PASS -- the vocal clock never stalled"
+                          : "*** VOIDS THE PRIMARY: the clock stalled ***");
+    if (nofr != 0) fatal = true;
+  }
+
+  // --- THE PRIMARY ---------------------------------------------------------
+  // Pooled over probes within an arm, AND per creature with a jackknife SE,
+  // because probes within a creature are not independent and a pooled share is
+  // dominated by the creatures with the most silent probes (`mean-of-ratios`).
+  auto share_at = [&](uint32_t a, uint32_t lo, uint32_t hi, uint32_t* n_out) {
+    uint32_t s = 0, q = 0;
+    for (uint32_t b = lo; b < hi; ++b) { s += pool_sil[a][b]; q += pool_quiet[a][b]; }
+    if (n_out) *n_out = s + q;
+    return (s + q) ? double(q) / double(s + q) : std::numeric_limits<double>::quiet_NaN();
+  };
+
+  std::printf("\n  THE PRIMARY. q = QUIET / (SIL + QUIET) in e8.\n");
+  std::printf("    arm           SIL   QUIET       n        q     verdict\n");
+  HuVerdict varm[kHuArms];
+  for (uint32_t a = 0; a < kHuArms; ++a) {
+    uint32_t n = 0;
+    const double q = share_at(a, kSmE - 1, kSmE, &n);
+    varm[a] = hu_classify(q, n);
+    std::printf("    %-12s %5u   %5u   %5u   %6.4f   %s\n", arms[a].name,
+                pool_sil[a][kSmE - 1], pool_quiet[a][kSmE - 1], n, q,
+                hu_verdict_name(varm[a]));
+  }
+  {
+    uint32_t s = 0, q = 0;
+    for (uint32_t a = 0; a < kHuArms; ++a) {
+      s += pool_sil[a][kSmE - 1];
+      q += pool_quiet[a][kSmE - 1];
+    }
+    const uint32_t n = s + q;
+    const double qq = n ? double(q) / double(n) : std::numeric_limits<double>::quiet_NaN();
+    const double se = n ? std::sqrt(qq * (1.0 - qq) / double(n)) : 0.0;
+    std::printf("    %-12s %5u   %5u   %5u   %6.4f +- %.4f\n", "POOLED", s, q, n, qq, se);
+    std::printf("\n    POOLED VERDICT   %s\n", hu_verdict_name(hu_classify(qq, n)));
+  }
+
+  // --- the same question of the control ------------------------------------
+  // Early silence is rare but not absent. If its composition matches e8's, the
+  // cliff is more of the same; if it differs, e8 is a distinct failure mode.
+  // Reported either way; NO verdict rides on it.
+  std::printf("\n  THE SAME QUESTION OF e1-e2, where silence is rare. A composition that\n"
+              "  MATCHES e8 means the cliff is more of the same; one that DIFFERS means\n"
+              "  e8 is a distinct failure. No verdict rides on this row.\n");
+  std::printf("    arm           SIL   QUIET       n        q     reading\n");
+  for (uint32_t a = 0; a < kHuArms; ++a) {
+    uint32_t n = 0;
+    const double q = share_at(a, 0, 2, &n);
+    uint32_t s2 = 0;
+    for (uint32_t b = 0; b < 2; ++b) s2 += pool_sil[a][b];
+    uint32_t q2 = 0;
+    for (uint32_t b = 0; b < 2; ++b) q2 += pool_quiet[a][b];
+    const HuVerdict v = hu_classify(q, n);
+    std::printf("    %-12s %5u   %5u   %5u   %6.4f   %s\n", arms[a].name, s2, q2, n, q,
+                v == kHuNoVerdict ? "NO VERDICT (registered: T1.ORACLE has ~3 here)"
+                                  : hu_verdict_name(v));
+  }
+
+  // --- SECONDARY 1: is the regulator out of range? -------------------------
+  std::printf("\n  SECONDARY 1. THE LARYNX'S HOMEOSTAT. `thr` is the mean adaptive\n"
+              "  threshold over the kVocal module, `pin` the share at >= 0.999 x\n"
+              "  threshold_max, `rate` the module's 1 s rate EMA in Hz against its\n"
+              "  target, `ref` the same threshold over kAssociation as the scale.\n");
+  for (uint32_t a = 0; a < kHuArms; ++a) {
+    std::printf("    %-12s   e1      e2      e3      e4      e5      e6      e7      e8\n",
+                arms[a].name);
+    const char* lbl[6] = {"thr  ", "pin  ", "rate ", "ref  ", "vfrac", "amp  "};
+    for (uint32_t which = 0; which < 6; ++which) {
+      std::printf("                 %s", lbl[which]);
+      for (uint32_t b = 0; b < kSmE; ++b) {
+        const double n = double(pool_sn[a][b]);
+        const double v = n == 0.0 ? std::numeric_limits<double>::quiet_NaN()
+                         : which == 0 ? pool_thr[a][b] / n
+                         : which == 1 ? pool_pin[a][b] / n
+                         : which == 2 ? pool_rate[a][b] / n
+                         : which == 3 ? pool_ref[a][b] / n
+                         : which == 4 ? pool_vf[a][b] / n
+                                      : pool_amp[a][b] / n;
+        std::printf(" %7.4f", v);
+      }
+      std::printf("\n");
+    }
+  }
+  {
+    const int32_t vm = dna.module_with_role(aibaby::ModuleRole::kVocal);
+    std::printf("\n    larynx target_rate_hz   %.2f   threshold_max   %.2f   ip_rate   %g\n",
+                vm >= 0 ? double(dna.module(uint32_t(vm)).target_rate_hz) : 0.0,
+                double(dna.header().homeo.threshold_max),
+                double(dna.header().homeo.ip_rate));
+    double worst = 0.0;
+    for (uint32_t a = 0; a < kHuArms; ++a) {
+      const double n = double(pool_sn[a][kSmE - 1]);
+      if (n > 0.0) worst = std::max(worst, pool_pin[a][kSmE - 1] / n);
+    }
+    std::printf("    pinned share at e8, largest over the arms   %.4f\n", worst);
+    std::printf("    SECONDARY 1 READS   %s\n",
+                worst >= 0.05 ? "SATURATED -- `ipctx`'s shape, at this budget"
+                              : "NOT SATURATED -- the clamp is not the gate");
+    std::printf("    AND ITS REGISTERED LIMIT: NOT SATURATED does NOT refute the\n"
+                "    homeostat. A sub-clamp rise can close the voicing gate on its own.\n");
+  }
+
+  // --- the per-creature cells, so no later window needs new compute --------
+  // §59c's `repdrift` dumped only a whole-session scalar, so its 190 fresh
+  // creatures cannot be re-windowed offline. §59a's `MAT` had it right.
+  std::printf("\n  THE MATRIX. One line per creature-eighth, prefixed `HMAT` so it greps\n"
+              "  clean. Every cell this section measures is here, so ANY later window is\n"
+              "  re-derivable offline without running this again.\n");
+  std::printf("  HMAT arm rep e  probes kept dark nov sil quiet nofr  sn thr pin rate ref vfrac amp\n");
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    if (!rows[i].ok) continue;
+    for (uint32_t b = 0; b < kSmE; ++b) {
+      const double n = double(rows[i].sn[b]);
+      std::printf("  HMAT %-12s %3u %u  %4u %4u %4u %4u %4u %5u %4u  %4u"
+                  " %.6g %.6g %.6g %.6g %.6g %.6g\n",
+                  arms[job_arm[i]].name, job_rep[i], b + 1, rows[i].pn[b], rows[i].kept[b],
+                  rows[i].dark[b], rows[i].nov[b], rows[i].sil[b], rows[i].quiet[b],
+                  rows[i].noframe[b], rows[i].sn[b],
+                  n ? rows[i].thr[b] / n : 0.0, n ? rows[i].pin[b] / n : 0.0,
+                  n ? rows[i].rate[b] / n : 0.0, n ? rows[i].ref[b] / n : 0.0,
+                  n ? rows[i].vfrac[b] / n : 0.0, n ? rows[i].amp[b] / n : 0.0);
+    }
+  }
+
+  std::printf("\n  %s\n", fatal ? "ONE OR MORE GATES FAILED -- nothing above is read."
+                                : "All gates passed.");
   return !fatal;
 }
 
