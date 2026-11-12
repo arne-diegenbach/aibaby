@@ -12790,6 +12790,13 @@ rate that stays flat. **A registered confirmation is still worth one run** —
 the cheapest is a budget arm, since the sleep account predicts the cliff moves
 with brain-wide firing rate and not with the eighth index.
 
+### THE GATES
+
+    identity, `vframes == count(awake && g1 > gate)`   0 bad of 20304   PASS
+    the sleep-blind form first registered              1291 of 20304    6.36%
+    vectors of disagreeing length                      0 sessions       PASS
+    determinism, `--experiment verify`   hash ad96f882becbee92          PASS
+
 ### DISCLOSED
 
 - **My pre-registered arithmetic was refuted by its own test.** The 4.2 Hz gate
