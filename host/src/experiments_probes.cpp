@@ -1064,6 +1064,19 @@ struct G3Probe {
   std::vector<float> probe_g1, probe_g1sd, probe_g8;
   std::vector<uint16_t> probe_g1n;
   std::vector<float> probe_g1thr, probe_g1pin, probe_g1rate, probe_g1marg;
+  // §62 SECOND PASS. THE SLEEP GATE. `VocalDecoder::update` shuts the glottis
+  // outright when the creature is asleep, without touching `group_activity_`,
+  // so the real identity is `vframes == count(awake && g1 > gate)`.
+  //
+  //   probe_awake   frames of this probe on which the creature was AWAKE
+  //   probe_g1aw    of those, frames above the gate -- the corrected identity
+  //   probe_fat     mean `drives().fatigue` over the probe's frames
+  //
+  // Fatigue rises as `fatigue_rate * dt * activity`, so sleep onset is
+  // ACTIVITY-dependent and therefore creature-dependent -- which is what a
+  // cliff that no larynx quantity predicts would look like.
+  std::vector<uint16_t> probe_awake, probe_g1aw;
+  std::vector<float> probe_fat;
   double ctx_present_frac = 0;   // scored ticks with the index live, over all of them
   uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
   // §50 clause 3. The same pairing over the TEACHING windows rather than the
@@ -1537,6 +1550,19 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // which is §62's identity gate.
   double probe_g1sum = 0.0, probe_g1sq = 0.0, probe_g8sum = 0.0;
   uint32_t probe_g1n = 0;
+  // §62, SECOND PASS. The first pass registered `vframes == count(g1 > thr)`
+  // as an exact identity and it FAILED on 1291 of 20304 probes at 900k while
+  // passing on all 2880 at 150k. The cause is in `VocalDecoder::update`:
+  //
+  //     if (!awake) { params_.voicing = kZero; ...; ++frame_; return; }
+  //
+  // **Asleep the glottis is shut**, `group_activity_` is NOT updated, and the
+  // frame counter still advances -- so on a sleeping frame `voicing` is 0
+  // whatever g1 says. The true identity is therefore
+  // `vframes == count(awake && g1 > thr)`, and the gate that caught this is
+  // the reason the first run was declared void rather than read.
+  uint32_t probe_awn = 0, probe_g1aw = 0;
+  double probe_fatsum = 0.0;
 
   // Reads the vocal tract over a stretch of ticks, optionally with a word
   // playing and optionally with a toy in view, and returns the mean of the nine
@@ -1570,6 +1596,9 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     probe_g1sq = 0.0;
     probe_g8sum = 0.0;
     probe_g1n = 0;
+    probe_awn = 0;
+    probe_g1aw = 0;
+    probe_fatsum = 0.0;
     // §49: the jittered draw happens EITHER WAY, so every later random number in
     // the session is identical between the held and jittered arms and the two
     // differ only in where the toy is. Skipping the draw would shift the stream
@@ -1886,6 +1915,11 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         probe_g1sq += g1 * g1;
         probe_g8sum += double(ga[8]);
         if (ga[1] > hush_vthr) ++probe_g1n;
+        // §62 second pass. The sleep gate, read on the SAME frame.
+        const bool awake = !s.brain.asleep();
+        if (awake) ++probe_awn;
+        if (awake && ga[1] > hush_vthr) ++probe_g1aw;
+        probe_fatsum += double(s.brain.drives().fatigue);
       }
       // §51's secondary. Voiced frames only, and accumulated for every window --
       // the probe loop is what reads it, and it reads it right after the call.
@@ -2241,6 +2275,10 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         out.probe_g1pin.push_back(float(hg.pin));
         out.probe_g1rate.push_back(float(hg.rate));
         out.probe_g1marg.push_back(float(hg.marg));
+        out.probe_awake.push_back(cap16(probe_awn));
+        out.probe_g1aw.push_back(cap16(probe_g1aw));
+        out.probe_fat.push_back(n > 0.0 ? float(probe_fatsum / n)
+                                        : std::numeric_limits<float>::quiet_NaN());
       }
       // §53's cells. A probe whose index never went live, or that produced no
       // voiced frame, enters NEITHER -- the same drop rule the columns above
@@ -18123,8 +18161,11 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double g1rate[kHgBins] = {}, g1marg[kHgBins] = {};
     double thr[kHgBins] = {}, rate[kHgBins] = {};
     uint32_t sn[kHgBins] = {};
-    uint32_t badid = 0;   // probes where g1n != vframes: the identity gate
+    uint32_t badid = 0;    // probes where (awake && g1>gate) != vframes
+    uint32_t badnaive = 0;  // probes where the SLEEP-BLIND identity fails
     uint32_t badlen = 0;
+    uint32_t awn[kHgBins] = {};   // frames awake
+    double fat[kHgBins] = {};     // mean fatigue
   };
 
   const std::vector<Row> rows = parallel_reps<Row>(kJobs, [&](uint32_t i) {
@@ -18150,7 +18191,8 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
     const size_t np = run.probe_why.size();
     if (run.probe_g1.size() != np || run.probe_g1n.size() != np ||
-        run.probe_vframes.size() != np || run.probe_g1marg.size() != np) {
+        run.probe_vframes.size() != np || run.probe_g1marg.size() != np ||
+        run.probe_awake.size() != np || run.probe_g1aw.size() != np) {
       ++row.badlen;
       row.ok = false;
       return row;
@@ -18159,11 +18201,17 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       const size_t lo = np * b / kHgBins, hi = np * (b + 1) / kHgBins;
       for (size_t k = lo; k < hi; ++k) {
         ++row.pn[b];
-        // THE IDENTITY GATE, per probe. `voicing` is defined as `g1 > vthr`,
-        // so these two counts are the same quantity counted two ways.
-        if (run.probe_g1n[k] != run.probe_vframes[k]) ++row.badid;
+        // THE IDENTITY GATE, per probe, CORRECTED. `voicing` is `g1 > vthr`
+        // only while AWAKE -- asleep the glottis is shut outright. Both forms
+        // are counted: `badnaive` is what the first pass registered and is
+        // kept so the size of that error is reported rather than quietly
+        // fixed.
+        if (run.probe_g1aw[k] != run.probe_vframes[k]) ++row.badid;
+        if (run.probe_g1n[k] != run.probe_vframes[k]) ++row.badnaive;
         row.wn[b] += run.probe_frames[k];
         row.vn[b] += run.probe_vframes[k];
+        row.awn[b] += run.probe_awake[k];
+        row.fat[b] += double(run.probe_fat[k]);
         const double g = double(run.probe_g1[k]);
         if (g == g) {
           row.g1[b] += g;
@@ -18194,20 +18242,35 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   // --- the identity gate ---------------------------------------------------
   {
-    uint32_t bad = 0, badlen = 0, probes = 0;
+    uint32_t bad = 0, naive = 0, badlen = 0, probes = 0;
     for (uint32_t i = 0; i < kJobs; ++i) {
       badlen += rows[i].badlen;
       if (!rows[i].ok) continue;
       bad += rows[i].badid;
+      naive += rows[i].badnaive;
       for (uint32_t b = 0; b < kHgBins; ++b) probes += rows[i].pn[b];
     }
-    std::printf("\n  THE IDENTITY GATE. frames with g1 > %.2f must equal §60's voiced\n"
-                "  frames, on every probe, because that IS voicing's definition.\n", vthr);
-    std::printf("    vectors of disagreeing length   %u sessions   %s\n", badlen,
+    std::printf("\n  THE IDENTITY GATE. `voicing` is `g1 > %.2f` ONLY WHILE AWAKE --\n"
+                "  `VocalDecoder::update` shuts the glottis outright when asleep and\n"
+                "  does not touch `group_activity_`. So the identity is\n"
+                "  `vframes == count(awake && g1 > gate)`.\n", vthr);
+    std::printf("    vectors of disagreeing length        %u sessions   %s\n", badlen,
                 badlen == 0 ? "PASS" : "*** FAIL ***");
-    std::printf("    probes where g1n != vframes     %u of %u    %s\n", bad, probes,
-                bad == 0 ? "PASS" : "*** FAIL -- the run is VOID ***");
+    std::printf("    probes where (awake && g1>gate) != vframes   %u of %u   %s\n", bad,
+                probes, bad == 0 ? "PASS" : "*** FAIL -- the run is VOID ***");
+    std::printf("    the SLEEP-BLIND form this section first registered failed on\n"
+                "    %u of %u probes (%.2f%%) -- the size of that error, reported\n"
+                "    rather than quietly fixed.\n", naive, probes,
+                probes ? 100.0 * double(naive) / double(probes) : 0.0);
     if (bad || badlen) fatal = true;
+  }
+
+  // A FAILED IDENTITY GATE MUST NOT PRINT A VERDICT. The first pass printed
+  // its primary above the line that declared the run void, which is exactly
+  // the plausible-looking number `plausible-wrong-number` warns about.
+  if (fatal) {
+    std::printf("\n  THE IDENTITY GATE FAILED, SO NOTHING BELOW IS COMPUTED.\n");
+    return false;
   }
 
   // --- pool the bins -------------------------------------------------------
@@ -18217,13 +18280,16 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::vector<double> mg8(kHgBins, 0.0), mthr(kHgBins, 0.0), mrate(kHgBins, 0.0);
   std::vector<double> mg1thr(kHgBins, 0.0), mg1pin(kHgBins, 0.0);
   std::vector<double> mg1rate(kHgBins, 0.0), mg1marg(kHgBins, 0.0);
+  std::vector<double> awake(kHgBins, 0.0), mfat(kHgBins, 0.0);
   for (uint32_t b = 0; b < kHgBins; ++b) {
-    uint64_t v = 0, w = 0;
+    uint64_t v = 0, w = 0, aw = 0;
     double n = 0.0;
     for (uint32_t i = 0; i < kJobs; ++i) {
       if (!rows[i].ok) continue;
       v += rows[i].vn[b];
       w += rows[i].wn[b];
+      aw += rows[i].awn[b];
+      mfat[b] += rows[i].fat[b];
       n += double(rows[i].sn[b]);
       mg1[b] += rows[i].g1[b];
       msd[b] += rows[i].g1sd[b];
@@ -18236,9 +18302,11 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       mg1marg[b] += rows[i].g1marg[b];
     }
     vfrac[b] = w ? double(v) / double(w) : std::numeric_limits<double>::quiet_NaN();
+    awake[b] = w ? double(aw) / double(w) : std::numeric_limits<double>::quiet_NaN();
     if (n > 0.0) {
       mg1[b] /= n; msd[b] /= n; mg8[b] /= n; mthr[b] /= n; mrate[b] /= n;
       mg1thr[b] /= n; mg1pin[b] /= n; mg1rate[b] /= n; mg1marg[b] /= n;
+      mfat[b] /= n;
     }
   }
 
@@ -18319,6 +18387,15 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("      group 1 fast rate                %+8.2f\n", zg1r);
   std::printf("      POOL mean rate (what §60 read)   %+8.2f\n", zrate);
   std::printf("      POOL mean threshold              %+8.2f\n", zthr);
+  // NOT REGISTERED, AND LABELLED AS SUCH. The awake fraction is here because
+  // the IDENTITY GATE failed on the first pass and the diagnosis named the
+  // sleep branch -- so this column was found by a registered gate, not chosen
+  // from the data. It is still a post-hoc candidate on THIS sample and cannot
+  // carry a verdict here (`verdict-fitted-to-data`): confirming it needs a
+  // registered test on creatures this run has not scored.
+  std::printf("    FOUND BY THE GATE FAILURE, NOT REGISTERED -- carries no verdict:\n");
+  std::printf("      AWAKE fraction                   %+8.2f\n", zed(awake, nullptr));
+  std::printf("      mean fatigue                     %+8.2f\n", zed(mfat, nullptr));
 
   HgVerdict v = kHgVoid;
   if (zg1 == zg1) {
@@ -18336,15 +18413,16 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  with a flat threshold means the DRIVE went; a rising threshold means IP\n"
               "  did it. `g1Hz` is g1 x %.1f, so the gate is at %.2f Hz.\n", rnorm,
               vthr * rnorm);
-  std::printf("    bin   ticks      vfrac     g1    g1Hz   g1sd   g1thr  g1pin"
-              "   g1marg   poolthr  poolHz\n");
+  std::printf("    bin   ticks      vfrac   AWAKE    fat     g1    g1Hz   g1sd   g1thr"
+              "  g1pin   g1marg   poolthr  poolHz\n");
   for (uint32_t b = 0; b < kHgBins; ++b) {
     if (kHgBins > 16 && (b % 4) != 0 && b + 1 != kHgBins &&
         !(b + 2 >= bstar && b <= bstar + 2)) continue;
-    std::printf("    %3u  %8llu  %6.4f %6.4f %6.2f %6.4f  %6.3f %6.4f %+8.4f  %7.4f %7.3f%s\n",
-                b + 1, (unsigned long long)(ticks * b / kHgBins), vfrac[b], mg1[b],
-                mg1[b] * rnorm, msd[b], mg1thr[b], mg1pin[b], mg1marg[b], mthr[b],
-                mrate[b], b == bstar ? "   <- b*" : "");
+    std::printf("    %3u  %8llu  %6.4f  %6.4f %6.4f %6.4f %6.2f %6.4f  %6.3f %6.4f"
+                " %+8.4f  %7.4f %7.3f%s\n",
+                b + 1, (unsigned long long)(ticks * b / kHgBins), vfrac[b], awake[b],
+                mfat[b], mg1[b], mg1[b] * rnorm, msd[b], mg1thr[b], mg1pin[b],
+                mg1marg[b], mthr[b], mrate[b], b == bstar ? "   <- b*" : "");
   }
 
   std::printf("\n  SECONDARY 2 (descriptive, no verdict). THE SHARPENING PREDICTION: if IP\n"
@@ -18359,18 +18437,19 @@ bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // --- the matrix ----------------------------------------------------------
   std::printf("\n  THE MATRIX, prefixed `GMAT`. One line per creature-bin, so ANY coarser\n"
               "  grid -- §60's eighths included -- is re-derivable offline.\n");
-  std::printf("  GMAT arm rep b  probes frames voiced  g1 g1sd g8 g1thr g1pin g1rate g1marg poolthr poolrate\n");
+  std::printf("  GMAT arm rep b  probes frames voiced awake  g1 g1sd g8 g1thr g1pin g1rate g1marg poolthr poolrate fat\n");
   for (uint32_t i = 0; i < kJobs; ++i) {
     if (!rows[i].ok) continue;
     for (uint32_t b = 0; b < kHgBins; ++b) {
       const double n = double(rows[i].sn[b]);
       if (n == 0.0) continue;
-      std::printf("  GMAT %-12s %3u %3u  %4u %6u %6u %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g\n",
+      std::printf("  GMAT %-12s %3u %3u  %4u %6u %6u %6u %.6g %.6g %.6g %.6g %.6g %.6g"
+                  " %.6g %.6g %.6g %.6g\n",
                   arms[job_arm[i]].name, job_rep[i], b + 1, rows[i].pn[b], rows[i].wn[b],
-                  rows[i].vn[b], rows[i].g1[b] / n, rows[i].g1sd[b] / n,
+                  rows[i].vn[b], rows[i].awn[b], rows[i].g1[b] / n, rows[i].g1sd[b] / n,
                   rows[i].g8[b] / n, rows[i].g1thr[b] / n, rows[i].g1pin[b] / n,
                   rows[i].g1rate[b] / n, rows[i].g1marg[b] / n, rows[i].thr[b] / n,
-                  rows[i].rate[b] / n);
+                  rows[i].rate[b] / n, rows[i].fat[b] / n);
     }
   }
 
