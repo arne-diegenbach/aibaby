@@ -2609,6 +2609,7 @@ bool run_slotexp(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_hush(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_hushgate(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_samediff(const std::vector<uint8_t>&, uint64_t, bool);
+bool run_echopred(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_repdrift(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_cpprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_stpprobe(const std::vector<uint8_t>&, uint64_t, bool);

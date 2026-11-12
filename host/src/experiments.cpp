@@ -366,6 +366,17 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"echopred", 672000, Expect::kRead, Tier::kLong,
+     "derived: §66. A GATE on a genome change, not the change. §65 named a\n"
+     "  combiner as the next build; this prices the one the architecture can\n"
+     "  cheaply support. DNA v15's rectified per-channel subtraction already\n"
+     "  exists in hear(); what was refuted is its prediction SOURCE (central\n"
+     "  carries no linear information about the sound at any tract density), and\n"
+     "  the shipped previous-frame predictor sees only silence across the gap.\n"
+     "  So the prediction is sourced from an efference copy of the creature's own\n"
+     "  posture, which §63 measured holding the first word at 0.7727. Rendered\n"
+     "  host-side through a second VowelSource and a second Cochlea: NO GENOME\n"
+     "  CHANGE. A refusal is the useful outcome and kills the combiner cheaply."},
     {"samediff", 672000, Expect::kRead, Tier::kLong,
      "derived: §63, M6 run one. Word A, a gap, word B, and a held-out readout\n"
      "  asked whether B was the SAME word as A -- the smallest operation that\n"
@@ -1738,6 +1749,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
   else if (name == "hushgate") ok = run_hushgate(dna_blob, ticks, verbose);
   else if (name == "samediff") ok = run_samediff(dna_blob, ticks, verbose);
+  else if (name == "echopred") ok = run_echopred(dna_blob, ticks, verbose);
   else if (name == "hush") ok = run_hush(dna_blob, ticks, verbose);
   else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);

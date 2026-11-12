@@ -19397,4 +19397,386 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "    not another store, as the next build.\n");
   return true;
 }
+
+// --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------
+//
+// ROADMAP §66, and it is a GATE on a genome change rather than the change
+// itself. §65 established that the two words are both represented at once and
+// that the creature does not compute their match, and named a COMBINER as the
+// next build. Before touching the genome, this measures whether the one
+// combiner the architecture can cheaply support would work at all.
+//
+// THE MECHANISM IT PRICES. DNA v15 already put a rectified, per-mel-channel
+// cancellation in `hear()` (`predict_gain`), shipping at 0.0 and bit-identical
+// when off. `critic-is-not-a-forward-model` refuted its PREDICTION SOURCE --
+// the association module carries no linear information about the sound at any
+// tract density -- but not the subtraction, and that file names the mechanism
+// as "the natural home for an adaptation experiment later".
+//
+// The shipped parameterisation still cannot do this job: `persistence_base = 1`
+// predicts the PREVIOUS ~16 ms frame, and across a 200-5000 ms gap that is
+// silence. Right shape, wrong memory. What holds the first word is the
+// ARTICULATORS (§63: 0.7727 where central is at chance), so the prediction is
+// sourced from an efference copy of the creature's own posture.
+//
+// NO GENOME CHANGE. A second `VowelSource` renders the creature's own posture
+// and a second `Cochlea` turns it into a mel frame -- `mel.h` knows nothing
+// about a brain, which is exactly what makes this measurable from outside.
+//
+// THE PREDICTION IS RENDERED AT A FIXED AMPLITUDE, not at the creature's own.
+// `quietecho` measured that the articulator posture is IDENTICAL whether the
+// creature phonates at 94% or at 0%, so the posture is a shape that exists
+// regardless of whether it is being voiced. Scaling the prediction by the
+// creature's actual amplitude would confound "what is this posture" with
+// "is it currently making a sound".
+
+constexpr float kEpPredAmp = 0.5f;  // the amplitude the words themselves use
+constexpr uint32_t kEpReps = 12;
+constexpr double kEpBar = 0.650;
+
+struct EpGapRow {
+  double prim_total = 0.0, prim_vec = 0.0;  // PRIMARY: residual energy, and its vector
+  double ctrl_total = 0.0, ctrl_vec = 0.0;  // posture drawn from ANOTHER trial
+  double ref_vec = 0.0;                     // raw mel, no subtraction at all
+  double live_total = 0.0, live_vec = 0.0;  // frame-wise, faithful to `hear()`
+  double norm_total = 0.0, norm_vec = 0.0;  // L1-normalised: shape only
+  double pred_a = 0.0;                      // does the posture decode A at all?
+  uint32_t trials = 0;
+  bool scored = false;
+};
+
+struct EpOut {
+  EpGapRow gap[kSdGapCount];
+  uint32_t attempted = 0, slept = 0;
+  bool align_bad = false;
+  bool ok = false;
+};
+
+inline std::vector<double> ep_rect(const std::vector<double>& a,
+                                   const std::vector<double>& p) {
+  std::vector<double> r(a.size(), 0.0);
+  for (size_t i = 0; i < a.size() && i < p.size(); ++i) {
+    const double d = a[i] - p[i];
+    r[i] = d > 0.0 ? d : 0.0;  // rectified, exactly as `hear()` rectifies
+  }
+  return r;
+}
+
+inline std::vector<double> ep_l1(const std::vector<double>& v) {
+  double s = 0.0;
+  for (double x : v) s += x;
+  if (s <= 1e-12) return v;
+  std::vector<double> o(v.size());
+  for (size_t i = 0; i < v.size(); ++i) o[i] = v[i] / s;
+  return o;
+}
+
+inline double ep_sum(const std::vector<double>& v) {
+  double s = 0.0;
+  for (double x : v) s += x;
+  return s;
+}
+
+EpOut run_echopred_session(const std::vector<uint8_t>& blob, uint64_t ticks, uint32_t rep) {
+  EpOut out;
+  std::vector<uint8_t> local = blob;
+  {
+    const uint64_t seed = reinterpret_cast<const aibaby::DnaHeader*>(local.data())->seed +
+                          uint64_t(rep) * 7919ull;
+    std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  }
+  Session s;
+  std::string error;
+  if (!s.init(local, error)) return out;
+  const aibaby::DnaAudio& acfg = s.dna.header().audio;
+  Ear ear;
+  if (!ear.configure(acfg, error)) return out;
+  // The SECOND front end: the creature's own posture, rendered and analysed
+  // with the same cochlea the genome describes.
+  Cochlea pred_coch;
+  if (!pred_coch.configure(acfg, error)) return out;
+  VowelSource pred_src(acfg.sample_rate);
+
+  const double dt = double(s.dna.header().sim.dt_ms);
+  const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
+  VowelSource voice(acfg.sample_rate);
+  std::vector<float> pcm(spt), ppcm(spt);
+  const uint32_t nch = ear.channels();
+  if (nch == 0) return out;
+
+  aibaby::Rng rng;
+  rng.seed(s.dna.header().seed ^ 0xE9C40u);
+  const uint64_t rounds = (ticks / kSdRoundTicks) / 4u * 4u;
+  if (rounds == 0) return out;
+
+  std::vector<std::vector<double>> act[kSdGapCount], prd[kSdGapCount], liv[kSdGapCount];
+  std::vector<int> lab_a[kSdGapCount], lab_b[kSdGapCount];
+
+  std::vector<uint8_t> cells[kSdGapCount];
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    cells[g].assign(size_t(rounds), 0);
+    for (size_t i = 0; i < cells[g].size(); ++i) cells[g][i] = uint8_t(i % 4u);
+    for (size_t i = cells[g].size(); i > 1; --i)
+      std::swap(cells[g][i - 1], cells[g][rng.next() % i]);
+  }
+  std::vector<uint32_t> gorder(kSdGapCount);
+  for (uint32_t g = 0; g < kSdGapCount; ++g) gorder[g] = g;
+  size_t cell_at[kSdGapCount] = {};
+
+  for (uint64_t r = 0; r < rounds; ++r) {
+    for (size_t i = gorder.size(); i > 1; --i)
+      std::swap(gorder[i - 1], gorder[rng.next() % i]);
+    for (uint32_t gi = 0; gi < kSdGapCount; ++gi) {
+      const uint32_t g = gorder[gi];
+      const uint64_t gap = kSdGaps[g];
+      const uint8_t cell = cells[g][cell_at[g]++];
+      const int a = int(cell >> 1), b = int(cell & 1u);
+      const uint64_t b_on = kSdWord + gap;
+      const uint64_t b_off = b_on + kSdWord;
+      const uint64_t len = b_off + kSdScore;
+      std::vector<double> asum(nch, 0.0), psum(nch, 0.0), lsum(nch, 0.0);
+      uint32_t fr = 0;
+      bool slept = false;
+      ++out.attempted;
+
+      for (uint64_t t = 0; t < len; ++t) {
+        const bool in_a = t < kSdWord;
+        const bool in_b = t >= b_on && t < b_off;
+        const Word& wa_ = kWords[a];
+        const Word& wb_ = kWords[b];
+        if (in_a) voice.render(wa_.f0, wa_.f1, wa_.f2, 0.5f, pcm.data(), spt);
+        else if (in_b) voice.render(wb_.f0, wb_.f1, wb_.f2, 0.5f, pcm.data(), spt);
+        else voice.render(0.0f, wa_.f1, wa_.f2, 0.0f, pcm.data(), spt);
+
+        // The posture is read BEFORE the step that hears this tick, so the
+        // prediction is one the creature already held when the frame arrived.
+        const aibaby::VocalParams& vp = s.brain.voice();
+        pred_src.render(float(vp.f0), float(vp.f1), float(vp.f2), kEpPredAmp,
+                        ppcm.data(), spt);
+        pred_coch.push(ppcm.data(), spt);
+
+        ear.tick(s.brain, pcm.data(), spt);
+        s.brain.step();
+        if (s.brain.asleep()) slept = true;
+
+        const bool in_overlap = (t >= b_on && t < b_on + kSdOverlap);
+        const std::vector<float>& pf = pred_coch.frames();
+        if (in_overlap && ear.had_frame() && pf.size() >= nch) {
+          const std::vector<float>& am = ear.latest_mel();
+          const size_t po = pf.size() - nch;  // the most recent predicted frame
+          if (am.size() >= nch) {
+            for (uint32_t c = 0; c < nch; ++c) {
+              const double av = double(am[c]), pv = double(pf[po + c]);
+              asum[c] += av;
+              psum[c] += pv;
+              const double d = av - pv;
+              lsum[c] += d > 0.0 ? d : 0.0;  // frame-wise rectified
+            }
+            ++fr;
+          }
+        }
+        pred_coch.clear_frames();
+      }
+      if (slept || fr == 0) { if (slept) ++out.slept; continue; }
+      std::vector<double> av(nch), pv(nch), lv(nch);
+      for (uint32_t c = 0; c < nch; ++c) {
+        av[c] = asum[c] / double(fr);
+        pv[c] = psum[c] / double(fr);
+        lv[c] = lsum[c] / double(fr);
+      }
+      act[g].push_back(av);
+      prd[g].push_back(pv);
+      liv[g].push_back(lv);
+      lab_a[g].push_back(a);
+      lab_b[g].push_back(b);
+    }
+  }
+
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    EpGapRow& row = out.gap[g];
+    row.trials = uint32_t(lab_a[g].size());
+    if (act[g].size() != row.trials || prd[g].size() != row.trials ||
+        liv[g].size() != row.trials)
+      out.align_bad = true;
+    if (row.trials < kSdMinTrials) continue;
+    uint32_t train = 0, cmin_tr = 0, cmin_te = 0;
+    const std::vector<uint32_t> perm =
+        sd_fold_split(lab_a[g], lab_b[g], train, cmin_tr, cmin_te);
+    if (train == 0 || train >= row.trials || cmin_te == 0) continue;
+
+    std::vector<std::vector<double>> A, P, L;
+    std::vector<int> ya, ysame;
+    for (uint32_t i : perm) {
+      A.push_back(act[g][i]);
+      P.push_back(prd[g][i]);
+      L.push_back(liv[g][i]);
+      ya.push_back(lab_a[g][i]);
+      ysame.push_back(lab_a[g][i] == lab_b[g][i] ? 1 : 0);
+    }
+    // THE POSTURE-SHUFFLED CONTROL, permuted WITHIN each fold so the fold
+    // compositions are untouched -- §63's lesson, which cost a voided run.
+    std::vector<uint32_t> sh(A.size());
+    for (size_t i = 0; i < sh.size(); ++i) sh[i] = uint32_t(i);
+    for (size_t i = train; i > 1; --i) std::swap(sh[i - 1], sh[rng.next() % i]);
+    for (size_t i = sh.size(); i > train + 1; --i)
+      std::swap(sh[i - 1], sh[train + (rng.next() % (i - train))]);
+
+    std::vector<std::vector<double>> rv(A.size()), rt(A.size()), cv(A.size()), ct(A.size());
+    std::vector<std::vector<double>> nv(A.size()), nt(A.size()), lt(A.size());
+    for (size_t i = 0; i < A.size(); ++i) {
+      const std::vector<double> r = ep_rect(A[i], P[i]);
+      rv[i] = r;
+      rt[i] = {ep_sum(r)};
+      const std::vector<double> c = ep_rect(A[i], P[sh[i]]);
+      cv[i] = c;
+      ct[i] = {ep_sum(c)};
+      const std::vector<double> n = ep_rect(ep_l1(A[i]), ep_l1(P[i]));
+      nv[i] = n;
+      nt[i] = {ep_sum(n)};
+      lt[i] = {ep_sum(L[i])};
+    }
+    row.prim_total = holdout_accuracy(rt, ysame, train);
+    row.prim_vec = holdout_accuracy(rv, ysame, train);
+    row.ctrl_total = holdout_accuracy(ct, ysame, train);
+    row.ctrl_vec = holdout_accuracy(cv, ysame, train);
+    row.ref_vec = holdout_accuracy(A, ysame, train);
+    row.live_total = holdout_accuracy(lt, ysame, train);
+    row.live_vec = holdout_accuracy(L, ysame, train);
+    row.norm_total = holdout_accuracy(nt, ysame, train);
+    row.norm_vec = holdout_accuracy(nv, ysame, train);
+    // Does the posture carry A at all, in these very units? Without this a
+    // null is ambiguous between "the subtraction fails" and "the posture here
+    // was never holding the word".
+    row.pred_a = holdout_accuracy(P, ya, train);
+    row.scored = true;
+  }
+  out.ok = true;
+  return out;
+}
+
+bool run_echopred(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::printf("\n  §66 — CAN AN EFFERENCE COPY CANCEL A MATCHING WORD?\n\n"
+              "  the question    §65 named a COMBINER as the next build. This prices the\n"
+              "                  one the architecture can cheaply support, BEFORE the\n"
+              "                  genome is touched.\n"
+              "  the mechanism   DNA v15's rectified per-channel subtraction in hear(),\n"
+              "                  but sourced from the ARTICULATORS instead of central --\n"
+              "                  central was refuted as a prediction source, and the\n"
+              "                  shipped previous-frame predictor sees only silence\n"
+              "                  across the gap.\n"
+              "  how             a SECOND VowelSource renders the creature's own posture\n"
+              "                  and a SECOND Cochlea turns it into mel. No genome change.\n"
+              "  the prediction  rendered at a FIXED amplitude (%.2f): quietecho measured\n"
+              "                  the posture identical at 94%% and 0%% phonation, so it is\n"
+              "                  a shape that exists whether or not it is being voiced.\n"
+              "  the bar         %.3f, three-way.\n"
+              "  creatures       %u\n\n",
+              double(kEpPredAmp), kEpBar, kEpReps);
+
+  std::vector<EpOut> res = parallel_reps<EpOut>(kEpReps, [&](uint32_t r) {
+    return run_echopred_session(blob, ticks, r);
+  });
+
+  uint32_t n_ok = 0, n_align = 0, attempted = 0, slept = 0, scored = 0;
+  for (const EpOut& o : res) {
+    if (o.ok) ++n_ok;
+    if (o.align_bad) ++n_align;
+    attempted += o.attempted;
+    slept += o.slept;
+    for (uint32_t g = 0; g < kSdGapCount; ++g)
+      if (o.gap[g].scored) ++scored;
+  }
+  const double sf = attempted ? double(slept) / double(attempted) : 1.0;
+
+  std::vector<double> col[kSdGapCount][10];
+  for (const EpOut& o : res)
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      if (!o.gap[g].scored) continue;
+      const EpGapRow& r = o.gap[g];
+      col[g][0].push_back(r.prim_total);
+      col[g][1].push_back(r.prim_vec);
+      col[g][2].push_back(r.ctrl_total);
+      col[g][3].push_back(r.ctrl_vec);
+      col[g][4].push_back(r.ref_vec);
+      col[g][5].push_back(r.live_total);
+      col[g][6].push_back(r.live_vec);
+      col[g][7].push_back(r.norm_total);
+      col[g][8].push_back(r.norm_vec);
+      col[g][9].push_back(r.pred_a);
+    }
+
+  std::printf("  THE GATES\n\n");
+  double ctrl_m = 0.0, ctrl_e = 0.0, ref_m = 0.0, ref_e = 0.0;
+  {
+    std::vector<double> c, rf;
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      for (double x : col[g][2]) c.push_back(x);
+      for (double x : col[g][4]) rf.push_back(x);
+    }
+    sd_stat(c, ctrl_m, ctrl_e);
+    sd_stat(rf, ref_m, ref_e);
+  }
+  const bool g_sessions = (n_ok == kEpReps);
+  const bool g_align = (n_align == 0);
+  const bool g_sleep = (sf <= kSdSleepMax);
+  const bool g_scored = (scored > 0);
+  const bool g_ctrl = g_scored && ctrl_m >= kSdNullLo && ctrl_m <= kSdNullHi;
+  const bool g_ref = g_scored && ref_m >= kSdNullLo && ref_m <= kSdNullHi;
+  std::printf("    sessions that ran            %u of %u                %s\n",
+              n_ok, kEpReps, g_sessions ? "PASS" : "FAIL");
+  std::printf("    rows == labels               %u misaligned           %s\n",
+              n_align, g_align ? "PASS" : "FAIL");
+  std::printf("    slept trials                 %u of %u = %.4f      %s\n",
+              slept, attempted, sf, g_sleep ? "PASS" : "FAIL");
+  std::printf("    gap-cells scored             %u                      %s\n",
+              scored, g_scored ? "PASS" : "FAIL");
+  std::printf("    CONTROL posture-shuffled     %.4f +- %.4f         %s\n",
+              ctrl_m, ctrl_e, g_ctrl ? "PASS" : "FAIL");
+  std::printf("    REFERENCE raw mel, no subtr  %.4f +- %.4f         %s\n",
+              ref_m, ref_e, g_ref ? "PASS" : "FAIL");
+  if (!(g_sessions && g_align && g_sleep && g_scored && g_ctrl && g_ref)) {
+    std::printf("\n  RUN VOID — a registered gate failed. No verdict is computed.\n");
+    return true;
+  }
+
+  std::printf("\n  THE RESIDUAL — same/different off the creature's own cancellation\n\n"
+              "    gap   PRIMARY         vector   ctrl-tot ctrl-vec  raw-mel  live-tot"
+              " live-vec  norm-tot norm-vec  postureA\n");
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    double m[10] = {}, e[10] = {};
+    for (uint32_t k = 0; k < 10; ++k) sd_stat(col[g][k], m[k], e[k]);
+    std::printf("   %5s  %.4f+-%.4f  %.4f   %.4f   %.4f    %.4f   %.4f    %.4f"
+                "    %.4f   %.4f    %.4f\n",
+                kSdGapName[g], m[0], e[0], m[1], m[2], m[3], m[4], m[5], m[6],
+                m[7], m[8], m[9]);
+  }
+
+  double best = 0.0, best_se = 0.0;
+  uint32_t bg = 0;
+  for (uint32_t g = 0; g < kSdGapCount; ++g) {
+    double m = 0, e = 0;
+    sd_stat(col[g][0], m, e);
+    if (m > best) { best = m; best_se = e; bg = g; }
+  }
+  const char* v = (best - 2.5 * best_se > 0.5 && best >= kEpBar)
+                      ? "LICENSED — build the efference-copy combiner"
+                      : (best + 2.0 * best_se < kEpBar
+                             ? "REFUSED — the cancellation does not separate same from "
+                               "different; do NOT change the genome"
+                             : "NO VERDICT");
+  std::printf("\n  THE VERDICT (best gap %sms): %.4f +- %.4f\n    -> %s\n",
+              kSdGapName[bg], best, best_se, v);
+  std::printf("\n  A REFUSAL IS THE USEFUL OUTCOME AND WAS PRE-COMMITTED TO: it kills the\n"
+              "  combiner for one instrument instead of for a genome change, a\n"
+              "  recalibration and a determinism re-pin. Read `postureA` first -- if the\n"
+              "  posture does not carry A in these units, the refusal is about the\n"
+              "  POSTURE and not about the subtraction.\n");
+  return true;
+}
 }  // namespace aibaby_host
