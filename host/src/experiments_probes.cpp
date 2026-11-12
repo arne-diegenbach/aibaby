@@ -913,6 +913,46 @@ static HushPool hush_pool(const aibaby::Network& net, int32_t module, float t_ma
   return hp;
 }
 
+// §62. The same four quantities over ONE GROUP of a module rather than the
+// whole of it, because the voicing gate reads a group and not the pool.
+// `read_group` slices a module into `kVocalGroups` contiguous spans with
+// `slice_begin`, and this reproduces that slicing rather than approximating it.
+//
+// `marg` is the membrane margin `v - threshold`, the quantity that actually
+// decides whether a neuron fires, so a falling margin with a flat threshold
+// says the DRIVE went and a rising threshold says IP did it.
+struct HushGroup {
+  double thr = std::numeric_limits<double>::quiet_NaN();
+  double pin = std::numeric_limits<double>::quiet_NaN();
+  double rate = std::numeric_limits<double>::quiet_NaN();
+  double marg = std::numeric_limits<double>::quiet_NaN();
+};
+static HushGroup hush_group(const aibaby::Network& net, int32_t module, uint32_t g,
+                            uint32_t groups, float t_max) {
+  HushGroup hg;
+  if (module < 0 || groups == 0) return hg;
+  const aibaby::ModuleState& ms = net.module(uint32_t(module));
+  if (ms.count == 0) return hg;
+  const uint32_t lo = ms.begin + aibaby::slice_begin(ms.count, groups, g);
+  const uint32_t hi = ms.begin + aibaby::slice_begin(ms.count, groups, g + 1);
+  if (hi <= lo) return hg;
+  double tsum = 0.0, rsum = 0.0, msum = 0.0;
+  uint32_t at_clamp = 0;
+  for (uint32_t n = lo; n < hi; ++n) {
+    const double t = double(net.threshold(n));
+    tsum += t;
+    rsum += double(net.rate_fast(n));
+    msum += double(net.membrane(n)) - t;
+    if (t_max > 0.0f && t >= double(t_max) * 0.999) ++at_clamp;
+  }
+  const double n = double(hi - lo);
+  hg.thr = tsum / n;
+  hg.rate = rsum / n;
+  hg.marg = msum / n;
+  hg.pin = t_max > 0.0f ? double(at_clamp) / n : std::numeric_limits<double>::quiet_NaN();
+  return hg;
+}
+
 struct G3Probe {
   bool ok = false;
   double vocal = 0;      // held-out accuracy on the probe voice — the ceiling
@@ -1009,6 +1049,21 @@ struct G3Probe {
   // NaN where the genome has no such module, never 0: a missing module
   // averaged as a real threshold is `plausible-wrong-number` exactly.
   std::vector<float> probe_thr, probe_pin, probe_rate, probe_ref;
+  // §62. THE GATE'S OWN QUANTITY, index-aligned with everything above.
+  // `voicing` is `group_activity_[1] > voicing_threshold`, so:
+  //
+  //   probe_g1     mean of group 1's activity over the probe's frames
+  //   probe_g1sd   its SD over those frames -- the SHARPENING secondary
+  //   probe_g1n    frames above the gate. MUST equal `probe_vframes` exactly
+  //   probe_g8     group 8's mean activity, which drives loudness via the jaw
+  //
+  // and group 1's own state, which the pool-wide columns above average away:
+  //
+  //   probe_g1thr / probe_g1pin / probe_g1rate   threshold, clamp share, fast rate
+  //   probe_g1marg                               membrane margin `v - threshold`
+  std::vector<float> probe_g1, probe_g1sd, probe_g8;
+  std::vector<uint16_t> probe_g1n;
+  std::vector<float> probe_g1thr, probe_g1pin, probe_g1rate, probe_g1marg;
   double ctx_present_frac = 0;   // scored ticks with the index live, over all of them
   uint32_t ctx_slots = 0;       // what the genome asked for, for the vacuity clause
   // §50 clause 3. The same pairing over the TEACHING windows rather than the
@@ -1276,6 +1331,13 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   const int32_t hush_vm = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
   const int32_t hush_am = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
   const float hush_tmax = s.dna.header().homeo.threshold_max;
+  // §62. The gate's own two constants, read from the genome rather than
+  // written here, so a genome that moves them moves this instrument with it.
+  // `rate_norm_hz` is deliberately NOT read here: the gate compares a
+  // normalised activity, so the session needs only the threshold. The
+  // experiment converts activity back into Hz for reporting, where the genome
+  // is in scope anyway.
+  const aibaby::Scalar hush_vthr = aibaby::Scalar(s.dna.header().vocal.voicing_threshold);
 
   aibaby::Rng rng;
   rng.seed((s.dna.header().seed ^ seed_shift) + 0x6D3Bu);
@@ -1467,6 +1529,14 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   // attributed to the next probe.
   uint32_t probe_wn = 0, probe_vn = 0;
   double probe_ampsum = 0.0;
+  // §62. THE QUANTITY THE VOICING GATE ACTUALLY READS. `voicing` is defined as
+  // `group_activity_[1] > voicing_threshold`, where group 1 is one of nine
+  // contiguous slices of the vocal module and the reading is its FAST rate
+  // normalised by `rate_norm_hz` -- not the module-wide mean rate §60 reported.
+  // `probe_g1n` must therefore equal `probe_vn` on every probe BY DEFINITION,
+  // which is §62's identity gate.
+  double probe_g1sum = 0.0, probe_g1sq = 0.0, probe_g8sum = 0.0;
+  uint32_t probe_g1n = 0;
 
   // Reads the vocal tract over a stretch of ticks, optionally with a word
   // playing and optionally with a toy in view, and returns the mean of the nine
@@ -1495,6 +1565,11 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     probe_wn = 0;
     probe_vn = 0;
     probe_ampsum = 0.0;
+    // §62, same reason again.
+    probe_g1sum = 0.0;
+    probe_g1sq = 0.0;
+    probe_g8sum = 0.0;
+    probe_g1n = 0;
     // §49: the jittered draw happens EITHER WAY, so every later random number in
     // the session is identical between the held and jittered arms and the two
     // differ only in where the toy is. Skipping the draw would shift the stream
@@ -1799,6 +1874,19 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       ++probe_wn;
       if (s.brain.voice().voicing > aibaby::Scalar(0.5)) ++probe_vn;
       probe_ampsum += double(s.brain.voice().amplitude);
+      // §62. Read on the SAME frames as the voicing count above, so the
+      // identity `probe_g1n == probe_vn` is a real check and not an alignment
+      // assumption. `vocal_activities()` is `group_activity_`, the SMOOTHED
+      // value the gate itself compares -- `vocal_groups()` is `group_value_`,
+      // the population vector, and reading that one would break the identity.
+      {
+        const aibaby::Scalar* ga = s.brain.vocal_activities();
+        const double g1 = double(ga[1]);
+        probe_g1sum += g1;
+        probe_g1sq += g1 * g1;
+        probe_g8sum += double(ga[8]);
+        if (ga[1] > hush_vthr) ++probe_g1n;
+      }
       // §51's secondary. Voiced frames only, and accumulated for every window --
       // the probe loop is what reads it, and it reads it right after the call.
       // Adding an unprinted accumulator touches no random stream and no existing
@@ -2132,6 +2220,28 @@ G3Probe run_g3probe_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       out.probe_rate.push_back(
           hush_vm >= 0 ? float(s.brain.network().module(uint32_t(hush_vm)).mean_rate)
                        : std::numeric_limits<float>::quiet_NaN());
+      // §62, pushed on the same probes and in the same order.
+      {
+        const double n = double(probe_wn);
+        const double m = n > 0.0 ? probe_g1sum / n : 0.0;
+        // Population SD over the probe's frames. `var` is clamped at 0 because
+        // E[x^2] - E[x]^2 can go very slightly negative in floating point and a
+        // negative under a sqrt would print as NaN and look like a dead column.
+        const double var = n > 0.0 ? std::max(0.0, probe_g1sq / n - m * m) : 0.0;
+        out.probe_g1.push_back(n > 0.0 ? float(m)
+                                       : std::numeric_limits<float>::quiet_NaN());
+        out.probe_g1sd.push_back(n > 0.0 ? float(std::sqrt(var))
+                                         : std::numeric_limits<float>::quiet_NaN());
+        out.probe_g8.push_back(n > 0.0 ? float(probe_g8sum / n)
+                                       : std::numeric_limits<float>::quiet_NaN());
+        out.probe_g1n.push_back(cap16(probe_g1n));
+        const HushGroup hg =
+            hush_group(s.brain.network(), hush_vm, 1u, aibaby::kVocalGroups, hush_tmax);
+        out.probe_g1thr.push_back(float(hg.thr));
+        out.probe_g1pin.push_back(float(hg.pin));
+        out.probe_g1rate.push_back(float(hg.rate));
+        out.probe_g1marg.push_back(float(hg.marg));
+      }
       // §53's cells. A probe whose index never went live, or that produced no
       // voiced frame, enters NEITHER -- the same drop rule the columns above
       // use, for `vocallearn`'s reason: a silent probe is missing data and not a
@@ -17903,6 +18013,364 @@ bool run_hush(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
                   n ? rows[i].thr[b] / n : 0.0, n ? rows[i].pin[b] / n : 0.0,
                   n ? rows[i].rate[b] / n : 0.0, n ? rows[i].ref[b] / n : 0.0,
                   n ? rows[i].vfrac[b] / n : 0.0, n ? rows[i].amp[b] / n : 0.0);
+    }
+  }
+
+  std::printf("\n  %s\n", fatal ? "ONE OR MORE GATES FAILED -- nothing above is read."
+                                : "All gates passed.");
+  return !fatal;
+}
+
+// ===========================================================================
+// §62. THE GATE IS 0.8 Hz ABOVE THE SETPOINT.
+//
+// §60 reported the larynx's MODULE-WIDE mean rate and threshold. The voicing
+// gate reads neither: `voicing = group_activity_[1] > voicing_threshold`,
+// where group 1 is one of nine contiguous slices of the vocal module and the
+// reading is its FAST rate over `rate_norm_hz`. That makes §60's rate column a
+// `guard-measures-the-wrong-quantity` instance in my own section -- its claims
+// about the POOL stand, but the pool is not what the gate reads.
+//
+// And from the genome alone, before any simulation:
+//
+//     voicing_threshold 0.42 x rate_norm_hz 10.0  =>  the glottis opens only
+//     while group 1's mean fast rate exceeds 4.2 Hz
+//     vocal target_rate_hz                        =   5.0 Hz
+//
+// **The gate sits 16% BELOW the homeostat's own setpoint**, so the creature is
+// voiced only while IP has not yet finished. That inverts
+// `silence-is-the-homeostat`: IP may silence the larynx by SUCCEEDING rather
+// than by running out of range. Derived, not measured -- which is what this
+// section is for.
+// ===========================================================================
+
+constexpr uint32_t kHgBins = 64u;  // §60 scored 8; any coarser grid re-derives
+constexpr uint32_t kHgReps = 36u;
+constexpr uint32_t kHgArms = 4u;
+
+enum HgVerdict { kHgExplained = 0, kHgNot, kHgPartial, kHgVoid };
+
+static const char* hg_verdict_name(HgVerdict v) {
+  switch (v) {
+    case kHgExplained:
+      return "EXPLAINED     -- a smooth decline meeting a hard gate";
+    case kHgNot:
+      return "NOT EXPLAINED -- group 1 itself breaks at the cliff";
+    case kHgPartial:
+      return "PARTIAL       -- registered middle band";
+    default:
+      return "VOID          -- the series could not be scored";
+  }
+}
+
+bool run_hushgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  constexpr uint32_t kObjects = 2;
+
+  const double vthr = double(dna.header().vocal.voicing_threshold);
+  const double rnorm = double(dna.header().vocal.rate_norm_hz);
+  const int32_t vm = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const double targ = vm >= 0 ? double(dna.module(uint32_t(vm)).target_rate_hz) : 0.0;
+
+  struct Arm { const char* name; int pin, pairing; };
+  const Arm arms[kHgArms] = {{"T1.RET", 0, 0},
+                             {"T1.RET.D", 0, 1},
+                             {"T1.ORACLE.D", 1, 1},
+                             {"T1.ORACLE", 1, 0}};
+
+  std::vector<uint32_t> job_arm, job_rep;
+  for (uint32_t a = 0; a < kHgArms; ++a)
+    for (uint32_t r = 0; r < kHgReps; ++r) { job_arm.push_back(a); job_rep.push_back(r); }
+  const uint32_t kJobs = uint32_t(job_arm.size());
+
+  std::printf("  the question      §62. §60 measured the POOL. The gate reads ONE GROUP:\n"
+              "                    `voicing = group_activity_[1] > voicing_threshold`.\n");
+  std::printf("  THE ARITHMETIC    derived from the genome before this ran:\n"
+              "                      gate      %.2f x %.1f Hz = %.2f Hz of group-1 rate\n"
+              "                      setpoint  vocal target_rate_hz = %.2f Hz\n"
+              "                    The gate sits %.2f Hz (%.0f%%) BELOW the setpoint, so\n"
+              "                    the creature is voiced only while IP has NOT finished.\n",
+              vthr, rnorm, vthr * rnorm, targ, targ - vthr * rnorm,
+              targ > 0.0 ? 100.0 * (targ - vthr * rnorm) / targ : 0.0);
+  std::printf("  the primary       b* is the bin of the largest drop in voiced fraction.\n"
+              "                    EXPLAINED if mean g1 crosses %.2f within +-2 bins of b*\n"
+              "                    AND z(g1) <= 2; NOT EXPLAINED if no crossing near b* or\n"
+              "                    z(g1) >= 3; PARTIAL otherwise.\n", vthr);
+  std::printf("  what each means   EXPLAINED closes the silence line with a mechanism and\n"
+              "                    makes §60's 58x sensitivity an artefact of thresholding.\n"
+              "                    NOT EXPLAINED moves the question off the homeostat. The\n"
+              "                    arithmetic PREDICTS the first, so the second is the\n"
+              "                    surprise -- the bands are written that way round.\n");
+  std::printf("  THE IDENTITY GATE `voicing` IS `g1 > %.2f`, so frames above the gate must\n"
+              "                    equal §60's voiced-frame count EXACTLY on every probe.\n"
+              "                    One mismatch voids the run. Reading `vocal_groups()`\n"
+              "                    instead of `vocal_activities()` breaks it.\n", vthr);
+  std::printf("  measures only     `voicing_threshold`, `rate_norm_hz` and `target_rate_hz`\n"
+              "                    are genome constants and no arm here moves one.\n");
+  std::printf("  session           %.1f s of simulated life x %u sessions, %u arms x %u reps,\n"
+              "                    scored on %u bins\n",
+              double(ticks) * dt / 1000.0, kJobs, kHgArms, kHgReps, kHgBins);
+  instrument("hushgate", dna.header().seed ^ 0x62A0u, kJobs, "sessions");
+
+  struct Row {
+    bool ok = false;
+    uint32_t pn[kHgBins] = {}, vn[kHgBins] = {}, wn[kHgBins] = {};
+    double g1[kHgBins] = {}, g1sd[kHgBins] = {}, g8[kHgBins] = {};
+    double g1thr[kHgBins] = {}, g1pin[kHgBins] = {};
+    double g1rate[kHgBins] = {}, g1marg[kHgBins] = {};
+    double thr[kHgBins] = {}, rate[kHgBins] = {};
+    uint32_t sn[kHgBins] = {};
+    uint32_t badid = 0;   // probes where g1n != vframes: the identity gate
+    uint32_t badlen = 0;
+  };
+
+  const std::vector<Row> rows = parallel_reps<Row>(kJobs, [&](uint32_t i) {
+    const uint32_t a = job_arm[i], r = job_rep[i];
+    Row row;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    {
+      aibaby::DnaHeader h;
+      std::memcpy(&h, variant.data(), sizeof(h));
+      h.exploration.context_source = 5u;
+      h.exploration.context_slots = kObjects;
+      h.exploration.ctx_proto_gate = 2u;
+      std::memcpy(variant.data(), &h, sizeof(h));
+    }
+    const G3Probe run =
+        run_g3probe_session(variant, ticks, /*consistent=*/true, 0x51E7u, 0,
+                            /*hold_nuisance=*/true, /*shuffle_order=*/false,
+                            arms[a].pin, /*teacher=*/1, arms[a].pairing);
+    if (!run.ok || run.probes < 12) return row;
+    row.ok = true;
+
+    const size_t np = run.probe_why.size();
+    if (run.probe_g1.size() != np || run.probe_g1n.size() != np ||
+        run.probe_vframes.size() != np || run.probe_g1marg.size() != np) {
+      ++row.badlen;
+      row.ok = false;
+      return row;
+    }
+    for (uint32_t b = 0; b < kHgBins; ++b) {
+      const size_t lo = np * b / kHgBins, hi = np * (b + 1) / kHgBins;
+      for (size_t k = lo; k < hi; ++k) {
+        ++row.pn[b];
+        // THE IDENTITY GATE, per probe. `voicing` is defined as `g1 > vthr`,
+        // so these two counts are the same quantity counted two ways.
+        if (run.probe_g1n[k] != run.probe_vframes[k]) ++row.badid;
+        row.wn[b] += run.probe_frames[k];
+        row.vn[b] += run.probe_vframes[k];
+        const double g = double(run.probe_g1[k]);
+        if (g == g) {
+          row.g1[b] += g;
+          row.g1sd[b] += double(run.probe_g1sd[k]);
+          row.g8[b] += double(run.probe_g8[k]);
+          row.g1thr[b] += double(run.probe_g1thr[k]);
+          row.g1pin[b] += double(run.probe_g1pin[k]);
+          row.g1rate[b] += double(run.probe_g1rate[k]);
+          row.g1marg[b] += double(run.probe_g1marg[k]);
+          row.thr[b] += double(run.probe_thr[k]);
+          row.rate[b] += double(run.probe_rate[k]);
+          ++row.sn[b];
+        }
+      }
+    }
+    return row;
+  });
+
+  std::vector<std::vector<uint32_t>> live(kHgArms);
+  for (uint32_t i = 0; i < kJobs; ++i)
+    if (rows[i].ok) live[job_arm[i]].push_back(job_rep[i]);
+  std::printf("\n  LIVENESS. completed sessions per arm:");
+  for (uint32_t a = 0; a < kHgArms; ++a)
+    std::printf("  %s %zu/%u", arms[a].name, live[a].size(), kHgReps);
+  std::printf("\n");
+
+  bool fatal = false;
+
+  // --- the identity gate ---------------------------------------------------
+  {
+    uint32_t bad = 0, badlen = 0, probes = 0;
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      badlen += rows[i].badlen;
+      if (!rows[i].ok) continue;
+      bad += rows[i].badid;
+      for (uint32_t b = 0; b < kHgBins; ++b) probes += rows[i].pn[b];
+    }
+    std::printf("\n  THE IDENTITY GATE. frames with g1 > %.2f must equal §60's voiced\n"
+                "  frames, on every probe, because that IS voicing's definition.\n", vthr);
+    std::printf("    vectors of disagreeing length   %u sessions   %s\n", badlen,
+                badlen == 0 ? "PASS" : "*** FAIL ***");
+    std::printf("    probes where g1n != vframes     %u of %u    %s\n", bad, probes,
+                bad == 0 ? "PASS" : "*** FAIL -- the run is VOID ***");
+    if (bad || badlen) fatal = true;
+  }
+
+  // --- pool the bins -------------------------------------------------------
+  // Pooled over every arm: the gate is a property of the larynx and not of the
+  // index, and §60 measured the cliff on all four arms alike.
+  std::vector<double> vfrac(kHgBins, 0.0), mg1(kHgBins, 0.0), msd(kHgBins, 0.0);
+  std::vector<double> mg8(kHgBins, 0.0), mthr(kHgBins, 0.0), mrate(kHgBins, 0.0);
+  std::vector<double> mg1thr(kHgBins, 0.0), mg1pin(kHgBins, 0.0);
+  std::vector<double> mg1rate(kHgBins, 0.0), mg1marg(kHgBins, 0.0);
+  for (uint32_t b = 0; b < kHgBins; ++b) {
+    uint64_t v = 0, w = 0;
+    double n = 0.0;
+    for (uint32_t i = 0; i < kJobs; ++i) {
+      if (!rows[i].ok) continue;
+      v += rows[i].vn[b];
+      w += rows[i].wn[b];
+      n += double(rows[i].sn[b]);
+      mg1[b] += rows[i].g1[b];
+      msd[b] += rows[i].g1sd[b];
+      mg8[b] += rows[i].g8[b];
+      mthr[b] += rows[i].thr[b];
+      mrate[b] += rows[i].rate[b];
+      mg1thr[b] += rows[i].g1thr[b];
+      mg1pin[b] += rows[i].g1pin[b];
+      mg1rate[b] += rows[i].g1rate[b];
+      mg1marg[b] += rows[i].g1marg[b];
+    }
+    vfrac[b] = w ? double(v) / double(w) : std::numeric_limits<double>::quiet_NaN();
+    if (n > 0.0) {
+      mg1[b] /= n; msd[b] /= n; mg8[b] /= n; mthr[b] /= n; mrate[b] /= n;
+      mg1thr[b] /= n; mg1pin[b] /= n; mg1rate[b] /= n; mg1marg[b] /= n;
+    }
+  }
+
+  // --- the cliff bin, and z for a series -----------------------------------
+  uint32_t bstar = 0;
+  double worst = 0.0;
+  for (uint32_t b = 1; b < kHgBins; ++b) {
+    const double d = vfrac[b - 1] - vfrac[b];
+    if (d == d && d > worst) { worst = d; bstar = b; }
+  }
+  // NO CLIFF IS A REAL OUTCOME, NOT A CRASH. If the voiced fraction never
+  // falls -- which is what a short budget looks like, since the cliff is keyed
+  // to absolute ticks -- `bstar` stays 0 and every `[bstar - 1]` below would
+  // index before the start of the vector. The 150k smoke found this by
+  // segfaulting, which is the cheapest way it could have been found.
+  if (bstar == 0) {
+    std::printf("\n  NO CLIFF IN THIS RUN. The voiced fraction never falls between\n"
+                "  consecutive bins, so b* is undefined and the primary cannot be\n"
+                "  scored. At a short budget this is EXPECTED -- §59a measured the\n"
+                "  cliff as keyed to ABSOLUTE ticks (7.4%% at 450k against 84%% at\n"
+                "  900k) -- and it is not a failure of the instrument.\n");
+    std::printf("    voiced fraction, first bin %.4f, last bin %.4f\n", vfrac[0],
+                vfrac[kHgBins - 1]);
+    std::printf("\n    VERDICT   %s\n", hg_verdict_name(kHgVoid));
+    std::printf("\n  %s\n", fatal ? "ONE OR MORE GATES FAILED."
+                                  : "Gates passed; the primary is unscorable at this budget.");
+    return !fatal;
+  }
+  // z of a series at b*, in units of the SD of its own bin-to-bin changes
+  // BEFORE b*. Using only the pre-cliff changes is the point: a window that
+  // included b* would inflate its own denominator with the event it is trying
+  // to measure, which is how a cliff hides itself.
+  auto zed = [&](const std::vector<double>& x, uint32_t* n_out) {
+    std::vector<double> d;
+    for (uint32_t b = 1; b < bstar; ++b) {
+      const double v = x[b] - x[b - 1];
+      if (v == v) d.push_back(v);
+    }
+    if (n_out) *n_out = uint32_t(d.size());
+    if (d.size() < 4) return std::numeric_limits<double>::quiet_NaN();
+    double m = 0.0;
+    for (double v : d) m += v;
+    m /= double(d.size());
+    double acc = 0.0;
+    for (double v : d) acc += (v - m) * (v - m);
+    const double sd = std::sqrt(acc / double(d.size() - 1));
+    if (!(sd > 0.0)) return std::numeric_limits<double>::quiet_NaN();
+    return (x[bstar] - x[bstar - 1]) / sd;
+  };
+
+  std::printf("\n  THE CLIFF, LOCATED. b* = bin %u of %u (ticks %llu..%llu), voiced\n"
+              "  fraction %.4f -> %.4f, a drop of %.4f.\n",
+              bstar + 1, kHgBins,
+              (unsigned long long)(ticks * bstar / kHgBins),
+              (unsigned long long)(ticks * (bstar + 1) / kHgBins),
+              vfrac[bstar - 1], vfrac[bstar], worst);
+
+  // --- the crossing --------------------------------------------------------
+  int cross = -1;
+  for (uint32_t b = 1; b < kHgBins; ++b) {
+    if (mg1[b - 1] > vthr && mg1[b] <= vthr) { cross = int(b); break; }
+  }
+  uint32_t zn = 0;
+  const double zg1 = zed(mg1, &zn);
+  const double zthr = zed(mthr, nullptr);
+  const double zrate = zed(mrate, nullptr);
+  const double zg1r = zed(mg1rate, nullptr);
+  const double zvf = zed(vfrac, nullptr);
+
+  std::printf("\n  THE PRIMARY.\n");
+  std::printf("    mean g1 crosses %.2f at bin        %s\n", vthr,
+              cross < 0 ? "NEVER (it does not cross in this session)" : "");
+  if (cross >= 0) std::printf("                                       %d   (b* = %u)\n",
+                              cross + 1, bstar + 1);
+  std::printf("    z at b*, over %u pre-cliff steps:\n", zn);
+  std::printf("      voiced fraction (defines b*)     %+8.2f\n", zvf);
+  std::printf("      g1, the gate's own quantity      %+8.2f\n", zg1);
+  std::printf("      group 1 fast rate                %+8.2f\n", zg1r);
+  std::printf("      POOL mean rate (what §60 read)   %+8.2f\n", zrate);
+  std::printf("      POOL mean threshold              %+8.2f\n", zthr);
+
+  HgVerdict v = kHgVoid;
+  if (zg1 == zg1) {
+    const bool near = cross >= 0 && std::abs(int(cross) - int(bstar)) <= 2;
+    const bool smooth = std::fabs(zg1) <= 2.0;
+    const bool breaks = std::fabs(zg1) >= 3.0;
+    if (near && smooth) v = kHgExplained;
+    else if (!near || breaks) v = kHgNot;
+    else v = kHgPartial;
+  }
+  std::printf("\n    VERDICT   %s\n", hg_verdict_name(v));
+
+  // --- secondary 1: which side moved --------------------------------------
+  std::printf("\n  SECONDARY 1. WHICH SIDE MOVED, on group 1 itself. A falling margin\n"
+              "  with a flat threshold means the DRIVE went; a rising threshold means IP\n"
+              "  did it. `g1Hz` is g1 x %.1f, so the gate is at %.2f Hz.\n", rnorm,
+              vthr * rnorm);
+  std::printf("    bin   ticks      vfrac     g1    g1Hz   g1sd   g1thr  g1pin"
+              "   g1marg   poolthr  poolHz\n");
+  for (uint32_t b = 0; b < kHgBins; ++b) {
+    if (kHgBins > 16 && (b % 4) != 0 && b + 1 != kHgBins &&
+        !(b + 2 >= bstar && b <= bstar + 2)) continue;
+    std::printf("    %3u  %8llu  %6.4f %6.4f %6.2f %6.4f  %6.3f %6.4f %+8.4f  %7.4f %7.3f%s\n",
+                b + 1, (unsigned long long)(ticks * b / kHgBins), vfrac[b], mg1[b],
+                mg1[b] * rnorm, msd[b], mg1thr[b], mg1pin[b], mg1marg[b], mthr[b],
+                mrate[b], b == bstar ? "   <- b*" : "");
+  }
+
+  std::printf("\n  SECONDARY 2 (descriptive, no verdict). THE SHARPENING PREDICTION: if IP\n"
+              "  concentrates the pool on its setpoint, g1's SPREAD across frames narrows,\n"
+              "  so a constant drift converts into a steeper change in the fraction above\n"
+              "  the gate.  g1sd at bin 1 %.4f -> at b* %.4f -> at the last bin %.4f\n",
+              msd[0], msd[bstar], msd[kHgBins - 1]);
+  std::printf("  SECONDARY 3 (descriptive). group 8 drives loudness through the jaw:\n"
+              "    g8 at bin 1 %.4f -> at b* %.4f -> last %.4f\n", mg8[0], mg8[bstar],
+              mg8[kHgBins - 1]);
+
+  // --- the matrix ----------------------------------------------------------
+  std::printf("\n  THE MATRIX, prefixed `GMAT`. One line per creature-bin, so ANY coarser\n"
+              "  grid -- §60's eighths included -- is re-derivable offline.\n");
+  std::printf("  GMAT arm rep b  probes frames voiced  g1 g1sd g8 g1thr g1pin g1rate g1marg poolthr poolrate\n");
+  for (uint32_t i = 0; i < kJobs; ++i) {
+    if (!rows[i].ok) continue;
+    for (uint32_t b = 0; b < kHgBins; ++b) {
+      const double n = double(rows[i].sn[b]);
+      if (n == 0.0) continue;
+      std::printf("  GMAT %-12s %3u %3u  %4u %6u %6u %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g %.6g\n",
+                  arms[job_arm[i]].name, job_rep[i], b + 1, rows[i].pn[b], rows[i].wn[b],
+                  rows[i].vn[b], rows[i].g1[b] / n, rows[i].g1sd[b] / n,
+                  rows[i].g8[b] / n, rows[i].g1thr[b] / n, rows[i].g1pin[b] / n,
+                  rows[i].g1rate[b] / n, rows[i].g1marg[b] / n, rows[i].thr[b] / n,
+                  rows[i].rate[b] / n);
     }
   }
 

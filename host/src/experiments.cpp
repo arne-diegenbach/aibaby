@@ -366,6 +366,19 @@ const Spec kSpecs[] = {
      "  the dumped matrix. G3 reproduces §58's four published phase windows to four\n"
      "  decimals INCLUDING their SEs from an independently written scorer. No core\n"
      "  change, no new genome field, no RNG draw. kRead: every branch prints"},
+    {"hushgate", 900000, Expect::kRead, Tier::kLong,
+     "derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's\n"
+     "  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --\n"
+     "  `voicing = group_activity_[1] > voicing_threshold`, where group 1 is one of\n"
+     "  nine contiguous slices of the vocal module and the reading is its FAST rate\n"
+     "  over `rate_norm_hz`. From the genome alone: 0.42 x 10.0 Hz means the glottis\n"
+     "  opens only above 4.2 Hz, while the vocal `target_rate_hz` is 5.0 -- THE GATE\n"
+     "  SITS 16% BELOW THE HOMEOSTAT'S OWN SETPOINT, so the creature is voiced only\n"
+     "  while IP has not yet finished. That inverts `silence-is-the-homeostat`: IP\n"
+     "  may silence the larynx by SUCCEEDING rather than by running out of range.\n"
+     "  Scored on 64 bins. An identity gate checks that frames above the gate equal\n"
+     "  §60's voiced-frame count exactly, since that is voicing's definition.\n"
+     "  Measures only: no arm moves a genome constant."},
     {"hush", 900000, Expect::kRead, Tier::kLong,
      "derived: §60. WHAT CLOSES THE LARYNX? §59a found every arm losing 55-80% of\n"
      "  its probes between e7 and e8, keyed to ABSOLUTE ticks, with the PINNED arms\n"
@@ -1709,6 +1722,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "slotwin") ok = run_slotwin(dna_blob, ticks, verbose);
   else if (name == "slotmat") ok = run_slotmat(dna_blob, ticks, verbose);
   else if (name == "slotexp") ok = run_slotexp(dna_blob, ticks, verbose);
+  else if (name == "hushgate") ok = run_hushgate(dna_blob, ticks, verbose);
   else if (name == "hush") ok = run_hush(dna_blob, ticks, verbose);
   else if (name == "repdrift") ok = run_repdrift(dna_blob, ticks, verbose);
   else if (name == "cpprobe") ok = run_cpprobe(dna_blob, ticks, verbose);
