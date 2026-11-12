@@ -12987,3 +12987,135 @@ only the association. It reads **0.4948 ± 0.0252**.
 
 This is `null-is-not-a-control` from the other side: a null biased *downward* is
 not a neutral error, because every contrast drawn against it is inflated.
+
+## §63 RESULT — M6 IS NOT MET, AND THE FAILURE IS AT THE MEETING POINT
+
+`--experiment samediff`, 1,680,000 ticks, 2 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934`. `results/n63-samediff-1680k.log`.
+
+**THE REGISTERED VERDICT IS A CLEAN REFUSAL, NOT A NO-VERDICT.**
+
+    PRIMARY   central          best gap 200 ms   0.5338 +- 0.0159   NOT MET
+    CO-PRIM   artic9 (MOTOR)   best gap 200 ms   0.5491 +- 0.0193   NOT MET
+
+The registered clause is `best + 2 SE < 0.650`: 0.5877 and 0.5877, both clear
+of the bar. No gap, no arm and no space reached it.
+
+### THE BUDGET WAS NOT FITTED TO THE DATA, AND THIS IS WHY IT IS THE RESULT
+
+1,680,000 was chosen to locate sleep onset, before any scoreable number
+existed — every prior run was `--allow-short` and prints under a banner saying
+it cannot pass whatever it reads. It is above the declared 672,000 minimum and
+it cleared every registered gate, so **it is §63's result and not a calibration
+pass.** Re-running at a budget chosen after reading these numbers is not
+available.
+
+    sessions that ran          24 of 24                       PASS
+    feature rows == labels     0 misaligned                   PASS
+    slept trials               1075 of 9600 = 0.1120           PASS
+    first sleep at tick        1,087,801
+    all 4 cells in both folds  0 gap-cells short              PASS
+    assembled oracle, best     1.0000                          PASS
+    label-destroyed, primary   0.5016 +- 0.0101                PASS
+
+**Sleep arrives at 1.088M under this protocol, not §62's ~780k.** Same genome,
+different drive — `match-at-the-operating-point`, and the reason this was
+measured rather than carried over.
+
+### THE SHARP NULL — THE INGREDIENTS ARE NOT BOTH PRESENT AT THE MOMENT OF COMPARISON
+
+Addition 2 was written so a null would say something exact, and it does. At the
+scoring window, 400 ms after the second word ends:
+
+    identity at the scoring window   auditory  central  vocal   artic9  artic7
+    B, the word just heard             0.80-0.86  0.48-0.52  0.55-0.59  0.79-0.85  0.75-0.83
+    A, the word being compared to      0.49-0.52  0.45-0.51  0.49-0.52  0.49-0.56  0.48-0.55
+
+**B is strongly carried and A is at chance everywhere.** The creature is not
+failing to compare two things it holds; at the moment the comparison is asked
+for, **it holds one of them.**
+
+And `central`, the primary module, carries **neither** — B reads 0.48-0.52
+there. Its assembled oracle of 0.77 is earned entirely in the during-word
+windows.
+
+### THE DECAY CURVE, WHICH IS NEW AND IS THE USEFUL PART
+
+A's identity just before B arrives, by time since A's offset — four points the
+project did not have, `ctxsrc`'s last bin having been a single pooled 1700-2800:
+
+    since A's offset    200 ms   800 ms   2000 ms   5000 ms
+    auditory            0.9209   0.5551   0.5174    0.5176
+    artic9              0.8269   0.7448   0.5440    0.5005
+    artic7              0.7842   0.7084   0.5325    0.4986
+
+**Two carriers with different lifetimes.** The ear's trace is gone by 800 ms.
+The motor echo is still at **0.74** there and dies between 800 and 2000 ms. The
+long carrier is the motor system, and its lifetime is **one to two seconds** —
+which is longer than §61 assumed from the echo's 200-600 ms window, and still
+far short of what a gap-crossing comparison needs at any useful interval.
+
+### THE OVERWRITE READING — SUGGESTIVE, CROSS-EXPERIMENT, NOT SEPARABLE HERE
+
+At gap 200 A reads **0.8269** just before B and **0.5645** after it. Those are
+different times since A's offset (200 ms against 1100-1500 ms), so the within-run
+comparison does not isolate overwrite from ordinary decay.
+
+The cross-experiment comparison is tighter and is worth stating as a reading:
+`ctxsrc` measured the articulators at **0.789** in exactly the 1100-1500 ms
+post-offset window with nothing after the word. Here, the same window with word
+B interposed, `artic7` reads **0.5477**. Same genome, different protocol and a
+readout that is comparable rather than identical.
+
+**This is a reading and not a verdict**, and the arm that would settle it is one
+line: a **B-omitted arm** — silence where the second word goes, A's identity read
+at the same absolute times. That is §63's named successor.
+
+### THE RESIDUAL AT SHORT GAPS, AND THE MUNDANE ACCOUNT FOR IT
+
+    same/different, shipped   200 ms   800 ms   2000 ms   5000 ms
+    auditory                  0.5572   0.5496   0.5212    0.5037
+    artic9                    0.5491   0.5396   0.5248    0.5230
+    central                   0.5338   0.5112   0.5154    0.4920
+
+Small, 2.1-2.5 SE above chance at the shortest gap, decaying monotonically on
+two spaces. Across 40 cells a 2-2.5 SE reading is not strong on its own; the
+decaying *pattern* is the part worth keeping.
+
+**The leading mundane account is repetition suppression**, and it is not
+separable here. If B is the same word as A, the neurons encoding it are still
+adapted and fire less — same/different information with no comparison computed
+anywhere, strongest at short gaps, decaying as adaptation recovers. That is
+exactly this shape. Nothing in this run distinguishes it from a weak genuine
+comparison, and it is not claimed as one.
+
+### DISCLOSED — THE ASSEMBLED ORACLE IS UNDERSTATED ON THE MOTOR SPACES
+
+    assembled oracle   auditory  central   vocal    artic9   artic7
+                       1.0000    0.76-0.78 0.95-0.98 0.56-0.58 0.54-0.56
+
+**The 0.650 bar sits ABOVE `artic9`'s own full scale (0.56-0.58), so the
+co-primary could not have passed it.** The cause is mine: the oracle decodes A
+from A's window and B from B's, and `ctxsrc` already measured that the
+articulators carry a word **better after it stops** than during it (0.818 and
+0.742 after, 0.510 and 0.742 during). The oracle therefore reads the motor
+spaces in the wrong window — `guard-measures-the-wrong-quantity`, inside the
+instrument written to price the bar.
+
+**The primary is unaffected.** `central`'s full scale is 0.77, the 0.650 bar is
+reachable there, and the observed 0.5338 is 12.5% of the way from chance to that
+ceiling. The NOT MET on central is a real refusal. The NOT MET on artic9 is
+uninformative and is withdrawn as evidence.
+
+### WHAT IT LICENSES
+
+§61 predicted a null would point the next build at **a carrier rather than a
+store**. The result refines that and the refinement is the finding:
+
+> There **is** a carrier — the motor echo, good for one to two seconds. The
+> failure is not that nothing persists, and not that nothing is legible. It is
+> that **the two things never coexist**: by the time B is available, A is gone.
+
+So the next build is neither a longer store nor a better carrier. It is
+whatever holds A **across B's presentation** — and whether B actively destroys
+A, or A simply dies on schedule, is the one-arm question §63 leaves open.
