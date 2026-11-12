@@ -13510,3 +13510,80 @@ not a longer carrier, and not a better readout.
 verdict rows, the gate figures and sleep onset at 1,087,801 — because the
 budget, genome, folds and seeds were held fixed across all three. The scoring
 grew; nothing underneath it moved.
+
+## §66 PRE-REGISTRATION — THE EFFERENCE-COPY COMBINER, PRICED BEFORE IT IS BUILT
+
+§65 named a **combiner** as the next build: something taking two concurrently
+represented items and emitting a match signal. Before changing the genome, the
+archive was read, and it changed the design twice.
+
+### WHAT THE ARCHIVE ALREADY HAS, AND WHAT IT ALREADY REFUTED
+
+**The subtraction machinery exists.** DNA v15 put `predict_gain` in
+`[curiosity]`: a rectified, per-mel-channel cancellation applied in `hear()`,
+one number per channel cancelling that channel and no other. It ships at **0.0**
+and is bit-identical when off.
+
+**Its prediction SOURCE is refuted, and thoroughly.**
+`critic-is-not-a-forward-model` measured that the association module carries no
+linear information about the sound — not the next frame (−0.027), not the frame
+it is hearing now (−0.022) — and that repairing the tract does not rescue it:
+nine of nine densities negative against plain persistence.
+
+**That refutation does not touch this use, and the archive says so itself:**
+*"The mechanism stays in the genome, off, at zero cost — it is the natural home
+for an adaptation experiment later."*
+
+### WHY THE SHIPPED PARAMETERISATION STILL CANNOT DO IT — TIMESCALE
+
+`persistence_base = 1, predict_gain = 1` is, in the archive's own words,
+*"exactly an onset detector"*. It predicts the **previous ~16 ms frame**. Across
+a gap of 200-5000 ms the previous frame is **silence**, so when B arrives the
+error is B's onset — identical whether or not B matches A. **The shipped
+mechanism has the right shape and the wrong memory.**
+
+### THE DESIGN, AND IT FOLLOWS FROM §63 AND §65
+
+What holds A is the **articulators**, at 0.7727, where central holds it at
+chance. So:
+
+> **Source the prediction from the articulators — an efference copy — instead of
+> from central.** When B arrives while the echo is still postured for A: a match
+> cancels and a mismatch does not. The same/different signal is then the
+> auditory module's own residual energy.
+
+This is reafference suppression, and the DNA comment anticipated it — *"a
+forward model driven by the same association module that drives the larynx is in
+a position to cancel it"*. It named the one module that turns out to hold
+nothing.
+
+### §66 IS THE GATE, NOT THE BUILD — AND ITS ONLY INTERESTING OUTCOME IS A REFUSAL
+
+Measured host-side with **no genome change**, as `shapeprobe` licensed DNA v46
+and `coderprobe` refused a front-end rewrite. At each tick of the overlap window:
+
+1. read the creature's own posture, `brain.voice()`;
+2. render it through a **second** `VowelSource` into a **second** `Cochlea` —
+   `mel.h` knows nothing about a brain, which is what makes this possible;
+3. subtract that predicted frame from the frame the ear actually delivered, and
+   **rectify**, exactly as `hear()` would.
+
+    PRIMARY     a held-out THRESHOLD on the residual's total energy -- one
+                scalar, which is what an innate downstream neuron could read
+    SECONDARY   a held-out readout of the 24-channel residual vector
+    CONTROL     the same residual against a posture drawn from a DIFFERENT
+                trial. Must read chance, or the residual is reading something
+                other than the match
+    REFERENCE   the raw mel frame with NO subtraction. Must read chance, since
+                B alone carries nothing about the label by construction
+
+Both an L1-normalised (shape-only) and a raw residual are computed. **The
+normalised one is the more generous test** — it removes loudness — so a failure
+there is the stronger refusal.
+
+Bar **0.650**, three-way as before. Budget, genome, gaps, arms and folds
+unchanged from §63-§65.
+
+**If this refuses, the efference-copy combiner is dead for one instrument
+instead of for a genome change, a recalibration and a determinism re-pin.** That
+is the whole point of running it first.
