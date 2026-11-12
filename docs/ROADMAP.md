@@ -13410,3 +13410,100 @@ denominator for the creature's own 0.50.
 Budget, genome, gaps, arms, folds and gates unchanged from §63 and §64 at
 1,680,000 ticks. The session must be re-run because features are not persisted;
 nothing else about it changes.
+
+## §65 RESULT — PRESENT AND RECOVERABLE, NOT COMPUTED
+
+`--experiment samediff`, 1,680,000 ticks, 3 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934`. `results/n65-samediff-1680k.log`. Budget,
+gaps, arms, folds and gates identical to §63 and §64.
+
+### THE REGISTERED VERDICT
+
+    §65 VERDICT  (artic9 x auditory, best gap 200 ms)
+      assembled    0.7727 +- 0.0247      an external observer, from the
+                                         creature's OWN simultaneous activity
+      conjunctive  0.7323                a learned combiner with a product term
+      creature     0.5104                what the creature makes available
+      destroyed    0.5072                the control
+      linear-joint 0.4947                chance, as named in advance
+      -> PRESENT AND RECOVERABLE, NOT COMPUTED
+
+The assembled readout is **11.0 SE above chance**. The creature's own readout,
+on the same trials in the same window, is **0.5104**.
+
+> **The two words are both there, the answer is fully recoverable from the
+> creature's own activity, and the creature does not compute it.**
+
+That is the statement M6 was written to reach. §63 could not make it (one
+ingredient appeared missing), §64 could not make it (no readout had been handed
+both), and it is now made.
+
+### THE ARITHMETIC IS TRANSPARENT, AND THAT MATTERS
+
+**`dec B` is exactly 1.0000 on both auditory pairs**, so the assembled readout
+**reduces to the A decoder**: if B is always right, the assembly is correct
+exactly when A is. The 0.7727 is not the assembly doing clever work — it is
+`A at 0.7727` and `B at 1.0000` in the same 400 ms, assembled without loss.
+
+Stated plainly so nobody later reads the assembly as a mechanism.
+
+    pair                gap 200   gap 800   gap 2000   gap 5000
+    artic9 x auditory   0.7727    0.6384    0.5058     0.4563
+    artic7 x auditory   0.7305    0.6212    0.4924     0.4715
+    artic9 x central    0.6431    0.5787    0.5192     0.4869
+
+Recoverability decays exactly as A's trace does, dying between 800 and 2000 ms —
+the same lifetime §63 measured.
+
+### A SIDE RESULT THAT VALIDATES §64'S CRITICISM OF §63
+
+On `artic9 × central`, where **neither** decoder is perfect (0.7727 and 0.6973),
+the independence formula §63 used for its oracle predicts
+`0.7727·0.6973 + 0.2273·0.3027 = 0.6076`. **Measured per trial: 0.6431.**
+
+The two decoders' errors are not independent, and the formula **understates the
+true assembly by 0.036**. §63's oracle was conservative in exactly the way §64
+suspected, and measuring the assembly rather than predicting it from marginals
+was worth doing for its own sake.
+
+### NOTED AND NOT EXPLAINED
+
+`dec A` reads **0.4563 ± 0.0207** at gap 5000 on artic9 and 0.4715 on artic7 —
+2.1 SE *below* chance, where gap 2000 sits at chance. Across twelve cells a
+deviation this size is roughly expected once, and it is on the gap where there
+is no trace left to decode. **It does not bear on the verdict**, which is read
+at gap 200, but a held-out decoder sitting below chance is a flag and is
+recorded rather than smoothed over.
+
+### WHAT THE INPUT SIDE NOW SAYS, END TO END
+
+    the ear carries the word                      0.981
+    both words are represented at once            A 0.7727, B 1.0000, same window
+    the answer is recoverable from that            0.7727, 11.0 SE
+    the creature's own readout of it               0.5104
+    the second word overwrites the first           +0.0967, 4.9 SE (§64)
+    the motor trace's lifetime                     1-2 s (§63)
+
+**M6's failure is not storage, not timing, not legibility, and not overwrite.**
+Every one of those was a candidate and every one is now measured and excluded as
+the binding constraint. What is missing is **the comparison operation itself**.
+
+That is a mechanistic bound on accumulation of the kind §61 said a null would
+buy, and it names the next build without ambiguity: a combiner — something that
+takes two concurrently represented items and emits a match signal — not a store,
+not a longer carrier, and not a better readout.
+
+### THE GATES
+
+    sessions that ran                      36 of 36            PASS
+    feature rows == labels                 0 misaligned        PASS
+    slept trials                           1617 of 14400       11.2%
+    all 4 cells in both folds              0 short of 144      PASS
+    label-destroyed, post-B window         0.5016 +- 0.0101    PASS
+    label-destroyed, the assembled readout 0.5072              PASS
+    assembled oracle, best                 1.0000              PASS
+
+§63, §64 and §65 reproduce every shared column to the digit — the §63 and §64
+verdict rows, the gate figures and sleep onset at 1,087,801 — because the
+budget, genome, folds and seeds were held fixed across all three. The scoring
+grew; nothing underneath it moved.
