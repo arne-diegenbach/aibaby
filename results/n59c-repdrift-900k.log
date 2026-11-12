@@ -1,0 +1,407 @@
+experiment: repdrift
+  the question      §59c. Is the REP INDEX exchangeable? `seed + r * 7919` is
+                    injective, so creature r is an independent draw and r must
+                    carry NO information. §59b's archived matrix says otherwise
+                    for ONE arm: T1.RET.D drifts upward with r in 30 of its 36
+                    windows, in e1 alone (t +2.77, where nothing is learned yet),
+                    while T1.RET / T1.ORACLE.D / T1.ORACLE read 5 / 1 / 0 on the
+                    same windows. Imbalance is refuted as the cause (survives at
+                    2.53 SE) and so is a weak coin (xoshiro256++ via splitmix64).
+  the primary       the OLS slope of T1.RET.D's e1-e8 slot term on r, over
+                    r 96..287 -- creatures NO section has scored. Null: slope = 0.
+  what it cannot    the four-block trend DECELERATES, so the drift may have
+   do               SATURATED before r 96. REFUTED here means `no slope in this
+                    range`, NOT `the r 0..95 drift was noise`. Secondary 2 is
+                    what makes saturation visible rather than assumed.
+  session           900.0 s of simulated life x 324 sessions
+  range             fresh r 96..287   G0 on (r 0..35)   arm2 on
+
+  THE VERDICT'S FOUR BRANCHES, exercised before any real row reaches it
+  (`deferral-note-is-untested-code`: real rows cannot test a branch they
+  never take, and a CONSTANT REGRESSOR cannot fail a slope test at all).
+    slope +0.00300  se 0.000288  sxx 5.0e+05 -> CONFIRMED -- the rep index carries information   ok  (slope >= +2 SE)
+    slope +0.00020  se 0.000288  sxx 5.0e+05 -> REFUTED -- no slope in this range                ok  (|slope| < 2 SE)
+    slope -0.00300  se 0.000288  sxx 5.0e+05 -> REVERSED -- the drift's sign is not stable       ok  (slope <= -2 SE)
+    slope +0.00300  se 0.000288  sxx 0.0e+00 -> UNDEFINED -- unidentified or too few creatures   ok  (CONSTANT regressor: sxx = 0)
+    branches reachable  4/4  PASS
+
+  THE PER-CREATURE DUMP. `%a` is the exact bit pattern, so two runs over
+  DIFFERENT rep ranges can be compared with `diff` and no tolerance. GATE A
+  is that comparison: independent creatures must agree to the last bit, and
+  a single differing creature is a harness defect touching every experiment.
+  CRE T1.RET.D    96  -0x1.746e1eafa233dp-5  -0.045462665494659472  scored
+  CRE T1.RET.D    97  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    98  0x1.0287208f95b54p-5  0.031558574290719094  scored
+  CRE T1.RET.D    99  0x1.d23d2b7302acep-6  0.028456966811101485  scored
+  CRE T1.RET.D   100  0x1.876f530709fep-4  0.095565151525647263  scored
+  CRE T1.RET.D   101  -0x1.47e0c2eb6d061p-3  -0.16009666710818052  scored
+  CRE T1.RET.D   102  -0x1.e78d747123fap-4  -0.11903138623369935  scored
+  CRE T1.RET.D   103  -0x1.8f3e9c2b2c02dp-3  -0.19494363791227567  scored
+  CRE T1.RET.D   104  -0x1.4ba8624466237p-3  -0.16194226046788326  scored
+  CRE T1.RET.D   105  0x1.d6007ab261211p-3  0.22949310166235695  scored
+  CRE T1.RET.D   106  -0x1.0300f0f221e5ep-2  -0.25293327787264797  scored
+  CRE T1.RET.D   107  -0x1.4b788c8a9a038p-6  -0.020231377837632375  scored
+  CRE T1.RET.D   108  0x1.1a8053f511495p-3  0.13794007865559324  scored
+  CRE T1.RET.D   109  -0x1.e5a02b6718afp-3  -0.2371219054067164  scored
+  CRE T1.RET.D   110  0x1.68ab6a28ad3a1p-5  0.044027049390400259  scored
+  CRE T1.RET.D   111  -0x1.4e264d6295b6cp-3  -0.16315899331194872  scored
+  CRE T1.RET.D   112  0x1.a725261fd8da2p-4  0.10330691234917436  scored
+  CRE T1.RET.D   113  -0x1.781bc4146abc2p-2  -0.36729341864218779  scored
+  CRE T1.RET.D   114  -0x1.654cf2f940db7p-4  -0.087231587520412698  scored
+  CRE T1.RET.D   115  0x1.22d74cbc84a14p-3  0.14201221418677845  scored
+  CRE T1.RET.D   116  -0x1.cd360a4dff971p-4  -0.11260036492601501  scored
+  CRE T1.RET.D   117  0x1.df43eaf711b3dp-7  0.014626016358432298  scored
+  CRE T1.RET.D   118  -0x1.da2fb7005d4d3p-10  -0.0018088775105671764  scored
+  CRE T1.RET.D   119  -0x1.6f1a373f663b3p-3  -0.17924922144154962  scored
+  CRE T1.RET.D   120  0x1.7807c3af7af8bp-4  0.091804279705398326  scored
+  CRE T1.RET.D   121  0x1.eaa7a9de4479dp-6  0.029947200667329466  scored
+  CRE T1.RET.D   122  -0x1.c066c59876178p-6  -0.027368252720266523  scored
+  CRE T1.RET.D   123  0x1.7063d9b8b10bfp-2  0.35975589933174129  scored
+  CRE T1.RET.D   124  -0x1.b78b3435bca58p-3  -0.21462097920410161  scored
+  CRE T1.RET.D   125  0x1.39617456e3cd7p-4  0.07650895543177981  scored
+  CRE T1.RET.D   126  0x1.cfb67c5afbb22p-3  0.22642228272112513  scored
+  CRE T1.RET.D   127  0x1.91a1b27fe98f6p-3  0.19610919430596824  scored
+  CRE T1.RET.D   128  0x1.8ec350d754b9dp-3  0.19470847279680195  scored
+  CRE T1.RET.D   129  0x1.c2edf1147cd62p-7  0.013761275019510581  scored
+  CRE T1.RET.D   130  0x1.e88f687000c57p-5  0.05963869474364774  scored
+  CRE T1.RET.D   131  0x1.d8194d5e65cf8p-5  0.057629252539465214  scored
+  CRE T1.RET.D   132  0x1.0b19d681d1fb8p-3  0.13042037566833442  scored
+  CRE T1.RET.D   133  0x1.254c78f9e7004p-5  0.035803066522220234  scored
+  CRE T1.RET.D   134  0x1.f52adeb4c31dcp-5  0.061177668545585567  scored
+  CRE T1.RET.D   135  -0x1.0a7492cff60eep-5  -0.032526289694659968  scored
+  CRE T1.RET.D   136  -0x1.584f42dd8c947p-6  -0.021014991091030024  scored
+  CRE T1.RET.D   137  0x1.31d05c08743b3p-3  0.14932319546508452  scored
+  CRE T1.RET.D   138  0x1.8dd3bc495b7fp-3  0.19425150965565718  scored
+  CRE T1.RET.D   139  -0x1.c650aaa89eeefp-6  -0.027729193362104828  scored
+  CRE T1.RET.D   140  -0x1.b8e1d5a162ff8p-3  -0.21527449511302144  scored
+  CRE T1.RET.D   141  0x1.381a4c419009fp-7  0.0095246193260439243  scored
+  CRE T1.RET.D   142  -0x1.83889d169d66p-2  -0.37845082712678924  scored
+  CRE T1.RET.D   143  -0x1.a21985caa2999p-4  -0.10207512152024946  scored
+  CRE T1.RET.D   144  -0x1.c6fe99e63e7d1p-4  -0.11108265034627542  scored
+  CRE T1.RET.D   145  0x1.b73f140569e13p-4  0.1072378904415177  scored
+  CRE T1.RET.D   146  -0x1.5a44e17a28498p-4  -0.084538346071456494  scored
+  CRE T1.RET.D   147  0x1.84d4d5b22b30dp-4  0.094929537534607714  scored
+  CRE T1.RET.D   148  0x1.42d7c9e7a59b8p-4  0.078819073382283444  scored
+  CRE T1.RET.D   149  -0x1.cb63964ca3a63p-4  -0.11215552054111692  scored
+  CRE T1.RET.D   150  0x1.a5757c019ca4ep-3  0.20579048995894528  scored
+  CRE T1.RET.D   151  0x1.6d4245ee0d214p-4  0.089174531139015578  scored
+  CRE T1.RET.D   152  -0x1.58847a37ac0a1p-6  -0.021027678826329169  scored
+  CRE T1.RET.D   153  -0x1.21cc0f9a77536p-5  -0.035375624156339588  scored
+  CRE T1.RET.D   154  -0x1.6614886d2fd04p-4  -0.087421925464685357  scored
+  CRE T1.RET.D   155  0x1.d6dee21cc70ecp-4  0.11495865178261838  scored
+  CRE T1.RET.D   156  -0x1.4a1457aab08efp-4  -0.08058580632044586  scored
+  CRE T1.RET.D   157  0x1.064c5e02fd0fep-4  0.064037673218823671  scored
+  CRE T1.RET.D   158  0x1.25d38f030b72dp-3  0.14346992233316183  scored
+  CRE T1.RET.D   159  0x1.0f19311fd736ap-3  0.13237226847095523  scored
+  CRE T1.RET.D   160  0x1.cd979f8f08139p-4  0.11269342734931777  scored
+  CRE T1.RET.D   161  0x1.213abdc7bb81fp-7  0.0088265825902134592  scored
+  CRE T1.RET.D   162  -0x1.83e80206769fep-5  -0.047351840930520681  scored
+  CRE T1.RET.D   163  -0x1.48a911d33e08p-8  -0.0050149601477117445  scored
+  CRE T1.RET.D   164  0x1.3e4502b376bf7p-3  0.15540506467991097  scored
+  CRE T1.RET.D   165  -0x1.ffd542be3c9b7p-6  -0.031239810160465811  scored
+  CRE T1.RET.D   166  0x1.8475e787856f3p-3  0.18967800981834379  scored
+  CRE T1.RET.D   167  -0x1.746d8187dcac5p-4  -0.090924745539989152  scored
+  CRE T1.RET.D   168  -0x1.e905102e74c25p-5  -0.059694797138625945  scored
+  CRE T1.RET.D   169  0x1.caca734f01d25p-7  0.014001184752500404  scored
+  CRE T1.RET.D   170  -0x1.4c3039d6fcff7p-2  -0.32440271734890253  scored
+  CRE T1.RET.D   171  -0x1.b8850fcbe4f4ep-4  -0.10754877253048997  scored
+  CRE T1.RET.D   172  0x1.6de475b817592p-5  0.044664602203492568  scored
+  CRE T1.RET.D   173  0x1.7267e88c46b92p-2  0.36172450405290946  scored
+  CRE T1.RET.D   174  -0x1.06c426d83a291p-3  -0.12830381724713338  scored
+  CRE T1.RET.D   175  0x1.95d63de93ee3ep-4  0.099081270065590282  scored
+  CRE T1.RET.D   176  0x1.171820d85cfc2p-2  0.27255297966553027  scored
+  CRE T1.RET.D   177  -0x1.1c0aa7f52b2bfp-4  -0.06934609993431716  scored
+  CRE T1.RET.D   178  -0x1.08eb83d16acb5p-2  -0.25871091809922159  scored
+  CRE T1.RET.D   179  -0x1.ff9ea5931a16ep-5  -0.06245357836525299  scored
+  CRE T1.RET.D   180  -0x1.8efe40c7caaabp-4  -0.09741044335229769  scored
+  CRE T1.RET.D   181  -0x1.af47b49cc17bp-5  -0.052646496542407717  scored
+  CRE T1.RET.D   182  -0x1.df2910318ce8dp-2  -0.4679300813906842  scored
+  CRE T1.RET.D   183  -0x1.69d274c47c1afp-4  -0.088335472224349884  scored
+  CRE T1.RET.D   184  -0x1.118c96393e38bp-3  -0.13356892931167538  scored
+  CRE T1.RET.D   185  -0x1.61d31b1ad014cp-2  -0.34553186751511045  scored
+  CRE T1.RET.D   186  -0x1.2d4ca71f9f341p-6  -0.018389857489171439  scored
+  CRE T1.RET.D   187  -0x1.6eaaa82303f74p-5  -0.044759109871050834  scored
+  CRE T1.RET.D   188  0x1.b8749cb8ba46ap-3  0.21506617010826129  scored
+  CRE T1.RET.D   189  0x1.a7c0ad645c836p-4  0.10345523577942192  scored
+  CRE T1.RET.D   190  0x1.d9dbd43c1ba75p-4  0.11568816093652308  scored
+  CRE T1.RET.D   191  -0x1.2fac1ba7d4675p-4  -0.074138744382503521  scored
+  CRE T1.RET.D   192  -0x1.fdb36e4a4745bp-5  -0.062219348345231316  scored
+  CRE T1.RET.D   193  0x1.9a47b21de2e4fp-3  0.20033206132608192  scored
+  CRE T1.RET.D   194  -0x1.9db91bf5e609ap-4  -0.10100661203466857  scored
+  CRE T1.RET.D   195  -0x1.19e60e7c079c7p-4  -0.068822914676707744  scored
+  CRE T1.RET.D   196  -0x1.30f2828e6aa09p-3  -0.14890005108948426  scored
+  CRE T1.RET.D   197  0x1.ff2482e3eccbep-3  0.249581358509749  scored
+  CRE T1.RET.D   198  -0x1.adc82ba96cfa5p-4  -0.10492722564123243  scored
+  CRE T1.RET.D   199  -0x1.783d54c66bfe2p-3  -0.18371072989020748  scored
+  CRE T1.RET.D   200  -0x1.63eac9f7fd1bp-2  -0.34757533622839798  scored
+  CRE T1.RET.D   201  0x1.1fd343f3a3e6cp-4  0.07026983779564383  scored
+  CRE T1.RET.D   202  -0x1.d4ca430e2e711p-4  -0.11445070451273077  scored
+  CRE T1.RET.D   203  -0x1.cb5f706a5b3ddp-5  -0.056075782357630756  scored
+  CRE T1.RET.D   204  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   205  0x1.2a56684b9cd18p-4  0.072836310771709711  scored
+  CRE T1.RET.D   206  -0x1.0de313013df15p-3  -0.13178076598682567  scored
+  CRE T1.RET.D   207  -0x1.5a6f85394a497p-4  -0.084579010396412677  scored
+  CRE T1.RET.D   208  0x1.2255501043cb9p-2  0.28352856730721104  scored
+  CRE T1.RET.D   209  0x1.efb362ca280f9p-4  0.12102068509785004  scored
+  CRE T1.RET.D   210  0x1.87c02f386a178p-3  0.1912845315066638  scored
+  CRE T1.RET.D   211  -0x1.20726a1e87542p-3  -0.14084322839418389  scored
+  CRE T1.RET.D   212  0x1.6ed883f57b42p-6  0.022390488496899619  scored
+  CRE T1.RET.D   213  -0x1.9028336610d36p-4  -0.097694588447713254  scored
+  CRE T1.RET.D   214  -0x1.618094c9132eep-4  -0.086304265206489567  scored
+  CRE T1.RET.D   215  0x1.f41aa388df1a7p-3  0.24419143449257527  scored
+  CRE T1.RET.D   216  0x1.4325146762362p-5  0.039446391917471471  scored
+  CRE T1.RET.D   217  -0x1.3ad54ea64a3c6p-5  -0.038431790935937779  scored
+  CRE T1.RET.D   218  0x1.509b5e25ba5e1p-4  0.08217942024534565  scored
+  CRE T1.RET.D   219  0x1.13ba9aeb7817ep-5  0.033658316209542058  scored
+  CRE T1.RET.D   220  -0x1.462fa55a3062cp-2  -0.31854112971277249  scored
+  CRE T1.RET.D   221  -0x1.9043b8379e97dp-3  -0.19544166488396889  scored
+  CRE T1.RET.D   222  0x1.08ff67f0da6c3p-3  0.12939339832091976  scored
+  CRE T1.RET.D   223  -0x1.4e582ddd3f07dp-5  -0.040813531473731658  scored
+  CRE T1.RET.D   224  -0x1.b7c185a11bc08p-6  -0.026840572831527992  scored
+  CRE T1.RET.D   225  -0x1.2e4ef41d1adp-7  -0.009225720592630271  scored
+  CRE T1.RET.D   226  0x1.9cdb259d3522cp-3  0.20158986459741024  scored
+  CRE T1.RET.D   227  0x1.b04f224ef694bp-4  0.10554421807993213  scored
+  CRE T1.RET.D   228  0x1.6d96fb9cefa97p-4  0.089255316604047827  scored
+  CRE T1.RET.D   229  -0x1.9eae9a1ba8608p-4  -0.10124073217823348  scored
+  CRE T1.RET.D   230  -0x1.5a71d14b3b866p-3  -0.16916240225640705  scored
+  CRE T1.RET.D   231  -0x1.1a306539317bp-4  -0.068893809703779452  scored
+  CRE T1.RET.D   232  -0x1.0253178ec701p-3  -0.12613504795524522  scored
+  CRE T1.RET.D   233  -0x1.51bf739cfb49ep-3  -0.16491594622440159  scored
+  CRE T1.RET.D   234  -0x1.aeb84dc6eae6ap-3  -0.21031246913240703  scored
+  CRE T1.RET.D   235  0x1.4c985edde0129p-4  0.081199999402092118  scored
+  CRE T1.RET.D   236  0x1.04e059f9b7d13p-4  0.06369052073158725  scored
+  CRE T1.RET.D   237  -0x1.83515c288ac7fp-4  -0.094560012811301761  scored
+  CRE T1.RET.D   238  0x1.152019508e6ep-6  0.016914391251907968  scored
+  CRE T1.RET.D   239  0x1.c40848830819cp-4  0.1103594620221941  scored
+  CRE T1.RET.D   240  0x1.cf0275d20073dp-6  0.028259863909631412  scored
+  CRE T1.RET.D   241  0x1.469801bed2519p-4  0.07973480874820317  scored
+  CRE T1.RET.D   242  -0x1.67ecfe753bbc2p-3  -0.1757449988867546  scored
+  CRE T1.RET.D   243  -0x1.0068864e4293ap-3  -0.12519936491328015  scored
+  CRE T1.RET.D   244  0x1.8cfda796eccc3p-6  0.024230397855444574  scored
+  CRE T1.RET.D   245  0x1.80931894a6364p-3  0.18778056338922078  scored
+  CRE T1.RET.D   246  0x1.b2145bb05a85ep-3  0.211952892608056  scored
+  CRE T1.RET.D   247  0x1.d1e80ad566d22p-5  0.056873341712355932  scored
+  CRE T1.RET.D   248  0x1.ca0a09bbdba0fp-2  0.44730391701787736  scored
+  CRE T1.RET.D   249  -0x1.328910f74d70dp-4  -0.074837747834717486  scored
+  CRE T1.RET.D   250  0x1.c28c190331efdp-3  0.21999377766609732  scored
+  CRE T1.RET.D   251  -0x1.c59a6dd052fd9p-3  -0.22148595611576985  scored
+  CRE T1.RET.D   252  -0x1.e78435116d159p-4  -0.11902256707873472  scored
+  CRE T1.RET.D   253  -0x1.356f25eac5fb8p-3  -0.1510909044525286  scored
+  CRE T1.RET.D   254  -0x1.23537c08b56eap-6  -0.017781134726496818  scored
+  CRE T1.RET.D   255  -0x1.7c285a3af1cdbp-4  -0.092811920606539131  scored
+  CRE T1.RET.D   256  -0x1.0143d86089ccp-4  -0.062808842871720394  scored
+  CRE T1.RET.D   257  0x1.c520f341023c1p-5  0.05531356344733452  scored
+  CRE T1.RET.D   258  0x1.f9882f4670093p-3  0.24684178289135569  scored
+  CRE T1.RET.D   259  -0x1.e73fed5b33fbbp-5  -0.059478725038956758  scored
+  CRE T1.RET.D   260  0x1.6c0720539b5e5p-3  0.17774796729229006  scored
+  CRE T1.RET.D   261  -0x1.746e2b2e2316bp-5  -0.04546268876683509  scored
+  CRE T1.RET.D   262  0x1.0eee871490b27p-6  0.016536361612689589  scored
+  CRE T1.RET.D   263  -0x1.02e7b6527626p-5  -0.031604629609948587  scored
+  CRE T1.RET.D   264  -0x1.de2ca4a73fp-4  -0.1167417938012818  scored
+  CRE T1.RET.D   265  0x1.844417feda4d6p-3  0.18958300348757601  scored
+  CRE T1.RET.D   266  -0x1.325b3a5c3875cp-3  -0.14958806604323172  scored
+  CRE T1.RET.D   267  -0x1.2e3542d5c0141p-4  -0.073781262468405565  scored
+  CRE T1.RET.D   268  0x1.dd981a5c18b18p-4  0.11660013481882137  scored
+  CRE T1.RET.D   269  -0x1.8808dde6ad88cp-7  -0.011963947630061499  scored
+  CRE T1.RET.D   270  -0x1.d7fc69ff4f2bp-7  -0.014403869396681784  scored
+  CRE T1.RET.D   271  0x1.ad809435363ap-5  0.052429475277399051  scored
+  CRE T1.RET.D   272  0x1.375ff92414496p-3  0.15203852311473004  scored
+  CRE T1.RET.D   273  -0x1.304f33b5e8379p-6  -0.018573570726974496  scored
+  CRE T1.RET.D   274  0x1.2985cedd0d4fp-4  0.072637374935613286  scored
+  CRE T1.RET.D   275  -0x1.0ae48e12e7778p-3  -0.13031874652090969  scored
+  CRE T1.RET.D   276  -0x1.3f5b355a993e7p-3  -0.15593568499312413  scored
+  CRE T1.RET.D   277  0x1.a43247048b08ep-6  0.025646752694385593  scored
+  CRE T1.RET.D   278  0x1.90c39ab3bfe2bp-6  0.024460698200526359  scored
+  CRE T1.RET.D   279  -0x1.da59db7afce0fp-4  -0.11580835089244366  scored
+  CRE T1.RET.D   280  -0x1.5f8c02858bf7ap-4  -0.085826883173238416  scored
+  CRE T1.RET.D   281  -0x1.eab9bacb7e3dbp-6  -0.029951507965936357  scored
+  CRE T1.RET.D   282  0x1.8b6eebf15ab65p-3  0.19308266001038557  scored
+  CRE T1.RET.D   283  -0x1.ca61dc961c7b6p-4  -0.11190973440696336  scored
+  CRE T1.RET.D   284  0x1.2803a2674e52p-3  0.14453818204655366  scored
+  CRE T1.RET.D   285  0x1.f017d93862c0cp-2  0.48446597487117127  scored
+  CRE T1.RET.D   286  0x1.88397d0b011a6p-6  0.023939487564364058  scored
+  CRE T1.RET.D   287  -0x1.124f1eaf4b25bp-4  -0.066969985830561837  scored
+  CRE T1.RET.D     0  -0x1.f947c3cde02f9p-2  -0.49343782371583661  scored
+  CRE T1.RET.D     1  -0x1.becf2ede931e9p-3  -0.21816860787147555  scored
+  CRE T1.RET.D     2  -0x1.ff80dbc27cc6cp-4  -0.12487874835623963  scored
+  CRE T1.RET.D     3  -0x1.0c417b1c9a788p-3  -0.13098426991501477  scored
+  CRE T1.RET.D     4  -0x1.2d56a840484bep-1  -0.58855176720330582  scored
+  CRE T1.RET.D     5  0x1.8aed987abeb66p-5  0.048208997546644025  scored
+  CRE T1.RET.D     6  -0x1.c311772419d9fp-3  -0.2202481563465257  scored
+  CRE T1.RET.D     7  -0x1.8785ed22fae29p-3  -0.19117341292381809  scored
+  CRE T1.RET.D     8  -0x1.0579a6eca98c2p-6  -0.015959179889841087  scored
+  CRE T1.RET.D     9  0x1.0996773c7e434p-3  0.12968152192459714  scored
+  CRE T1.RET.D    10  0x1.4912399e133bep-5  0.040169823202269125  scored
+  CRE T1.RET.D    11  -0x1.ddec3eddd8419p-5  -0.058340189729968191  scored
+  CRE T1.RET.D    12  0x1.5e92b2e31f61p-4  0.08558912160693688  scored
+  CRE T1.RET.D    13  0x1.1ef726bb6f62bp-8  0.0043787450371702103  scored
+  CRE T1.RET.D    14  -0x1.0326d82a95a9cp-3  -0.12653893356283141  scored
+  CRE T1.RET.D    15  -0x1.0b62d7fe103bfp-3  -0.13055962318506251  scored
+  CRE T1.RET.D    16  0x1.d31d2e4a348c9p-4  0.11404150087335831  scored
+  CRE T1.RET.D    17  -0x1.a5aedcf9ffdadp-4  -0.1029499656578909  scored
+  CRE T1.RET.D    18  -0x1.6990bc355c906p-3  -0.17654559171530354  scored
+  CRE T1.RET.D    19  -0x1.1eaf9ff501653p-7  -0.0087489634552283865  scored
+  CRE T1.RET.D    20  -0x1.7299f7f145b95p-7  -0.011309858384761099  scored
+  CRE T1.RET.D    21  -0x1.8b826ecdd6683p-5  -0.048279968656697946  scored
+  CRE T1.RET.D    22  -0x1.5da0e09e4154bp-4  -0.085358502783568088  scored
+  CRE T1.RET.D    23  0x1.da855c7f10447p-3  0.23169967901961483  scored
+  CRE T1.RET.D    24  0x1.7b32156ac128fp-4  0.092577060375399464  scored
+  CRE T1.RET.D    25  0x1.c18331ed6b758p-5  0.054872128977293044  scored
+  CRE T1.RET.D    26  -0x1.3a5cbe58036e9p-2  -0.30699441349211881  scored
+  CRE T1.RET.D    27  0x1.410bb4808e84bp-2  0.31352121386192228  scored
+  CRE T1.RET.D    28  -0x1.895aa9bc9d424p-4  -0.096033728632236193  scored
+  CRE T1.RET.D    29  -0x1.37cd3d4cc7206p-3  -0.15224693193967215  scored
+  CRE T1.RET.D    30  -0x1.c7d5b0da66d7ep-5  -0.055643887916825271  scored
+  CRE T1.RET.D    31  -0x1.9cdb2f7726872p-2  -0.40317987599121985  scored
+  CRE T1.RET.D    32  -0x1.f3c52231a745ap-3  -0.24402834619550867  scored
+  CRE T1.RET.D    33  -0x1.f8ed4803c679ep-3  -0.24654632817765515  scored
+  CRE T1.RET.D    34  -0x1.aaeb79c4b6308p-4  -0.10422847333701324  scored
+  CRE T1.RET.D    35  -0x1.76e75f6f56bc4p-3  -0.18305849607972224  scored
+  CRE T1.RET      96  -0x1.94f4479ebcf3dp-9  -0.0030895554949611757  scored
+  CRE T1.RET      97  0x1.bfe2fd593f7cfp-10  0.0017085520869950415  scored
+  CRE T1.RET      98  0x1.bede0788d8e82p-3  0.21819692503332894  scored
+  CRE T1.RET      99  -0x1.2f1d3e7fd318cp-8  -0.0046251561723916861  scored
+  CRE T1.RET     100  0x1.979a7e3a7d56bp-2  0.39805028182975971  scored
+  CRE T1.RET     101  -0x1.cfcc0f8b9efcp-6  -0.028307929211663696  scored
+  CRE T1.RET     102  0x1.e47819ef8360ep-3  0.2365572000712039  scored
+  CRE T1.RET     103  0x1.5357555bf8af2p-6  0.020711739882140763  scored
+  CRE T1.RET     104  0x1.cb309415a4ea8p-5  0.056053437450058141  scored
+  CRE T1.RET     105  0x1.1cf1e3150bc4cp-3  0.13913323791482168  scored
+  CRE T1.RET     106  -0x1.0f81ac1ca3048p-3  -0.13257154905693569  scored
+  CRE T1.RET     107  -0x1.9f7446aa0013bp-5  -0.050714624419926989  scored
+  CRE T1.RET     108  -0x1.d9bf15c261c52p-5  -0.057830374239579499  scored
+  CRE T1.RET     109  0x1.1bbf1b6afd1fep-3  0.13854810161832626  scored
+  CRE T1.RET     110  -0x1.11c0e57ebe413p-3  -0.13366870205916878  scored
+  CRE T1.RET     111  -0x1.def02a05c9bcbp-5  -0.058464128566178518  scored
+  CRE T1.RET     112  -0x1.34ee096a59943p-9  -0.0023569475644535111  scored
+  CRE T1.RET     113  0x1.7cb111132358ap-7  0.011617787682804321  scored
+  CRE T1.RET     114  0x1.0039d763f08e2p-1  0.50044129462210329  scored
+  CRE T1.RET     115  0x1.aebca2945348bp-7  0.01314504564711629  scored
+  CRE T1.RET     116  0x1.b86231556ec87p-7  0.013439439858180314  scored
+  CRE T1.RET     117  0x1.163da9fd77f72p-7  0.0084912376432268767  scored
+  CRE T1.RET     118  -0x1.fa854a0d37d22p-3  -0.24732454159582412  scored
+  CRE T1.RET     119  0x1.6e55f5884b16fp-2  0.3577497829853859  scored
+  CRE T1.RET     120  0x1.60016808dcaedp-4  0.085938841233467136  scored
+  CRE T1.RET     121  0x1.589107834c32fp-4  0.084122685763543301  scored
+  CRE T1.RET     122  -0x1.854391fa4c818p-3  -0.19007028622724031  scored
+  CRE T1.RET     123  0x1.d5284c6fb2d61p-6  0.028635096211286796  scored
+  CRE T1.RET     124  -0x1.4ab90cd9a344bp-4  -0.080742883869065071  scored
+  CRE T1.RET     125  -0x1.0fd7331a416b4p-5  -0.033183669862450499  scored
+  CRE T1.RET     126  0x1.c942ab9b9665fp-4  0.11163584741861986  scored
+  CRE T1.RET     127  0x1.cdd315710bad4p-5  0.056375066640944077  scored
+  CRE T1.RET     128  -0x1.2fb93a6eaa921p-3  -0.14830251360155791  scored
+  CRE T1.RET     129  0x1.b2c23a261ea21p-7  0.013267782586116774  scored
+  CRE T1.RET     130  -0x1.2e592085d5573p-8  -0.00461346668256134  scored
+  CRE T1.RET     131  -0x1.0d2a5aabb3f5bp-3  -0.13142844044204591  scored
+  CRE T1.RET     132  -0x1.6a3888a16ad16p-3  -0.17686564200025917  scored
+  CRE T1.RET     133  -0x1.4cd8d38ab81d3p-4  -0.081261469207226697  scored
+  CRE T1.RET     134  0x1.5553d408123dbp-3  0.16666379594451439  scored
+  CRE T1.RET     135  -0x1.5e03de0c98915p-5  -0.042726453485345463  scored
+  CRE T1.RET     136  -0x1.01e1f221d4cb7p-8  -0.0039349762099220508  scored
+  CRE T1.RET     137  0x1.64dfca2bf99b3p-2  0.34850994008447883  scored
+  CRE T1.RET     138  0x1.9a12fe83fe94bp-2  0.40046308212881304  scored
+  CRE T1.RET     139  0x1.7eba7cfad2d8p-5  0.046719783879406229  scored
+  CRE T1.RET     140  0x1.2e62fce8848dp-6  0.018456217747435499  scored
+  CRE T1.RET     141  0x1.4cb65521bde76p-3  0.16245714673253858  scored
+  CRE T1.RET     142  -0x1.09dee8dd64808p-3  -0.12981969762455514  scored
+  CRE T1.RET     143  0x1.60d0b1222d75dp-5  0.04306826206577228  scored
+  CRE T1.RET     240  0x1.d2ff7ccd7b1b3p-6  0.028503295781705251  scored
+  CRE T1.RET     241  0x1.76172216d583ap-5  0.045665327625713251  scored
+  CRE T1.RET     242  0x1.59982b741a3c7p-3  0.1687472719961802  scored
+  CRE T1.RET     243  0x1.c40f2cb3c0021p-8  0.0068978771339516529  scored
+  CRE T1.RET     244  0x1.45004f6758d19p-4  0.0793459989268296  scored
+  CRE T1.RET     245  0x1.63c99b3d02ee7p-6  0.021715547180106844  scored
+  CRE T1.RET     246  -0x1.6690781865c25p-4  -0.087540120241428612  scored
+  CRE T1.RET     247  0x1.4ec4420ab4e8cp-5  0.040865067470488986  scored
+  CRE T1.RET     248  0x1.bb31c04f13bc1p-6  0.027050435830741074  scored
+  CRE T1.RET     249  0x1.c2fdec4a4dde4p-4  0.11010544110182924  scored
+  CRE T1.RET     250  0x1.e231b16b863c7p-5  0.058861586116286051  scored
+  CRE T1.RET     251  0x1.681c6b171bf24p-4  0.087917726823203923  scored
+  CRE T1.RET     252  0x1.352edbad5128ap-2  0.30193656201689889  scored
+  CRE T1.RET     253  -0x1.47ac0ad9bad2dp-8  -0.0049998785486693844  scored
+  CRE T1.RET     254  -0x1.6d3da3a319c97p-4  -0.089170111854047426  scored
+  CRE T1.RET     255  0x1.8d742df0fa1cbp-5  0.048517312745221718  scored
+  CRE T1.RET     256  -0x1.fbfde03aacb49p-5  -0.06201070589795294  scored
+  CRE T1.RET     257  0x1.a3a761d951468p-3  0.20490910000276874  scored
+  CRE T1.RET     258  0x1.a5cb0752a6aa7p-2  0.41190730516397384  scored
+  CRE T1.RET     259  0x1.1055ce6d9e528p-3  0.13297616264370871  scored
+  CRE T1.RET     260  0x1.2d1955f64bdb1p-5  0.036755245108334285  scored
+  CRE T1.RET     261  0x1.f1d2c4d2a75e2p-3  0.24307779090751952  scored
+  CRE T1.RET     262  0x1.944732403ec1cp-4  0.098700710575869655  scored
+  CRE T1.RET     263  -0x1.5b4b618c42f5bp-3  -0.16957737168592754  scored
+  CRE T1.RET     264  0x1.877b551825e5bp-3  0.19115320663398702  scored
+  CRE T1.RET     265  0x1.c1d4c0cfa150dp-2  0.43928815142892647  scored
+  CRE T1.RET     266  0x1.dfa04db046d31p-4  0.11709623667814097  scored
+  CRE T1.RET     267  0x1.512e515f3f1c7p-3  0.16463912555617652  scored
+  CRE T1.RET     268  -0x1.33d9a25be5b7ap-6  -0.018789681008992677  scored
+  CRE T1.RET     269  -0x1.63a3c991c4a9ap-6  -0.021706530423282723  scored
+  CRE T1.RET     270  -0x1.33b498f0744ep-6  -0.018780850748787326  scored
+  CRE T1.RET     271  0x1.12d03b3aee16bp-3  0.13418623231496993  scored
+  CRE T1.RET     272  0x1.3a3351e9bde3bp-2  0.30683639516016442  scored
+  CRE T1.RET     273  0x1.6599409ddd5b4p-4  0.087304356011222606  scored
+  CRE T1.RET     274  0x1.223083c8733bap-2  0.28338819418859951  scored
+  CRE T1.RET     275  0x1.6a0aac556b0f4p-7  0.011048635623261728  scored
+  CRE T1.RET     276  -0x1.0cdfae06845bap-3  -0.13128601033581139  scored
+  CRE T1.RET     277  0x1.5ede9503fc466p-5  0.042830744787246286  scored
+  CRE T1.RET     278  0x1.593a7747a755ep-6  0.021071068271898745  scored
+  CRE T1.RET     279  0x1.6fa6487e3a06fp-5  0.044879094684632352  scored
+  CRE T1.RET     280  -0x1.f0e2eb0eb4fdap-5  -0.060655078026371448  scored
+  CRE T1.RET     281  0x1.778feacd5a449p-2  0.36675993803379875  scored
+  CRE T1.RET     282  0x1.2cda0e6f0dba4p-4  0.073450142271083652  scored
+  CRE T1.RET     283  -0x1.64f2f5e5613d8p-7  -0.010893220964826186  scored
+  CRE T1.RET     284  0x1.698fad29c56b2p-5  0.044135893067659096  scored
+  CRE T1.RET     285  -0x1.8ab811bb8045ap-6  -0.024091737095663347  scored
+  CRE T1.RET     286  0x1.09604a3a59f4fp-3  0.12957818975996324  scored
+  CRE T1.RET     287  0x1.2a2d29b238908p-4  0.072796976924596746  scored
+
+  G0 -- TRANSFER, READ FIRST. The same binary must reproduce §53's PUBLISHED
+  T1.RET.D whole-session value on r 0..35 to four decimals INCLUDING the SE
+  and exactly on n. If it does not, this is a different experiment and
+  nothing below is readable.
+    T1.RET.D e1-e8  -0.0947 +- 0.0306 (n36)   archive -0.0947 +- 0.0306 (n36)   match
+
+  ================= THE REGISTERED PRIMARY =================
+  T1.RET.D e1-e8, OLS slope on rep index, r 96..287
+    slope +0.000138 +- 0.000200 per rep    n 190 scored of 192 run
+    0.69 SE from zero
+    identification: sxx 5.807e+05 over r span 192   (a CONSTANT regressor would
+      make this 0 and the verdict UNDEFINED -- measured, not asserted)
+    per-creature SD 0.1523   (the power input; §59b's fresh e1-e8 gave 0.188,
+      its discovery 0.170, and the plan assumed a pessimistic 0.21)
+    2 SE detection threshold +0.000400 per rep = 23% of the drift measured
+      on r 0..95 (+0.00176 per rep on this window)
+    scored fraction 99.0%   (the OTHER power input rule 5 says to take from
+      a FRESH arm, never a discovery sample)
+
+    VERDICT: REFUTED -- no slope in this range
+
+  SECONDARY 1 -- THE LEVEL, against §53's archived constant. DECLARED BEFORE
+  THE RUN AS CAPPED: the archive's own SE is 0.0306, so this contrast cannot
+  exceed 2.75 SE however many creatures run. The cap is not a result.
+    fresh r 96..287  -0.0034 +- 0.0111 (n190)   archive -0.0947 +- 0.0306 (n36)
+    difference      +0.0913 +- 0.0325 = 2.81 SE
+
+  SECONDARY 2 -- THE BLOCK TABLE over r 96..287, 48 reps each. This is what
+  distinguishes `no drift` from `drift already finished` -- the distinction
+  the primary cannot make on its own.
+    r  96..143   -0.0087 +- 0.0232 (n47 of 48)
+    r 144..191   -0.0066 +- 0.0225 (n48 of 48)
+    r 192..239   -0.0188 +- 0.0211 (n47 of 48)
+    r 240..287   +0.0203 +- 0.0218 (n48 of 48)
+
+  SECONDARY 3 -- ARM SPECIFICITY in fresh territory, on the two extreme
+  blocks only, which are DISJOINT by construction. §59b established
+  specificity on r 0..95; this asks whether it holds here. DISCLOSED BEFORE
+  THE RUN: a null is WEAK -- half the creatures and no lever arm.
+    T1.RET  r  96..143  +0.0404 +- 0.0233 (n48 of 48)
+    T1.RET  r 240..287  +0.0830 +- 0.0192 (n48 of 48)
+    difference          +0.0426 +- 0.0302 = 1.41 SE
+
+  SECONDARY 4 -- THE SLOPE OVER r 0..287, WHICH CONTAINS THE DISCOVERY SAMPLE
+  (r 0..35 motivated this test), so it CANNOT be the result. Printed so the
+  shape is on the record, labelled here rather than left to a reader.
+    slope +0.000379 +- 0.000129 per rep   n 226   sxx 1.505e+06   2.94 SE
+
+  THE REGISTERED PRIMARY WAS: T1.RET.D e1-e8 slope on r over r 96..287.
+  VERDICT: REFUTED -- no slope in this range
+  All gates passed.

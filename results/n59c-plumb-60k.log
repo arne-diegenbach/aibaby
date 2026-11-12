@@ -1,0 +1,229 @@
+experiment: repdrift
+  SHORT RUN — 60000 ticks against a minimum of 900000. derived: §59c. IS THE REP INDEX EXCHANGEABLE? `seed = dna.seed + r * 7919` is
+  injective, so creature r is an independent draw and the rep index must carry
+  NO information about anything. §59b's archived per-creature matrix says
+  otherwise for exactly ONE arm: T1.RET.D -- the label-destroyed control that
+  §53, §58, §59a and §59b all lean on -- drifts UPWARD with r in 30 of its 36
+  windows, every one positive, while T1.RET, T1.ORACLE.D and T1.ORACLE read
+  5 / 1 / 0 on identical windows with identical nesting. It is present in e1
+  ALONE (t +2.77), where no lesson has accumulated, so it is not learning; the
+  object-presentation imbalance is refuted as the cause (the drift survives the
+  imb x Gbar correction at 2.53 SE) and so is a weak coin (the generator is
+  xoshiro256++ seeded through splitmix64, whose low bits are sound). If r really
+  carries information then every comparison this project has made BETWEEN REP
+  RANGES is confounded, §53's `the drawn arm is pushed negative by unequal
+  dose` is a low-rep value rather than a property of the arm, and §59b's clause
+  5a was evaluated where that arm happens to sit near zero.
+  THE PRIMARY is the OLS slope of T1.RET.D's e1-e8 slot term on r over
+  r 96..287 -- 192 creatures no section has scored -- against a null slope of
+  zero, which is what exchangeable creatures must give. Buying LEVER ARM rather
+  than creatures is deliberate: a contrast against §53's archived constant is
+  capped at 2.75 SE by that constant's own SE however many creatures run, so
+  the first design proposed for this was unrunnable and was replaced BEFORE any
+  code existed. GATE A comes first and needs no statistics: the per-creature
+  dump prints `%a`, so this run and a second over a DIFFERENT range must agree
+  BITWISE on every overlapping creature. A single differing creature is a
+  harness defect touching every experiment, not a fact about this arm.
+  AIBABY_REPDRIFT_LO / _HI set the fresh range, _G0 and _ARM2 switch off the
+  transfer gate and the comparison arm for a Gate A half. Instrumentation only:
+  core/ untouched, no genome field, no RNG draw, the scorer is §59a's and the
+  session call is §53's argument for argument.
+  kRead: all four verdicts are results and the exit status encodes none of
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+  the question      §59c. Is the REP INDEX exchangeable? `seed + r * 7919` is
+                    injective, so creature r is an independent draw and r must
+                    carry NO information. §59b's archived matrix says otherwise
+                    for ONE arm: T1.RET.D drifts upward with r in 30 of its 36
+                    windows, in e1 alone (t +2.77, where nothing is learned yet),
+                    while T1.RET / T1.ORACLE.D / T1.ORACLE read 5 / 1 / 0 on the
+                    same windows. Imbalance is refuted as the cause (survives at
+                    2.53 SE) and so is a weak coin (xoshiro256++ via splitmix64).
+  the primary       the OLS slope of T1.RET.D's e1-e8 slot term on r, over
+                    r 96..111 -- creatures NO section has scored. Null: slope = 0.
+  what it cannot    the four-block trend DECELERATES, so the drift may have
+   do               SATURATED before r 96. REFUTED here means `no slope in this
+                    range`, NOT `the r 0..95 drift was noise`. Secondary 2 is
+                    what makes saturation visible rather than assumed.
+  session           60.0 s of simulated life x 116 sessions
+  range             fresh r 96..111   G0 on (r 0..35)   arm2 on
+
+  THE VERDICT'S FOUR BRANCHES, exercised before any real row reaches it
+  (`deferral-note-is-untested-code`: real rows cannot test a branch they
+  never take, and a CONSTANT REGRESSOR cannot fail a slope test at all).
+    slope +0.00300  se 0.000288  sxx 5.0e+05 -> CONFIRMED -- the rep index carries information   ok  (slope >= +2 SE)
+    slope +0.00020  se 0.000288  sxx 5.0e+05 -> REFUTED -- no slope in this range                ok  (|slope| < 2 SE)
+    slope -0.00300  se 0.000288  sxx 5.0e+05 -> REVERSED -- the drift's sign is not stable       ok  (slope <= -2 SE)
+    slope +0.00300  se 0.000288  sxx 0.0e+00 -> UNDEFINED -- unidentified or too few creatures   ok  (CONSTANT regressor: sxx = 0)
+    branches reachable  4/4  PASS
+
+  THE PER-CREATURE DUMP. `%a` is the exact bit pattern, so two runs over
+  DIFFERENT rep ranges can be compared with `diff` and no tolerance. GATE A
+  is that comparison: independent creatures must agree to the last bit, and
+  a single differing creature is a harness defect touching every experiment.
+  CRE T1.RET.D    96  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    97  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    98  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    99  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   100  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   101  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   102  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   103  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   104  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   105  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   106  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   107  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   108  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   109  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   110  0x0p+0  0  UNSCORED
+  CRE T1.RET.D   111  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     0  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     1  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     2  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     3  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     4  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     5  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     6  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     7  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     8  0x0p+0  0  UNSCORED
+  CRE T1.RET.D     9  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    10  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    11  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    12  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    13  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    14  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    15  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    16  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    17  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    18  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    19  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    20  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    21  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    22  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    23  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    24  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    25  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    26  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    27  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    28  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    29  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    30  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    31  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    32  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    33  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    34  0x0p+0  0  UNSCORED
+  CRE T1.RET.D    35  0x0p+0  0  UNSCORED
+  CRE T1.RET      96  0x0p+0  0  UNSCORED
+  CRE T1.RET      97  0x0p+0  0  UNSCORED
+  CRE T1.RET      98  0x0p+0  0  UNSCORED
+  CRE T1.RET      99  0x0p+0  0  UNSCORED
+  CRE T1.RET     100  0x0p+0  0  UNSCORED
+  CRE T1.RET     101  0x0p+0  0  UNSCORED
+  CRE T1.RET     102  0x0p+0  0  UNSCORED
+  CRE T1.RET     103  0x0p+0  0  UNSCORED
+  CRE T1.RET     104  0x0p+0  0  UNSCORED
+  CRE T1.RET     105  0x0p+0  0  UNSCORED
+  CRE T1.RET     106  0x0p+0  0  UNSCORED
+  CRE T1.RET     107  0x0p+0  0  UNSCORED
+  CRE T1.RET     108  0x0p+0  0  UNSCORED
+  CRE T1.RET     109  0x0p+0  0  UNSCORED
+  CRE T1.RET     110  0x0p+0  0  UNSCORED
+  CRE T1.RET     111  0x0p+0  0  UNSCORED
+  CRE T1.RET      64  0x0p+0  0  UNSCORED
+  CRE T1.RET      65  0x0p+0  0  UNSCORED
+  CRE T1.RET      66  0x0p+0  0  UNSCORED
+  CRE T1.RET      67  0x0p+0  0  UNSCORED
+  CRE T1.RET      68  0x0p+0  0  UNSCORED
+  CRE T1.RET      69  0x0p+0  0  UNSCORED
+  CRE T1.RET      70  0x0p+0  0  UNSCORED
+  CRE T1.RET      71  0x0p+0  0  UNSCORED
+  CRE T1.RET      72  0x0p+0  0  UNSCORED
+  CRE T1.RET      73  0x0p+0  0  UNSCORED
+  CRE T1.RET      74  0x0p+0  0  UNSCORED
+  CRE T1.RET      75  0x0p+0  0  UNSCORED
+  CRE T1.RET      76  0x0p+0  0  UNSCORED
+  CRE T1.RET      77  0x0p+0  0  UNSCORED
+  CRE T1.RET      78  0x0p+0  0  UNSCORED
+  CRE T1.RET      79  0x0p+0  0  UNSCORED
+  CRE T1.RET      80  0x0p+0  0  UNSCORED
+  CRE T1.RET      81  0x0p+0  0  UNSCORED
+  CRE T1.RET      82  0x0p+0  0  UNSCORED
+  CRE T1.RET      83  0x0p+0  0  UNSCORED
+  CRE T1.RET      84  0x0p+0  0  UNSCORED
+  CRE T1.RET      85  0x0p+0  0  UNSCORED
+  CRE T1.RET      86  0x0p+0  0  UNSCORED
+  CRE T1.RET      87  0x0p+0  0  UNSCORED
+  CRE T1.RET      88  0x0p+0  0  UNSCORED
+  CRE T1.RET      89  0x0p+0  0  UNSCORED
+  CRE T1.RET      90  0x0p+0  0  UNSCORED
+  CRE T1.RET      91  0x0p+0  0  UNSCORED
+  CRE T1.RET      92  0x0p+0  0  UNSCORED
+  CRE T1.RET      93  0x0p+0  0  UNSCORED
+  CRE T1.RET      94  0x0p+0  0  UNSCORED
+  CRE T1.RET      95  0x0p+0  0  UNSCORED
+  CRE T1.RET      96  0x0p+0  0  UNSCORED
+  CRE T1.RET      97  0x0p+0  0  UNSCORED
+  CRE T1.RET      98  0x0p+0  0  UNSCORED
+  CRE T1.RET      99  0x0p+0  0  UNSCORED
+  CRE T1.RET     100  0x0p+0  0  UNSCORED
+  CRE T1.RET     101  0x0p+0  0  UNSCORED
+  CRE T1.RET     102  0x0p+0  0  UNSCORED
+  CRE T1.RET     103  0x0p+0  0  UNSCORED
+  CRE T1.RET     104  0x0p+0  0  UNSCORED
+  CRE T1.RET     105  0x0p+0  0  UNSCORED
+  CRE T1.RET     106  0x0p+0  0  UNSCORED
+  CRE T1.RET     107  0x0p+0  0  UNSCORED
+  CRE T1.RET     108  0x0p+0  0  UNSCORED
+  CRE T1.RET     109  0x0p+0  0  UNSCORED
+  CRE T1.RET     110  0x0p+0  0  UNSCORED
+  CRE T1.RET     111  0x0p+0  0  UNSCORED
+
+  G0 -- TRANSFER, READ FIRST. The same binary must reproduce §53's PUBLISHED
+  T1.RET.D whole-session value on r 0..35 to four decimals INCLUDING the SE
+  and exactly on n. If it does not, this is a different experiment and
+  nothing below is readable.
+    T1.RET.D e1-e8  +0.0000 +- 0.0000 (n0)   archive -0.0947 +- 0.0306 (n36)   *** DIFFERS ***
+    THE ARCHIVE DOES NOT REPRODUCE. Nothing below is readable.
+
+  ================= THE REGISTERED PRIMARY =================
+  T1.RET.D e1-e8, OLS slope on rep index, r 96..111
+    slope +0.000000 +- 0.000000 per rep    n 0 scored of 16 run
+    identification: sxx 0 over r span 16   (a CONSTANT regressor would
+      make this 0 and the verdict UNDEFINED -- measured, not asserted)
+    per-creature SD 0.0000   (the power input; §59b's fresh e1-e8 gave 0.188,
+      its discovery 0.170, and the plan assumed a pessimistic 0.21)
+    2 SE detection threshold +0.000000 per rep = 0% of the drift measured
+      on r 0..95 (+0.00176 per rep on this window)
+    scored fraction 0.0%   (the OTHER power input rule 5 says to take from
+      a FRESH arm, never a discovery sample)
+
+    VERDICT: UNDEFINED -- unidentified or too few creatures
+
+  SECONDARY 1 -- THE LEVEL, against §53's archived constant. DECLARED BEFORE
+  THE RUN AS CAPPED: the archive's own SE is 0.0306, so this contrast cannot
+  exceed 2.75 SE however many creatures run. The cap is not a result.
+    fresh r 96..111  +0.0000 +- 0.0000 (n0)   archive -0.0947 +- 0.0306 (n36)
+    difference      +0.0947 +- 0.0306 = 3.09 SE
+
+  SECONDARY 2 -- THE BLOCK TABLE over r 96..111, 48 reps each. This is what
+  distinguishes `no drift` from `drift already finished` -- the distinction
+  the primary cannot make on its own.
+    r  96..111   +0.0000 +- 0.0000 (n0 of 16)
+
+  SECONDARY 3 -- ARM SPECIFICITY in fresh territory, on the two extreme
+  blocks only. §59b established specificity on r 0..95; this asks whether it
+  holds here. DISCLOSED BEFORE THE RUN: a null is WEAK -- half the creatures
+  and no lever arm between the blocks.
+    T1.RET  r  96..143  +0.0000 +- 0.0000 (n0)
+    T1.RET  r  64..111  +0.0000 +- 0.0000 (n0)
+    difference          +0.0000 +- 0.0000 = 0.00 SE
+
+  SECONDARY 4 -- THE SLOPE OVER r 0..111, WHICH CONTAINS THE DISCOVERY SAMPLE
+  (r 0..35 motivated this test), so it CANNOT be the result. Printed so the
+  shape is on the record, labelled here rather than left to a reader.
+    slope +0.000000 +- 0.000000 per rep   n 0   sxx 0   0.00 SE
+
+  THE REGISTERED PRIMARY WAS: T1.RET.D e1-e8 slope on r over r 96..111.
+  VERDICT: UNDEFINED -- unidentified or too few creatures
+  ONE OR MORE GATES FAILED

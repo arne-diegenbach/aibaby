@@ -11957,3 +11957,148 @@ built on a control whose value at r ≥ 96 nobody has measured.
 - Budget **~55 minutes**, more than the eight first proposed. The increase is
   the power pre-flight above and is a pre-run decision.
 - `core/` is not touched. No genome field, no RNG draw, no mechanism.
+
+## §59c RESULT — THE DRIFT IS REFUTED AS A TREND, THE HARNESS IS CLEAN, AND WHAT SURVIVES IS ONE REP BLOCK READING LOW (2026-11-12)
+
+`results/n59c-repdrift-900k.log`, 324 sessions at 900k, 54 min, all gates
+passed. Genome `9f6faac320210cc8e9f5830adf066934`, byte-identical to
+§53/§57/§58/§59a/§59b's. `core/` untouched. `bitid` 183/183 content lines on
+`slotdrift` against §59b's baseline.
+
+### G0 — THE RUN IS READABLE
+
+    T1.RET.D e1-e8  -0.0947 +- 0.0306 (n36)   archive -0.0947 +- 0.0306 (n36)   match
+
+§53's published value reproduces **exactly**, including the SE and the `n`,
+through a third enclosing experiment. So the low reading on `r 0..35` is not a
+code difference and not an estimator difference — **it is those creatures.**
+
+### GATE A — PASS, ON ROWS THAT CARRY REAL NUMBERS
+
+24 overlapping creatures computed twice: once inside a 48-job sweep
+(`r 96..143`), once alone in a 24-job process (`r 120..143`), so the thread
+assignment differs too. **All 24 agree to the last bit**, 22 scored with 22
+distinct values — not a vacuous pass on zeros.
+
+**No state survives between reps.** Creature `r` does not depend on which
+creatures ran beside it, so the candidate that would have mattered most — a
+harness defect touching every experiment in the project — is dead. It ran at
+450k rather than 60k precisely so this would be a real exercise; at 60k nothing
+scores and the comparison would have been the hollow one §59b had to disclose.
+
+### THE REGISTERED PRIMARY — REFUTED
+
+| `T1.RET.D` e1-e8, OLS slope on `r`, `r 96..287` | |
+|---|---|
+| slope | **+0.000138 ± 0.000200 per rep** |
+| from zero | **0.69 SE** |
+| n | **190 scored of 192** (99.0%) |
+| identification | `sxx` 5.807e+05 over a 192-rep span — measured, not asserted |
+| 2 SE detection threshold | **+0.000400 per rep = 23% of the claimed drift** |
+| **VERDICT** | **REFUTED — no slope in this range** |
+
+**This is a well-powered null, not a shrug.** The test could have detected a
+drift four times smaller than the one §59b's scan measured, and found nothing.
+
+**For the first time in four sections the power came in BETTER than
+registered**: per-creature SD **0.1523** against the planned 0.21, and 99.0%
+scoring against the planned 90%. Rule 5's inflation worked as insurance rather
+than as a tax. Note also that the 450k smoke's SD was **0.0845** — less than
+half the 900k figure — so using the smoke's SD would have been *optimistic*
+here, the exact inverse of §59b, where the smoke's SD was larger than the
+discovery sample's and should have been used. **The rule that survives both is
+`match-at-the-operating-point`, not "trust the smoke".**
+
+### SECONDARY 2 — NO SATURATION AT HEIGHT, EITHER
+
+The pre-registration named this as the one distinction the primary cannot make:
+a flat slope could mean "no drift" or "drift already finished at a high value".
+The blocks settle it:
+
+    r  96..143   -0.0087 +- 0.0232 (n47)
+    r 144..191   -0.0066 +- 0.0225 (n48)
+    r 192..239   -0.0188 +- 0.0211 (n47)
+    r 240..287   +0.0203 +- 0.0218 (n48)
+
+Flat, scattered about **zero** — not parked at the `+0.070` the `r 72..95` block
+read. So the drift did not saturate; **fresh territory simply sits at zero.**
+
+### THE SHAPE, ASSEMBLED — AND IT IS A STEP AT ONE BLOCK, NOT A GRADIENT
+
+    r   0..35   §53's own reps     -0.0947 +- 0.0306  n 36   <- THE PUBLISHED VALUE
+    r  36..95   §59b's reps        -0.0014 +- 0.0231  n 66   (offline, §59b's matrix)
+    r  96..287  §59c, fresh        -0.0034 +- 0.0111  n 190  <- 9x better measured
+
+**The only rep range that reads substantially negative is §53's own 36.**
+Everything from `r 36` upward reads zero. Secondary 1 puts that difference at
+**+0.0913 ± 0.0325 = 2.80 SE**, against a declared ceiling of 2.98 SE for this
+difference — near its cap, as registered, and not something more creatures could
+improve, because the archive's own SE dominates.
+
+**§59b's "monotone drift" was blocks straddling that boundary.** Its four
+24-rep blocks were −0.144 (inside §53's region), −0.032 (straddling it), then
++0.028 and +0.070 (outside) — which reads as a gradient and is a step plus
+noise.
+
+**And it is not arm-specific, which further deflates the scan.** Unregistered
+arithmetic: `T1.RET`'s two fresh blocks pool to **+0.0617 ± 0.0151 (n 96)**
+against its archived **+0.0081 ± 0.0170**, a difference of **+0.0536 ± 0.0227 =
+2.36 SE** — the same direction and a similar size. **But this is NOT a second
+confirmation**: the two arms are the *same 36 seeds* with a different `pairing`,
+so their archive values are correlated. **One block, one observation.**
+
+### WHAT §59c ESTABLISHES, AND WHAT IT DOES NOT
+
+**Honouring the pre-registered limitation verbatim:** REFUTED means *"no slope
+in r 96..287"* and **not** *"the r 0..95 drift was noise"*. Those remain
+different claims and this section does not merge them.
+
+What is established:
+
+1. **The harness is clean** — reps are order-independent to the bit.
+2. **There is no gradient in r**, with power to see 23% of the claimed one.
+3. **Fresh territory sits at zero**, flat across four blocks of 48.
+4. **§53's block is genuinely low** and that is a property of those creatures,
+   since G0 reproduces them exactly.
+
+What is **not** established is whether item 4 is chance or something about that
+block. In units of a 36-creature block's own SE (0.0254 at the measured SD),
+§53's value sits ~3.6 SE below the fresh level, which is uncomfortable for a
+chance account — but the comparison was selected after a 144-slice scan flagged
+it, which is exactly the selection that makes a large deviation expectable.
+**§59c was not designed to resolve chance-versus-step and does not.** Resolving
+it would need a pre-registered test of whether *any* 36-rep block can read
+−0.09, and nothing downstream depends on the answer.
+
+### THE PRACTICAL PAYOFF — THE SUCCESSOR IS UNBLOCKED
+
+This ran because §59b's named successor carries `T1.RET.D` as its control on
+`r ≥ 96`, and an upward-drifting control would have arrived above the +2E void
+threshold and voided that primary for a reason that is not about the science.
+
+**It will not.** The control on `r 96..287` reads **−0.0034 ± 0.0111 on 190
+creatures** — flat, indistinguishable from zero, and **9× better measured than
+§53's published value.** That is the number the successor should carry, and it is
+a better control than the one §58, §59a and §59b used.
+
+**One change in how the archive is quoted.** §53's **−0.0947** is the value of
+one 36-creature block and is not reproduced on 252 others. The best estimate of
+this arm's whole-session level is **−0.0034 ± 0.0111**. §53's
+object-presentation-imbalance *slope* was independently reproduced in §59b's
+scan and stands; the drawn arm's negative *level* does not generalise, so
+**"the drawn arm is pushed negative" should not be quoted as a property of the
+arm.**
+
+### DISCLOSED
+
+- The motivating scan was post-hoc over 144 slices and this section was its
+  test. **It did not survive**, which is what a registered test is for.
+- **I ran the determinism check with the wrong invocation.** The chain called
+  `--verify`, which the binary rejects (`error: unknown argument`), and
+  `tools/verify_gate.sh` caught it on every clause rather than passing a
+  one-line log. The correct form is `--experiment verify`. This is
+  `smoke-the-exact-command`'s own lesson — **the binary is not the
+  invocation** — landing in the verification chain rather than in the science,
+  and the gate is why it cost a re-run and not a false PASS.
+- Secondary 3 was declared WEAK before the run (half the creatures, no lever
+  arm) and its 1.41 SE between-block reading is reported as such.
