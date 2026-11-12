@@ -13886,3 +13886,191 @@ exposed and must not be quoted.
 - **DO NOT write a one-tailed refusal clause.** Strand 4 reports both signs.
 - **DO NOT report any of the four papers as new without grepping README's
   References first.** That rule was earned on Kornfeld et al.
+
+## §68 PRE-REGISTRATION — `overlapgate`: stage 0 of §67, and it predicts stage 2
+
+§67 stage 0. **The question: do the two words drive DISTINCT synapses on the
+tract where §64's two carriers meet?** If they do not, per-synapse depletion
+cannot carry word identity and the lead dies here without a genome change.
+
+**WRITTEN BEFORE THE INSTRUMENT EXISTS AND BEFORE ANY NUMBER IS SEEN.**
+
+### A CORRECTION TO §67 THAT CHANGES THE METHOD, NOT THE DIRECTION
+
+§67 said the kernel keeps a per-synapse `traffic` field and the gate could read
+it. **The field exists internally but is NOT exposed**, and reading it would be
+the wrong quantity anyway: it is a running accumulator, not a per-word count.
+
+**The right quantity is the PRESYNAPTIC SPIKE COUNT**, because a Tsodyks-Markram
+resource variable is depleted by its own presynaptic spikes and nothing else.
+Each synapse has exactly one presynaptic neuron, so `network.spikes()` plus
+`tract_synapses` / `synapse_source` / `synapse_weight` — all already public —
+give the per-synapse depletion drive exactly. **No kernel change, no genome
+change.**
+
+### WHAT IS MEASURED, AND IT IS SIMULATED ARITHMETIC RATHER THAN A LINEARISATION
+
+For each presentation `p` and each synapse `j` on a tract, `n_j(p)` is the spike
+count of `src(j)` during the 900 ms word. The Tsodyks-Markram resource left
+after a word, with no recovery inside the word, is exact:
+
+    d_j(p) = 1 - (1 - U)^n_j(p)              the fraction of j's resources used
+
+For an ordered pair (p then q) at gap G with recovery `tau_rec`, the drive the
+tract delivers during q is then, synapse by synapse:
+
+    I(p,q) = SUM_j |w_j| . n_j(q) . ( 1 - d_j(p) . exp(-G / tau_rec) )
+
+**This is not an approximation of the mechanism — it is the mechanism's own
+arithmetic, evaluated on measured spike counts.** The one thing it omits is
+recovery *during* the word, which **overstates** depletion. So this instrument
+is **optimistic about depth**, and the asymmetry is registered here:
+
+- **A REFUSAL from this instrument is CONSERVATIVE** — the real mechanism cannot
+  do better than its own optimistic simulation.
+- **A LICENSE from this instrument is NOT CONSERVATIVE** and must be reported
+  with that flag attached, never as a prediction of stage 2's value.
+
+### THE PRIMARY, AND IT IS ONE PRE-NAMED CELL
+
+    tract       auditory -> vocal, EXCITATORY only (synapse_weight > 0)
+    pair        kWords[0] /a/ 780/1180  against  kWords[1] /i/ 320/2500
+    U           0.5        stpprobe's depressing corner, ALREADY MEASURED
+    tau_rec     300 ms     the same corner
+    gap         200 ms     the shortest rung, where §63's residual is largest
+    statistic   d' of I(p,q) between same-condition and cross-condition pairs
+    bar         0.7706     DERIVED: 2 . Phi^-1(0.650), the d' that M6's 0.650
+                           bar requires of a single-trial scalar readout
+
+**THE BAR IS DERIVED, NOT CHOSEN.** `accuracy = Phi(d'/2)`, so 0.650 demands
+`d' = 2 . Phi^-1(0.650) = 0.7706`. Nothing about it is fitted to anything.
+
+**WHY EXCITATORY ONLY IS THE PRIMARY, and this is a prediction in itself.** There
+are **two** `auditory -> vocal` projections and `tract_synapses` keys on the
+module pair, so it returns both merged; they are separable because
+`syn_weight_` is **signed**. Depression on the **inhibitory** projection
+*reduces inhibition* for a repeated word and therefore pushes the delivered
+drive the **opposite** way. **With STP on both, the identity-dependent terms
+partly cancel.** The genome can enable STP per projection, so the cheapest real
+change is one projection — and that is why the primary is one projection.
+Excitatory-only, inhibitory-only and merged are all reported.
+
+### REGISTERED CLAUSES — THREE-WAY, AND ONE OF THEM IS ARITHMETIC
+
+    LICENSED               d_hat - 2 SE > 0.7706
+    REFUSED                d_hat + 2 SE < 0.7706
+    NO VERDICT             otherwise
+
+    REFUSED BY ARITHMETIC  no U in (0, 1] reaches accuracy 0.650 at the
+                           primary's gap and tau_rec, whatever the SE
+
+**The arithmetic clause is the sharpest outcome available and it fires
+independently of power.** `U` is a utilisation fraction and cannot exceed 1: a
+synapse cannot release more than all of its resources. If the mechanism's
+**ceiling over its own whole parameter range** sits below the bar, the lead is
+closed the way §63's `artic9` arm was closed — by a bar above its own ceiling —
+except that this time the ceiling is computed before anything is built.
+`U` is scanned over (0, 1] and the reached maximum is printed **as a number**
+whether it clears or not.
+
+**A SECOND, WEAKER QUESTION IS REGISTERED SEPARATELY, because the two have
+different consequences:**
+
+    (a) is the code word-specific AT ALL, as depletion sees it?   separation > 0
+    (b) is it specific ENOUGH to reach 0.650?                     d' > 0.7706
+
+(a) failing kills §67 outright. (a) passing with (b) failing leaves a mechanism
+that exists and is too weak, and the **required utilisation** `U_req` is then
+the reportable quantity.
+
+### THE LADDERS, REPORTED AND NOT PRIMARY
+
+- **Stimulus distance.** `kWords[0]` and `kWords[1]` are **already the corner
+  pair** — the table's own comment says they are maximally far apart on both
+  formants. So the ladder runs toward **harder** pairs, not easier ones:
+  `(1,2)` /i/-/u/ is a nearly pure F2 discrimination with F1 within 30 Hz, and
+  `(0,3)` /a/-/e/ is the adjacent-vowel case. **If separation falls monotonically
+  with formant distance, that is a dose-response in the STIMULUS** and it prices
+  how much vocabulary this mechanism could ever support.
+- **Gap.** 200 / 800 / 2000 / 5000 ms, by `exp(-G/tau_rec)`, so §68 predicts the
+  shape §63 measured.
+- **`tau_rec`.** 100 / 300 / 1000 / 3000 ms. **This is stage 2's dose-response,
+  predicted before it is run** — and if §68 says the predicted curve is flat,
+  stage 2 does not get run.
+- **`U`.** 0.2 / 0.5 / 0.8, a sensitivity band around the measured corner. **Not
+  a fitted parameter**: the primary is pinned to 0.5 in advance.
+- **The cascade, which is the ATTRIBUTION COLUMN.** The same separation statistic
+  on the **mel frame** (the ear's own code, full scale), on the **whole auditory
+  population** unweighted, and on each tract. §66's lesson: without `postureA`
+  that null would have been ambiguous between "the subtraction fails" and "the
+  posture was empty". **If separation dies between mel and auditory, the ear's
+  encoding lost it; if it survives to auditory and dies on the tract, the random
+  projection at density 0.15 lost it. Either way the refusal has a reason.**
+
+### THE GATES — EVERY ONE OF THEM CAN FAIL
+
+    G1  liveness      live synapses on each tract > 0, and the mean spikes per
+                      presynaptic neuron per presentation printed. A silent or
+                      saturated population makes an overlap meaningless: VOID,
+                      not a refusal.
+    G2  label-        condition labels permuted WITHIN creature, separation and
+        destroyed     d' recomputed. **The null here is EXACTLY 0 by
+                      construction**, because the statistic is defined only by
+                      which pairs count as same. Must read within 2 SE of 0.
+    G3  reachability  the SILENCE condition gives the maximum attainable
+                      separation. If word-against-silence d' is itself small,
+                      the estimator or the tract is broken: **VOID, not a
+                      refusal.** A gate that cannot fail cannot guard a
+                      rejection.
+    G4  sign          `separation >= 0` is forced by construction — same-word
+                      pairs share their synapses. **A significantly NEGATIVE
+                      separation is a BUG, not a finding**, and voids the run.
+    G5  alignment     presentations == labels per condition, per creature.
+                      `ctxsrc` once ran a feature space ahead of its labels.
+    G6  sleep         slept presentations discarded and COUNTED. Sleep arrives
+                      at ~1.088M under the samediff protocol; this budget
+                      crosses it.
+    G7  determinism   `--experiment verify` hash unmoved. Nothing in the
+                      creature is touched, so a MOVED hash is a bug in the
+                      instrument.
+
+### THE PROTOCOL AND THE BUDGET
+
+    condition   900 ms word, then 2000 ms rest        5 conditions:
+                /a/ /i/ /u/ /e/ and SILENCE           2900 ticks each
+    round       all five, order SHUFFLED per round    14,500 ticks
+    budget      1,680,000 ticks, 12 creatures         115 rounds
+    unit        the CREATURE. Mean +- SE over 12.
+
+**The budget matches §63-§66 exactly and is not re-chosen**, so §68 reads the
+same creature at the same operating point as the sections it informs, and the
+per-eighth column says whether the quantity drifts.
+
+**The 2000 ms rest is derived from our own decay curve**: §63 measured the ear at
+0.5174 and `artic9` at 0.5440 by 2000 ms, so a predecessor is at or near chance
+by the time the next word starts. Order is shuffled, so what residue remains is
+**spread across conditions rather than confounded with them** — it adds noise,
+not bias.
+
+### THE THREE PRE-FLIGHTS, AND ONE OF THEM IS HONESTLY DEFERRED
+
+1. **Noise model.** The unit is the creature; SE is across 12 creatures, so the
+   between-creature component does not shrink with reps. Within a creature the
+   pair statistics are not independent (pairs share presentations), which is
+   why **no within-creature SE is quoted anywhere**.
+2. **The refusal clause's firing probability, AS A NUMBER.** It cannot be
+   written before the SE is measured, and
+   `calibrate-the-estimator-in-claim-units` forbids projecting it from a scaling
+   law. **So it is deferred to the 300k smoke, which measures an SE over the
+   same 12 creatures, and it is written down BEFORE the 1.68M run.** The order
+   is disclosed here rather than discovered later.
+3. **A smoke cannot pre-judge the verdict.** §64's 300k smoke read **0.6250** on
+   a primary that landed at **0.5180**. The smoke's job here is the code path
+   and the SE, and **its own point estimate is not read as evidence.**
+
+### WHAT WOULD MAKE THIS SECTION WORTHLESS
+
+If the primary lands in NO VERDICT **and** the arithmetic clause does not fire,
+§68 has spent a run to say nothing — and the honest response is to report that,
+not to re-run it larger. §59b's registered refusal fired and the lesson recorded
+was **DO NOT RE-RUN THE ARM LARGER**.
