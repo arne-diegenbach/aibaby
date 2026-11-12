@@ -14376,3 +14376,26 @@ registered shape.
 works **at one gap**, on vowels that are genuinely distinct — including on one
 formant alone — and **fails on adjacent vowels**. That is a newborn-grade
 ability and it is what §67 argued for. It is **not** the comparator §65 named.
+
+### §68 THE DETERMINISM GATE
+
+    verify                             PASS            count 1
+    pinned hash                        PASS            count 1
+    final hash A == B                  ad96f882becbee92
+    as recorded                        ad96f882becbee92
+    experiments                        24 as expected, 0 not
+    the run happened                   936 lines
+    -> VERIFY GATE: PASS
+
+`results/n68-verify.log`, checked with `tools/verify_gate.sh`.
+
+**The hash is unmoved because nothing in the creature was touched** — no genome
+field was written and no kernel state was modified, which is the whole design of
+a gate that prices a change instead of making one. **A moved hash here would
+have been a bug in the instrument, not a finding about the creature.** Same
+shape as §66, and the genome's own md5 is unchanged too
+(`9f6faac320210cc8e9f5830adf066934`, as §63-§66).
+
+**Stage 2 is the first thing in this line that will move it**, because it writes
+`stp_use` and `stp_recover_ms` on a live tract. That re-pin is the cost §68 was
+run to decide was worth paying.
