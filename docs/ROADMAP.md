@@ -13334,3 +13334,79 @@ classifier the sensory features (which carry B at 1.0000) and the motor features
 there would still mean the creature does not combine them — but it removes the
 competing explanation that nothing ever looked at both. The features are already
 collected.
+
+## §65 PRE-REGISTRATION — IS IT RECOVERABLE AT ALL? AND A CORRECTION TO §64'S SUCCESSOR
+
+§64 named a **joint readout over concatenated spaces** as the successor and said
+it would remove the competing explanation that nothing ever looked at both
+words. **That is wrong, and the algebra §63 wrote down says so.**
+
+If the sensory activity is linear in B's identity and the motor activity linear
+in A's, then any linear combination `w1·sensory + w2·motor` is **additive** in A
+and B. Same-versus-different is their XOR. A linear joint readout cannot produce
+it, so a joint readout at chance would mean exactly what §64 already has and
+would settle nothing. **The successor as named was not worth running.**
+
+### THE QUESTION THAT IS WORTH RUNNING: RECOVERABLE VERSUS REPRESENTED
+
+The real ambiguity in §64's null is not *where the readout looked* but **whether
+the two pieces are jointly usable at all**. Split that in two:
+
+> **REPRESENTED** — same/different is linearly available in the creature's own
+> activity. Measured in §63 and §64. It is not: chance everywhere.
+>
+> **RECOVERABLE** — an external observer, given the creature's own activity,
+> can work out whether the words matched. Never measured.
+
+If recoverable is high while represented is at chance, the statement is exact
+and is the one M6 was written to reach: **the information is fully present in
+the creature and the creature does not compute it.**
+
+### THE THREE READOUTS, ALL AT THE OVERLAP WINDOW
+
+All three take the first 400 ms of the second word, where §64 measured A at
+0.7727 (artic9) and B at 1.0000 (auditory) **simultaneously**. Decoding
+directions are fit on the **training fold only**.
+
+**(1) THE ASSEMBLED READOUT, PER TRIAL.** Decode A from the motor space, decode
+B from the sensory space, predict "same" iff the two decodes agree. Scored on
+the held-out fold. **This is §65's primary.** It is not §63's assembled oracle:
+that one *predicted* an accuracy from two marginal rates assuming independent
+errors, and this one *measures* the assembly trial by trial.
+
+**(2) THE CONJUNCTIVE READOUT.** `[a_score, b_score, a_score × b_score]` →
+same/different. A learned combiner with the product term it needs. It is given
+more than the creature can be assumed to have, and is reported as such.
+
+**(3) THE LINEAR JOINT READOUT.** The concatenated standardised features.
+Reported for completeness and **expected to read chance by construction** —
+both from the XOR algebra above and because the auditory space has hundreds of
+standardised dimensions against the articulators' nine, so the motor
+contribution to the distance is a few percent. Named in advance so that its
+null is not later read as a finding.
+
+### PAIRS, FIXED BEFORE THE RUN
+
+    motor (carries A)   sensory (carries B)
+    artic9              auditory
+    artic7              auditory
+    artic9              central
+
+### THE VERDICT, THREE-WAY
+
+    assembled >= 0.650 while the creature is NOT MET
+        -> PRESENT AND RECOVERABLE, NOT COMPUTED
+    assembled < 0.650, conjunctive also < 0.650
+        -> NOT JOINTLY RECOVERABLE; M6's failure is upstream of comparison
+    assembled < 0.650 but conjunctive >= 0.650
+        -> recoverable only with a product term; reported, no verdict
+
+**THE HONEST STATUS OF THE PRIMARY, STATED FIRST.** The assembled readout uses
+the host's knowledge of which space carries which word and fits two separate
+decoders. **That is more structure than the creature has, so it is an upper
+bound and never a claim about the creature.** Its whole value is as a
+denominator for the creature's own 0.50.
+
+Budget, genome, gaps, arms, folds and gates unchanged from §63 and §64 at
+1,680,000 ticks. The session must be re-run because features are not persisted;
+nothing else about it changes.
