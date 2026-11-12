@@ -13310,3 +13310,27 @@ change with no new session.
 - **B overwrites A's motor trace**, 4.9 SE, with an internal control that
   switches off where the trace does.
 - §63's "the ingredients never coexist" is **withdrawn**.
+
+### THE GATES
+
+    sessions that ran                      36 of 36            PASS
+    feature rows == labels                 0 misaligned        PASS
+    slept trials                           1617 of 14400       11.2%
+    all 4 cells in both folds              0 short of 144      PASS
+    label-destroyed, post-B window         0.5016 +- 0.0101    PASS
+    label-destroyed, overlap window        0.4924 +- 0.0118    PASS
+    assembled oracle, best                 1.0000              PASS
+    determinism, `--experiment verify`     ad96f882becbee92    PASS
+
+Sleep onset reproduced to the tick at **1,087,801**, on a run with a third arm
+and a different RNG draw order — the number is a property of the protocol, not
+of §63's particular session.
+
+### THE SUCCESSOR — A SCORING CHANGE, NO NEW SESSION
+
+A **joint readout** over concatenated spaces at the overlap window: hand one
+classifier the sensory features (which carry B at 1.0000) and the motor features
+(which carry A at 0.7727) together. It cannot compute XOR either, so chance
+there would still mean the creature does not combine them — but it removes the
+competing explanation that nothing ever looked at both. The features are already
+collected.
