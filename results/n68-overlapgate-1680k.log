@@ -1,0 +1,196 @@
+experiment: overlapgate
+
+  §68 OVERLAPGATE — STAGE 0 OF §67, AND IT PREDICTS STAGE 2
+
+  the question     do the two words drive DISTINCT synapses on the tract
+                   where §64's two carriers meet? If not, per-synapse
+                   depletion cannot carry word identity and §67 dies here.
+  what is run      900 ms word, 2000 ms rest, 5 conditions per round
+                   (/a/ /i/ /u/ /e/ SILENCE), order shuffled per round
+  round            14500 ticks; 115 rounds at this budget
+  creatures        12, the independent unit; mean +- SE over them
+  NO GENOME CHANGE, NO KERNEL CHANGE. The depletion is SIMULATED from
+  measured presynaptic spike counts: d = 1-(1-U)^n is EXACT for a
+  Tsodyks-Markram resource with no recovery inside the word.
+  primary          aud->vocal EXCITATORY   <- PRIMARY
+                   /a/ vs /i/      THE PRIMARY -- samediff's own pair, and the CORNER pair
+                   U 0.20, tau_rec 300 ms (stpprobe's MEASURED corner),
+                   gap 200 ms
+  the bar          d' 0.7706, DERIVED: Phi(0.7706/2) = 0.6500, which must read
+                   0.650 -- M6's bar in this estimator's own units
+  OPTIMISM FLAG    recovery DURING the word is omitted, which OVERSTATES
+                   depletion. A REFUSAL here is conservative; a LICENSE
+                   is NOT, and is reported with this flag attached.
+
+  THE GATES
+
+    sessions that ran                12 of 12            PASS
+    presentations == labels          0 misaligned        PASS
+    slept presentations              774 of 6900            11.2%
+    first sleep at tick              1089892
+    tracts pruned during session     7 of 12 creatures   SEE LIMITATION
+
+    G1 LIVENESS — a silent or saturated population makes an overlap
+       meaningless, so this is read BEFORE any separation.
+
+      space                                   elems  w-sum   active  mean/elem
+      mel  (the ear's own code, FULL SCALE)      24   24.00   1.00     8.2162
+      auditory population (unweighted)          192  192.00   1.00     3.4938
+      aud->vocal EXCITATORY   <- PRIMARY        192  351.10   0.81     3.4938
+      aud->vocal inhibitory                     192  902.25   0.19     3.4938
+      aud->vocal merged                         192  1253.35   1.00     3.4938
+      aud->central (density 0.02)               192  223.14   1.00     3.4938
+
+      synapses: aud->voc exc 2898, inh 1815; aud->cen 1496
+      verdict                                 PASS
+
+    G5 SATURATION — THE GATE THE 290k SMOKE SHOWED WAS MISSING. At mean
+       depletion near 1 every active synapse is already empty and the mask
+       is CONSTANT across words; near 0 nothing depletes. Either end makes
+       the mechanism vacuous while every other number looks healthy.
+
+       auditory spikes per neuron per 900 ms word, by condition:
+         /a/         3.6227 +- 0.0192
+         /i/         4.2356 +- 0.0314
+         /u/         4.5655 +- 0.0296
+         /e/         3.0786 +- 0.0112
+         SILENCE     1.9625 +- 0.0068
+
+       mean depletion at the primary U 0.20   0.4040 +- 0.0013
+       required window                        (0.05, 0.95)
+       verdict                               PASS — depletion is GRADED
+
+    G3 REACHABILITY — word against SILENCE on the primary tract, the
+       maximum this estimator can attain. A gate that cannot fail cannot
+       guard a rejection, so a small value here VOIDS rather than refuses.
+       IT ALSO SELECTS THE ESTIMATOR, on this label-independent contrast
+       alone and never on /a/-vs-/i/.
+
+       /a/ vs SILENCE  a magnitude contrast -- NOT an upper bound, see §68
+         d' POOLED over B   (registered)     0.4425 +- 0.0069   does NOT clear
+         d' drive RATIO     (addendum)        1.4649 +- 0.0228   clears
+         d' WITHIN B        (addendum)        0.7379 +- 0.0256   does NOT clear
+       -> NOT A VALID POSITIVE CONTROL. Silence differs from a word in
+          MAGNITUDE; two vowels differ in PATTERN, and this statistic is
+          pattern-sensitive. The cascade shows silence is the HARDER
+          contrast, so this pair cannot bound anything and VOIDS NOTHING.
+          Its guard role passes to the arithmetic clause, which has a
+          provable bound (U <= 1). Kept as a stimulus-ladder rung.
+
+    G2 LABEL-DESTROYED — the labels permuted, the presentations untouched.
+       The null is EXACTLY 0 in expectation: the statistic is defined only
+       by which pairs count as same.
+       d'  on the primary cell               0.0024 +- 0.0006
+       cosine separation                     +0.0009 +- 0.0011
+       verdict                               PASS
+
+    G4 SIGN — same-condition pairs share their synapses, so a separation
+       BELOW zero is a BUG and not a finding.
+       cosine separation, primary cell       +0.7981 +- 0.0052
+       verdict                               PASS
+
+    THE TIME-LAG BALANCE — pairs are restricted to DIFFERENT rounds, so
+       that cross-condition pairs do not sit systematically closer in time
+       than same-condition ones. The residual is printed, not argued.
+       mean round lag, same  39.35    cross  39.35
+
+
+  THE CASCADE — the ATTRIBUTION COLUMN §66 earned. Cosine separation,
+  sqrt(w)-weighted so the numerator IS the depletion-relevant inner
+  product SUM_i w_i n_i(p) n_i(q).
+
+    space                                     pair0   pair1   pair2   pair3   pair4 
+    mel  (the ear's own code, FULL SCALE)  +0.3180 +0.2157 +0.1627 +0.1660 +0.2018
+    auditory population (unweighted)       +0.8049 +0.5760 +0.5651 +0.4537 +0.5422
+    aud->vocal EXCITATORY   <- PRIMARY     +0.7981 +0.5861 +0.5522 +0.4428 +0.5387
+    aud->vocal inhibitory                  +0.7576 +0.5010 +0.5408 +0.4180 +0.5048
+    aud->vocal merged                      +0.7956 +0.5408 +0.5662 +0.4499 +0.5394
+    aud->central (density 0.02)            +0.8021 +0.5621 +0.5674 +0.4526 +0.5412
+
+    pairs: 
+      pair0  /a/ vs /i/      THE PRIMARY -- samediff's own pair, and the CORNER pair
+      pair1  /i/ vs /u/      nearly pure F2: F1 within 30 Hz
+      pair2  /a/ vs /e/      the adjacent-vowel case
+      pair3  /a/ vs SILENCE  a magnitude contrast -- NOT an upper bound, see §68
+      pair4  /i/ vs SILENCE  the same, second word
+
+    the primary cell, with its parts and its SE:
+      same-word cosine   0.9359 +- 0.0020
+      cross-word cosine  0.1378 +- 0.0034
+      SEPARATION         +0.7981 +- 0.0052   (153.5 SE from 0)
+
+
+  THE VERDICT — the registered primary cell
+
+    d' POOLED over B   (registered)       1.3076 +- 0.0621   -> accuracy 0.7434
+    d' WITHIN B        (addendum)         1.4986 +- 0.0372   -> accuracy 0.7732
+    d' drive RATIO     (EXCLUDED)         7.2663 +- 0.3479   -> accuracy 0.9999
+
+    THE DRIVE RATIO IS EXCLUDED, AND THE REASON IS ALGEBRA RATHER THAN
+    ITS VALUE. J = 1 - rec . T/S, so the mean difference AND the SD both
+    scale linearly in `rec` and it CANCELS EXACTLY: the statistic is
+    scale-free, its d' does not depend on the gap or on tau_rec, and its
+    gap ladder is FLAT. It therefore predicts near-perfect accuracy at a
+    5000 ms gap, where §63 measured the trace already dead. An estimator
+    whose normalisation divides out the very quantity under test cannot
+    model a physical readout. `rank-one-noise-saturates-the-estimator` in
+    a new costume: what is missing is a noise term that does NOT scale
+    with the signal, which both kept statistics have and this one does not.
+
+    LABEL-DESTROYED, pooled               0.0024 +- 0.0006
+    LABEL-DESTROYED, within-B             0.0250 +- 0.0043
+    (a d' is an ABSOLUTE value, so its null floor is half-normal and
+     positive, not 0. The SIGNED null is G2's cosine, which reads 0.)
+    the bar                               0.7706           -> accuracy 0.650
+
+    carried by                            the REGISTERED pooled statistic
+    registered clause                     best - 2 SE 1.1833, best + 2 SE 1.4319
+    -> LICENSED — and the OPTIMISM FLAG applies
+
+    THE ARITHMETIC CLAUSE — U is a utilisation fraction and cannot exceed
+    1, so this is the mechanism's CEILING over its whole parameter range.
+      best d' over U in (0,1]             1.3098 +- 0.0621   at U 0.24
+      the accuracy that reaches            0.7426 +- 0.0101
+      creatures where SOME U reaches 0.650  12 of 12
+      -> the arithmetic clause does NOT fire; smallest sufficient U 0.05
+
+
+  THE LADDERS — reported, not primary. On the REGISTERED pooled statistic.
+
+    GAP, at the primary tau and U (this is the shape §63 measured)
+        200 ms   d' 1.3076 +- 0.0621   -> accuracy 0.7434    within-B 1.4986
+        800 ms   d' 0.1383 +- 0.0072   -> accuracy 0.5276    within-B 0.1611
+       2000 ms   d' 0.0039 +- 0.0009   -> accuracy 0.5008    within-B 0.0028
+       5000 ms   d' 0.0034 +- 0.0012   -> accuracy 0.5007    within-B 0.0000
+
+    tau_rec, at the primary gap — STAGE 2's DOSE-RESPONSE, PREDICTED.
+    A FLAT curve here means stage 2 does not get run.
+        100 ms   d' 0.2811 +- 0.0137   -> accuracy 0.5559    within-B 0.3245
+        300 ms   d' 1.3076 +- 0.0621   -> accuracy 0.7434    within-B 1.4986
+       1000 ms   d' 2.4110 +- 0.1185   -> accuracy 0.8860    within-B 2.7798
+       3000 ms   d' 2.8791 +- 0.1442   -> accuracy 0.9250    within-B 3.3373
+
+    U, the sensitivity band around the measured corner
+      0.05      d' 0.9213 +- 0.0423   -> accuracy 0.6775
+      0.20      d' 1.3076 +- 0.0621   -> accuracy 0.7434   <- PRIMARY, pinned in advance
+      0.50      d' 1.2341 +- 0.0582   -> accuracy 0.7314
+
+    STIMULUS DISTANCE — kWords[0] and kWords[1] are ALREADY the corner
+    pair, so this ladder runs toward HARDER pairs. A monotone fall is a
+    dose-response in the STIMULUS and prices the vocabulary this could hold.
+      /a/ vs /i/      THE PRIMARY -- samediff's own pair, and the CORNER pair d' 1.3076 +- 0.0621   cos +0.7981
+      /i/ vs /u/      nearly pure F2: F1 within 30 Hz      d' 0.9779 +- 0.0364   cos +0.5861
+      /a/ vs /e/      the adjacent-vowel case              d' 0.6931 +- 0.0235   cos +0.5522
+      /a/ vs SILENCE  a magnitude contrast -- NOT an upper bound, see §68 d' 0.4425 +- 0.0069   cos +0.4428
+      /i/ vs SILENCE  the same, second word                d' 0.4998 +- 0.0046   cos +0.5387
+
+    THE OTHER TRACTS at the primary pair and gap
+      auditory population (unweighted)       d' 1.4027 +- 0.0250   -> accuracy 0.7585
+      aud->vocal EXCITATORY   <- PRIMARY     d' 1.3076 +- 0.0621   -> accuracy 0.7434
+      aud->vocal inhibitory                  d' 1.0679 +- 0.1003   -> accuracy 0.7033
+      aud->vocal merged                      d' 1.2744 +- 0.0710   -> accuracy 0.7380
+      aud->central (density 0.02)            d' 1.3882 +- 0.0370   -> accuracy 0.7562
+
+  Nothing in the creature was touched: no genome field was written and no
+  kernel state was modified, so `verify`'s hash MUST be unmoved. A moved
+  hash is a bug in this instrument.

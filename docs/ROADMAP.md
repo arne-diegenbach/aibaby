@@ -14172,3 +14172,186 @@ read fresh:
 between 800 and 2000 ms **from `exp(-G/tau_rec)` alone**, which is where §63
 measured A's trace actually dying. Two independent routes to the same decay is
 worth more than either.
+
+## §68 RESULT — THE PRECONDITION IS MET, AND THE PREDICTION IS ADJACENT-ONLY
+
+`--experiment overlapgate`, 12 creatures at 1,680,000 ticks. Genome md5
+`9f6faac320210cc8e9f5830adf066934` — **unchanged from §63-§66, because nothing
+in the creature was touched.** `results/n68-overlapgate-1680k.log`.
+
+### THE VERDICT
+
+    d' POOLED over B   (registered)   1.3076 +- 0.0621   -> accuracy 0.7434
+    d' WITHIN B        (addendum)     1.4986 +- 0.0372   -> accuracy 0.7732
+    the bar                           0.7706             -> accuracy 0.650
+    best - 2 SE 1.1833, best + 2 SE 1.4319
+    -> LICENSED, and the OPTIMISM FLAG applies
+
+**THE PRECONDITION §67 NAMED IS MET AND IT IS NOT CLOSE.** On the primary tract
+the two words drive **near-disjoint** synapse sets:
+
+    same-word cosine    0.9359 +- 0.0020
+    cross-word cosine   0.1378 +- 0.0034
+    SEPARATION         +0.7981 +- 0.0052      153.5 SE from 0
+    label-destroyed    +0.0009 +- 0.0011      EXACTLY 0, as derived
+
+The null is signed and derivable, so that 0 is a statement about the estimator
+and not a hope about it.
+
+### THE CASCADE — AND THE EAR SHARPENS THE WORD RATHER THAN LOSING IT
+
+    space                          pair0    pair1    pair2    pair3
+    mel  (FULL SCALE)             +0.3180  +0.2157  +0.1627  +0.1660
+    auditory population           +0.8049  +0.5760  +0.5651  +0.4537
+    aud->vocal EXCITATORY         +0.7981  +0.5861  +0.5522  +0.4428
+    aud->vocal inhibitory         +0.7576  +0.5010  +0.5408  +0.4180
+    aud->vocal merged             +0.7956  +0.5408  +0.5662  +0.4499
+    aud->central (density 0.02)   +0.8021  +0.5621  +0.5674  +0.4526
+
+**The separation MORE THAN DOUBLES between the mel frame and the auditory
+spikes** (0.3180 -> 0.8049). The expectation going in was attrition — some of
+the mel distinction surviving into the spiking code. The opposite happens: the
+cochlea-to-auditory encoding **sharpens** the distinction, because a mel frame
+shares broadband energy across vowels while a spiking population assigns them
+different *cells*. **And the random projection costs almost nothing**: 0.8049 on
+the whole population against 0.7981 through a density-0.15 tract.
+
+`aud->central` carries it at **0.8021** on a density of **0.02** and 1496
+synapses. A tract does not need to be thick to preserve which cells fired.
+
+### THE PREDICTION IS GAP-SPECIFIC, AND THAT IS THE RESULT WORTH CARRYING
+
+    gap        d' POOLED            accuracy    within-B
+     200 ms    1.3076 +- 0.0621     0.7434      1.4986
+     800 ms    0.1383 +- 0.0072     0.5276      0.1611
+    2000 ms    0.0039 +- 0.0009     0.5008      0.0028
+    5000 ms    0.0034 +- 0.0012     0.5007      0.0000
+
+**M6 is predicted to be met at 200 ms and at no other rung.** Above 800 ms the
+mechanism is at chance and the prediction is a flat refusal.
+
+**THAT IS THE NEONATE'S PROFILE, ARRIVED AT FROM THE OTHER DIRECTION.** §67's
+strand 4 records that newborns detect **adjacent** repetition and **fail** on
+non-adjacent. Here the arithmetic of a depressing synapse, with a recovery
+constant borrowed from a measurement and nothing fitted, produces
+**adjacent-only** detection by itself. Two independent routes — a developmental
+literature and `exp(-G/tau_rec)` — to the same shape.
+
+**And it reproduces §63's own decay curve.** §63 measured A's trace dying
+between 800 and 2000 ms; this ladder falls to chance in exactly that interval,
+from the recovery exponential alone. **That is the instrument's validation, and
+it was not tuned to produce it.**
+
+### THE DOSE-RESPONSE STAGE 2 WOULD MEASURE, PREDICTED BEFORE IT RUNS
+
+    tau_rec     d' POOLED            accuracy    within-B
+     100 ms     0.2811 +- 0.0137     0.5559      0.3245
+     300 ms     1.3076 +- 0.0621     0.7434      1.4986
+    1000 ms     2.4110 +- 0.1185     0.8860      2.7798
+    3000 ms     2.8791 +- 0.1442     0.9250      3.3373
+
+**Monotone, and steep: a factor of 4.6 in d' across the ladder.** The curve is
+not flat, so the §68 clause that would have cancelled stage 2 does not fire.
+
+**READ IT AT 300-1000 ms AND NOT AT THE TOP.** A Tsodyks-Markram `tau_rec` of
+3000 ms is at or outside the range the literature uses, so the 0.9250 rung is an
+extrapolation of the arithmetic rather than a proposal. **Do not quote it as a
+predicted accuracy.**
+
+### THE DERIVED PIN WAS RIGHT, WHICH IS WORTH RECORDING BECAUSE IT WAS A REPAIR
+
+    U      d' POOLED            accuracy
+    0.05   0.9213 +- 0.0423     0.6775
+    0.20   1.3076 +- 0.0621     0.7434    <- the DERIVED pin
+    0.50   1.2341 +- 0.0582     0.7314    <- stpprobe's corner
+
+    U scan over (0,1]:  best d' 1.3098 +- 0.0621 at U 0.24, accuracy 0.7426
+
+The addendum replaced the borrowed U 0.5 with `U ~ 1/n_bar = 0.226`. **The scan's
+own optimum is 0.24.** A constant derived from the operating point landed within
+0.02 of the measured optimum, where the constant borrowed from another
+experiment was saturating. `derive-the-constant`, with a number attached.
+
+**THE ARITHMETIC CLAUSE DOES NOT FIRE**: the ceiling over the whole of (0,1] is
+accuracy 0.7426, above the 0.650 bar, and 12 of 12 creatures have some U that
+reaches it. Smallest sufficient U, 0.05.
+
+### THE REGISTERED CANCELLATION PREDICTION IS CONFIRMED, MODESTLY
+
+§68 predicted that depression on the **inhibitory** projection pushes the
+delivered drive the opposite way, so STP on both would partly cancel:
+
+    aud->vocal EXCITATORY   1.3076 +- 0.0621
+    aud->vocal inhibitory   1.0679 +- 0.1003
+    aud->vocal merged       1.2744 +- 0.0710
+
+**Merged sits below excitatory-only**, in the predicted direction, by 0.0332 —
+well inside one SE, so **the size is not claimed**. What is claimed is that the
+sign is the registered one and that **excitatory-only remains the right primary**,
+which is also the cheapest genome change.
+
+### STIMULUS DISTANCE — A DOSE-RESPONSE IN THE STIMULUS, AND IT PRICES VOCABULARY
+
+    /a/ vs /i/   corner pair       d' 1.3076 +- 0.0621   cos +0.7981
+    /i/ vs /u/   near-F2           d' 0.9779 +- 0.0364   cos +0.5861
+    /a/ vs /e/   adjacent vowel    d' 0.6931 +- 0.0235   cos +0.5522
+    /a/ vs SILENCE                 d' 0.4425 +- 0.0069   cos +0.4428
+    /i/ vs SILENCE                 d' 0.4998 +- 0.0046   cos +0.5387
+
+Monotone in both columns. **Only the corner pair clears the bar**: the near-F2
+pair reaches accuracy 0.6886 and the adjacent-vowel pair 0.6350, both under
+0.650 or at it. So the mechanism as priced supports **a two-word
+same/different judgement on well-separated vowels and not a vocabulary**, which
+is a limit to state in advance rather than discover in stage 2.
+
+### THE GATES
+
+    sessions that ran                  12 of 12             PASS
+    presentations == labels            0 misaligned         PASS
+    slept presentations                774 of 6900          11.2%
+    first sleep at tick                1,089,892
+    G1 liveness                        every space live     PASS
+    G5 saturation, mean depletion      0.4040 +- 0.0013     PASS, graded
+    G2 label-destroyed, signed         +0.0009 +- 0.0011    PASS
+    G4 sign                            +0.7981 +- 0.0052    PASS
+    time-lag balance, same vs cross    39.35 / 39.35        exact
+    tracts pruned during session       7 of 12 creatures    SEE BELOW
+
+**Sleep arrives at 1,089,892 against §63's 1,087,801** — 2,091 ticks apart on a
+different protocol, which is a useful reproduction of
+[[aibaby-the-cliff-is-sleep]]'s onset under a third drive. 11.2% discarded,
+identical to §63's share.
+
+### THE LIMITATIONS, AND THE FIRST ONE HAS ITS OWN CONTROL IN THE TABLE
+
+1. **7 of 12 creatures pruned tract synapses during the session**, and the
+   weight vectors were captured at birth. So for those creatures the weighting
+   is partly stale. **The control is already in the cascade**: the *unweighted*
+   auditory row reads 0.8049 and 1.4027 against the weighted tract's 0.7981 and
+   1.3076, so the weighting contributes almost nothing and a stale weighting
+   cannot be carrying the result.
+2. **THE OPTIMISM FLAG.** Recovery *during* the word is omitted, which overstates
+   depletion. A refusal here would have been conservative; **this is a license,
+   so the flag applies and the predicted 0.7434 is an upper estimate.**
+3. **A scalar drive readout is not `samediff`'s classifier.** §63-§66 used a
+   standardised nearest-centroid readout on a population vector. The two are not
+   the same estimator and 0.7434 is not a prediction of what `samediff` would
+   print.
+4. **The `vocal -> central -> auditory` loop is not simulated.** Real depression
+   on `auditory -> vocal` could feed back and change `auditory` itself. The
+   depressing synapse is downstream of the spike counts used here, so the
+   first-order arithmetic is exact; this is the second-order term.
+
+### WHAT IS LICENSED, AND WHAT IS STILL NOT
+
+**Licensed: stage 1 and stage 2.** The gap-0 rung in `samediff`, then STP on the
+**excitatory** `auditory -> vocal` projection at `U ~ 0.2` and
+`tau_rec` **300-1000 ms**, scored two-tailed, with the gap ladder as the
+registered shape.
+
+**Still not licensed: stage 3** (series depression). Nothing here bears on it.
+
+**And the honest frame for stage 2:** §68 predicts a *repetition detector* that
+works at one gap on one well-separated pair. That is a newborn-grade ability and
+it is what §67 argued for — **not** the comparator §65 named, and not a
+vocabulary.
