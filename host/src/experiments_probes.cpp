@@ -18531,6 +18531,70 @@ constexpr uint64_t kSdRoundTicks =
 enum SdWin { kSdWA = 0, kSdWG, kSdWBE, kSdWB, kSdWS, kSdWinCount };
 constexpr uint64_t kSdOverlap = 400;  // width of kSdWBE
 
+// §65. PAIRS OF SPACES, FIXED BEFORE THE RUN: the space that carries A, and
+// the space that carries B. §64 measured A at 0.7727 on artic9 and B at 1.0000
+// on auditory, in the SAME window.
+constexpr uint32_t kSdPairCount = 3;
+constexpr uint32_t kSdPairA[kSdPairCount] = {3, 4, 3};  // motor: artic9, artic7, artic9
+constexpr uint32_t kSdPairB[kSdPairCount] = {0, 0, 1};  // sensory: auditory, auditory, central
+constexpr const char* kSdPairName[kSdPairCount] = {"artic9 x auditory", "artic7 x auditory",
+                                                    "artic9 x central"};
+
+// A held-out linear PROJECTION: the same standardise-then-nearest-centroid rule
+// `holdout_accuracy` uses, but returning the per-trial score and the decision
+// threshold instead of an accuracy, so that two decoders can be ASSEMBLED
+// trial by trial. Everything is fit on the TRAINING FOLD ONLY.
+struct SdProj {
+  std::vector<double> score;
+  double thr = 0.0;
+  bool ok = false;
+};
+
+inline SdProj sd_project(const std::vector<std::vector<double>>& x,
+                         const std::vector<int>& y, size_t train) {
+  SdProj out;
+  if (x.empty() || train == 0 || train >= x.size()) return out;
+  const size_t d = x[0].size();
+  if (d == 0) return out;
+  std::vector<double> mean(d, 0.0), sd(d, 0.0);
+  for (size_t i = 0; i < train; ++i)
+    for (size_t k = 0; k < d; ++k) mean[k] += x[i][k];
+  for (size_t k = 0; k < d; ++k) mean[k] /= double(train);
+  for (size_t i = 0; i < train; ++i)
+    for (size_t k = 0; k < d; ++k) {
+      const double v = x[i][k] - mean[k];
+      sd[k] += v * v;
+    }
+  for (size_t k = 0; k < d; ++k) {
+    sd[k] = std::sqrt(sd[k] / double(train));
+    if (sd[k] < 1e-9) sd[k] = 1e-9;
+  }
+  std::vector<double> c0(d, 0.0), c1(d, 0.0);
+  size_t n0 = 0, n1 = 0;
+  for (size_t i = 0; i < train; ++i) {
+    if (y[i] == 0) { ++n0; for (size_t k = 0; k < d; ++k) c0[k] += (x[i][k] - mean[k]) / sd[k]; }
+    else if (y[i] == 1) { ++n1; for (size_t k = 0; k < d; ++k) c1[k] += (x[i][k] - mean[k]) / sd[k]; }
+    else return out;
+  }
+  if (n0 == 0 || n1 == 0) return out;
+  for (size_t k = 0; k < d; ++k) { c0[k] /= double(n0); c1[k] /= double(n1); }
+  std::vector<double> dir(d, 0.0);
+  double thr = 0.0;
+  for (size_t k = 0; k < d; ++k) {
+    dir[k] = c1[k] - c0[k];
+    thr += dir[k] * 0.5 * (c1[k] + c0[k]);
+  }
+  out.thr = thr;
+  out.score.assign(x.size(), 0.0);
+  for (size_t i = 0; i < x.size(); ++i) {
+    double v = 0.0;
+    for (size_t k = 0; k < d; ++k) v += ((x[i][k] - mean[k]) / sd[k]) * dir[k];
+    out.score[i] = v;
+  }
+  out.ok = true;
+  return out;
+}
+
 struct SdGapRow {
   double milestone[kSdSpaces] = {};  // same/different at the scoring window
   double nulled[kSdSpaces] = {};     // ...with the labels destroyed
@@ -18545,6 +18609,13 @@ struct SdGapRow {
   double null_be[kSdSpaces] = {};    // ...with the labels destroyed
   double ing_a_be[kSdSpaces] = {};   // A's identity during B
   double ing_b_be[kSdSpaces] = {};   // B's identity during B
+  // §65: RECOVERABLE, as against REPRESENTED.
+  double asm_real[kSdPairCount] = {};   // per-trial assembled readout — §65's primary
+  double asm_null[kSdPairCount] = {};   // ...with the labels destroyed
+  double conj[kSdPairCount] = {};       // learned combiner, with the product term
+  double joint[kSdPairCount] = {};      // linear concatenation — chance by construction
+  double dec_a[kSdPairCount] = {};      // what the motor decoder gets on A
+  double dec_b[kSdPairCount] = {};      // what the sensory decoder gets on B
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
   bool scored = false;
@@ -18840,10 +18911,41 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // 0.510 / 0.742 during) — the motor code is a delayed copy. So the motor
       // spaces are priced on their post-word windows. NOT a maximum over
       // windows: that is selection dressed up as a ceiling.
-      const bool motor = (sp == 3 || sp == 4);
+      const bool motor = (sp == 3 || sp == 4);  // artic9, artic7
       const double pa = motor ? row.decay[sp] : row.orac_a[sp];
       const double pb = motor ? row.ing_b[sp] : row.orac_b[sp];
       row.assembled[sp] = pa * pb + (1.0 - pa) * (1.0 - pb);
+    }
+    // ---- §65: IS IT RECOVERABLE AT ALL? ----
+    for (uint32_t pr = 0; pr < kSdPairCount; ++pr) {
+      const SdProj pa = sd_project(feat[g][kSdWBE][kSdPairA[pr]], ya, train);
+      const SdProj pb = sd_project(feat[g][kSdWBE][kSdPairB[pr]], yb, train);
+      if (!pa.ok || !pb.ok) continue;
+      uint32_t ca = 0, cb = 0, cs = 0, cn = 0, tot = 0;
+      for (size_t i = train; i < ysame.size(); ++i) {
+        const int da = pa.score[i] > pa.thr ? 1 : 0;
+        const int db = pb.score[i] > pb.thr ? 1 : 0;
+        const int pred = (da == db) ? 1 : 0;
+        if (da == ya[i]) ++ca;
+        if (db == yb[i]) ++cb;
+        if (pred == ysame[i]) ++cs;
+        if (pred == yshuf[i]) ++cn;
+        ++tot;
+      }
+      if (tot == 0) continue;
+      row.dec_a[pr] = double(ca) / double(tot);
+      row.dec_b[pr] = double(cb) / double(tot);
+      row.asm_real[pr] = double(cs) / double(tot);
+      row.asm_null[pr] = double(cn) / double(tot);
+      std::vector<std::vector<double>> cj(ysame.size()), jn(ysame.size());
+      for (size_t i = 0; i < ysame.size(); ++i) {
+        cj[i] = {pa.score[i], pb.score[i], pa.score[i] * pb.score[i]};
+        jn[i] = feat[g][kSdWBE][kSdPairA[pr]][i];
+        jn[i].insert(jn[i].end(), feat[g][kSdWBE][kSdPairB[pr]][i].begin(),
+                     feat[g][kSdWBE][kSdPairB[pr]][i].end());
+      }
+      row.conj[pr] = holdout_accuracy(cj, ysame, train);
+      row.joint[pr] = holdout_accuracy(jn, ysame, train);
     }
     row.scored = true;
   }
@@ -19182,6 +19284,74 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                                : "ORDINARY DECAY — A dies on schedule, B is not the cause");
     std::printf("\n    verdict (%s, best gap %sms): %+.4f +- %.4f  ->  %s\n",
                 kSdSpaceName[kSdCoPrimary], kSdGapName[ow_g], ow_best, ow_best_se, v);
+  }
+
+  // ---- §65: RECOVERABLE versus REPRESENTED ----
+  std::vector<double> ar[kSdGapCount][kSdPairCount], an[kSdGapCount][kSdPairCount];
+  std::vector<double> cj[kSdGapCount][kSdPairCount], jn[kSdGapCount][kSdPairCount];
+  std::vector<double> da[kSdGapCount][kSdPairCount], db[kSdGapCount][kSdPairCount];
+  for (const SdOut& o : res[0])
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      if (!o.gap[g].scored) continue;
+      for (uint32_t pr = 0; pr < kSdPairCount; ++pr) {
+        ar[g][pr].push_back(o.gap[g].asm_real[pr]);
+        an[g][pr].push_back(o.gap[g].asm_null[pr]);
+        cj[g][pr].push_back(o.gap[g].conj[pr]);
+        jn[g][pr].push_back(o.gap[g].joint[pr]);
+        da[g][pr].push_back(o.gap[g].dec_a[pr]);
+        db[g][pr].push_back(o.gap[g].dec_b[pr]);
+      }
+    }
+  std::printf("\n  §65 — RECOVERABLE versus REPRESENTED, at the overlap window.\n\n"
+              "  REPRESENTED is what the creature makes linearly available, and §63/§64\n"
+              "  measured it at chance. RECOVERABLE is what an EXTERNAL observer can work\n"
+              "  out from the creature's OWN activity. The assembled readout decodes A from\n"
+              "  the motor space and B from the sensory space and predicts 'same' iff the two\n"
+              "  decodes AGREE. It uses the host's knowledge of which space carries which\n"
+              "  word, so it is an UPPER BOUND and never a claim about the creature -- its\n"
+              "  whole value is as a denominator for the creature's own 0.50.\n\n");
+  for (uint32_t pr = 0; pr < kSdPairCount; ++pr) {
+    std::printf("  pair %s\n"
+                "    gap   dec A    dec B    ASSEMBLED        destroyed  conjunctive  linear-joint  creature\n",
+                kSdPairName[pr]);
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      double m[7] = {}, e[7] = {};
+      sd_stat(da[g][pr], m[0], e[0]);
+      sd_stat(db[g][pr], m[1], e[1]);
+      sd_stat(ar[g][pr], m[2], e[2]);
+      sd_stat(an[g][pr], m[3], e[3]);
+      sd_stat(cj[g][pr], m[4], e[4]);
+      sd_stat(jn[g][pr], m[5], e[5]);
+      sd_stat(mbe[0][g][kSdPairA[pr]], m[6], e[6]);
+      std::printf("   %5s  %.4f   %.4f   %.4f+-%.4f   %.4f     %.4f       %.4f        %.4f\n",
+                  kSdGapName[g], m[0], m[1], m[2], e[2], m[3], m[4], m[5], m[6]);
+    }
+    std::printf("\n");
+  }
+  {
+    double best = 0.0, best_se = 0.0, best_cj = 0.0;
+    uint32_t bg = 0;
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      double m = 0, e = 0;
+      sd_stat(ar[g][0], m, e);
+      if (m > best) {
+        best = m; best_se = e; bg = g;
+        double cm = 0, ce = 0;
+        sd_stat(cj[g][0], cm, ce);
+        best_cj = cm;
+      }
+    }
+    const char* v =
+        (best >= kSdBar)
+            ? "PRESENT AND RECOVERABLE, NOT COMPUTED"
+            : ((best_cj >= kSdBar)
+                   ? "recoverable only WITH a product term — reported, no verdict"
+                   : "NOT JOINTLY RECOVERABLE — M6 fails upstream of comparison");
+    std::printf("    §65 VERDICT (%s, best gap %sms)\n"
+                "      assembled %.4f +- %.4f   conjunctive %.4f   creature %.4f\n"
+                "      -> %s\n",
+                kSdPairName[0], kSdGapName[bg], best, best_se, best_cj,
+                [&]{ double m=0,e=0; sd_stat(mbe[0][bg][kSdPrimary],m,e); return m; }(), v);
   }
 
   // ---- THE VERDICT, THREE-WAY ----
