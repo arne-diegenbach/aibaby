@@ -19809,6 +19809,101 @@ text leans on is listed with a link. Where a citation could not be verified to
 author level it is given by title and URL rather than guessed at — an invented
 author list is worse than an incomplete one.
 
+**Comparison, repetition and the first same/different ability — the §67 lead.**
+Found 2026-11-12 after §66's refusal. **Nothing here is built**; the verdicts
+below are what the lead predicts, not what this creature has been measured to do.
+See `docs/ROADMAP.md` §67.
+
+- Rigotti, M., Barak, O., Warden, M. R., Wang, X.-J., Daw, N. D., Miller, E. K. &
+  Fusi, S. (2013). *The importance of mixed selectivity in complex cognitive
+  tasks.* Nature 497, 585–590.
+  <https://www.cns.nyu.edu/wanglab/publications/pdf/rigotti_2013.pdf> — and
+  Fusi, S., Miller, E. K. & Rigotti, M. (2016). *Why neurons mix: high
+  dimensionality for higher cognition.* Current Opinion in Neurobiology 37,
+  66–74. <https://www.matrig.net/publications/articles/fusi2016.pdf>. A linear
+  readout can produce many responses only if some population **nonlinearly
+  mixes** its inputs; linear mixing stays low-dimensional, and mixed selectivity
+  arises naturally from a random projection onto nonlinear units. The 2024
+  *Neuron* perspective *Mixed selectivity: cellular computations for complexity*
+  (<https://www.sciencedirect.com/science/article/pii/S0896627324002782>) adds
+  that nonlinear mixing is **not sufficient** — the responses must also be
+  diverse. **This is §63's XOR argument generalised**, and it says §63–§66's
+  nulls are the theory's prediction rather than a defect: no space in this
+  creature carries both words, so no linear readout of any of them could have
+  expressed the comparison. Taken here as an argument **against** building a
+  mixing population, in favour of making the conjunction happen upstream of the
+  readout.
+
+- Mill, R., Coath, M., Wennekers, T. & Denham, S. L. (2011). *A neurocomputational
+  model of stimulus-specific adaptation to oddball and Markov sequences.* PLoS
+  Computational Biology 7(8), e1002117.
+  <https://journals.plos.org/ploscompbiol/article?id=10.1371/journal.pcbi.1002117>
+  — and *Modelling novelty detection in the thalamocortical loop* (2021), PLoS
+  Computational Biology <https://pmc.ncbi.nlm.nih.gov/articles/PMC10212104/>.
+  Feedforward **synaptic depression** yields adaptation specific to the
+  *stimulus* rather than general fatigue, **because each input channel depletes
+  its own synapses**. Stated limitation, and it matters for what may be claimed:
+  a single depressing layer **cannot** exhibit true deviance detection, because
+  each feature's response depends only on its own channel's adaptation — so this
+  licenses **pairwise same/different**, which is what M6 asks, and **not**
+  oddball-paradigm regularity sensitivity. The second paper also reports that
+  the latency of the secondary cortical response is **not** accounted for by
+  short-term depression in a recurrent network, so the account is incomplete in
+  the literature too. This creature has owned the mechanism since **DNA v36**
+  and ships it at zero on every tract.
+
+- Miller, E. K., Erickson, C. A. & Desimone, R. (1996). *Neural mechanisms of
+  visual working memory in prefrontal cortex of the macaque.* Journal of
+  Neuroscience 16(16), 5154–5167.
+  <https://www.jneurosci.org/content/16/16/5154> — in a delayed match-to-sample
+  task, match enhancement is **stimulus-specific**: IT cells enhance only for
+  the stimulus that matched the sample. PF shows sample-selective delay activity
+  and match enhancement more often and more strongly; match **suppression** is
+  about equally common in both areas. An attractor model reproduces the split
+  (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3704278/>): weakly selective
+  neurons suppress, strongly selective ones enhance. **Read here as an
+  architecture claim** — the match signal is a **gain change on the population
+  that already carries the item**, a scalar, with no XOR of two codes anywhere.
+  That is why §65's named combiner may be the wrong shape rather than merely
+  expensive.
+
+- Gervain, J., Macagno, F., Cogoi, S., Peña, M. & Mehler, J. (2008). *The neonate
+  brain detects speech structure.* PNAS 105(37), 14222–14227.
+  <https://www.semanticscholar.org/paper/60925771d49c8a8abf7a4c0c6bb00570cd391456>
+  — 22 neonates, fNIRS: ABB sequences with an immediate repetition give larger
+  temporal and left-frontal responses than ABC controls, within the first few
+  trials. Neonates detect **adjacent** repetition and **fail** on non-adjacent
+  (ABA), which the field now generally reads as a **perceptual repetition
+  detector** rather than rule extraction; de la Cruz-Pavía & Gervain's review
+  (<https://www.research.unipd.it/bitstream/11577/3393910/1/delaCruzGervain21.pdf>)
+  argues infants represent difference as well as sameness. Nallet et al. (2023),
+  Developmental Science <https://onlinelibrary.wiley.com/doi/full/10.1111/desc.13408>
+  finds it is **not speech-specific** but engages distinct mechanisms for speech
+  and music. *Hemispheric asymmetries in repetition enhancement and suppression
+  effects in the newborn brain*, PLoS ONE 2015
+  (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC4618998/>) finds left-lateralised
+  repetition **enhancement** to ABB and not ABC. **Two things this fixes in our
+  own design**: M6's 200–5000 ms gap ladder asks for more than a neonate can do
+  at every rung and is **missing a gap-0 rung**; and because both signs of
+  repetition effect are reported in the same paradigm, **the sign is not
+  constrained and any refusal clause must be two-tailed.** It does **not**
+  overturn §63's refusal to claim its short-gap residual — it argues that
+  repetition suppression is the mechanism to **build** rather than only the
+  confound to exclude, which a single contrast still cannot establish.
+
+- *Deep neural networks and the same-different relation* — Kim, J., Ricci, M. &
+  Serre, T. (2018). *Not-So-CLEVR: learning same-different relations strains
+  feedforward neural networks.* <https://arxiv.org/pdf/2108.03603> (and
+  Puebla & Bowers, *Journal of Vision* 2022,
+  <https://jov.arvojournals.org/article.aspx?articleid=2783637>; Vaishnav &
+  Serre's GAMR, <https://pmc.ncbi.nlm.nih.gov/articles/PMC13594982>). Feedforward
+  architectures strain on same-different; the proposed remedies are **attention
+  and working memory**, i.e. feedback. Recorded because it is the machine-learning
+  mirror of our own result and **not** because it licenses anything: the
+  literature is unsettled (<https://arxiv.org/pdf/2310.09612> reports networks
+  learning generalisable same-different relations), and the remedies it proposes
+  are the expensive route strand 1 argues against.
+
 **Sequence generation, and why it needs more than STDP.**
 
 - Fiete, I. R., Senn, W., Wang, C. Z. H. & Hahnloser, R. H. R. (2010).

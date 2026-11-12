@@ -13671,3 +13671,218 @@ and it is not licensed by anything measured yet.
 
 The determinism hash is unmoved **because nothing in the creature was touched**
 — which is the point of the section, not an incidental property of it.
+
+## §67 — LITERATURE LEAD, NOT BUILT: the comparison may not need a comparator
+
+Found 2026-11-12 from a literature pass after §66's refusal. **Nothing built,
+nothing costed in runs.** Four strands converge on one proposal, and the
+proposal is cheaper than the thing §65 asked for.
+
+### 1. WHY EVERY READOUT FAILED — AND IT IS THE THEORY'S PREDICTION, NOT A BUG
+
+Rigotti et al. 2013 and Fusi, Miller & Rigotti 2016: a linear readout can
+produce many different responses only if some population **nonlinearly mixes**
+its inputs. Responses that combine task aspects only *linearly* can generate
+only low-dimensional representations. Mixed selectivity arises naturally from a
+**random projection of an input representation onto nonlinear units** — and the
+2024 *Neuron* perspective adds that nonlinear mixing alone is not sufficient:
+the responses must also be **diverse**.
+
+**This is §63's XOR argument from the other side, and it generalises it.** §63
+said a linear readout of a superposition cannot compute XOR. The theory says
+what is missing is a population that mixes the two streams nonlinearly. The
+creature has none: §64's overlap table shows A legible only on the motor spaces
+and B only on the sensory ones, with no space carrying both.
+
+**So §63-§66's nulls are what the theory predicts, and the conclusion is a
+redirection rather than a fifth null.** The expensive route is to build a new
+mixing population. The cheap route is to make the conjunction happen **before**
+the readout, so nothing has to mix anything.
+
+### 2. WHERE THE CONJUNCTION CAN HAPPEN FOR FREE — AND WE ALREADY OWN IT
+
+The stimulus-specific adaptation literature (Mill et al., *PLoS Comput Biol*
+2011; Yarden & Nelken; the 2021 thalamocortical model) is explicit about the
+mechanism: feedforward **synaptic depression** produces adaptation that is
+specific to the *stimulus* rather than general fatigue, **because each input
+channel depletes its own synapses.**
+
+**The creature has had this since DNA v36 and ships it at zero.** `stp_use`,
+`stp_recover_ms`, `stp_facil_ms` — a per-synapse Tsodyks-Markram synapse
+available on **every** tract, all three fields `0.0` in `dna/default.toml`.
+Release is normalised by U, so the first spike after a silence delivers exactly
+the genome's `weight` and switching it on is not secretly a recalibration.
+
+**And the convergence point already exists.** `auditory -> vocal` carries both
+of §64's words: A as the motor echo it sustains, B as the drive arriving through
+it. Two tracts, both with the v36 fields at zero:
+
+    src = auditory  dst = vocal  source = either       density 0.15  weight 0.12
+    src = auditory  dst = vocal  source = inhibitory   density 0.25  weight 0.25
+
+With depression on that tract, the gain B is delivered at **is** the resources A
+left behind:
+
+    delivered(B) = weight x resources_remaining(A)
+
+**That is a multiplicative conjunction at the synapse** — strand 1's nonlinear
+mixing, with no new population — and it is an operation on the **codes**, which
+is exactly what §66's prohibition demands in place of a subtraction on the
+spectra.
+
+**Three objections it answers, each from one of our own results:**
+
+- **§64's overwrite finding does not touch it.** Depletion is not activity. B's
+  spikes overwrite A's *motor trace*; they cannot overwrite a resource variable.
+  The one measured obstacle to holding A across B does not apply to this
+  carrier.
+- **"`central` carries neither word" is not an objection.** The readout is a
+  **magnitude**, not an identity. Central does not have to code the word; it has
+  to register how depleted the tract was.
+- **It needs no store.** Four stores have been refused. A resource variable with
+  a recovery time constant is not a fifth — it is the tract's own state.
+
+### 3. BIOLOGY READS SAME/DIFFERENT AS A SCALAR, NOT AS A COMPARISON OF TWO CODES
+
+Miller, Erickson & Desimone 1996 and the delayed-match-to-sample line: match
+enhancement in IT is **stimulus-specific** — cells enhance only for the stimulus
+that matched the sample. PF shows match enhancement and sample-selective delay
+activity more often and more strongly; match **suppression** is about equally
+common in both areas, and in IT an early enhancement is overtaken by a robust
+suppression. An attractor model reproduces the split: weakly selective neurons
+suppress, strongly selective ones enhance.
+
+**Read as an architecture claim: the match signal is a gain change on the
+population that already carries the item.** The same neurons hold the sample and
+receive the test. Nothing anywhere computes an XOR of two codes — which is why
+no brain needs the module §65 named.
+
+### 4. AND THIS IS WHAT A NEWBORN ACTUALLY DOES
+
+Gervain et al. 2008 and the line after it: neonates detect **adjacent**
+repetition (ABB) and **fail** on non-adjacent repetition (ABA). That asymmetry
+is the signature of a **perceptual repetition detector**, not a rule extractor —
+the reading the field now generally takes. Nallet et al. 2023 adds that it is
+not speech-specific. Newborn NIRS also finds left-lateralised repetition
+**enhancement** to ABB and not to ABC.
+
+**TWO CONSEQUENCES, AND THE SECOND IS A PRE-REGISTRATION CONSTRAINT:**
+
+1. **The first same/different ability a human has is adjacent-only and
+   decays fast.** M6 as written — gaps of 200 to 5000 ms — asks for more than a
+   neonate can do at every rung.
+2. **THE SIGN IS NOT CONSTRAINED.** Suppression and enhancement are both
+   reported, in the same paradigm, in newborns. **Any refusal clause here is
+   two-tailed**, and a one-tailed clause would be fitted to a guess.
+
+### WHAT THIS DOES AND DOES NOT DO TO §63's REFUSED RESIDUAL
+
+§63 declined to claim 2.1-2.5 SE at gap 200 because *repetition suppression
+explains the whole shape with no comparison computed anywhere.* **That remains
+the right call on that evidence and is not overturned here.**
+
+What strand 4 adds is that repetition suppression is the leading account of the
+**first same/different ability a human has** — so it is the mechanism to
+**build**, not merely the confound to exclude. The residual's shape — largest at
+the shortest gap, decaying monotonically — is that mechanism in miniature, at a
+depth the shipped genome sets to **zero**.
+
+**WHAT WOULD CONVERT IT FROM A CONFOUND INTO A RESULT, and a single contrast
+cannot:** §63 already has one and correctly declined it. A **dose-response in a
+quantity the genome sets** can. The signal must grow with depression depth and
+collapse when `tau_rec` is far below the gap. Memory
+`aibaby-liveness-is-not-dose`.
+
+### THE GATE THAT COMES FIRST — AND ITS NULL IS DERIVED, NOT GUESSED
+
+The precondition is one thing, and it is measurable with **no genome change**:
+**the two words must drive distinct synapses.** The kernel already keeps a
+per-synapse `traffic` field (`consolidate()`'s pruning pass moves it — that is
+how the v16 eligibility bug was found). So, on `auditory -> vocal`, per synapse,
+during word A against during word B:
+
+    overlap = <traffic_A, traffic_B> / (|traffic_A| . |traffic_B|)
+
+and the effect size follows with no free parameters:
+
+    delta_gain(same vs different)  ~  depth x (1 - overlap) x exp(-gap / tau_rec)
+
+`depth` is settable and bracketed by measurement: `stpprobe`'s depressing corner
+delivered **0.686-0.695** of nominal weight on `auditory -> central`, i.e. about
+0.31 of depletion at steady state.
+
+**IF `overlap` IS NEAR 1 THE LEAD IS DEAD FOR ONE RUN AND NOTHING IS BUILT** —
+depletion cannot be word-specific if the words share their synapses. That is
+`ctxfactor`'s shape and `phaseteach`'s: an exact decomposition with no fitted
+parameter, which is what killed the factorial-structure and sparse-time-basis
+leads for one run each instead of a build.
+
+**The precondition is already partly met and that is why the gate is worth
+running:** §63 measured the ear carrying the word at 0.92-0.98, so the auditory
+code **is** word-specific. What is unmeasured is whether that specificity
+survives the random projection onto `vocal` at density 0.15.
+
+### THE GAP LADDER IS MISSING ITS MOST INFORMATIVE RUNG
+
+`samediff` runs 200 / 800 / 2000 / 5000 ms. The newborn's success condition is
+**adjacent** — gap at or near 0 — and the creature's own residual is monotone
+increasing toward the short end. **A gap-0 rung must be added before any of this
+is priced**, or the experiment omits the only condition a neonate passes.
+`aibaby-match-at-the-operating-point`.
+
+### AN INSTRUMENT CAVEAT ON §63-§65's PRIMARY, recorded either way
+
+§63 chose `central` as primary and scored it in a 400 ms window. The
+`auditory -> central` comment in `dna/default.toml` carries `audprobe`'s
+measurement of that tract: central resolves which of two words was said at
+**0.512 at 50 ms, 0.700 at 200 ms, 0.940 at 1200 ms** of integration. **Central
+is slow, not deaf.**
+
+A 400 ms window is below its integration time, so the primary module was read at
+an operating point where it is independently known to be weak. **This does not
+change §63-§66's verdicts** — the assembled oracle measured central's own full
+scale in that same window (B at 0.6973) and every refusal was taken against
+that, not against an assumed ceiling. But **`central`'s chance reading is partly
+a window choice**, and a successor must either widen the window or say why not.
+
+### WHAT IS NOT PROPOSED, SO IT CANNOT BE READ IN
+
+- **Not a new comparator module.** Strand 1 says that is the expensive route and
+  the synapse makes it unnecessary.
+- **Not a longer store, not a better carrier, not a better readout.** §65's
+  prohibition stands.
+- **Not `predict_gain`, and not DNA v15 as a comparator.** §66's prohibitions
+  stand untouched.
+- **NOT WEBB'S PAIR.** It was **built and refused** — `dep -> dep` spread as
+  much as `dep -> fac` on 2 of 3 seeds, and 2 of 3 responded *more* to the
+  shuffled train. That refusal was of a **syllable-rate bandpass**, which is a
+  different quantity from across-gap stimulus specificity; and Rothman's result
+  that **depressing synapses in series amplify the novelty component** is the
+  reason it is not dead for this purpose. **But it is stage 3, gated behind
+  stage 2, and it is not proposed now.** Anything built there must restate the
+  `dep -> dep` and shuffled controls that refused it the first time.
+
+### STAGING
+
+    0.  overlap gate         no genome change, derived null       kills or licenses
+    1.  gap-0 rung           one constant in `samediff`           needed by 2
+    2.  STP dose-response    `tau_rec` ladder on auditory->vocal  two-tailed
+    3.  series depression    only if 2 lands                      not proposed now
+
+**THE CALIBRATION PROBLEM IS SOLVED BY THE DESIGN, NOT BY A PASS.** Switching
+depression on shifts the tract's gain (0.69 at `stpprobe`'s corner), which would
+normally demand a recalibration before anything downstream could be compared.
+It does not here: **the primary contrast is same against different *within* one
+arm**, and a gain shift is common to both classes. Cross-arm absolutes stay
+exposed and must not be quoted.
+
+### PROHIBITIONS THIS SECTION CREATES
+
+- **DO NOT quote 0.31 as this creature's adaptation depth.** It is `stpprobe`'s
+  depressing *corner* on `auditory -> central`, a different tract and a chosen
+  operating point.
+- **DO NOT claim a dose-response from two doses.** Three seeds were not enough
+  for the smoothing sweep either.
+- **DO NOT write a one-tailed refusal clause.** Strand 4 reports both signs.
+- **DO NOT report any of the four papers as new without grepping README's
+  References first.** That rule was earned on Kornfeld et al.
