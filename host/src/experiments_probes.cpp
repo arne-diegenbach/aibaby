@@ -18668,6 +18668,7 @@ struct SdGapRow {
   double rel_corr = 0.0;   // their correlation across (trial, source neuron) cells
   double rel_cells = 0.0;  // cells entering the three above
   double rel_bmean = 0.0;  // the MEASURED factor averaged over ALL of B, reported
+  double rel_amean = 0.0;  // ...and DURING A, which is the vacuity gate's quantity
   double samp_frac = 0.0;  // tract synapses sampled at a transmission, per trial
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
@@ -18845,6 +18846,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   double pc_xx[kSdGapCount] = {}, pc_yy[kSdGapCount] = {}, pc_xy[kSdGapCount] = {};
   double pc_samp[kSdGapCount] = {}, pc_trials[kSdGapCount] = {};
   double pc_m[kSdGapCount] = {}, pc_mn[kSdGapCount] = {};  // the B-AVERAGE factor
+  double pc_a[kSdGapCount] = {}, pc_an[kSdGapCount] = {};  // the factor DURING A
 
   size_t cell_at[kSdGapCount] = {};
   uint64_t tick_now = 0;
@@ -19110,6 +19112,19 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
             pc_m[g] += dfac[kSdWB][i] / dcnt[kSdWB][i];              // B's AVERAGE
             pc_mn[g] += 1.0;
           }
+          // THE VACUITY QUANTITY IS THE DEPLETION BUILT DURING A, not the
+          // depletion left at B. §68's G5 gate asked "is the mask GRADED, or is
+          // every active synapse already empty / still full" and measured it at
+          // the END OF THE WORD (0.4040 at U 0.20). The depletion SURVIVING the
+          // gap is a different thing entirely — it is the trace's strength, the
+          // very quantity under test — and gating on it with §68's threshold
+          // would void the run for the finding. `guard-measures-the-wrong-
+          // quantity`, caught by the smoke for the fourth time in five
+          // sections. The gate reads A; B's onset is REPORTED.
+          if (dcnt[kSdWA][i] > 0.0) {
+            pc_a[g] += dfac[kSdWA][i] / dcnt[kSdWA][i];
+            pc_an[g] += 1.0;
+          }
         }
         if (!slist.empty()) {
           uint32_t ns = 0;
@@ -19140,6 +19155,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       row.rel_corr = (vx > 0.0 && vy > 0.0) ? cxy / std::sqrt(vx * vy) : 0.0;
     }
     if (pc_mn[g] > 0.0) row.rel_bmean = pc_m[g] / pc_mn[g];
+    if (pc_an[g] > 0.0) row.rel_amean = pc_a[g] / pc_an[g];
     if (pc_trials[g] > 0.0) row.samp_frac = pc_samp[g] / pc_trials[g];
     // THE ALIGNMENT CHECK. `ctxsrc` once ran a feature space AHEAD of its labels
     // by the number of slept trials, pairing row i with the wrong word and
@@ -19678,7 +19694,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // a readout" is premature until which is which has been measured.
   {
     const uint32_t ca = kSdStpCarrier;
-    std::vector<double> x, y, d, corr, samp, bmean;
+    std::vector<double> x, y, d, corr, samp, bmean, amean;
     uint64_t reads = 0, zeros = 0;
     uint32_t pruned_creatures = 0;
     for (const SdOut& o : res[ca]) {
@@ -19693,11 +19709,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         d.push_back(r0.rel_meas - r0.rel_sim);
         corr.push_back(r0.rel_corr);
         bmean.push_back(r0.rel_bmean);
+        amean.push_back(r0.rel_amean);
       }
       samp.push_back(r0.samp_frac);
     }
     double xm = 0, xs = 0, ym = 0, ys = 0, dm = 0, ds = 0, cm = 0, cs = 0, sm = 0, ss = 0;
-    double bm = 0, bs = 0;
+    double bm = 0, bs = 0, am = 0, as = 0;
+    sd_stat(amean, am, as);
     sd_stat(x, xm, xs);
     sd_stat(y, ym, ys);
     sd_stat(d, dm, ds);
@@ -19714,15 +19732,25 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // THE GATES FIRST, AND EACH ONE CAN ACTUALLY FAIL.
     const bool g_samp = sm >= 0.05;
     const bool g_wrote = (reads > 0 && zeros == 0);
-    const double depl = 1.0 - xm;
+    // §68's G5 QUANTITY, MEASURED: the depletion built DURING A. At a mean near
+    // 1 every active synapse is already empty and the mask is constant across
+    // words; near 0 nothing depletes. Either end makes the mechanism vacuous
+    // while every other number looks healthy. The depletion left at B's ONSET
+    // is NOT this quantity — it is the trace under test — and is reported below.
+    const double depl = 1.0 - am;
     const bool g_depl = depl > 0.05 && depl < 0.95;
+    const double depl_b = 1.0 - xm;
     std::printf("    G-SAMPLE  tract synapses read at a transmission   %.4f  (>= 0.05)   %s\n",
                 sm, g_samp ? "PASS" : "VOID");
     std::printf("    G-WROTE   transmissions with u still exactly 0    %llu of %llu        %s\n",
                 (unsigned long long)zeros, (unsigned long long)reads,
                 g_wrote ? "PASS" : "VOID");
-    std::printf("    G-DEPL    mean LIVE depletion 1 - u*R/U           %.4f  in (.05,.95) %s\n",
+    std::printf("    G-DEPL    LIVE depletion built DURING A            %.4f  in (.05,.95) %s\n"
+                "              (§68 SIMULATED this at 0.4040)\n",
                 depl, g_depl ? "PASS" : "VOID");
+    std::printf("    the depletion still there at B's onset           %.4f  REPORTED, not\n"
+                "              gated: this is the TRACE, the quantity under test\n",
+                depl_b);
     std::printf("    tract size, first vs last scored trial           %u of %u creatures pruned\n",
                 pruned_creatures, unsigned(res[ca].size()));
     if (!(g_samp && g_wrote && g_depl)) {
@@ -19765,7 +19793,19 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       std::printf("      MEASURED over ALL of B           %.4f +- %.4f   (two-tailed:\n"
                   "        the cost of the within-B depletion §68 omits; NOT the check)\n",
                   bm, bs);
-      const bool transfers = ds > 0.0 && std::fabs(dm) < 2.0 * ds;
+      // THE PREMISE HAS TWO PARTS AND THEY CARRY DIFFERENT WEIGHT, which the
+      // smoke is what forced. A LEVEL offset in the predicted direction is
+      // §68's own disclosed optimism, now QUANTIFIED — §70's pre-registration
+      // says so in as many words ("a rung 1 BELOW §68 is the predicted
+      // direction and is not by itself a failure to transfer"), and the first
+      // version of this verdict printed "ARITHMETIC DOES NOT TRANSFER" for
+      // exactly that case, contradicting the registration it was built from.
+      // A PATTERN mismatch is the one that bears on §68's conclusion: §68
+      // claimed a SEPARATION between words in the per-synapse pattern, and a
+      // level offset common to every synapse cannot disturb a separation while
+      // a pattern that is simply different can.
+      const bool level_agrees = ds > 0.0 && std::fabs(dm) < 2.0 * ds;
+      const bool wrong_sign = !level_agrees && dm < 0.0;
       // THE SIGN IS DERIVED, which is what keeps this from being a two-tailed
       // shrug. At B's first spike exactly ONE of §68's two omissions is in
       // play: it computes d_A without recovery DURING A, which OVERSTATES how
@@ -19781,13 +19821,19 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       // inside the gap both deplete again and reset that clock, which §68
       // cannot see. That predicts a MEASURED factor below the prediction, i.e.
       // the UNEXPLAINED sign, and a correlation well under 1.
-      std::printf("      %s\n",
-                  transfers ? "-> TRANSFERS: within its own SE, the arithmetic is the kernel's"
-                            : (dm > 0.0
-                                   ? "-> DIFFERS, IN §68's OWN DERIVED DIRECTION (§68 overstated"
-                                     " depletion)"
-                                   : "-> DIFFERS, AGAINST THE DERIVED DIRECTION — the gap's own"
-                                     " spikes are the named suspect"));
+      std::printf("      LEVEL: %s\n",
+                  level_agrees
+                      ? "agrees within its own SE"
+                      : (dm > 0.0 ? "differs, IN §68's OWN DERIVED DIRECTION — its\n"
+                                    "        optimism flag is now a measured number, not a"
+                                    " caveat"
+                                  : "differs, AGAINST THE DERIVED DIRECTION — the\n"
+                                    "        gap's own spontaneous spikes are the named"
+                                    " suspect"));
+      std::printf("      PATTERN: correlation %.4f. A level offset shared by every\n"
+                  "        synapse cannot disturb a separation; a DIFFERENT pattern can,\n"
+                  "        and the pattern is what §68's 153.5 SE was measured on.\n",
+                  cm);
 
       // ---- THE CO-PRIMARY: THE LADDER ----
       //
@@ -19826,23 +19872,67 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       }
       std::printf("\n      the bar                    %.3f\n", kSdBar);
 
+      // ---- THE CONSEQUENCE TEST, AND IT NEEDS NO THRESHOLD ----
+      //
+      // The question §68's premise actually raises is not "do two release
+      // factors agree to some tolerance I would have to invent"
+      // (`derive-the-constant`) but "does the simulation FLATTER the
+      // mechanism?". Both spaces are in the same accuracy units on the same
+      // trials, so the paired per-creature difference between §68's simulated
+      // drive and the kernel's measured one answers it directly, with an SE and
+      // nothing chosen.
+      std::vector<double> sdif;
+      {
+        const std::vector<double>& vsim = mbe[ca][0][kSdDrvSim];
+        const std::vector<double>& vmes = mbe[ca][0][kSdDrvExc];
+        for (size_t i = 0; i < vsim.size() && i < vmes.size(); ++i)
+          sdif.push_back(vsim[i] - vmes[i]);
+      }
+      double sdm = 0, sds = 0;
+      sd_stat(sdif, sdm, sds);
+      const bool flatters = sds > 0.0 && sdm >= 2.0 * sds;
+      std::printf("\n    THE CONSEQUENCE — does the SIMULATION flatter the mechanism?\n"
+                  "      §68's drive minus the kernel's, paired, same trials and units\n"
+                  "      %+.4f +- %.4f  (%.1f SE)   %s\n",
+                  sdm, sds, sds > 0.0 ? std::fabs(sdm) / sds : 0.0,
+                  flatters ? "THE SIMULATION READS HIGHER"
+                           : "no difference this run can resolve");
+
       // ---- THE REGISTERED FOUR-WAY ----
       const bool at1 = (acc[0] >= kSdBar && live[0]) || (acc[1] >= kSdBar && live[1]);
       const bool at2 = acc[3] >= kSdBar && live[3];
       const bool at3 = acc[4] >= kSdBar && live[4];
       std::printf("\n");
-      if (!transfers) {
-        std::printf("    -> §68's ARITHMETIC DOES NOT TRANSFER. §69 refused a mechanism it\n"
-                    "       never installed as §68 modelled it, every §67-§69 inference\n"
-                    "       rests on the simulation, and §67 IS RE-OPENED. The successor\n"
-                    "       is a corrected §68, computed from the live kernel.\n");
+      if (wrong_sign) {
+        std::printf("    -> §68's ARITHMETIC DOES NOT TRANSFER, AND AGAINST ITS OWN DERIVED\n"
+                    "       DIRECTION. §69 refused a mechanism it never installed as §68\n"
+                    "       modelled it, every §67-§69 inference rests on the simulation,\n"
+                    "       and §67 IS RE-OPENED. Reported first because this outcome\n"
+                    "       invalidates more prior work than any other. The named suspect\n"
+                    "       is the gap's own spontaneous traffic, which resets the kernel's\n"
+                    "       recovery clock invisibly to §68; the successor is a corrected\n"
+                    "       §68 computed from the live kernel.\n");
+      } else if (flatters) {
+        std::printf("    -> §68's SEPARATION DOES NOT TRANSFER AT FULL SIZE. The level\n"
+                    "       offset is §68's own disclosed optimism and is not the finding;\n"
+                    "       what matters is that a readout of the SIMULATED drive beats a\n"
+                    "       readout of the REAL one on the same trials, so §68's figure was\n"
+                    "       inflated by the simulation and not only by its flag. The\n"
+                    "       measured drive is the right basis, and the localisation below\n"
+                    "       is read on it.\n");
+      }
+      if (wrong_sign) {
+        // nothing further: the premise is gone and the rungs price a mechanism
+        // that was never the one modelled.
       } else if (!at1) {
         std::printf("    -> THE CONJUNCTION IS NOT IN THE MEASURED DRIVE AS A READOUT CAN\n"
-                    "       USE IT. The arithmetic transfers and §68's own statistic still\n"
-                    "       separates, but a held-out readout of the delivered drive does\n"
-                    "       not reach the bar — so §68's pair-d' priced an ORACLE over\n"
-                    "       pairs and never a single-trial readout. Nothing downstream is\n"
-                    "       at fault, and the gap is in §68's estimator, not the creature.\n");
+                    "       USE IT. A held-out readout of the drive the kernel actually\n"
+                    "       delivers does not reach the bar, so §68's pair-d' priced an\n"
+                    "       ORACLE OVER PAIRS — it was handed the pairing and scored a\n"
+                    "       scalar — and never a single-trial readout. NOTHING DOWNSTREAM\n"
+                    "       IS AT FAULT: the membrane and the spikes cannot lose a signal\n"
+                    "       that is not in what reaches them, and §69's refusal is left\n"
+                    "       standing for a reason one stage EARLIER than it looked.\n");
       } else if (at1 && at2 && !at3) {
         std::printf("    -> THE LOSS IS AT THE THRESHOLD. The signal is in the drive and\n"
                     "       still in the membrane, and spiking discards it. §69 refused for\n"
