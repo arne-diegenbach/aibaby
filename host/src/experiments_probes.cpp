@@ -18503,9 +18503,51 @@ constexpr const char* kSdGapName[kSdGapCount] = {"200", "800", "2000", "5000"};
 // column is comparable with `ctxsrc`'s 0.818/0.742/0.632, which were measured
 // on exactly those seven; `artic9` keeps all nine, because the words differ ON
 // F1 and F2 and excluding them would hide the echo this section is about.
-constexpr uint32_t kSdSpaces = 5;
+// §70 ADDS FOUR, AND THEY ARE THE LOCALISATION. §68 measured a 153.5-SE
+// separation in the depletion-weighted DELIVERED DRIVE; §69 measured 0.8 SE in
+// the vocal module's SPIKES. Something between the synapse and the spike
+// destroys the signal, and nothing in §67-§69 says what, so these four spaces
+// are the rungs of one ladder read on ONE set of trials:
+//
+//   drive-exc  rung 1, MEASURED. Sum of `w * u * R / U` over the actual
+//              transmissions of each auditory source neuron, EXCITATORY limb —
+//              §68's own primary space, now read from the live kernel instead
+//              of simulated host-side.
+//   drive-net  the same sum with the SIGN kept, which is what the vocal module
+//              is actually handed. §69 found the inhibitory limb is the
+//              stronger one, so exc-only and net can differ in kind: a signal
+//              present in `drive-exc` and absent in `drive-net` is the loss
+//              happening AT THE MERGE, one stage earlier than any membrane.
+//   drive-sim  rung 1's COMPARATOR: §68's arithmetic `1-(1-U)^n` applied to
+//              this trial's own spike counts. §68's pairs were VIRTUAL — two
+//              presentations from different rounds, never adjacent — while here
+//              A and B are the same physical trial, so the comparison against
+//              the measured drive is PAIRED. This is the premise nobody has
+//              ever checked.
+//   vmem       rung 2, the vocal module's MEMBRANE, averaged over the window.
+//              Rung 3 is `vocal` above, the spikes §69 already measured.
+constexpr uint32_t kSdSpaces = 9;
 constexpr const char* kSdSpaceName[kSdSpaces] = {"auditory", "central", "vocal",
-                                                 "artic9", "artic7"};
+                                                 "artic9", "artic7",
+                                                 "drive-exc", "drive-net",
+                                                 "drive-sim", "vmem"};
+constexpr uint32_t kSdDrvExc = 5;
+constexpr uint32_t kSdDrvNet = 6;
+constexpr uint32_t kSdDrvSim = 7;
+constexpr uint32_t kSdVmem = 8;
+// THE FIVE SPACES §69 READ ITS GATES ON, PINNED. `best_oracle` below is a MAX
+// over spaces, so letting §70's four into it would move a gate §69 already
+// passed — a new column quietly changing an old verdict's guard is exactly
+// `columns-move-with-the-primary` from the other side. The gate stays on the
+// five; the report tables show all nine.
+constexpr uint32_t kSdSpacesG69 = 5;
+// §68's SIMULATION PARAMETERS, and they are FIXED ACROSS ARMS rather than taken
+// from the arm's dose. `drive-sim` has to be §68's statistic verbatim wherever
+// it is printed, so U and tau_rec here are §68's derived operating point and
+// not the genome's. The carrier arm's dose IS exactly this pair, which is why
+// the carrier is the one arm where measured and simulated are comparable.
+constexpr double kSdSimU = 0.20;
+constexpr double kSdSimTau = 300.0;
 // THE PRIMARY SPACE, NAMED BEFORE THE RUN. `central` is the non-motor route and
 // the module M6 is really about — it is the one measured at 0.503, chance, once
 // the word stops. `artic9` is a CO-PRIMARY and is labelled the motor route: a
@@ -18616,6 +18658,17 @@ struct SdGapRow {
   double joint[kSdPairCount] = {};      // linear concatenation — chance by construction
   double dec_a[kSdPairCount] = {};      // what the motor decoder gets on A
   double dec_b[kSdPairCount] = {};      // what the sensory decoder gets on B
+  // §70's PREMISE CHECK, and it is classifier-free. Both quantities are the
+  // RELEASE FACTOR during B — the fraction of its nominal weight a synapse
+  // actually delivers — one measured from the live kernel at the moment of
+  // transmission, one predicted by §68's arithmetic from the same trial's own
+  // spike counts. If the arithmetic transfers they are the same number.
+  double rel_meas = 0.0;   // MEASURED u*R/U at B's FIRST transmission — the check
+  double rel_sim = 0.0;    // PREDICTED 1 - rec*(1-(1-U)^n_A) for the same cells
+  double rel_corr = 0.0;   // their correlation across (trial, source neuron) cells
+  double rel_cells = 0.0;  // cells entering the three above
+  double rel_bmean = 0.0;  // the MEASURED factor averaged over ALL of B, reported
+  double samp_frac = 0.0;  // tract synapses sampled at a transmission, per trial
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
   bool scored = false;
@@ -18637,6 +18690,15 @@ struct SdOut {
   uint32_t stp_patched = 0;
   double voc_spikes = 0.0;
   double voc_ticks = 0.0;
+  // §70. The three things that decide whether rung 1 was READ AT ALL.
+  // `rel_zero` is the one that can fail for a reason worth knowing: the STP
+  // state is written by the kernel's delivery loop from the same spike list the
+  // host reads back, so a transmission whose stored `u` is still 0 means the
+  // sampling is not where it thinks it is. It is a gate and not a diagnostic.
+  uint32_t syn_tract = 0;      // aud->vocal synapses, first scored trial
+  uint32_t syn_tract_end = 0;  // ...and the last, so a prune is visible
+  uint64_t rel_reads = 0;      // synapse states read at a transmission
+  uint64_t rel_zero = 0;       // ...of which the stored u was still exactly 0
   bool ok = false;
 };
 
@@ -18776,6 +18838,14 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   std::vector<uint32_t> gorder(kSdGapCount);
   for (uint32_t g = 0; g < kSdGapCount; ++g) gorder[g] = g;
 
+  // §70's premise-check accumulators, over (trial, source neuron) cells. `x` is
+  // the measured release factor and `y` §68's predicted one; the sums are kept
+  // rather than the cells so the correlation costs no storage.
+  double pc_n[kSdGapCount] = {}, pc_x[kSdGapCount] = {}, pc_y[kSdGapCount] = {};
+  double pc_xx[kSdGapCount] = {}, pc_yy[kSdGapCount] = {}, pc_xy[kSdGapCount] = {};
+  double pc_samp[kSdGapCount] = {}, pc_trials[kSdGapCount] = {};
+  double pc_m[kSdGapCount] = {}, pc_mn[kSdGapCount] = {};  // the B-AVERAGE factor
+
   size_t cell_at[kSdGapCount] = {};
   uint64_t tick_now = 0;
   for (uint64_t r = 0; r < rounds; ++r) {
@@ -18797,6 +18867,78 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       uint32_t gn[kSdWinCount] = {};
       bool slept = false;
       ++out.attempted;
+
+      // §70's RUNG 1 AND RUNG 2, per window.
+      //   dexc/dnet  the MEASURED delivered drive per auditory source neuron,
+      //              excitatory-only and signed, summed over transmissions.
+      //   dfac/dcnt  the release factors behind it and how many there were, so
+      //              the mean factor can be read back out for the premise check.
+      //   vmem       the vocal module's membrane, summed over windowed ticks.
+      std::vector<std::vector<double>> dexc(kSdWinCount, std::vector<double>(wa, 0.0));
+      std::vector<std::vector<double>> dnet(kSdWinCount, std::vector<double>(wa, 0.0));
+      std::vector<std::vector<double>> dfac(kSdWinCount, std::vector<double>(wa, 0.0));
+      std::vector<std::vector<double>> dcnt(kSdWinCount, std::vector<double>(wa, 0.0));
+      std::vector<std::vector<double>> vmem(kSdWinCount, std::vector<double>(wv, 0.0));
+      std::vector<double> wexc(wa, 0.0);  // live excitatory weight per source
+      // THE FIRST TRANSMISSION OF B, PER SOURCE NEURON, AND IT IS THE ONLY
+      // MOMENT §68's MODEL IS DEFINED AT. §68 holds the release factor constant
+      // across the whole of B at (1 - rec*d_A); the kernel depletes further with
+      // every spike B drives. So the B-AVERAGE carries two deviations in
+      // OPPOSITE directions — §68 omits recovery within A (which makes its
+      // factor too LOW) and depletion within B (too HIGH) — and its sign is
+      // therefore unconstrained, which would make the premise check a shrug.
+      //
+      // At B's FIRST spike nothing of B has depleted anything yet, so the
+      // kernel's state there IS "depletion from A, recovered across the gap" —
+      // exactly §68's quantity, with ONE deviation left and a DERIVED sign:
+      // omitting within-A recovery overstates d_A, so §68's predicted factor
+      // must sit at or BELOW the kernel's. That is the premise check. The
+      // B-average is kept and reported beside it as the cost of within-B
+      // depletion, two-tailed and labelled as such.
+      std::vector<double> bf_sum(wa, 0.0), bf_n(wa, 0.0);
+      std::vector<uint8_t> bf_done(wa, 0);
+
+      // THE TRACT INDEX IS REBUILT EVERY TRIAL, AND THAT IS CORRECTNESS RATHER
+      // THAN CAUTION. `prune_synapses` COMPACTS THE POOL IN PLACE — survivors
+      // slide down into vacated slots — so a cached synapse id reads another
+      // synapse's state after a prune. Pruning runs only inside
+      // `consolidate()`, which `brain.cpp` reaches only when `sleep_` is not
+      // `kAwake`; `asleep()` is the same predicate because the enum has exactly
+      // two states; and a trial with ANY asleep tick is DISCARDED below. So a
+      // per-trial rebuild is exact for every SCORED trial, and it costs one
+      // pool scan against the 2200-7700 brain steps of the trial itself.
+      //
+      // The feature vector is indexed by SOURCE NEURON and never by synapse id,
+      // which is the second half of the same guard: compaction happens inside
+      // one source's own block, so an aggregate per source survives it anyway.
+      std::vector<uint32_t> sbeg(size_t(wa) + 1, 0);
+      std::vector<uint32_t> slist;
+      {
+        const aibaby::Network& net = s.brain.network();
+        const uint32_t ntr = net.tract_synapses(uint32_t(aud), uint32_t(voc), nullptr, 0);
+        std::vector<uint32_t> ids(ntr, 0);
+        if (ntr) net.tract_synapses(uint32_t(aud), uint32_t(voc), ids.data(), ntr);
+        for (uint32_t id : ids) {
+          const uint32_t src = net.synapse_source(id);
+          if (src >= ms_a.begin && src < ms_a.begin + wa) ++sbeg[src - ms_a.begin + 1];
+        }
+        for (uint32_t i = 0; i < wa; ++i) sbeg[i + 1] += sbeg[i];
+        slist.assign(sbeg[wa], 0);
+        std::vector<uint32_t> at(sbeg.begin(), sbeg.end());
+        for (uint32_t id : ids) {
+          const uint32_t src = net.synapse_source(id);
+          if (src < ms_a.begin || src >= ms_a.begin + wa) continue;
+          slist[at[src - ms_a.begin]++] = id;
+        }
+        for (uint32_t i = 0; i < wa; ++i)
+          for (uint32_t k = sbeg[i]; k < sbeg[i + 1]; ++k) {
+            const double w = double(net.synapse_weight(slist[k]));
+            if (w > 0.0) wexc[i] += w;
+          }
+        if (out.syn_tract == 0) out.syn_tract = uint32_t(slist.size());
+        out.syn_tract_end = uint32_t(slist.size());
+      }
+      std::vector<uint8_t> seen(slist.size(), 0);
 
       for (uint64_t t = 0; t < len; ++t) {
         const bool in_a = t < kSdWord;
@@ -18838,10 +18980,50 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           const uint32_t idx = net.spikes()[si];
           if (idx >= ms_v.begin && idx < ms_v.begin + wv) out.voc_spikes += 1.0;
         }
+        // §70's RUNG 1, AND THE SAMPLING MOMENT IS THE WHOLE OF ITS VALIDITY.
+        // `synapse_release`/`synapse_resource` return the pair the kernel
+        // delivered with at each synapse's MOST RECENT TRANSMISSION, so they are
+        // read HERE: directly after `step()`, on the tick whose own spike list
+        // drove the delivery loop that wrote them. Read at any other time they
+        // are stale by an unknown interval and the number would be plausible and
+        // wrong. `rel_zero` is the check that this reasoning holds: every
+        // release leaves u at U or above, so a transmission sampled with u still
+        // exactly 0 means the sampling is not where this comment claims.
+        if (stp_use > 0.0f && net.stp_active()) {
+          const double inv_u = 1.0 / double(stp_use);
+          for (uint32_t si = 0; si < net.spike_count(); ++si) {
+            const uint32_t idx = net.spikes()[si];
+            if (idx < ms_a.begin || idx >= ms_a.begin + wa) continue;
+            const uint32_t i = idx - ms_a.begin;
+            for (uint32_t k = sbeg[i]; k < sbeg[i + 1]; ++k) {
+              const uint32_t syn = slist[k];
+              const double u = double(net.synapse_release(syn));
+              ++out.rel_reads;
+              if (!(u > 0.0)) { ++out.rel_zero; continue; }
+              const double f = u * double(net.synapse_resource(syn)) * inv_u;
+              const double w = double(net.synapse_weight(syn));
+              seen[k] = 1;
+              if (in_b && !bf_done[i]) { bf_sum[i] += f; bf_n[i] += 1.0; }
+              for (uint32_t wi = 0; wi < nwin; ++wi) {
+                const uint32_t win = wins[wi];
+                if (w > 0.0) dexc[win][i] += w * f;
+                dnet[win][i] += w * f;
+                dfac[win][i] += f;
+                dcnt[win][i] += 1.0;
+              }
+            }
+            // Set AFTER this neuron's whole synapse block, so the first
+            // transmission contributes every synapse it drove and not one.
+            if (in_b) bf_done[i] = 1;
+          }
+        }
         for (uint32_t wi = 0; wi < nwin; ++wi) {
           const uint32_t win = wins[wi];
           for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[win][q] += double(gp[q]);
           ++gn[win];
+          // §70's RUNG 2. The analog state the spikes are thresholded from, and
+          // the stage §69's refusal could not see.
+          for (uint32_t j = 0; j < wv; ++j) vmem[win][j] += double(net.membrane(ms_v.begin + j));
           for (uint32_t i = 0; i < net.spike_count(); ++i) {
             const uint32_t idx = net.spikes()[i];
             if (idx >= ms_a.begin && idx < ms_a.begin + wa) bins[win][idx - ms_a.begin] += 1.0;
@@ -18872,6 +19054,69 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         }
         feat[g][win][3].push_back(g9);
         feat[g][win][4].push_back(g7);
+        // ---- §70's FOUR SPACES ----
+        //
+        // `drive-sim` IS §68's ARITHMETIC, written out: A leaves depletion
+        // d_i = 1-(1-U)^{n_i(A)} behind, the gap recovers it by
+        // rec = exp(-elapsed/tau_rec), so the predicted release factor during a
+        // later window is (1 - rec*d_i) and the predicted drive is
+        // W_i * n_i(win) * (1 - rec*d_i). §68 computed exactly this for two
+        // presentations drawn from DIFFERENT ROUNDS — a pair that never
+        // physically happened — while here A and B are one trial, so the
+        // comparison against `drive-exc` is PAIRED on the same spikes.
+        //
+        // `elapsed` is measured from A's OFFSET to this window's START. It is
+        // negative for A's own window, where nothing precedes A: rec is 0 there
+        // and the space degenerates to the weighted spike count, which is the
+        // correct statement rather than a special case.
+        {
+          const double w_start_ms[kSdWinCount] = {0.0, double(pre_from) * dt,
+                                                  double(b_on) * dt, double(b_on) * dt,
+                                                  double(b_off) * dt};
+          const double elapsed = w_start_ms[win] - double(kSdWord) * dt;
+          const double rec = elapsed >= 0.0 ? std::exp(-elapsed / kSdSimTau) : 0.0;
+          const double l = std::log1p(-kSdSimU);
+          std::vector<double> ve(wa, 0.0), vn(wa, 0.0), vs(wa, 0.0);
+          for (uint32_t i = 0; i < wa; ++i) {
+            ve[i] = dexc[win][i];
+            vn[i] = dnet[win][i];
+            // 1 - (1-U)^n via expm1, which stays exact at small U.
+            const double d = -std::expm1(bins[kSdWA][i] * l);
+            vs[i] = wexc[i] * bins[win][i] * (1.0 - rec * d);
+          }
+          std::vector<double> vm(wv, 0.0);
+          for (uint32_t j = 0; j < wv; ++j)
+            vm[j] = gn[win] ? vmem[win][j] / double(gn[win]) : 0.0;
+          feat[g][win][kSdDrvExc].push_back(ve);
+          feat[g][win][kSdDrvNet].push_back(vn);
+          feat[g][win][kSdDrvSim].push_back(vs);
+          feat[g][win][kSdVmem].push_back(vm);
+        }
+      }
+      // §70's PREMISE CHECK, accumulated on the B window and on the cells that
+      // actually transmitted there. Classifier-free: two estimates of the same
+      // physical fraction, one read from the kernel and one predicted by §68.
+      {
+        const double rec = std::exp(-double(gap) * dt / kSdSimTau);
+        const double l = std::log1p(-kSdSimU);
+        for (uint32_t i = 0; i < wa; ++i) {
+          if (!(bf_n[i] > 0.0)) continue;
+          const double x = bf_sum[i] / bf_n[i];                      // B's FIRST spike
+          const double y = 1.0 - rec * (-std::expm1(bins[kSdWA][i] * l));
+          pc_n[g] += 1.0;
+          pc_x[g] += x; pc_y[g] += y;
+          pc_xx[g] += x * x; pc_yy[g] += y * y; pc_xy[g] += x * y;
+          if (dcnt[kSdWB][i] > 0.0) {
+            pc_m[g] += dfac[kSdWB][i] / dcnt[kSdWB][i];              // B's AVERAGE
+            pc_mn[g] += 1.0;
+          }
+        }
+        if (!slist.empty()) {
+          uint32_t ns = 0;
+          for (uint8_t v : seen) ns += v;
+          pc_samp[g] += double(ns) / double(slist.size());
+          pc_trials[g] += 1.0;
+        }
       }
       lab_a[g].push_back(a);
       lab_b[g].push_back(b);
@@ -18881,6 +19126,21 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   for (uint32_t g = 0; g < kSdGapCount; ++g) {
     SdGapRow& row = out.gap[g];
     row.trials = uint32_t(lab_a[g].size());
+    // §70's premise check, written out of the accumulators. Recorded whether or
+    // not the cell scores, because "rung 1 was never read" and "rung 1 was read
+    // and disagrees" are different findings and must not share a blank.
+    if (pc_n[g] > 1.0) {
+      const double n = pc_n[g];
+      row.rel_cells = n;
+      row.rel_meas = pc_x[g] / n;
+      row.rel_sim = pc_y[g] / n;
+      const double vx = pc_xx[g] - pc_x[g] * pc_x[g] / n;
+      const double vy = pc_yy[g] - pc_y[g] * pc_y[g] / n;
+      const double cxy = pc_xy[g] - pc_x[g] * pc_y[g] / n;
+      row.rel_corr = (vx > 0.0 && vy > 0.0) ? cxy / std::sqrt(vx * vy) : 0.0;
+    }
+    if (pc_mn[g] > 0.0) row.rel_bmean = pc_m[g] / pc_mn[g];
+    if (pc_trials[g] > 0.0) row.samp_frac = pc_samp[g] / pc_trials[g];
     // THE ALIGNMENT CHECK. `ctxsrc` once ran a feature space AHEAD of its labels
     // by the number of slept trials, pairing row i with the wrong word and
     // indexing past the end of `labels` — undefined behaviour, not a wrong
@@ -19198,9 +19458,12 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         }
       }
 
+  // PINNED TO §69's FIVE SPACES. This is a MAX, so admitting §70's four could
+  // only raise it — and a gate that an added column makes easier to pass is a
+  // gate that no longer means what it meant when §69 passed it.
   double best_oracle = 0.0;
   for (uint32_t g = 0; g < kSdGapCount; ++g)
-    for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+    for (uint32_t sp = 0; sp < kSdSpacesG69; ++sp) {
       double m = 0.0, se = 0.0;
       sd_stat(asm_[0][g][sp], m, se);
       if (m > best_oracle) best_oracle = m;
@@ -19407,12 +19670,222 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "    mechanism at this dose; it does not correct §68's arithmetic.\n\n");
   }
 
-  std::printf("  EVERY SPACE, shipped arm, same/different only\n\n    gap  ");
+  // ---- §70: WHERE DOES THE SIGNAL DIE? ----
+  //
+  // §68 measured 153.5 SE in the delivered drive and §69 measured 0.8 SE in the
+  // vocal spikes, on the same mechanism at the same dose. One of those is wrong
+  // or something between them destroys the signal, and §69's "the next thing is
+  // a readout" is premature until which is which has been measured.
+  {
+    const uint32_t ca = kSdStpCarrier;
+    std::vector<double> x, y, d, corr, samp, bmean;
+    uint64_t reads = 0, zeros = 0;
+    uint32_t pruned_creatures = 0;
+    for (const SdOut& o : res[ca]) {
+      if (!o.ok) continue;
+      reads += o.rel_reads;
+      zeros += o.rel_zero;
+      if (o.syn_tract_end != o.syn_tract) ++pruned_creatures;
+      const SdGapRow& r0 = o.gap[0];
+      if (r0.rel_cells > 1.0) {
+        x.push_back(r0.rel_meas);
+        y.push_back(r0.rel_sim);
+        d.push_back(r0.rel_meas - r0.rel_sim);
+        corr.push_back(r0.rel_corr);
+        bmean.push_back(r0.rel_bmean);
+      }
+      samp.push_back(r0.samp_frac);
+    }
+    double xm = 0, xs = 0, ym = 0, ys = 0, dm = 0, ds = 0, cm = 0, cs = 0, sm = 0, ss = 0;
+    double bm = 0, bs = 0;
+    sd_stat(x, xm, xs);
+    sd_stat(y, ym, ys);
+    sd_stat(d, dm, ds);
+    sd_stat(corr, cm, cs);
+    sd_stat(samp, sm, ss);
+    sd_stat(bmean, bm, bs);
+
+    std::printf("  §70 WHERE DOES THE SIGNAL DIE? — THREE RUNGS, ONE SET OF TRIALS\n\n"
+                "    Read on the %s arm, which carries §68's own operating point\n"
+                "    (U %.2f, tau_rec %.0f ms) as its DOSE, so the live kernel and §68's\n"
+                "    arithmetic are being asked about the same synapse.\n\n",
+                kSdArms[ca].name, kSdSimU, kSdSimTau);
+
+    // THE GATES FIRST, AND EACH ONE CAN ACTUALLY FAIL.
+    const bool g_samp = sm >= 0.05;
+    const bool g_wrote = (reads > 0 && zeros == 0);
+    const double depl = 1.0 - xm;
+    const bool g_depl = depl > 0.05 && depl < 0.95;
+    std::printf("    G-SAMPLE  tract synapses read at a transmission   %.4f  (>= 0.05)   %s\n",
+                sm, g_samp ? "PASS" : "VOID");
+    std::printf("    G-WROTE   transmissions with u still exactly 0    %llu of %llu        %s\n",
+                (unsigned long long)zeros, (unsigned long long)reads,
+                g_wrote ? "PASS" : "VOID");
+    std::printf("    G-DEPL    mean LIVE depletion 1 - u*R/U           %.4f  in (.05,.95) %s\n",
+                depl, g_depl ? "PASS" : "VOID");
+    std::printf("    tract size, first vs last scored trial           %u of %u creatures pruned\n",
+                pruned_creatures, unsigned(res[ca].size()));
+    if (!(g_samp && g_wrote && g_depl)) {
+      std::printf("\n    -> RUNG 1 IS VOID: the live state was not read where this\n"
+                  "       instrument claims to read it, so no premise check is printed.\n"
+                  "       §69's refusal stands exactly as it stood, unexamined.\n\n");
+    } else {
+      // ---- THE PRIMARY: DOES §68's ARITHMETIC TRANSFER? ----
+      //
+      // PAIRED, and that is the one place §70 is STRONGER than its own
+      // pre-registration. §70 registered this as rung 1 against §68's PRINTED
+      // number, with the caveat that §68 simulated an UNDOSED creature while
+      // the kernel here is dosed. Both quantities below are computed on the
+      // SAME physical trials of the SAME creature from the SAME spikes, so that
+      // caveat is gone: the only difference left between them IS the
+      // arithmetic. The change is a disclosed strengthening, recorded before
+      // the run, not a verdict fitted afterwards.
+      std::printf("\n    THE PREMISE CHECK — §68's ARITHMETIC vs THE LIVE KERNEL, PAIRED\n"
+                  "    The release factor u*R/U: the fraction of its nominal weight a\n"
+                  "    synapse actually delivers, 1.0 being rested. Read at B's FIRST\n"
+                  "    transmission, the one moment §68's model is defined at — before\n"
+                  "    that it is A's own word, after it B has depleted the synapse\n"
+                  "    further and §68 holds the factor constant.\n\n");
+      std::printf("      MEASURED at B's first spike      %.4f +- %.4f\n", xm, xs);
+      std::printf("      PREDICTED, 1 - rec*(1-(1-U)^n)   %.4f +- %.4f\n", ym, ys);
+      std::printf("      paired difference                %+.4f +- %.4f  (%.1f SE)\n", dm, ds,
+                  ds > 0.0 ? std::fabs(dm) / ds : 0.0);
+      std::printf("      relative to the prediction       %+.2f%%\n",
+                  ym > 0.0 ? 100.0 * dm / ym : 0.0);
+      std::printf("      correlation across cells         %.4f +- %.4f\n", cm, cs);
+      {
+        std::vector<double> nc;
+        for (const SdOut& o : res[ca])
+          if (o.ok && o.gap[0].rel_cells > 1.0) nc.push_back(o.gap[0].rel_cells);
+        double ncm = 0, ncs = 0;
+        sd_stat(nc, ncm, ncs);
+        std::printf("      cells per creature, mean         %.0f over %u creatures\n", ncm,
+                    unsigned(nc.size()));
+      }
+      std::printf("      MEASURED over ALL of B           %.4f +- %.4f   (two-tailed:\n"
+                  "        the cost of the within-B depletion §68 omits; NOT the check)\n",
+                  bm, bs);
+      const bool transfers = ds > 0.0 && std::fabs(dm) < 2.0 * ds;
+      // THE SIGN IS DERIVED, which is what keeps this from being a two-tailed
+      // shrug. At B's first spike exactly ONE of §68's two omissions is in
+      // play: it computes d_A without recovery DURING A, which OVERSTATES how
+      // depleted the synapse is, so its predicted factor must sit at or BELOW
+      // the kernel's and MEASURED - PREDICTED must be POSITIVE. A negative
+      // difference is not that direction and is reported as unexplained.
+      //
+      // AND THE LEADING CANDIDATE FOR A FAILURE IS NAMED IN ADVANCE: §68's
+      // model assumes word A is the only thing that ever depleted the synapse.
+      // The kernel's recovery clock runs from THIS SYNAPSE'S OWN last
+      // transmission, and §68's G5 table measured auditory neurons firing 1.96
+      // spikes per neuron per 900 ms under SILENCE — so spontaneous spikes
+      // inside the gap both deplete again and reset that clock, which §68
+      // cannot see. That predicts a MEASURED factor below the prediction, i.e.
+      // the UNEXPLAINED sign, and a correlation well under 1.
+      std::printf("      %s\n",
+                  transfers ? "-> TRANSFERS: within its own SE, the arithmetic is the kernel's"
+                            : (dm > 0.0
+                                   ? "-> DIFFERS, IN §68's OWN DERIVED DIRECTION (§68 overstated"
+                                     " depletion)"
+                                   : "-> DIFFERS, AGAINST THE DERIVED DIRECTION — the gap's own"
+                                     " spikes are the named suspect"));
+
+      // ---- THE CO-PRIMARY: THE LADDER ----
+      //
+      // Every rung in ONE window — the first 400 ms of B, §64's overlap window,
+      // the one moment both words are present. Reading rungs in different
+      // windows would make the comparison a comparison of windows.
+      std::printf("\n    THE LADDER — same/different at the OVERLAP window (first %llu ms of B),\n"
+                  "    gap %s. `oracle` is full scale in each space's own units; a rung\n"
+                  "    whose oracle is under the bar cannot be tested against the bar.\n\n",
+                  (unsigned long long)kSdOverlap, kSdGapName[0]);
+      std::printf("      rung                       carrier          shipped     oracle   null\n");
+      const uint32_t rung[5] = {kSdDrvExc, kSdDrvNet, kSdDrvSim, kSdVmem, kSdStpPrimary};
+      const char* rname[5] = {"1a drive-exc  MEASURED", "1b drive-net  signed  ",
+                              "1c drive-sim  §68's    ", "2  vmem       membrane",
+                              "3  vocal      spikes   "};
+      double acc[5] = {};
+      bool live[5] = {};
+      for (uint32_t k = 0; k < 5; ++k) {
+        const uint32_t sp = rung[k];
+        double am = 0, as = 0, hm = 0, hs = 0, om = 0, os = 0, nm2 = 0, ns2 = 0;
+        sd_stat(mbe[ca][0][sp], am, as);
+        sd_stat(mbe[kSdArmShipped][0][sp], hm, hs);
+        sd_stat(asm_[ca][0][sp], om, os);
+        sd_stat(nbe[ca][0][sp], nm2, ns2);
+        acc[k] = am;
+        live[k] = om >= kSdBar;
+        // The measured drive does not EXIST on `shipped`: with STP off the
+        // kernel allocates no state and the space is identically zero. Printing
+        // whatever a classifier returns for an all-zero matrix would be a
+        // number with no referent.
+        const bool shipped_has = !(sp == kSdDrvExc || sp == kSdDrvNet);
+        std::printf("      %s   %.4f+-%.4f    ", rname[k], am, as);
+        if (shipped_has) std::printf("%.4f   ", hm);
+        else std::printf("  n/a    ");
+        std::printf("%.4f   %.4f%s\n", om, nm2, live[k] ? "" : "   <- NOT TESTABLE");
+      }
+      std::printf("\n      the bar                    %.3f\n", kSdBar);
+
+      // ---- THE REGISTERED FOUR-WAY ----
+      const bool at1 = (acc[0] >= kSdBar && live[0]) || (acc[1] >= kSdBar && live[1]);
+      const bool at2 = acc[3] >= kSdBar && live[3];
+      const bool at3 = acc[4] >= kSdBar && live[4];
+      std::printf("\n");
+      if (!transfers) {
+        std::printf("    -> §68's ARITHMETIC DOES NOT TRANSFER. §69 refused a mechanism it\n"
+                    "       never installed as §68 modelled it, every §67-§69 inference\n"
+                    "       rests on the simulation, and §67 IS RE-OPENED. The successor\n"
+                    "       is a corrected §68, computed from the live kernel.\n");
+      } else if (!at1) {
+        std::printf("    -> THE CONJUNCTION IS NOT IN THE MEASURED DRIVE AS A READOUT CAN\n"
+                    "       USE IT. The arithmetic transfers and §68's own statistic still\n"
+                    "       separates, but a held-out readout of the delivered drive does\n"
+                    "       not reach the bar — so §68's pair-d' priced an ORACLE over\n"
+                    "       pairs and never a single-trial readout. Nothing downstream is\n"
+                    "       at fault, and the gap is in §68's estimator, not the creature.\n");
+      } else if (at1 && at2 && !at3) {
+        std::printf("    -> THE LOSS IS AT THE THRESHOLD. The signal is in the drive and\n"
+                    "       still in the membrane, and spiking discards it. §69 refused for\n"
+                    "       a reason that has nothing to do with comparison, and the\n"
+                    "       successor is a GAIN or RESOLUTION change at the vocal module.\n");
+      } else if (at1 && !at2) {
+        std::printf("    -> THE LOSS IS IN POSTSYNAPTIC INTEGRATION. The signal is in the\n"
+                    "       delivered drive and gone by the membrane. §69 makes inhibitory\n"
+                    "       cancellation the live suspect: the inhibitory limb is the\n"
+                    "       stronger of the two and depressing it is DISINHIBITION%s\n",
+                    (acc[0] >= kSdBar && !(acc[1] >= kSdBar))
+                        ? ",\n       AND THE SIGNED/EXCITATORY SPLIT ABOVE CONFIRMS IT."
+                        : ".");
+      } else {
+        std::printf("    -> THE SIGNAL SURVIVES TO THE SPIKES AT THIS WINDOW. Then §69's\n"
+                    "       refusal is about its own window and not about the mechanism:\n"
+                    "       §69 read the SCORING window, after B is over, and this reads\n"
+                    "       DURING B. The successor is the window, not the readout.\n");
+      }
+      std::printf("\n    §69's HEADLINE CELL, UNCHANGED AND IN THE SAME RUN: `vocal` at the\n"
+                  "    SCORING window, which is where §69 read 0.5124. §70 adds a window\n"
+                  "    and three rungs; it does not re-read §69's number.\n");
+    }
+    std::printf("\n");
+  }
+
+  // THE MEASURED DRIVE DOES NOT EXIST ON THE SHIPPED ARM, and both tables below
+  // are read on that arm. With STP off the kernel allocates no state, the two
+  // measured spaces are identically zero, and `holdout_accuracy` on an all-zero
+  // matrix still returns a number — a number with no referent, printed in a
+  // column of real ones. `plausible-wrong-number`: it is blanked, not printed.
+  auto sd_live_on_shipped = [](uint32_t sp) {
+    return !(sp == kSdDrvExc || sp == kSdDrvNet);
+  };
+  std::printf("  EVERY SPACE, shipped arm, same/different only\n"
+              "  (`drive-exc`/`drive-net` are MEASURED from live STP state, which a\n"
+              "   creature with the mechanism off does not have: blank, not zero.)\n\n    gap  ");
   for (uint32_t sp = 0; sp < kSdSpaces; ++sp) std::printf("%-10s", kSdSpaceName[sp]);
   std::printf("\n");
   for (uint32_t g = 0; g < kSdGapCount; ++g) {
     std::printf("   %5s ", kSdGapName[g]);
     for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
       double m = 0, se = 0;
       sd_stat(mile[0][g][sp], m, se);
       std::printf("%.4f    ", m);
@@ -19430,6 +19903,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   for (uint32_t g = 0; g < kSdGapCount; ++g) {
     std::printf("   %5s ", kSdGapName[g]);
     for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
       double m = 0, se = 0;
       sd_stat(asm_[0][g][sp], m, se);
       std::printf("%.4f    ", m);
@@ -19447,6 +19921,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     for (uint32_t g = 0; g < kSdGapCount; ++g) {
       std::printf("   %5s %s ", kSdGapName[g], which == 0 ? "A" : "B");
       for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
         double m = 0, se = 0;
         sd_stat(which == 0 ? ia[0][g][sp] : ib[0][g][sp], m, se);
         std::printf("%.4f   ", m);
@@ -19463,6 +19938,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   for (uint32_t g = 0; g < kSdGapCount; ++g) {
     std::printf("   %5s ", kSdGapName[g]);
     for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
       double m = 0, se = 0;
       sd_stat(dec[0][g][sp], m, se);
       std::printf("%.4f    ", m);
@@ -19480,6 +19956,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   for (uint32_t g = 0; g < kSdGapCount; ++g) {
     std::printf("   %5s ", kSdGapName[g]);
     for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+      if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
       double m = 0, se = 0;
       sd_stat(mbe[0][g][sp], m, se);
       std::printf("%.4f    ", m);
@@ -19493,6 +19970,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     for (uint32_t g = 0; g < kSdGapCount; ++g) {
       std::printf("   %5s %s ", kSdGapName[g], which == 0 ? "A" : "B");
       for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        if (!sd_live_on_shipped(sp)) { std::printf("  n/a     "); continue; }
         double m = 0, se = 0;
         sd_stat(which == 0 ? iabe[0][g][sp] : ibbe[0][g][sp], m, se);
         std::printf("%.4f   ", m);

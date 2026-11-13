@@ -14836,3 +14836,87 @@ OVERSTATES depletion, so §68's simulation should read HIGHER than the live
 kernel. **A rung 1 BELOW §68 is the predicted direction and is not by itself a
 failure to transfer; a rung 1 ABOVE §68 is unexplained and must be reported as
 such.**
+
+### §70 AMENDMENT — SIX CHANGES, MADE WHILE BUILDING AND BEFORE RUNNING
+
+Building the instrument forced six departures from the section above. All six are
+recorded here **before the run**, because a change to a pre-registration that
+surfaces after the numbers is indistinguishable from a verdict fitted to them
+(`verdict-fitted-to-data`). Three of them make §70 **stronger** than registered,
+one **corrects a sign I derived wrongly**, and two are guards.
+
+**1. THE PREMISE CHECK IS PAIRED, AND §70's REGISTERED CAVEAT IS GONE.** §70
+registered rung 1 against §68's *printed* number, and disclosed that §68
+simulated an UNDOSED creature while §70's kernel is dosed. That comparison is
+avoidable. §68's arithmetic is pure arithmetic over spike counts, so it can be
+computed **on §70's own trials, from §70's own spikes, inside the same session**
+(`drive-sim`). Both quantities now come from the same creature, the same
+physical trial and the same spikes, and the only difference left between them
+**is the arithmetic**. The dosed-vs-undosed caveat does not apply to a
+comparison that never crosses runs.
+
+**2. AND §68's PAIRS WERE VIRTUAL, WHICH IS A SHARPER STATEMENT OF THE SAME
+POINT.** §68 paired presentations **drawn from different rounds** — two words
+that never occurred adjacently — and then applied a recovery factor as if they
+had. `samediff` plays A, waits the gap, and plays B **as one physical trial**.
+So §70 is not only measuring what §68 simulated; it is measuring it on a
+history that actually happened.
+
+**3. THE SIGN I REGISTERED WAS WRONG, AND THE FIX MOVES THE READING POINT.**
+§70 registered: §68 omits recovery during the word, which overstates depletion,
+so §68 should read BELOW the kernel. That is true of §68's treatment of **A**
+and I stopped there. §68 also holds the release factor **constant across the
+whole of B**, while the kernel depletes further with every spike B drives — which
+pushes the other way. **Averaged over B the two omissions have opposite signs and
+the test would have been two-tailed**, which is the shrug
+`power-is-not-the-error-model` warns about.
+
+So the check is read at **B's FIRST transmission**, per source neuron. Nothing of
+B has depleted anything yet there, so the kernel's state is exactly "depletion
+from A, recovered across the gap" — §68's quantity, with **one** omission left
+and a **derived one-tailed sign: MEASURED − PREDICTED must be POSITIVE.** The
+B-average is still printed, labelled two-tailed, as the measured cost of the
+within-B depletion §68 omits.
+
+**4. A FAILURE'S LEADING SUSPECT IS NAMED IN ADVANCE.** §68's model assumes word
+A is the only thing that ever depleted the synapse. The kernel's recovery clock
+runs from **that synapse's own last transmission**, and §68's own G5 table
+measured auditory neurons firing **1.96 spikes per neuron per 900 ms under
+SILENCE** — so spontaneous spikes inside the gap both deplete again and reset the
+clock, invisibly to §68. That predicts a measured factor **below** the prediction
+(the UNEXPLAINED sign of clause 3) together with a correlation well under 1. It
+is written down now so that finding it later is a confirmation and not a story.
+
+**5. A FOURTH RUNG, BECAUSE THE LOSS MAY BE EARLIER THAN RUNG 2.** The measured
+drive is recorded twice: **excitatory only** (§68's own primary space) and
+**signed net** (what the vocal module is actually handed). §69 established that
+the inhibitory limb is the stronger one and that depressing it is disinhibition,
+so a signal **present in `drive-exc` and absent in `drive-net`** localises the
+loss **at the merge** — one stage before any membrane, and a place §70's
+registered four-way could not name.
+
+**6. TWO GUARDS, BOTH AGAINST A NUMBER WITH NO REFERENT.**
+
+- **§69's assembled-oracle gate is PINNED to its original five spaces.** That
+  gate is a MAX over spaces, so admitting §70's four could only raise it. A gate
+  that an added column makes easier to pass is no longer the gate §69 passed —
+  `columns-move-with-the-primary`, from the other side.
+- **The measured drive does not exist on the `shipped` arm.** With STP off the
+  kernel allocates no state, both measured spaces are identically zero, and
+  `holdout_accuracy` on an all-zero matrix still returns a number. Every table
+  that reads the shipped arm **blanks those two columns** rather than printing
+  it.
+
+### §70's REGRESSION GATE, WHICH THE DESIGN GIVES FOR FREE
+
+§70 adds **no arm, no tick and no random draw**, and writes nothing to kernel
+state. Every number §69 printed is therefore computed from the same seeds on the
+same trials in the same run. **§69's columns must reproduce EXACTLY — the carrier
+at 0.5124, shipped at 0.4814, the paired difference +0.0310, the null at 0.4904
+and the carrier's oracle at 0.8980.** A moved §69 column means §70's measurement
+perturbed the creature it was supposed to observe, and that voids §70 rather than
+revising §69.
+
+The same logic covers the kernel: two const getters cannot change behaviour, so
+`verify`'s hash must stay `ad96f882becbee92`. Both gates are stated before the
+run and neither is an expectation.

@@ -408,7 +408,19 @@ const Spec kSpecs[] = {
      "  shipped hash must not move. The dose is the MERGED tract because the\n"
      "  kernel keys STP by the (source, target) module pair; §68 priced that\n"
      "  substitution at 1.2744 against the excitatory limb's 1.3076. §69's\n"
-     "  primary MOVES to `vocal`: depression here does not feed `central`."},
+     "  primary MOVES to `vocal`: depression here does not feed `central`.\n"
+     "  §70 ADDS NO ARM AND NO TICK. It adds four FEATURE SPACES on the same\n"
+     "  trials, because §68 measured 153.5 SE in the delivered drive and §69\n"
+     "  measured 0.8 SE in the vocal spikes and nothing said what lies between:\n"
+     "  the MEASURED delivered drive `w*u*R/U` read from the live kernel at the\n"
+     "  moment of transmission (excitatory and signed), §68's own arithmetic\n"
+     "  `1-(1-U)^n` on the same trial's spike counts, and the vocal MEMBRANE.\n"
+     "  The primary is the PREMISE CHECK -- §68 simulated depletion host-side\n"
+     "  with no within-word recovery over pairs that never physically occurred,\n"
+     "  the kernel runs the real Tsodyks-Markram recursion, and nobody had\n"
+     "  compared them. Here A and B are one trial, so the comparison is PAIRED\n"
+     "  on identical spikes. §69's own columns must reproduce EXACTLY: nothing\n"
+     "  added here draws a random number or touches kernel state."},
     {"hushgate", 900000, Expect::kRead, Tier::kLong,
      "derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's\n"
      "  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --\n"

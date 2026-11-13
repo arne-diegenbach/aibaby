@@ -898,6 +898,38 @@ class Network {
   Scalar synapse_credit(uint32_t syn) const {
     return elig_mean_alpha_ > kZero ? syn_elig_[syn] - syn_elig_mean_[syn] : syn_elig_[syn];
   }
+  // DNA v36's two state variables, PER SYNAPSE. `stp_gain` already averages
+  // `u * R / U` over a module pair, which is the right summary for telemetry
+  // and the wrong one for §70: localising where the conjunction dies needs the
+  // PATTERN across synapses, because that is the only thing that can carry
+  // which word was heard.
+  //
+  // THREE THINGS A CALLER MUST KNOW, each of which otherwise yields a
+  // plausible wrong number rather than an obvious one.
+  //
+  //   1. Both hold the value as of this synapse's MOST RECENT TRANSMISSION, not
+  //      a continuously decayed state. Read at an arbitrary tick they are stale
+  //      by an unknown interval. Read immediately after `step()` on a tick where
+  //      `synapse_source` SPIKED, they are exactly the pair the kernel just
+  //      delivered with.
+  //   2. The delivered amount is `synapse_weight * u * R / U` — the release is
+  //      normalised by the genome's U so that a rested synapse delivers the
+  //      nominal weight. A caller reconstructing the drive must divide by the U
+  //      it put in the genome; the kernel's own `stp_inv_u_` is not exposed and
+  //      does not need to be.
+  //   3. The arrays exist only when some projection asks for the mechanism, so
+  //      BOTH RETURN 0 WHEN `stp_active()` IS FALSE. On a genome with STP off
+  //      that is not a depleted synapse, it is the absence of one, and the two
+  //      readings are distinguished by `stp_active()` and never by the value.
+  //      With STP on, a stored `u` of exactly 0 means this synapse has never
+  //      transmitted — every release leaves u at U or above — so it is rested
+  //      rather than empty, which is the opposite reading.
+  Scalar synapse_resource(uint32_t syn) const {
+    return any_stp_ ? syn_res_[syn] : Scalar(0);
+  }
+  Scalar synapse_release(uint32_t syn) const {
+    return any_stp_ ? syn_use_[syn] : Scalar(0);
+  }
 
  private:
   void wire_intra_module(uint32_t m, Rng& rng);
