@@ -19872,6 +19872,118 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       }
       std::printf("\n      the bar                    %.3f\n", kSdBar);
 
+      // THE SAME RUNGS ACROSS THE WHOLE DOSE LADDER, and this is a column the
+      // run already computed rather than a new measurement. A refusal that says
+      // "the conjunction is not in the measured drive" invites exactly one
+      // question — at any dose? — and §69's four arms are already here to
+      // answer it. `read-every-budget-for-every-claim`: read the same column on
+      // the controls before making a claim that quantifies over them.
+      //
+      // §69 measured that the dose DEGRADES the representation monotonically
+      // and that `tau3000` voids on its own oracle, so the prediction is that
+      // this ladder gets WORSE and not better. The oracle is printed beside
+      // every cell so a cell that cannot be tested says so itself.
+      std::printf("\n    THE SAME RUNGS ACROSS THE DOSE LADDER — accuracy (oracle), gap %s,\n"
+                  "    overlap window. A cell whose oracle is under %.3f is marked * and\n"
+                  "    cannot be tested against the bar at all.\n\n",
+                  kSdGapName[0], kSdBar);
+      std::printf("      rung           ");
+      for (uint32_t k = 0; k <= kSdStpCount; ++k) {
+        const uint32_t a = (k == 0) ? kSdArmShipped : (kSdStpFirst + k - 1);
+        std::printf("%-17s", kSdArms[a].name);
+      }
+      std::printf("\n");
+      for (uint32_t r = 0; r < 5; ++r) {
+        const uint32_t sp = rung[r];
+        std::printf("      %-15s", kSdSpaceName[sp]);
+        for (uint32_t k = 0; k <= kSdStpCount; ++k) {
+          const uint32_t a = (k == 0) ? kSdArmShipped : (kSdStpFirst + k - 1);
+          if (a == kSdArmShipped && (sp == kSdDrvExc || sp == kSdDrvNet)) {
+            std::printf("%-17s", "  n/a");
+            continue;
+          }
+          double am2 = 0, as2 = 0, om2 = 0, os2 = 0;
+          sd_stat(mbe[a][0][sp], am2, as2);
+          sd_stat(asm_[a][0][sp], om2, os2);
+          char cell[32];
+          std::snprintf(cell, sizeof(cell), "%.4f (%.3f)%s", am2, om2,
+                        om2 >= kSdBar ? "" : "*");
+          std::printf("%-17s", cell);
+        }
+        std::printf("\n");
+      }
+      std::printf("\n      `drive-sim` IS NOT A DOSE COLUMN. Its U and tau_rec are PINNED at\n"
+                  "      §68's operating point for every arm, by design, so that it is §68's\n"
+                  "      statistic verbatim wherever it appears. It therefore varies across\n"
+                  "      this ladder only through the dose's effect on SPIKE COUNTS, and it\n"
+                  "      is comparable with the measured drive AT tau300 AND NOWHERE ELSE.\n");
+
+      // ---- THE LADDER AS A FALSIFICATION, AND THE ASYMMETRY IS THE POINT ----
+      //
+      // A maximum selected after seeing the data cannot ESTABLISH a positive —
+      // `pairing-on-discovery-sample`. It can REFUTE A UNIVERSAL NEGATIVE,
+      // because if the largest of five cells clears the bar then "no dose puts
+      // it there" is false whichever cell was largest. So the two readings
+      // below are deliberately different in kind, and labelled.
+      uint32_t best_dose_arm = kSdArmCount;
+      double best_dose_acc = 0.0;
+      for (uint32_t k = 0; k < kSdStpCount; ++k) {
+        const uint32_t a = kSdStpFirst + k;
+        double am2 = 0, as2 = 0, om2 = 0, os2 = 0;
+        sd_stat(mbe[a][0][kSdDrvExc], am2, as2);
+        sd_stat(asm_[a][0][kSdDrvExc], om2, os2);
+        if (om2 >= kSdBar && am2 > best_dose_acc) { best_dose_acc = am2; best_dose_arm = a; }
+      }
+      const bool drive_carries = best_dose_arm < kSdArmCount && best_dose_acc >= kSdBar;
+      if (drive_carries) {
+        std::printf("\n      -> A SUFFICIENT DOSE DOES PUT IT IN THE DRIVE: %s reads %.4f on\n"
+                    "         a testable oracle, so \"the measured drive never carries the\n"
+                    "         conjunction\" is REFUTED. A selected maximum is allowed to do\n"
+                    "         this and nothing more — the cell is chosen on the data, and\n"
+                    "         what it licenses is the falsification, not the figure.\n",
+                    kSdArms[best_dose_arm].name, best_dose_acc);
+        // THE LOCALISATION NEEDS A DOSE WHERE EVERY RUNG IS STILL TESTABLE, and
+        // §69 measured that the dose damages the spike code, so the highest
+        // dose is not automatically the readable one. The arm reported is the
+        // strongest at which rung 3's OWN oracle still clears the bar; above it
+        // the spikes cannot be tested at all and a loss there is vacuous.
+        uint32_t loc = kSdArmCount;
+        double loc_acc = 0.0;
+        for (uint32_t k = 0; k < kSdStpCount; ++k) {
+          const uint32_t a = kSdStpFirst + k;
+          double d1 = 0, s1 = 0, o1 = 0, so1 = 0, o3 = 0, so3 = 0;
+          sd_stat(mbe[a][0][kSdDrvExc], d1, s1);
+          sd_stat(asm_[a][0][kSdDrvExc], o1, so1);
+          sd_stat(asm_[a][0][kSdStpPrimary], o3, so3);
+          if (d1 >= kSdBar && o1 >= kSdBar && o3 >= kSdBar && d1 > loc_acc) {
+            loc = a;
+            loc_acc = d1;
+          }
+        }
+        if (loc < kSdArmCount) {
+          double d1 = 0, s1 = 0, m2 = 0, s2 = 0, m3 = 0, s3 = 0;
+          sd_stat(mbe[loc][0][kSdDrvExc], d1, s1);
+          sd_stat(mbe[loc][0][kSdVmem], m2, s2);
+          sd_stat(mbe[loc][0][kSdStpPrimary], m3, s3);
+          std::printf("\n      THE LOCALISATION, at %s — the strongest dose at which rung 3's\n"
+                      "      own oracle still clears the bar, so every stage can be tested:\n"
+                      "        rung 1  drive     %.4f +- %.4f\n"
+                      "        rung 2  membrane  %.4f +- %.4f\n"
+                      "        rung 3  spikes    %.4f +- %.4f\n"
+                      "      SELECTED ON THE DATA. This is the arm §70 should have pinned and\n"
+                      "      did not: §70 pinned §69's carrier, which turns out to be a dose\n"
+                      "      at which rung 1 is EMPTY — and a chain's loss cannot be located\n"
+                      "      from a chain whose first link carries nothing. The figures above\n"
+                      "      are a LEAD and require a pre-registered confirmation at this\n"
+                      "      dose; they are not a verdict.\n",
+                      kSdArms[loc].name, d1, s1, m2, s2, m3, s3);
+        }
+      } else {
+        std::printf("\n      -> NO DOSE ON THIS LADDER PUTS IT IN THE DRIVE ON A TESTABLE\n"
+                    "         ORACLE. The universal negative survives the ladder, which is\n"
+                    "         the strongest form this run can give it.\n");
+      }
+
       // ---- THE CONSEQUENCE TEST, AND IT NEEDS NO THRESHOLD ----
       //
       // The question §68's premise actually raises is not "do two release
@@ -19913,26 +20025,30 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                     "       recovery clock invisibly to §68; the successor is a corrected\n"
                     "       §68 computed from the live kernel.\n");
       } else if (flatters) {
-        std::printf("    -> §68's SEPARATION DOES NOT TRANSFER AT FULL SIZE. The level\n"
-                    "       offset is §68's own disclosed optimism and is not the finding;\n"
-                    "       what matters is that a readout of the SIMULATED drive beats a\n"
-                    "       readout of the REAL one on the same trials, so §68's figure was\n"
-                    "       inflated by the simulation and not only by its flag. The\n"
-                    "       measured drive is the right basis, and the localisation below\n"
-                    "       is read on it.\n");
+        std::printf("    -> AT §68's OWN OPERATING POINT ITS SEPARATION DOES NOT TRANSFER AT\n"
+                    "       FULL SIZE. The level offset is §68's disclosed optimism and is\n"
+                    "       not the finding; what matters is that a readout of the SIMULATED\n"
+                    "       drive beats a readout of the REAL one on the same trials, so\n"
+                    "       §68's figure at tau300 was inflated by the simulation and not\n"
+                    "       only by its flag. This comparison is valid HERE and nowhere else\n"
+                    "       on the ladder, because `drive-sim`'s parameters are pinned to\n"
+                    "       this dose.\n");
       }
       if (wrong_sign) {
         // nothing further: the premise is gone and the rungs price a mechanism
         // that was never the one modelled.
       } else if (!at1) {
-        std::printf("    -> THE CONJUNCTION IS NOT IN THE MEASURED DRIVE AS A READOUT CAN\n"
-                    "       USE IT. A held-out readout of the drive the kernel actually\n"
-                    "       delivers does not reach the bar, so §68's pair-d' priced an\n"
-                    "       ORACLE OVER PAIRS — it was handed the pairing and scored a\n"
-                    "       scalar — and never a single-trial readout. NOTHING DOWNSTREAM\n"
-                    "       IS AT FAULT: the membrane and the spikes cannot lose a signal\n"
-                    "       that is not in what reaches them, and §69's refusal is left\n"
-                    "       standing for a reason one stage EARLIER than it looked.\n");
+        std::printf("    -> AT §68's OWN OPERATING POINT THE CONJUNCTION IS NOT IN THE\n"
+                    "       MEASURED DRIVE AS A READOUT CAN USE IT, and the scope of that\n"
+                    "       sentence is the whole of it. A held-out readout of the drive the\n"
+                    "       kernel actually delivers does not reach the bar at tau300, so\n"
+                    "       §68's pair-d' priced an ORACLE OVER PAIRS — handed the pairing,\n"
+                    "       scoring a scalar — and never a single-trial readout. At THIS\n"
+                    "       dose nothing downstream can be at fault, because the membrane\n"
+                    "       and the spikes cannot lose a signal that is not in what reaches\n"
+                    "       them. WHETHER A LARGER DOSE CHANGES THIS IS A SEPARATE QUESTION\n"
+                    "       AND THE DOSE LADDER ABOVE ANSWERS IT — read it before carrying\n"
+                    "       this sentence anywhere, because it does NOT generalise.\n");
       } else if (at1 && at2 && !at3) {
         std::printf("    -> THE LOSS IS AT THE THRESHOLD. The signal is in the drive and\n"
                     "       still in the membrane, and spiking discards it. §69 refused for\n"

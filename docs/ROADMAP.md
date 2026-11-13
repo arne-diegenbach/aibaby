@@ -14920,3 +14920,106 @@ revising §69.
 The same logic covers the kernel: two const getters cannot change behaviour, so
 `verify`'s hash must stay `ad96f882becbee92`. Both gates are stated before the
 run and neither is an expectation.
+
+## §70 RESULT — THE SIGNAL DIES AT THE THRESHOLD, AND THE CARRIER WAS THE WRONG DOSE TO ASK FROM
+
+`--experiment samediff`, 1,680,000 ticks, 7 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934`, `results/n70-samediff-1680k.log`. Budget,
+arms, gaps, folds, seeds and gates **identical to §69** — §70 added no arm, no
+tick and no random draw.
+
+### BOTH REGISTERED GATES HOLD
+
+    verify                      PASS, hash ad96f882becbee92 UNMOVED, 24 experiments
+    §69's carrier               0.5124 +- 0.0245   as §69 printed it
+    §69's shipped               0.4814 +- 0.0144   as §69 printed it
+    §69's paired difference     +0.0310 +- 0.0382  as §69 printed it
+    §69's null, ladder spread   0.4904, 0.0272     as §69 printed them
+    sleep, first sleep tick     11.23%, 1,086,021  as §69 printed them
+
+Every §69 column reproduces to four decimals, so **the measurement does not
+perturb the creature it observes**. The instrument's own gates: G-SAMPLE 0.9777,
+**G-WROTE 0 of 184,728,071** — not one sampled transmission had a stale `u`, which
+is the subtlety most likely to have produced a plausible wrong number — and
+G-DEPL 0.1324 in band.
+
+### THE PREMISE TRANSFERS IN SIGN, NOT IN MAGNITUDE OR PATTERN
+
+    MEASURED at B's first spike        0.9229 +- 0.0002
+    PREDICTED by §68's arithmetic      0.7960 +- 0.0004
+    paired difference                  +0.1270 +- 0.0004   316.1 SE, +15.95%
+    correlation across cells           0.4842 +- 0.0022
+
+The difference is in the **derived direction**, so **§67 does not re-open**: §68
+overstated depletion exactly as its own optimism flag said, and the flag is now a
+number. But the trace surviving into B is **7.7% depletion, not the 20% §68's
+arithmetic predicted** — 2.6× weaker — and its per-synapse pattern correlates
+**0.4842** with the modelled one. The pattern is what §68's 153.5 SE was measured
+on. At §68's own operating point a readout of the simulated drive beats a readout
+of the real one by **+0.1409 ± 0.0141, 10.0 SE**.
+
+### THE LADDER REFUTED MY OWN PREDICTION, AND IT IS THE RESULT
+
+I predicted this ladder would get worse, because §69 measured the dose degrading
+the code monotonically. **Wrong, and it is recorded as wrong.**
+
+    rung           shipped        tau100         tau300         tau1000        tau3000
+    drive-exc        n/a          0.5168(1.000)  0.5460(1.000)  0.7226(1.000)  0.8377(1.000)
+    drive-net        n/a          0.5419(1.000)  0.5463(1.000)  0.7497(1.000)  0.8571(1.000)
+    vmem           0.5049(0.957)  0.5374(0.979)  0.5288(0.976)  0.6463(0.911)  0.6686(0.747)
+    vocal          0.4934(0.976)  0.5643(0.936)  0.5135(0.898)  0.5940(0.740)  0.5640(0.616)*
+
+§69's degradation is real but it is a fact about the **spike** code, not about the
+delivered drive, whose oracle stays **1.000 at every dose**. So **"the conjunction
+is not in the measured drive" is false as a general claim** — it is true only at
+§68's operating point, which §70 pinned because §69 pinned it.
+
+**THAT IS §70's OWN METHODOLOGICAL ERROR AND IT IS THE TRANSFERABLE LESSON.** A
+chain's loss cannot be located from a chain whose **first link is empty**, and
+§70 registered its localisation at a dose where rung 1 reads 0.5460 against a
+0.650 bar. The dose ladder was printed only because a refusal quantifying over
+doses demanded it (`read-every-budget-for-every-claim`), and it overturned the
+section's own headline.
+
+### WHAT IS ESTABLISHED, AND WHAT IS ONLY A LEAD
+
+**REFUTED, and a selected maximum may do exactly this much:** "the measured drive
+never carries the conjunction". `tau3000` reads 0.8377 on a testable oracle, so
+the universal negative is false whichever cell was largest.
+
+**A LEAD, NOT A VERDICT — selected on the data after seeing the ladder:** the
+localisation at `tau1000`, the strongest dose at which rung 3's own oracle still
+clears the bar so that every stage can be tested at all.
+
+    rung 1  drive     0.7226 +- 0.0169     PRESENT
+    rung 2  membrane  0.6463 +- 0.0205     at the bar, 0.2 SE under it
+    rung 3  spikes    0.5940 +- 0.0176     GONE, oracle 0.740 so the loss is REAL
+
+That is the registered "present at rung 2, gone at rung 3" shape — **the loss is
+at the threshold**, distributed across the last two stages. At `tau3000` the
+membrane clears the bar outright (0.6686) while the spike oracle collapses to
+0.616 and voids. **It requires a pre-registered confirmation at `tau1000` and it
+is not a verdict.** `pairing-on-discovery-sample`.
+
+### TWO THINGS NOT TO CARRY OUT OF THIS SECTION
+
+- **`drive-sim` IS NOT A DOSE COLUMN.** Its U and tau_rec are pinned at §68's
+  operating point for every arm by design, so it varies across the ladder only
+  through the dose's effect on spike counts. It is comparable with the measured
+  drive **at `tau300` and nowhere else**, and the "the simulation flatters the
+  mechanism" reading is valid there and meaningless at high tau.
+- **THE MERGE IS NOT THE LOSS.** `drive-exc` and `drive-net` are the same number
+  to within an SE at every dose (0.5460/0.5463, 0.7226/0.7497). §70's amendment
+  added that split specifically to catch inhibitory cancellation, which §69 had
+  made the live suspect, and it **excludes it cleanly**.
+
+### THE SUCCESSOR
+
+§69's "the next build is a READOUT" survives, re-aimed and now with a stage: the
+signal exists in the delivered drive and is lost at the spike threshold, and the
+dose that makes the drive informative is the dose that damages the spike code.
+The two leads found while this run was in flight are in `README.md`'s References
+under *"Reading a trace that is held in the synapses"* — an **impulse probe** in
+the scoring window, which needs no genome or kernel change and explains five of
+our own refusals, and **per-projection STP keying**, which addresses the damage
+and explicitly not the loss.

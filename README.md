@@ -19904,6 +19904,114 @@ See `docs/ROADMAP.md` §67.
   learning generalisable same-different relations), and the remedies it proposes
   are the expensive route strand 1 argues against.
 
+**Reading a trace that is held in the synapses — the §70 lead.**
+Found 2026-11-14 from a literature pass while §70's archival run was in flight.
+**Nothing here is built.** §70 measured the same/different conjunction *present in
+the delivered drive* (0.7226 at `tau1000`, 0.8377 at `tau3000`, on an oracle of
+1.000) and *absent from the ongoing spike rate* (0.5940), with the spike code's
+own oracle degrading as the dose rises. These are the references that bear on
+that specific shape, and the verdicts are what they predict rather than what this
+creature has been measured to do.
+
+- Mongillo, G., Barak, O. & Tsodyks, M. (2008). *Synaptic theory of working
+  memory.* Science 319, 1543–1546.
+  <https://www.researchgate.net/publication/5512288_SynaptiC_Theory_of_Working_Memory>
+  — and the serial-order follow-up, *Synaptic theory of working memory for serial
+  order* (2024), <https://www.biorxiv.org/content/10.1101/2024.01.11.575157v2.full>,
+  plus *Synaptic theory of chunking in working memory*
+  (<https://arxiv.org/pdf/2408.07637>) and Trübutschek et al., *A theory of working
+  memory without consciousness or sustained activity*
+  (<https://elifesciences.org/articles/23871>). Information is held in
+  **short-term synaptic state, not in sustained firing**. The 2024 paper names
+  three regimes by background input — **activity-silent** (maintained with no
+  enhanced spiking), **low-activity** (refreshed by brief population
+  reactivations), and persistent activity — and reports that its own mechanism
+  *fails* in the activity-silent and persistent regimes, so the regime is not a
+  free parameter. **This is §70's result in the literature's own vocabulary**, and
+  it reframes what §69 and §70 were doing: both read the ongoing rate, which is
+  the one place this theory says the trace is not.
+
+- Wolff, M. J., Jochim, J., Akyürek, E. G. & Stokes, M. G. — the **impulse-response
+  ("pinging") method**: a brief, task-irrelevant stimulus perturbs the network and
+  the hidden synaptic state shapes the response, making content decodable that is
+  not decodable from ongoing activity. Current statement of it: Karabay, A. et al.
+  (2025). *Behaviorally irrelevant feature matching increases neural and
+  behavioral working memory readout.* Psychophysiology 62, e70020.
+  <https://onlinelibrary.wiley.com/doi/10.1111/psyp.70020> — decoding improves
+  when the impulse **physically overlaps** the remembered item, which the authors
+  read as a content-specific interaction between impulse and a low-activity or
+  silent state. See also *Reactivating and reorganizing activity-silent working
+  memory: two distinct mechanisms underlying pinging the brain*
+  (<https://www.researchgate.net/publication/387756627>) and *Dynamic hidden states
+  underlying working-memory-guided behaviour*
+  (<https://ora.ox.ac.uk/objects/uuid:d4a8d11d-b8de-4e4b-8259-73f2a08cda4f>).
+  **THE CONTESTED PART IS THE PART THAT MATTERS TO US.** Barbosa et al. argued the
+  pinging results reflect **electrically active** memories rather than silent ones,
+  and that paper's own correction
+  (<https://www.ncbi.nlm.nih.gov/pmc/articles/PMC8956321/>) reports a baseline
+  choice that introduced a spurious code aligned with the decoding of interest.
+  Karabay et al. concede the rival reading explicitly: the impulse may only improve
+  **signal-to-noise** on a weak *active* trace instead of perturbing a silent one.
+  **We are in a better position to settle that than the human literature is**,
+  because §70 added `synapse_resource`/`synapse_release` and can read the synaptic
+  state, the membrane and the spikes **on the same trials, with and without the
+  impulse** — which is the measurement the human work cannot make. The rival
+  SNR explanation is therefore a **registered arm**, not a discussion point.
+
+- Khanjanianpak, M. & Valiadeh, A. (2026). *Activity regeneration from silent
+  states in neuronal networks with transient synaptic memory.* arXiv:2607.14000.
+  <https://arxiv.org/abs/2607.14000> — the residual synaptic configuration at the
+  first silent state already determines whether activity terminates or restarts,
+  and a *Latent Excitatory Recruitment* capacity predicts the multi-cycle dynamics
+  **without running the simulation**. Recorded as the one strand that needs **no
+  probe at all**: it says a silent synaptic state can regenerate activity on its
+  own. Taken here as a **caution rather than a lead** — if a synaptic state can
+  restart activity unprompted, then an impulse arm needs a no-impulse control on
+  the same trials or the regeneration is indistinguishable from the probe's effect.
+
+- **Synapse-type-specific short-term plasticity, which is the architecture this
+  kernel does not have.** Reyes, A. et al. (1998). *Target-cell-specific
+  modulation of transmitter release at terminals from a single axon.* PNAS 95,
+  12004 <https://www.pnas.org/doi/10.1073/pnas.95.20.12004>; Blackman, A. V.,
+  Abrahamsson, T., Costa, R. P., Lalanne, T. & Sjöström, P. J. (2013).
+  *Target-cell-specific short-term plasticity in local circuits.*
+  <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3854841/>; Larsen & Sjöström
+  (2015). *Synapse-type-specific plasticity in local circuits.*
+  <https://plasticity.muhc.mcgill.ca/DataPage/PDFs/Larsen_Sjostrom_CONB_2015.pdf>;
+  human neocortex, eLife 2022 <https://elifesciences.org/articles/81863>;
+  mechanism via vesicle priming states, PNAS 2024
+  <https://www.pnas.org/doi/10.1073/pnas.2322550121>. **One axon depresses onto one
+  target type and facilitates onto another** — in neocortex, pyramidal→basket
+  depresses while pyramidal→Martinotti facilitates. **Our genome already says this
+  and our kernel does not honour it**: `stp_use` is a per-`DnaProjection` field,
+  but the kernel keys STP state by the (source, target) **MODULE** pair
+  (`stp_id_[pr.src][pr.dst]`), so every `auditory -> vocal` synapse shares one
+  parameter set and §69 had to disclose that it could not express "the excitatory
+  limb only". **SCOPED HONESTLY: this does NOT address §70's loss.** §70 measured
+  `drive-exc` 0.5460 against `drive-net` 0.5463 at `tau300`, and 0.7226 against
+  0.7497 at `tau1000` — the merge is not where the signal goes. What it may
+  address is the **damage**: the spike code's oracle falls 0.976 → 0.740 → 0.616
+  as the dose rises, §69 measured net vocal drive *rising* because depressing the
+  stronger inhibitory limb is disinhibition, and depressing one limb only is the
+  single change that could break that trade-off.
+
+- **The dose–damage trade-off is a known non-monotonicity, and that makes the dose
+  DERIVABLE.** de la Rocha, J. & Parga, N. (2005). *Short-term synaptic depression
+  causes a non-monotonic response to correlated stimuli.* Journal of Neuroscience
+  25(37), 8416 <https://www.jneurosci.org/content/25/37/8416>; Bird & Richardson,
+  who find depression produces a **peak** in postsynaptic firing at an intermediate
+  number of release sites and an optimal presynaptic synchrony rather than a
+  monotonic change; Salmasi, M. et al. (2019), PLoS Computational Biology
+  <https://epub.ub.uni-muenchen.de/60852/1/journal.pcbi.1006666.pdf>, who find
+  depression can **raise** the information rate at a release site and that **the
+  optimal input rate is independent of the depression amplitude and time
+  constant**. §70 found the drive's readability rising monotonically in `tau_rec`
+  while the spike code's oracle fell, and found it by **scanning four doses**. This
+  literature says the postsynaptic response has a predictable optimum, so the dose
+  is a quantity to **derive** rather than scan — `derive-the-constant` and
+  `match-at-the-operating-point`, applied to the one constant §70 chose by ladder.
+  Salmasi's independence claim is directly testable against our own `tau` ladder.
+
 **Sequence generation, and why it needs more than STDP.**
 
 - Fiete, I. R., Senn, W., Wang, C. Z. H. & Hahnloser, R. H. R. (2010).
