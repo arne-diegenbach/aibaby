@@ -14726,3 +14726,113 @@ what §69 narrows the field to, and it is the one class §61-§69 never tested:
 every arm in this line has handed the same linear nearest-centroid classifier a
 better-conditioned input and asked it to produce an XOR. **It cannot, and that
 was provable from §63's own algebra before any of this ran.**
+
+## §70 PRE-REGISTRATION — WHERE DOES THE SIGNAL DIE?
+
+### THE CONTRADICTION §70 EXISTS TO RESOLVE
+
+    §68  the depletion-weighted DELIVERED DRIVE separates same from
+         different, cosine +0.7981 +- 0.0052                      153.5 SE
+    §69  the vocal module's SPIKES carry it, paired against shipped   0.8 SE
+
+**Something between the synapse and the spike destroys a 153.5-SE signal**, and
+nothing in §67-§69 says what. §69's conclusion — "the next thing is a readout"
+— is premature until the loss is LOCALISED, because a readout aimed at the
+wrong stage is a wasted section.
+
+**AND THE PREMISE OF THE WHOLE CHAIN HAS NEVER BEEN TESTED.** §68 computed
+depletion **HOST-SIDE** as `d = 1-(1-U)^n` from measured presynaptic spike
+counts, with no recovery inside the word. §69 ran the **ACTUAL** Tsodyks-Markram
+kernel, which recovers continuously and whose release is normalised by U.
+**Nobody has compared the two.** If they disagree, §69 refused a mechanism that
+was never installed, and §67-§69's entire inference rests on a simulation that
+does not transfer. **That is the same error shape as the two I made in §69 — an
+asserted premise rather than a measured one — and it is the main reason to run
+this before anything else.**
+
+### THE KERNEL CHANGE IS TWO CONST ACCESSORS, AND THE HASH MUST NOT MOVE
+
+`syn_res_` (R, resources available) and `syn_use_` (u, fraction released) are
+**PRIVATE** (`core/include/aibaby/network.h:1051-1052`); the public synapse
+accessors stop at `synapse_target`. §70 adds:
+
+    Scalar synapse_resource(uint32_t syn) const;   // R
+    Scalar synapse_release(uint32_t syn) const;    // u
+
+**Header-only const getters over existing state. They cannot change behaviour,
+so `verify`'s hash MUST stay `ad96f882becbee92` — and that is a GATE, not an
+expectation.** A moved hash means the change was not the read-only change it
+was registered as.
+
+### THREE RUNGS ON THE SAME TRIALS
+
+    rung 1   DELIVERED DRIVE, MEASURED      w * u * R / U, from the live kernel
+    rung 2   VOCAL MEMBRANE                 network.h:702, exposed already
+    rung 3   VOCAL SPIKES                   §69's measurement, 0.5124 at chance
+
+**Rung 1 is MEASURED, not simulated, and that is what makes §70 different from
+§68.** The delivered amount is exactly `syn_weight * u * R * (1/U)`
+(`core/src/network.cpp:2776`), so the two new accessors plus the existing
+`synapse_weight` reconstruct it with nothing fitted.
+
+**TWO SUBTLETIES THAT WOULD OTHERWISE PRODUCE A PLAUSIBLE WRONG NUMBER.**
+
+1. **`syn_res_` and `syn_use_` hold the state AS OF THAT SYNAPSE'S MOST RECENT
+   TRANSMISSION**, not a continuously decayed value. Reading them at a chosen
+   tick returns a value that is stale by an unknown gap. **So they are sampled
+   immediately after `step()` on ticks where the synapse's SOURCE NEURON
+   SPIKED** — recovered from the exposed spike list and `synapse_source` — which
+   is exactly when the kernel itself wrote them.
+2. **They are allocated only when a genome asks** (`any_stp_`), so rung 1 does
+   not exist on the undosed arm. There is no live depletion there to read, which
+   is correct rather than a limitation, but it means the premise check compares
+   **§68's simulation of the UNDOSED creature** against **the DOSED kernel's
+   actual state**. §69 measured that cost: the dose moves `vocal`'s oracle
+   0.9759 -> 0.8980 at `tau300`, so the populations are comparable but **not
+   identical, and the comparison is reported with that stated.**
+
+### THE PRIMARY, AND THE CO-PRIMARY
+
+    PRIMARY      rung 1 vs §68's simulation — DOES THE ARITHMETIC TRANSFER?
+    CO-PRIMARY   rung 2, the same/different separation on MEMBRANE
+    REFERENCE    rung 3, which §69 already measured at 0.5124
+
+The primary is the premise check because every §67-§69 inference depends on it.
+The co-primary is what localises the loss.
+
+### THE REGISTERED CLAUSES — FOUR-WAY
+
+- **Rung 1 disagrees with §68's simulation** beyond its own SE -> **§68's
+  ARITHMETIC DOES NOT TRANSFER.** §69's refusal is then about a mechanism that
+  was never installed, §67 is RE-OPENED, and §70's own successor is a corrected
+  §68. **This outcome invalidates more prior work than any other and is
+  therefore reported first whatever else the run says.**
+- **Rung 1 agrees, present at rung 2, gone at rung 3** -> the loss is at the
+  **THRESHOLD**. The signal lives in the creature's analog state and spiking
+  discards it. Names a gain/resolution fix and means §69 refused for a reason
+  unrelated to comparison.
+- **Rung 1 agrees, gone at rung 2** -> the loss is in **POSTSYNAPTIC
+  INTEGRATION**: inhibitory cancellation or homeostatic gain normalisation.
+  §69 makes cancellation the live suspect — the inhibitory limb is the stronger
+  of the two and depressing it is disinhibition.
+- **Rung 1 agrees and the separation is absent at BOTH 2 and 3** -> the
+  conjunction never leaves the synapse, and §69's refusal stands as written with
+  its mechanism now named.
+
+**VOID SHAPES**, registered because a gate that cannot fail cannot guard a
+rejection:
+
+- Fewer than 5% of dose-arm synapses ever sampled -> the sampling missed the
+  transmissions and rung 1 is VOID.
+- Mean live depletion outside (0.05, 0.95) -> §68's G5 saturation gate, applied
+  to the MEASURED value this time instead of the simulated one.
+- `verify`'s hash moves -> the accessors were not read-only. VOID, and a bug.
+
+### NO GENOME CHANGE, AND THE FLAG THAT CARRIES FORWARD
+
+`dna/default.toml` is untouched; the dose remains §69's arm. **§68's optimism
+flag is now TESTABLE rather than carried**: omitting within-word recovery
+OVERSTATES depletion, so §68's simulation should read HIGHER than the live
+kernel. **A rung 1 BELOW §68 is the predicted direction and is not by itself a
+failure to transfer; a rung 1 ABOVE §68 is unexplained and must be reported as
+such.**
