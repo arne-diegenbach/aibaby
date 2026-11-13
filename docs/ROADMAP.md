@@ -14677,3 +14677,52 @@ verdict moves to a new primary, every supporting column has to move with it.
 
 **The ladder is bit-identical across both 1.68M runs** (the second added only
 the gate), so nothing here depends on which log is read.
+
+### §69 THE DETERMINISM AND REGRESSION GATE
+
+    verify                             PASS            count 1
+    pinned hash                        PASS            count 1
+    final hash A == B                  ad96f882becbee92
+    as recorded                        ad96f882becbee92
+    experiments                        24 as expected, 0 not
+    the run happened                   937 lines
+    -> VERIFY GATE: PASS
+
+`results/n69-verify.log`, checked with `tools/verify_gate.sh`.
+
+**§69 was registered as the first section in this line that COULD move the
+hash, and it did not — because the dose was built as an ARM.** The four doses
+write `stp_use` and `stp_recover_ms` into the session's blob copy and never
+into `dna/default.toml`, whose md5 is still
+`9f6faac320210cc8e9f5830adf066934`. So the regression risk the pre-registration
+named — `auditory -> vocal` is the dense arc M1b, M1d and `vocallearn` all run
+on, and DNA v19 showed that touching it globally makes the creature drone — was
+never taken. **The shipped creature is bit-identical to §63-§68's.**
+
+**That is also why §69 can refuse without closing the field.** A genome
+promotion would have had to earn its own gate; nothing was promoted, because
+nothing in the ladder was worth promoting.
+
+### WHERE THE INPUT SIDE STANDS AFTER §69
+
+    the ear carries the word                 0.981            coderprobe
+    both words represented at once           A 0.7727, B 1.0000   §64
+    the answer recoverable from that         0.7727, 11.0 SE      §65
+    the creature's own readout of it         0.5104               §65
+    a spectral subtraction can cancel it     REFUSED              §66
+    the two words drive distinct synapses    +0.7981, 153.5 SE    §68
+    depletion COULD read same/different      0.7434 at 200 ms     §68
+    depletion DOES read same/different       0.5124, 0.8 SE       §69  REFUSED
+
+**Four mechanisms have now been priced and refused** — a store (four times
+over), a longer carrier, a better readout, a spectral combiner, and a synaptic
+one. **Every refusal has landed on the same side of the same line: the
+ingredients are present and the comparison is not performed.** §69 is the
+strongest form of it yet, because the conjunction was actually DELIVERED — at
+the synapse, measured, 153.5 SE — and the readout still could not use it.
+
+**The next thing anyone builds here is a READOUT, not a mechanism.** That is
+what §69 narrows the field to, and it is the one class §61-§69 never tested:
+every arm in this line has handed the same linear nearest-centroid classifier a
+better-conditioned input and asked it to produce an XOR. **It cannot, and that
+was provable from §63's own algebra before any of this ran.**
