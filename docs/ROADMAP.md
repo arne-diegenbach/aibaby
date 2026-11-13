@@ -14399,3 +14399,115 @@ shape as §66, and the genome's own md5 is unchanged too
 **Stage 2 is the first thing in this line that will move it**, because it writes
 `stp_use` and `stp_recover_ms` on a live tract. That re-pin is the cost §68 was
 run to decide was worth paying.
+
+## §69 PRE-REGISTRATION — STAGE 2, AND WHY STAGE 1 IS DROPPED
+
+### STAGE 1 IS DROPPED, AND READING THE CODE IS THE REASON
+
+§68 deferred stage 1 as "a gap-0 rung in `samediff` — one constant." It is five
+changes, and the last one kills it.
+
+1. `kSdGaps` and `kSdGapName` take the new value; `kSdGapCount` derives.
+2. `kSdRoundTicks` hardcodes the gap sum as `200 + 800 + 2000 + 5000` — a
+   literal that would silently stop matching the array it is meant to total.
+3. At gap 0, `pre_from == b_on`, so the gap window `kSdWG` is **EMPTY**. Its
+   feature vector is all zeros and `holdout_accuracy` standardises by an SD of
+   0. That is a NaN in the decay column, and **`nan <= bound` is FALSE**.
+4. Rounds per session fall 100 -> 88 at the §63-§65 budget, which **re-rolls
+   every other rung's noise** and breaks the like-for-like read against them.
+5. **THE CONFOUND, AND IT IS BY CONSTRUCTION.** At gap 0 a trial is 1800 ms of
+   unbroken audio. The "same" cells are one continuous vowel; the "different"
+   cells carry a formant transition at t=900. Same-versus-different is then
+   readable **FROM THE STIMULUS**, with no comparison anywhere — the exact
+   hazard `samediff`'s own header names ("what a trace COULD do trivially is
+   mix acoustically"). **The acoustic-silenced arm cannot disarm it**: it cuts
+   the creature's own voice reaching its own ear, not the tutor's word. So a
+   **PASS** at gap 0 is uninterpretable and only a **failure** means anything —
+   a rung that can fail usefully and succeed meaninglessly.
+
+The salvage — a 50-100 ms rung, long enough to break acoustic continuity and
+still near the mechanism's peak — is sound but is not worth a session. §65
+measured the creature at **0.5104 at gap 200**, where §68's carry-over is
+already `exp(-200/300) = 0.513` of full. **If the ability were there, 200 ms is
+where it would have shown.**
+
+`deferral-note-is-untested-code`, for the second time in two sections.
+
+### WHAT §69 RUNS
+
+**The question.** Does per-synapse depression on `auditory -> vocal` make
+same-versus-different readable by the creature's **OWN** linear readout?
+
+**The mechanism, as §68 priced it.**
+
+    delivered_j(B) = w_j . n_j(B) . (1 - d_j(A) . exp(-G/tau_rec))
+
+A **product** of A's identity and B's identity at each synapse — the nonlinear
+mixing §63's XOR argument said was missing, with **no new population** and no
+store. §68 measured the precondition it needs: the two words drive distinct
+synapses, same-word cosine 0.9359 against cross-word 0.1378, +0.7981 at 153.5
+SE, signed null exactly 0.
+
+**THE CHANGE IS AN ARM, NOT A GENOME EDIT.** `stp_use` and `stp_recover_ms` are
+patched into the `auditory -> vocal` projection in the session's **blob copy**,
+the way the existing arm already patches `voicing_threshold`. `dna/default.toml`
+is untouched, the dose sits in the instrument beside its own control, and the
+shipped hash stays pinned — so `verify` still reads as a check on the creature
+as it ships. Promoting a dose into the genome would be a later section with its
+own gate.
+
+**THE PRIMARY MOVES, AND THAT IS REGISTERED HERE.** `samediff`'s `kSdPrimary`
+is `central`. **Depression on `auditory -> vocal` does not feed `central`** —
+the spaces downstream of the patched tract are `vocal` and `artic9`. Keeping
+`central` primary would test a tract the change does not touch.
+
+    PRIMARY        vocal
+    CO-PRIMARY     artic9
+    OFF-TARGET     central — an effect HERE is a confound, not the mechanism
+
+**The dose, from §68 and not from taste.** `stp_use` 0.20, derived as `1/n_bar`
+at this creature's 4.43 spikes per word, and the U scan's own optimum landed at
+0.24. `stp_recover_ms` on §68's ladder: 100 / 300 / 1000 / 3000 ms.
+`stp_facil_ms` stays 0.0 — facilitation is not what §67 argued for.
+
+### THE REGISTERED CLAUSES
+
+Three-way, and **TWO-TAILED**: the newborn ABB literature reports repetition
+**suppression and enhancement** both, so the sign is not constrained.
+
+- `vocal` clears **0.650** at gap 200 on at least one `tau_rec` rung, with the
+  label-destroyed null inside [0.42, 0.58] -> **M6 MET on the vocal route**,
+  reported with its gap ladder.
+- `vocal` stays inside [0.42, 0.58] at **every** rung -> **REFUSED.** Depression
+  delivers the conjunction and the readout still cannot use it. That kills §67
+  and re-names the missing piece as the **readout**, not the mixing.
+- `vocal` moves off chance but under 0.650 -> **NO VERDICT at this dose.**
+  Report the `tau_rec` slope and whether it is monotone.
+
+Two shapes void the dose-response reading rather than answering it:
+
+- A **FLAT** `tau_rec` curve at a non-chance level. §68 predicts 0.2811 ->
+  1.3076 -> 2.4110 -> 2.8791 across the four rungs; flatness with an effect is
+  the signature of something that is not depression.
+- An effect that appears at gap **2000 or 5000**. §68's registered shape is
+  **adjacent-only** (0.7434 at 200, 0.5276 at 800, chance beyond). An effect
+  where the trace is dead is an artefact.
+
+### THE REGRESSION GATE — THIS IS THE FIRST CHANGE THAT COULD MOVE THE HASH
+
+`auditory -> vocal` is the **dense arc the vocal loop runs on**. M1b
+(imitation), M1d and `vocallearn` all depend on it, and **DNA v19 already showed
+that touching this arc globally makes the creature drone** at rates as low as
+0.002 with no window between stable and useless. Depression is not potentiation
+and the arm is in-instrument, so:
+
+    shipped hash MUST stay          ad96f882becbee92
+    a MOVED hash                    a bug in the arm, not a finding
+    fast-tier verify read as        a REGRESSION check, not only determinism
+
+### OPTIMISM FLAG, CARRIED FORWARD
+
+§68's 0.7434 **omits recovery during the word**, which overstates depletion, so
+it is an **upper** estimate. **§69 can land under the bar without contradicting
+§68.** A refusal here is a refusal of the mechanism at this dose; it is not a
+correction of §68's arithmetic.
