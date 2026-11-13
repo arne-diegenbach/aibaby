@@ -14511,3 +14511,25 @@ and the arm is in-instrument, so:
 it is an **upper** estimate. **§69 can land under the bar without contradicting
 §68.** A refusal here is a refusal of the mechanism at this dose; it is not a
 correction of §68's arithmetic.
+
+### §69 WAS REGISTERED AND NOT RUN
+
+The line stops here, by the project's own call, on 2026-11-13. **Everything
+above this note is a pre-registration and nothing below it is a result.** No
+arm was built, no smoke was run, no genome field was ever written, and the
+shipped hash `ad96f882becbee92` is untouched.
+
+**It is left standing rather than deleted** because a registration written
+before its result is the only kind worth trusting, and this one is already
+past the two places §68 went wrong: the dose is derived rather than chosen,
+and the primary is aimed at a tract the change actually feeds. If anyone
+picks this up, **the clauses are binding as written** — they were fixed with
+no outcome in hand, which is the whole point of them.
+
+**What it would cost to resume:** build the blob patch for
+`stp_use`/`stp_recover_ms` on the `auditory -> vocal` projection, smoke it at
+~290k ticks until the estimator reads clean, then one `samediff` session at
+the §63-§65 budget. The state it needs is all archived —
+`results/n68-overlapgate-1680k.log` carries the measured precondition and the
+`tau_rec` ladder it predicts, and `results/n68-genome.toml` is the genome it
+was measured on.
