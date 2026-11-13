@@ -18626,6 +18626,17 @@ struct SdOut {
   uint32_t attempted = 0, slept = 0;
   uint64_t first_sleep_tick = 0;  // 0 means the creature never slept
   bool align_bad = false;         // ctxsrc's own historical misalignment
+  // §69. The two numbers that decide whether a dose arm is a real arm at all.
+  // `stp_patched` counts the auditory->vocal projections actually written; a
+  // dose arm that patched NOTHING is bit-identical to `shipped` and would read
+  // as a clean refusal. `voc_spikes/voc_ticks` is the delivered-drive check:
+  // if depression is live the vocal module must fire DIFFERENTLY from shipped,
+  // and an identical rate means the patch is inert however many projections
+  // were written. A refusal is the likely outcome here, so the gates that
+  // guard it have to measure the mechanism and not merely assert it.
+  uint32_t stp_patched = 0;
+  double voc_spikes = 0.0;
+  double voc_ticks = 0.0;
   bool ok = false;
 };
 
@@ -18676,7 +18687,8 @@ inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
 }
 
 SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
-                           uint32_t rep, float voicing_override, bool omit_b) {
+                           uint32_t rep, float voicing_override, bool omit_b,
+                           float stp_use, float stp_rec) {
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
@@ -18687,6 +18699,28 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
                       offsetof(aibaby::DnaVocal, voicing_threshold),
                   &voicing_override, sizeof(voicing_override));
+    }
+    // §69. The dose. A `Dna` is a NON-OWNING VIEW over this blob, so the byte
+    // offset of a projection is recovered from the view's own pointer rather
+    // than from an assumed layout — the blob can grow a field without this
+    // silently writing into the wrong one.
+    if (stp_use > 0.0f && stp_rec > 0.0f) {
+      aibaby::Dna probe;
+      if (probe.load(local.data(), local.size()) == aibaby::DnaStatus::kOk) {
+        const int32_t pa = probe.module_with_role(aibaby::ModuleRole::kAuditory);
+        const int32_t pv = probe.module_with_role(aibaby::ModuleRole::kVocal);
+        for (uint32_t pi = 0; pa >= 0 && pv >= 0 && pi < probe.projection_count(); ++pi) {
+          const aibaby::DnaProjection& pr = probe.projection(pi);
+          if (int32_t(pr.src) != pa || int32_t(pr.dst) != pv) continue;
+          const size_t base =
+              size_t(reinterpret_cast<const uint8_t*>(&pr) - local.data());
+          std::memcpy(local.data() + base + offsetof(aibaby::DnaProjection, stp_use),
+                      &stp_use, sizeof(stp_use));
+          std::memcpy(local.data() + base + offsetof(aibaby::DnaProjection, stp_recover_ms),
+                      &stp_rec, sizeof(stp_rec));
+          ++out.stp_patched;
+        }
+      }
     }
   }
   Session s;
@@ -18797,6 +18831,13 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
         const aibaby::Scalar* gp = s.brain.vocal_groups();
         const aibaby::Network& net = s.brain.network();
+        // §69's delivered-drive check, counted ONCE per windowed tick so that a
+        // tick belonging to two windows is not double counted.
+        out.voc_ticks += 1.0;
+        for (uint32_t si = 0; si < net.spike_count(); ++si) {
+          const uint32_t idx = net.spikes()[si];
+          if (idx >= ms_v.begin && idx < ms_v.begin + wv) out.voc_spikes += 1.0;
+        }
         for (uint32_t wi = 0; wi < nwin; ++wi) {
           const uint32_t win = wins[wi];
           for (uint32_t q = 0; q < aibaby::kVocalGroups; ++q) gsum[win][q] += double(gp[q]);
@@ -18961,13 +19002,56 @@ constexpr uint32_t kSdReps = 12;
 // length and timing untouched, so A's trace is read at the same absolute times
 // with and without B. It contributes ONLY the A-trace columns: same-versus-
 // different is undefined there and is not computed.
-struct SdArmDef { const char* name; float vthr; bool omit_b; const char* what; };
-constexpr SdArmDef kSdArms[3] = {
-    {"shipped", 0.0f, false, "the creature as it ships"},
-    {"acoustic-silenced", 1.15f, false, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
-    {"B-omitted", 0.0f, true, "silence where the second word goes — overwrite vs decay"},
+// §69's FOUR DOSE ARMS. `stp_use` and `stp_recover_ms` are patched into the
+// `auditory -> vocal` projections of the session's BLOB COPY — never into
+// `dna/default.toml` — so the shipped genome and its hash are untouched and the
+// dose sits in the instrument beside its own controls.
+//
+// THE DOSE IS THE MERGED TRACT, AND IT CANNOT BE ANYTHING ELSE. §68's primary
+// was the EXCITATORY limb, but neither the genome nor the kernel can express
+// that: `stp_use` is a per-PROJECTION field, the "either"-source projection
+// already carries both signs, and the kernel keys STP state by the (source,
+// target) MODULE pair (`stp_id_[pr.src][pr.dst]`), so every auditory->vocal
+// synapse shares one parameter set however many projections are patched.
+// **§68 priced this substitution in advance**: merged 1.2744 against the
+// excitatory limb's 1.3076, inside one SE. It is a disclosed deviation from
+// §69's pre-registration, not a silent one.
+//
+// `stp_facil_ms` stays 0: facilitation is not what §67 argued for, and the
+// kernel rejects `stp_use > 0` with `stp_recover_ms <= 0`, so the two are
+// always written together.
+struct SdArmDef {
+  const char* name;
+  float vthr;
+  bool omit_b;
+  float stp_use;   // 0 leaves the tract exactly as it ships
+  float stp_rec;   // tau_rec in ms
+  const char* what;
 };
-constexpr uint32_t kSdArmCount = 3;
+constexpr SdArmDef kSdArms[7] = {
+    {"shipped", 0.0f, false, 0.0f, 0.0f, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+    {"B-omitted", 0.0f, true, 0.0f, 0.0f, "silence where the second word goes — overwrite vs decay"},
+    {"stp tau100", 0.0f, false, 0.20f, 100.0f, "§68 predicts d' 0.2811 — the FLOOR rung"},
+    {"stp tau300", 0.0f, false, 0.20f, 300.0f, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
+    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, "§68 predicts d' 2.4110"},
+    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, "§68 predicts d' 2.8791 — the CEILING rung"},
+};
+constexpr uint32_t kSdArmCount = 7;
+constexpr uint32_t kSdArmShipped = 0;
+constexpr uint32_t kSdStpFirst = 3;   // first dose arm
+constexpr uint32_t kSdStpCount = 4;   // the tau_rec ladder
+// §69's primary MOVES off `central`. Depression on `auditory -> vocal` does not
+// feed the association module, so `central` would test a tract the change never
+// touches. Registered before the run in ROADMAP §69.
+constexpr uint32_t kSdStpPrimary = 2;    // vocal
+constexpr uint32_t kSdStpCoPrimary = 3;  // artic9
+constexpr uint32_t kSdStpOffTarget = 1;  // central — an effect HERE is a confound
+// THE RUNG THAT CARRIES THE VERDICT, pinned before the run: tau_rec 300 ms is
+// §68's measured corner and `stpprobe`'s. The other three rungs are the
+// registered SHAPE and carry no verdict, because a maximum taken over four of
+// them is selected on the data.
+constexpr uint32_t kSdStpCarrier = kSdStpFirst + 1;
 
 // mean and standard error over creatures, which are the independent unit here.
 inline void sd_stat(const std::vector<double>& v, double& m, double& se) {
@@ -18999,21 +19083,69 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  primary           %s (the non-motor route)\n"
               "  co-primary        %s (the MOTOR route — reads differently)\n"
               "  round             %llu ticks; %llu rounds at this budget\n"
-              "  creatures         %u per arm, 2 arms\n\n",
+              "  creatures         %u per arm, %u arms\n\n",
               (unsigned long long)kSdWord, (unsigned long long)kSdWord,
               (unsigned long long)kSdScore, kSdBar,
               kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary],
               (unsigned long long)kSdRoundTicks,
-              (unsigned long long)(ticks / kSdRoundTicks), kSdReps);
+              (unsigned long long)(ticks / kSdRoundTicks), kSdReps, kSdArmCount);
 
   std::vector<SdOut> res[kSdArmCount];
   for (uint32_t a = 0; a < kSdArmCount; ++a) {
     const float vt = kSdArms[a].vthr;
     const bool ob = kSdArms[a].omit_b;
+    const float su = kSdArms[a].stp_use;
+    const float sr = kSdArms[a].stp_rec;
     res[a] = parallel_reps<SdOut>(kSdReps, [&](uint32_t r) {
-      return run_samediff_session(blob, ticks, r, vt, ob);
+      return run_samediff_session(blob, ticks, r, vt, ob, su, sr);
     });
   }
+
+  // ---- §69's DOSE GATES, READ BEFORE ANY VERDICT ----
+  //
+  // A dose arm that patched nothing, or that patched something the kernel then
+  // ignored, is bit-identical to `shipped` and would print a clean refusal.
+  // Both failures are silent in every other column, so both are measured here.
+  double voc_rate[kSdArmCount] = {};
+  uint32_t stp_min[kSdArmCount] = {};
+  for (uint32_t a = 0; a < kSdArmCount; ++a) {
+    double sp = 0.0, tk = 0.0;
+    uint32_t mn = 0xffffffffu;
+    for (const SdOut& o : res[a]) {
+      if (!o.ok) continue;
+      sp += o.voc_spikes;
+      tk += o.voc_ticks;
+      if (o.stp_patched < mn) mn = o.stp_patched;
+    }
+    voc_rate[a] = tk > 0.0 ? sp / tk : 0.0;
+    stp_min[a] = (mn == 0xffffffffu) ? 0u : mn;
+  }
+  bool dose_vacuous = false, dose_inert = false;
+  for (uint32_t k = 0; k < kSdStpCount; ++k) {
+    const uint32_t a = kSdStpFirst + k;
+    if (stp_min[a] == 0) dose_vacuous = true;
+    if (voc_rate[kSdArmShipped] > 0.0 &&
+        std::fabs(voc_rate[a] - voc_rate[kSdArmShipped]) <
+            1e-9 * voc_rate[kSdArmShipped])
+      dose_inert = true;
+  }
+  std::printf("  §69 THE DOSE — stp_use 0.20 on the MERGED auditory->vocal tract\n\n");
+  std::printf("    arm                  projections patched   vocal spikes/tick\n");
+  for (uint32_t a = 0; a < kSdArmCount; ++a)
+    std::printf("    %-20s %10u            %10.5f%s\n", kSdArms[a].name, stp_min[a],
+                voc_rate[a], a == kSdArmShipped ? "   <- the reference" : "");
+  std::printf("\n    G-DOSE  every dose arm wrote at least one projection   %s\n",
+              dose_vacuous ? "FAIL" : "PASS");
+  std::printf("    G-LIVE  every dose arm's vocal drive differs from it   %s\n",
+              dose_inert ? "FAIL" : "PASS");
+  if (dose_vacuous || dose_inert) {
+    std::printf("\n  -> VOID. The dose did not reach the creature, so NOTHING below\n"
+                "     would have been a finding about depression. No verdict is\n"
+                "     computed. (A refusal is the expected outcome of §69, which is\n"
+                "     exactly why this gate returns instead of printing one.)\n");
+    return false;
+  }
+  std::printf("\n");
 
   // ---- THE GATES, AND THEY RETURN BEFORE ANYTHING IS COMPUTED ----
   //
@@ -19137,6 +19269,107 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   pm, ps, cm, cs, am, dm, iam, ibm);
     }
     std::printf("\n");
+  }
+
+  // ---- §69's VERDICT, ON ITS OWN REGISTERED PRIMARY ----
+  //
+  // Not `central`. ROADMAP §69 moved the primary to `vocal` before the run,
+  // because depression on `auditory -> vocal` does not feed the association
+  // module and `central` would have tested a tract the change never touches.
+  std::printf("  §69 THE tau_rec LADDER — at gap %s, the REGISTERED shape\n\n",
+              kSdGapName[0]);
+  std::printf("    arm                  %-9s(PRIMARY)  %-9s(co)   %-9s(off-target)   null\n",
+              kSdSpaceName[kSdStpPrimary], kSdSpaceName[kSdStpCoPrimary],
+              kSdSpaceName[kSdStpOffTarget]);
+  double best_dose = 0.0;
+  uint32_t best_arm = kSdArmShipped;
+  for (uint32_t k = 0; k <= kSdStpCount; ++k) {
+    const uint32_t a = (k == 0) ? kSdArmShipped : (kSdStpFirst + k - 1);
+    double pm = 0, ps = 0, cm = 0, cs = 0, om = 0, os = 0, nm = 0, ns = 0;
+    sd_stat(mile[a][0][kSdStpPrimary], pm, ps);
+    sd_stat(mile[a][0][kSdStpCoPrimary], cm, cs);
+    sd_stat(mile[a][0][kSdStpOffTarget], om, os);
+    sd_stat(nul[a][0][kSdStpPrimary], nm, ns);
+    std::printf("    %-20s %.4f+-%.4f    %.4f+-%.4f  %.4f+-%.4f     %.4f%s\n",
+                kSdArms[a].name, pm, ps, cm, cs, om, os, nm,
+                a == kSdArmShipped ? "   <- the reference" : "");
+    if (k > 0 && pm > best_dose) { best_dose = pm; best_arm = a; }
+  }
+  {
+    double rm = 0, rs = 0, bs = 0;
+    sd_stat(mile[kSdArmShipped][0][kSdStpPrimary], rm, rs);
+    sd_stat(mile[best_arm][0][kSdStpPrimary], best_dose, bs);
+    double nm = 0, ns = 0;
+    sd_stat(nul[best_arm][0][kSdStpPrimary], nm, ns);
+    // The ladder's own shape, which §69 registered as able to VOID rather than
+    // answer: a flat curve at a non-chance level is not depression.
+    double lo = 1.0, hi = 0.0;
+    for (uint32_t k = 0; k < kSdStpCount; ++k) {
+      double m = 0, s = 0;
+      sd_stat(mile[kSdStpFirst + k][0][kSdStpPrimary], m, s);
+      if (m < lo) lo = m;
+      if (m > hi) hi = m;
+    }
+    // THE VERDICT IS CARRIED BY A PINNED RUNG, NOT BY THE BEST ONE, and the
+    // 300k smoke is what forced this. Two faults it exposed:
+    //
+    //   1. The chance test read `best_dose` against [kSdNullLo, kSdNullHi].
+    //      That band is the ACCEPTANCE WINDOW FOR THE LABEL-DESTROYED CONTROL,
+    //      not a test of an effect. The smoke printed 0.5729 +- 0.0286 — inside
+    //      the band, and 2.5 SE above 0.5 — and called it chance.
+    //      `guard-measures-the-wrong-quantity`, a third time in three sections.
+    //   2. `best_arm` is chosen as the maximum over four rungs, so testing THAT
+    //      arm is selection-biased. `pairing-on-discovery-sample`.
+    //
+    // So the carrier is `stp tau300`, pinned in advance: §68's measured corner
+    // and `stpprobe`'s. The comparison is the PAIRED per-creature difference
+    // against `shipped` — same rep index means the same seed and the same
+    // creature, so the between-creature variance cancels instead of being
+    // carried into the error bar. The best rung is still printed, labelled as
+    // selected on the data, and carries no verdict.
+    std::vector<double> dif;
+    const std::vector<double>& vp = mile[kSdStpCarrier][0][kSdStpPrimary];
+    const std::vector<double>& vs_ = mile[kSdArmShipped][0][kSdStpPrimary];
+    for (size_t i = 0; i < vp.size() && i < vs_.size(); ++i) dif.push_back(vp[i] - vs_[i]);
+    double dm = 0, ds = 0, cm = 0, cs2 = 0;
+    sd_stat(dif, dm, ds);
+    sd_stat(vp, cm, cs2);
+    const bool null_ok = nm >= kSdNullLo && nm <= kSdNullHi;
+    const bool moved = ds > 0.0 && std::fabs(dm) >= 2.0 * ds;
+    const bool flat = (hi - lo) < 2.0 * bs;
+    std::printf("\n    CARRIER, pinned        %s at %.4f +- %.4f\n",
+                kSdArms[kSdStpCarrier].name, cm, cs2);
+    std::printf("    shipped, same cell     %.4f +- %.4f\n", rm, rs);
+    std::printf("    PAIRED difference      %+.4f +- %.4f  (%.1f SE)   %s\n", dm, ds,
+                ds > 0.0 ? std::fabs(dm) / ds : 0.0, moved ? "MOVED" : "not distinguishable");
+    std::printf("    label-destroyed        %.4f   in [%.2f,%.2f]        %s\n", nm,
+                kSdNullLo, kSdNullHi, null_ok ? "PASS" : "FAIL");
+    std::printf("    ladder spread          %.4f over the four rungs   %s\n", hi - lo,
+                flat ? "FLAT — see below" : "graded");
+    std::printf("    the bar                %.3f\n", kSdBar);
+    std::printf("    best rung (SELECTED ON THE DATA, no verdict)  %s at %.4f\n\n",
+                kSdArms[best_arm].name, best_dose);
+    if (!null_ok) {
+      std::printf("    -> VOID. The label-destroyed null is off chance on the primary,\n"
+                  "       so the readout is reading something other than the label.\n");
+    } else if (cm >= kSdBar) {
+      std::printf("    -> M6 MET ON THE VOCAL ROUTE at this dose%s",
+                  flat ? ", BUT the tau_rec ladder is FLAT, which is not the\n"
+                         "       dose-response depression predicts. Read as VOID until the\n"
+                         "       shape is explained.\n"
+                       : ".\n");
+    } else if (!moved) {
+      std::printf("    -> REFUSED. Depression delivers the conjunction and the creature's\n"
+                  "       own readout still cannot use it. §67 dies here, and the missing\n"
+                  "       piece is named as the READOUT rather than the mixing.\n");
+    } else {
+      std::printf("    -> NO VERDICT AT THIS DOSE. The dose MOVED the readout%s but left\n"
+                  "       it under the bar. The direction is the reportable result.\n",
+                  dm > 0.0 ? " UP" : " DOWN");
+    }
+    std::printf("\n    OPTIMISM FLAG, from §68: its 0.7434 omitted recovery DURING the\n"
+                "    word, so it was an UPPER estimate. A refusal here refuses the\n"
+                "    mechanism at this dose; it does not correct §68's arithmetic.\n\n");
   }
 
   std::printf("  EVERY SPACE, shipped arm, same/different only\n\n    gap  ");

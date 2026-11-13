@@ -401,7 +401,14 @@ const Spec kSpecs[] = {
      "  make the milestone trivial. §61's larynx-silenced arm is renamed\n"
      "  ACOUSTIC-silenced: quietecho took the voiced fraction 0.773 -> 0.000 with\n"
      "  the articulator echo UNMOVED, so the knob cuts the self-heard loop only.\n"
-     "  Arms move `voicing_threshold` and nothing else."},
+     "  §69 ADDS FOUR DOSE ARMS and they are the first that move something other\n"
+     "  than `voicing_threshold`: `stp_use` 0.20 and `stp_recover_ms` on a\n"
+     "  100/300/1000/3000 ms ladder, patched into the auditory->vocal projections\n"
+     "  of the SESSION'S BLOB COPY. `dna/default.toml` is never written and the\n"
+     "  shipped hash must not move. The dose is the MERGED tract because the\n"
+     "  kernel keys STP by the (source, target) module pair; §68 priced that\n"
+     "  substitution at 1.2744 against the excitatory limb's 1.3076. §69's\n"
+     "  primary MOVES to `vocal`: depression here does not feed `central`."},
     {"hushgate", 900000, Expect::kRead, Tier::kLong,
      "derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's\n"
      "  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --\n"

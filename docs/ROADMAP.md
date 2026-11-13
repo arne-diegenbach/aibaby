@@ -14512,24 +14512,74 @@ it is an **upper** estimate. **§69 can land under the bar without contradicting
 §68.** A refusal here is a refusal of the mechanism at this dose; it is not a
 correction of §68's arithmetic.
 
-### §69 WAS REGISTERED AND NOT RUN
+### §69 WAS CLOSED UNRUN AND THEN REOPENED — 2026-11-13
 
-The line stops here, by the project's own call, on 2026-11-13. **Everything
-above this note is a pre-registration and nothing below it is a result.** No
-arm was built, no smoke was run, no genome field was ever written, and the
-shipped hash `ad96f882becbee92` is untouched.
+The line was stopped and the registration above was marked never-run. **It was
+reopened the same day and §69 IS BEING RUN.** The paragraph is kept rather than
+deleted because the registration's value is that it was fixed before any
+outcome was in hand, and that is still true: **nothing in the clauses below
+changed when the run was authorised.**
 
-**It is left standing rather than deleted** because a registration written
-before its result is the only kind worth trusting, and this one is already
-past the two places §68 went wrong: the dose is derived rather than chosen,
-and the primary is aimed at a tract the change actually feeds. If anyone
-picks this up, **the clauses are binding as written** — they were fixed with
-no outcome in hand, which is the whole point of them.
+### §69 THE INSTRUMENT, AND THE FIVE THINGS BUILDING IT FORCED
 
-**What it would cost to resume:** build the blob patch for
-`stp_use`/`stp_recover_ms` on the `auditory -> vocal` projection, smoke it at
-~290k ticks until the estimator reads clean, then one `samediff` session at
-the §63-§65 budget. The state it needs is all archived —
-`results/n68-overlapgate-1680k.log` carries the measured precondition and the
-`tau_rec` ladder it predicts, and `results/n68-genome.toml` is the genome it
-was measured on.
+**1. The dose is the MERGED tract and it cannot be anything else.** §69's
+pre-registration said the **excitatory** `auditory -> vocal` projection.
+Neither the genome nor the kernel can express that: `stp_use` is a
+per-PROJECTION field, the "either"-source projection at `dna/default.toml`
+already carries both signs, and **the kernel keys STP state by the (source,
+target) MODULE pair** (`stp_id_[pr.src][pr.dst]`, `core/src/network.cpp:276`),
+so every `auditory -> vocal` synapse shares one parameter set. **§68 priced
+this substitution in advance** — merged 1.2744 against the excitatory limb's
+1.3076, inside one SE — so it is a **disclosed** deviation, not a silent one.
+
+**2. There are TWO `auditory -> vocal` projections**, not one: the
+"either"-source tract at density 0.15 / weight 0.12, and a separate
+**inhibitory** tract at density 0.25 / weight 0.25. Both are patched, and the
+patched count is a gate.
+
+**3. The dose is an ARM, not a genome edit.** `stp_use` and `stp_recover_ms`
+are written into the **session's blob copy**, recovering the byte offset from
+the non-owning `Dna` view's own pointer rather than from an assumed layout.
+`dna/default.toml` is never touched and its md5 is still
+`9f6faac320210cc8e9f5830adf066934`.
+
+**4. TWO GATES GUARD THE REFUSAL, because a refusal is the expected outcome.**
+A dose arm that patched nothing, or that patched something the kernel then
+ignored, is bit-identical to `shipped` and would print a clean refusal with
+every other column looking healthy. So `G-DOSE` counts projections actually
+written and `G-LIVE` requires each dose arm's vocal firing rate to differ from
+shipped. Both return VOID before any verdict is computed.
+
+**5. THE 300k SMOKE CAUGHT A BROKEN REFUSAL CLAUSE.** As first written, the
+"is this chance?" test read the primary against `[kSdNullLo, kSdNullHi]` =
+[0.42, 0.58]. **That band is the acceptance window for the LABEL-DESTROYED
+CONTROL, not a test of an effect.** The smoke printed **0.5729 +- 0.0286** —
+inside the band and 2.5 SE above 0.5 — and the clause called it **REFUSED**.
+`guard-measures-the-wrong-quantity`, a third time in three sections. And
+`best_arm` was a maximum over four rungs, so testing it was selected on the
+data. **Both fixed before the run**: the verdict is carried by `stp tau300`,
+**pinned in advance** as §68's and `stpprobe`'s measured corner, and the test
+is the **PAIRED per-creature difference** against `shipped`. With the fix the
+same smoke reads **"MOVED UP, no verdict"** instead of "REFUSED".
+
+### §69 THE SMOKE — PLUMBING ONLY, NEVER SIGN
+
+`results/n69-smoke-300k.log`, 300,000 ticks with `--allow-short`, 193 s.
+
+    arm                  projections patched   vocal spikes/tick
+    shipped                       0               0.48483   <- the reference
+    stp tau100                    2               0.48715
+    stp tau300                    2               0.49172
+    stp tau1000                   2               0.49881
+    stp tau3000                   2               0.51003
+    G-DOSE  PASS    G-LIVE  PASS    all registered gates  PASS
+
+**THE DIRECTION OF THE DRIVE CHANGE IS ITSELF A RESULT, and §68 could not have
+predicted it.** Vocal firing **RISES** with `tau_rec` rather than falling.
+Depression is applied to the merged tract, the **inhibitory** limb is the
+stronger of the two (0.25 x 0.25 against 0.15 x 0.12), and depressing
+inhibition is **disinhibition**. §68 measured whether a PATTERN is present, not
+what the net drive does — so this is new, and it is the first sign that the
+merged dose is not simply a weaker version of the excitatory one.
+
+**NOTHING ELSE IN THE SMOKE IS READ.** 16 rounds cannot settle a sign.
