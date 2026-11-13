@@ -14583,3 +14583,97 @@ what the net drive does — so this is new, and it is the first sign that the
 merged dose is not simply a weaker version of the excitatory one.
 
 **NOTHING ELSE IN THE SMOKE IS READ.** 16 rounds cannot settle a sign.
+
+### §69 THE RESULT — REFUSED, AND §67 DIES HERE
+
+`results/n69-samediff-1680k.log`, 1,680,000 ticks, 7 arms x 12 creatures.
+Genome md5 `9f6faac320210cc8e9f5830adf066934`, unchanged — the dose is an arm.
+
+    sessions that ran                84 of 84                  PASS
+    feature rows == labels           0 misaligned              PASS
+    slept trials                     3774 of 33600 = 0.1123    PASS
+    first sleep at tick              1086021
+    all 4 cells in both folds        0 gap-cells short         PASS
+    assembled oracle, best           1.0000  (>= 0.80)         PASS
+    label-destroyed, primary         0.5016 +- 0.0101          PASS
+    G-DOSE  projections written      2 on every dose arm       PASS
+    G-LIVE  vocal drive differs      yes on every dose arm     PASS
+
+**THE VERDICT, on `vocal`, §69's registered primary, at gap 200.**
+
+    arm           vocal (PRIMARY)   oracle(vocal)   testable at 0.650
+    shipped       0.4814 +- 0.0144     0.9759            YES
+    stp tau100    0.4999 +- 0.0255     0.9359            YES
+    stp tau300    0.5124 +- 0.0245     0.8980            YES   <- CARRIER
+    stp tau1000   0.4895 +- 0.0237     0.7402            YES
+    stp tau3000   0.4852 +- 0.0166     0.6164            NO — vacuous
+
+    CARRIER, pinned in advance       stp tau300, 0.5124 +- 0.0245
+    shipped, same cell               0.4814 +- 0.0144
+    PAIRED difference                +0.0310 +- 0.0382  (0.8 SE)
+    label-destroyed                  0.4904   in [0.42,0.58]    PASS
+    ladder spread                    0.0272 over four rungs     FLAT
+    the bar                          0.650
+    -> REFUSED
+
+**§68 predicted 0.7380 here** (d' 1.2744 on the merged tract). **The creature
+reads 0.5124, and the paired difference against its own untreated self is
+0.8 SE.** The conjunction is delivered at the synapse and **the creature's own
+readout cannot use it.** §67 is dead as a route to M6.
+
+**THE REFUSAL IS CLEAN, AND THAT TOOK A GATE THAT WAS NOT THERE.** A refusal
+was §69's expected outcome, so the thing that could make one meaningless had to
+be measured: `G-ORACLE` asks whether the arm's ASSEMBLED ORACLE — full scale in
+this task's own units, which no readout can beat — still exceeds the bar it is
+tested against. **The threshold is derived, not chosen:** below the bar, no
+readout could reach the bar for reasons unrelated to comparison. The carrier
+clears it at **0.8980**, above even the instrument's own 0.80 floor. Only
+`tau3000` is voided.
+
+### §69's SIDE RESULT — THE DOSE TRADES REPRESENTATION FOR NOTHING
+
+Monotone in `tau_rec`, and §68 could not have produced this because §68
+measured whether a PATTERN was present in delivered drive, never what the dose
+did to the CODE.
+
+    arm           oracle(vocal)   oracle(artic9)   decay(A)   ing(B) artic9
+    shipped          0.9759          0.7320         0.8269       0.8496
+    stp tau100       0.9359          0.6781         0.7923       0.7957
+    stp tau300       0.8980          0.6112         0.7507       0.7161
+    stp tau1000      0.7402          0.5384         0.6255       0.6389
+    stp tau3000      0.6164          0.5105         0.5800       0.5688
+
+**The MOTOR route pays far more than the vocal one** — artic9's assembled
+oracle falls to chance by `tau3000` while `vocal` is still at 0.6164. So
+depression on `auditory -> vocal` **costs word identity at every rung and buys
+same/different at none.** And the net drive moves the *opposite* way to the
+naive expectation: vocal firing **RISES** 0.54677 -> 0.55457, because the
+merged tract's **inhibitory** limb is the stronger (0.25 x 0.25 against
+0.15 x 0.12) and depressing inhibition is disinhibition.
+
+**THE REFUSAL DOES NOT REST ON THE DAMAGE.** At the carrier the cost is small
+(0.9759 -> 0.8980) and the readout is still at chance; at `tau100` the cost is
+smaller still (0.9359) and the readout reads **0.4999**, below even §68's own
+floor-rung prediction of 0.5559. **The dose is not too strong to test — it is
+simply not a comparator.**
+
+### §69 — TWO ERRORS OF MINE, BOTH CAUGHT BY GATES I HAD TO BE FORCED TO WRITE
+
+**1. A refusal clause that measured the wrong quantity.** The "is this chance?"
+test read the primary against `[kSdNullLo, kSdNullHi]` = [0.42, 0.58] — **the
+acceptance window for the LABEL-DESTROYED CONTROL, not a test of an effect.**
+The 300k smoke printed 0.5729 +- 0.0286, inside the band and 2.5 SE above 0.5,
+and the clause called it REFUSED. Caught **before** the run.
+`guard-measures-the-wrong-quantity`, a third time in three sections.
+
+**2. I READ THE WRONG COLUMN AND BRIEFLY RETRACTED A CORRECT RESULT.** On the
+first 1.68M log I read the per-arm table's `assembled` column — which is the
+**CO-PRIMARY (`artic9`)**, where the oracle does collapse to 0.6112 at the
+carrier — and concluded the carrier was VOID and only `tau100` survived. **On
+the primary the carrier's oracle is 0.8980 and the refusal stands.** The gate I
+added to test my own claim is what refuted it. **A PER-ARM COLUMN IN A SHARED
+TABLE IS NOT NECESSARILY ON THE SPACE YOUR VERDICT IS READ ON** — and when the
+verdict moves to a new primary, every supporting column has to move with it.
+
+**The ladder is bit-identical across both 1.68M runs** (the second added only
+the gate), so nothing here depends on which log is read.

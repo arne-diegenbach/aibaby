@@ -19334,6 +19334,33 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     double dm = 0, ds = 0, cm = 0, cs2 = 0;
     sd_stat(dif, dm, ds);
     sd_stat(vp, cm, cs2);
+    // G-ORACLE, AND THE 1.68M RUN IS WHAT FORCED IT. The dose does not merely
+    // fail to deliver a comparison — it DESTROYS THE REPRESENTATION BEING
+    // COMPARED, monotonically in tau_rec. On the co-primary at gap 200 the
+    // assembled oracle falls 0.7320 (shipped) -> 0.6781 -> 0.6112 -> 0.5384 ->
+    // 0.5105, and B's own identity falls 0.8496 -> 0.5688 with it.
+    //
+    // THE THRESHOLD IS DERIVED, NOT CHOSEN. The assembled oracle is full scale
+    // in this task's own units: no readout can beat it. So an arm whose oracle
+    // sits BELOW the bar it is being tested against cannot reach that bar for
+    // reasons that have nothing to do with comparison, and a refusal there is
+    // VACUOUS. The gate is therefore `oracle >= kSdBar`, read on the SAME space
+    // the verdict is read on. `vacuity-gate-cannot-guard-a-rejection`: a
+    // refusal is §69's expected outcome, so the thing that could make a refusal
+    // meaningless has to be measured and not assumed.
+    std::printf("\n    ARM           oracle(%s)   retains ing(B)   testable at bar %.3f\n",
+                kSdSpaceName[kSdStpPrimary], kSdBar);
+    bool carrier_testable = false;
+    for (uint32_t k = 0; k <= kSdStpCount; ++k) {
+      const uint32_t a = (k == 0) ? kSdArmShipped : (kSdStpFirst + k - 1);
+      double om2 = 0, os2 = 0, ibm = 0, ibs = 0;
+      sd_stat(asm_[a][0][kSdStpPrimary], om2, os2);
+      sd_stat(ib[a][0][kSdStpPrimary], ibm, ibs);
+      const bool testable = om2 >= kSdBar;
+      if (a == kSdStpCarrier) carrier_testable = testable;
+      std::printf("    %-14s %.4f          %.4f           %s\n", kSdArms[a].name, om2, ibm,
+                  testable ? "YES" : "NO — a refusal here is VACUOUS");
+    }
     const bool null_ok = nm >= kSdNullLo && nm <= kSdNullHi;
     const bool moved = ds > 0.0 && std::fabs(dm) >= 2.0 * ds;
     const bool flat = (hi - lo) < 2.0 * bs;
@@ -19352,6 +19379,14 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     if (!null_ok) {
       std::printf("    -> VOID. The label-destroyed null is off chance on the primary,\n"
                   "       so the readout is reading something other than the label.\n");
+    } else if (!carrier_testable) {
+      std::printf("    -> VOID AT THE CARRIER, and the reason is a RESULT. The dose has\n"
+                  "       pulled the assembled oracle BELOW the bar it is tested against,\n"
+                  "       so no readout could have reached %.3f on this arm and a refusal\n"
+                  "       here says nothing about comparison. THE DOSE DESTROYS THE\n"
+                  "       REPRESENTATION IT WAS MEANT TO COMPARE. Read the lowest rung\n"
+                  "       that is still testable, and read the ladder above as damage.\n",
+                  kSdBar);
     } else if (cm >= kSdBar) {
       std::printf("    -> M6 MET ON THE VOCAL ROUTE at this dose%s",
                   flat ? ", BUT the tau_rec ladder is FLAT, which is not the\n"
