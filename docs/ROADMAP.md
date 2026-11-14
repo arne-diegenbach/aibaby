@@ -15481,3 +15481,77 @@ the input" and that spike correlations "increase this variability enormously".
 **The correlations may be noise rather than signal**, which is exactly why the
 zero-dose arm and the label-destroyed null are registered as gates and not as
 reassurance.
+
+## §72 RESULT — THE DESIGN IS REFUTED BEFORE THE RUN, AND THE ARITHMETIC IS THE RESULT
+
+**No 1.68M run was made, and that is the finding rather than an omission.** The
+instrument was built, smoked four times at 300k, and the smokes plus §70's own
+measured ladder show the design **cannot answer its question on this creature**.
+`results/n72-smoke-300k.log`. No genome change, no kernel change.
+
+### WHY NOT, IN TWO NUMBERS THAT WERE AVAILABLE BEFORE THE BUILD
+
+**1. THE PER-NEURON FORM HAS 1.5 SPIKES IN IT.** The overlap window is 400
+ticks, the vocal module has **126** neurons, and it fires ~0.47 spikes/tick:
+
+    0.47 * 400 / 126 = ~1.5 spikes per neuron per window
+
+A correlation coefficient estimated from 1.5 observations is noise, and the
+smoke shows exactly that — oracle 0.4922 at chance, mean |excess| 0.0292, and a
+residual rate correlation of +0.5468 because the dominant variance in `rho_i` is
+just `n_i`. **That division is one line and belonged in the pre-registration.**
+`calibrate-the-estimator-in-claim-units`, which is a rule this project already
+owns and which I applied to accuracies and not to spike budgets.
+
+**2. THE GROUP-LEVEL FORM IS KILLED BY §70's OWN LADDER.** Pooling into the
+genome's nine motor groups puts ~21 spikes behind each estimate, which fixes the
+estimator — and then the ARM has no room for it. §70 measured `artic9`'s oracle,
+a NINE-DIMENSIONAL RATE space, falling across the dose:
+
+    arm         shipped  tau100  tau300  tau1000  tau3000
+    artic9 orac 0.7320   0.6781  0.6112  0.5384   0.5105
+
+**At `tau1000`, where the drive finally carries the conjunction (0.7226), a
+nine-dimensional RATE space is already at 0.5384 — under the bar.** So a
+nine-dimensional CORRELATION space cannot be tested there either, and on the
+`shipped` arm where 9 dims score fine (0.7320) there is no depression and
+therefore no depletion-borne correlation to find. **The only dose with both a
+live mechanism and a testable low-dimensional oracle is `tau100`, which is
+exactly where the drive carries the least (0.5168).** The window is essentially
+empty, and it is empty according to numbers §70 had already printed.
+
+### WHAT THIS DOES AND DOES NOT CLOSE
+
+- **It closes the CHEAP READOUT.** There is no dose at which a low-dimensional
+  coincidence space on this creature can be tested against the bar, so
+  "synchrony carries what the rate misses" is **not testable here** — which is
+  different from false, and is written down as different.
+- **It does NOT adjudicate §71's two hypotheses.** A space with nothing in it
+  cannot distinguish "the threshold destroys the signal" from "our rate readout
+  cannot see what it preserved". **Hypothesis A is not confirmed by this.**
+- **The successor is therefore a MECHANISM and not another readout**: the burst
+  dose (`burst_ms` ships 0.0, so DNA v37 is off), or per-projection STP keying.
+
+### FOUR DEFECTS THE SMOKES CAUGHT, ALL MINE
+
+- **A VERDICT THAT OVERRAN ITS OWN CAVEAT, AGAIN.** The first version printed
+  "HYPOTHESIS A SURVIVES ON EVIDENCE" and then, three lines later, a note saying
+  the refusal was vacuous because the space's oracle was at chance. That is the
+  §70 mistake exactly. §69's G-ORACLE rule is a GATE and is now read as one,
+  before any verdict.
+- **A "RATE-CORRECTED BY CONSTRUCTION" CLAIM THAT WAS FALSE.** §72 registered
+  that a rate change could not move `sync-exc`. True under the independence
+  NULL, false for the signal: at fixed correlation the covariance scales with
+  the rates. The smoke measured +0.6297 and §72's own gate fired on its own
+  primary. The replacement is a correlation COEFFICIENT, normalised by a scale
+  it computes rather than by a constant.
+- **AN INVENTED VACUITY THRESHOLD.** `mean |excess| > 1e-6` is a number I chose,
+  and it PASSED a value the oracle then showed to be meaningless. Dropped; the
+  oracle does the gating, because the oracle is derived.
+- **AND I COMPARED COLUMNS FROM DIFFERENT ARMS, IN A MESSAGE CALLING IT "THE
+  DECISIVE CONTROL".** I read `artic9`'s oracle as 0.7031 off the SHIPPED arm
+  and compared it against `sync-grp` on the DOSED arm, concluding the budget was
+  ample. The same-arm figure is **0.5339**. `columns-move-with-the-primary` is a
+  memory this project wrote after §69 cost it a retracted result, and this is the
+  second time I have made it. The control is now computed in the code, on the
+  arm the verdict is read on, so it cannot be done by hand and got wrong again.

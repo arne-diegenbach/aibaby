@@ -18546,15 +18546,64 @@ constexpr const char* kSdGapName[kSdGapCount] = {"200", "800", "2000", "5000"};
 //              ever checked.
 //   vmem       rung 2, the vocal module's MEMBRANE, averaged over the window.
 //              Rung 3 is `vocal` above, the spikes §69 already measured.
-constexpr uint32_t kSdSpaces = 9;
+// §72 ADDS TWO, AND THEY ARE THE FIRST FEATURE SPACES IN THIS PROJECT THAT ARE
+// NOT RATES. Every space above is a count or a time-average of one, so if the
+// conjunction survives into the spike train as CORRELATION, nothing measured
+// since §63 could have seen it.
+//
+//   sync-excess  per vocal neuron, its COINCIDENCES with any other vocal
+//                neuron MINUS the number independent spiking would give at the
+//                observed per-neuron rates. RATE-CORRECTED BY CONSTRUCTION —
+//                see the derivation at the accumulation site. 192-dimensional
+//                exactly like `vocal`, so the paired comparison between them
+//                differs in the feature and in nothing else.
+//   sync-raw     the per-tick population-count histogram. RATE-SENSITIVE by
+//                design and reported rather than primary: §69 measured net
+//                vocal drive RISING under the dose, so a rate change alone
+//                moves this and a pass here is ambiguous.
+constexpr uint32_t kSdSpaces = 13;
 constexpr const char* kSdSpaceName[kSdSpaces] = {"auditory", "central", "vocal",
                                                  "artic9", "artic7",
                                                  "drive-exc", "drive-net",
-                                                 "drive-sim", "vmem"};
+                                                 "drive-sim", "vmem",
+                                                 "sync-exc", "sync-raw", "sync-rho",
+                                                 "sync-grp"};
 constexpr uint32_t kSdDrvExc = 5;
 constexpr uint32_t kSdDrvNet = 6;
 constexpr uint32_t kSdDrvSim = 7;
 constexpr uint32_t kSdVmem = 8;
+constexpr uint32_t kSdSyncExc = 9;
+constexpr uint32_t kSdSyncRaw = 10;
+// §72's PRIMARY MOVED HERE AFTER THE SMOKE, AND THE REASON IS A FALSIFIED CLAIM
+// OF MY OWN. The pre-registration said of `sync-exc` that "a rate change cannot
+// move it". That is true under the INDEPENDENCE NULL and false for the signal:
+// for a fixed correlation coefficient the covariance itself scales with the
+// rates, so the 300k smoke measured the summed excess tracking the population
+// rate at +0.6297 and §72's own G-SYNC-RATE gate fired on its own primary.
+//
+// `sync-rho` is the COVARIANCE DIVIDED BY ITS OWN SCALE — a correlation
+// coefficient, dimensionless and rate-free by construction rather than by
+// assertion. The normalisation is derived, not chosen.
+constexpr uint32_t kSdSyncRho = 11;
+// AND THE PRIMARY MOVED AGAIN, ON ARITHMETIC THE PRE-REGISTRATION SHOULD HAVE
+// DONE FIRST. The overlap window is 400 ticks, the vocal module has 126 neurons
+// and fires ~0.47 spikes/tick, so each neuron contributes
+//
+//     0.47 * 400 / 126 = ~1.5 SPIKES
+//
+// to its own coincidence estimate. A correlation coefficient from 1.5
+// observations is noise, which is why the per-neuron spaces came back with an
+// oracle at chance (0.4922), a residual rate correlation of +0.5468 and a mean
+// |excess| of 0.0292. `calibrate-the-estimator-in-claim-units`: that division
+// takes one line and belonged in §72's registration, not in its smoke.
+//
+// `sync-grp` pools into the genome's OWN nine motor groups — 14 neurons each,
+// the same unit `artic9` already uses, so the pooling is derived and not
+// invented. Each group-level correlation then rests on ~21 spikes instead of
+// 1.5, and every term is computed EXACTLY rather than approximated.
+constexpr uint32_t kSdSyncGrp = 12;
+// Population-count bins for `sync-raw`: 0, 1, ... 8, then 9-or-more.
+constexpr uint32_t kSdSyncBins = 10;
 // THE FIVE SPACES §69 READ ITS GATES ON, PINNED. `best_oracle` below is a MAX
 // over spaces, so letting §70's four into it would move a gate §69 already
 // passed — a new column quietly changing an old verdict's guard is exactly
@@ -18716,6 +18765,13 @@ struct SdGapRow {
   double probe_aud = 0.0;  // auditory response to the probe — the ear-arrived gate
   double probe_pre = 0.0;  // ongoing vocal rate BEFORE the probe — the SNR covariate
   double probe_rel = 0.0;  // release factor the probe meets in the scoring window
+  // §72. `sync_abs` is the vacuity number — a mean |excess| near 0 means there
+  // is no synchrony beyond independence to read and the space is VOID rather
+  // than refusing. `sync_rate_corr` is the check that the correction worked: if
+  // the summed excess still tracks the population rate across trials, a pass is
+  // not a synchrony result.
+  double sync_abs = 0.0, sync_rate_corr = 0.0, sync_cells = 0.0;
+  double sync_exc_rate_corr = 0.0;  // the same check on the REPLACED statistic
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
   bool scored = false;
@@ -18902,6 +18958,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   std::vector<double> pb1[kSdGapCount], pb2[kSdGapCount], pbpre[kSdGapCount];
   std::vector<double> pba[kSdGapCount];   // auditory response, for the ear gate
   std::vector<double> pbrel[kSdGapCount]; // release factor in the scoring window
+  // §72's vacuity and rate-confound accumulators, on the overlap window.
+  double sy_abs[kSdGapCount] = {}, sy_n[kSdGapCount] = {};
+  double sy_sx[kSdGapCount] = {}, sy_sy[kSdGapCount] = {};
+  double sy_sxx[kSdGapCount] = {}, sy_syy[kSdGapCount] = {}, sy_sxy[kSdGapCount] = {};
+  double se_sx[kSdGapCount] = {}, se_sxx[kSdGapCount] = {}, se_sxy[kSdGapCount] = {};
 
   size_t cell_at[kSdGapCount] = {};
   uint64_t tick_now = 0;
@@ -18959,6 +19020,26 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // SNR-on-active-firing account would have the readout riding on.
       double p1_voc = 0.0, p2_voc = 0.0, pre_voc = 0.0;
       double p1_aud = 0.0, p2_aud = 0.0;
+      // §72. `csync[win][j]` is neuron j's coincidence count with ANY other
+      // vocal neuron, and `shist[win][k]` how often exactly k of them fired on
+      // the same tick. Both are accumulated ONCE PER TICK and then added to each
+      // window the tick belongs to, because a coincidence is a property of the
+      // tick and not of the window.
+      std::vector<std::vector<double>> csync(kSdWinCount, std::vector<double>(wv, 0.0));
+      std::vector<std::vector<double>> shist(kSdWinCount,
+                                             std::vector<double>(kSdSyncBins, 0.0));
+      std::vector<uint32_t> vsp;  // the vocal neurons spiking on this tick
+      vsp.reserve(wv);
+      double sk[kSdWinCount] = {}, skk[kSdWinCount] = {};
+      // §72's GROUP-LEVEL terms, all EXACT. For each of the nine motor groups:
+      // its per-tick count, that count squared, the rest-of-module count, its
+      // square, and their product. Five sums per group per window is all a
+      // correlation coefficient needs, and nothing here is approximated.
+      double gsp[kSdWinCount][aibaby::kVocalGroups] = {};
+      double gspp[kSdWinCount][aibaby::kVocalGroups] = {};
+      double gssp[kSdWinCount][aibaby::kVocalGroups] = {};
+      double gsspp[kSdWinCount][aibaby::kVocalGroups] = {};
+      double gscp[kSdWinCount][aibaby::kVocalGroups] = {};
 
       // THE TRACT INDEX IS REBUILT EVERY TRIAL, AND THAT IS CORRECTNESS RATHER
       // THAN CAUTION. `prune_synapses` COMPACTS THE POOL IN PLACE — survivors
@@ -19067,6 +19148,45 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         // lead before either arrives. Counted on the module totals rather than
         // per neuron, because the registered statistic is the ASYMMETRY between
         // the two parts and that is a scalar.
+        // §72's COINCIDENCES. A neuron fires at most once per tick, so for a
+        // neuron that fired, `k_t - spike_i(t)` is simply `k_t - 1`: the number
+        // of OTHER vocal neurons that fired with it. Collected once per tick.
+        vsp.clear();
+        for (uint32_t si = 0; si < net.spike_count(); ++si) {
+          const uint32_t idx = net.spikes()[si];
+          if (idx >= ms_v.begin && idx < ms_v.begin + wv) vsp.push_back(idx - ms_v.begin);
+        }
+        {
+          const double km1 = double(vsp.size()) - 1.0;
+          const uint32_t hb = vsp.size() < kSdSyncBins ? uint32_t(vsp.size())
+                                                       : kSdSyncBins - 1;
+          const double kt = double(vsp.size());
+          // The nine motor groups are CONTIGUOUS SLICES of the vocal module —
+          // the same partition `vocal_groups()` and therefore `artic9` use.
+          double gk[aibaby::kVocalGroups] = {};
+          if (wv) {
+            for (uint32_t j : vsp) {
+              uint32_t grp = uint32_t(uint64_t(j) * aibaby::kVocalGroups / wv);
+              if (grp >= aibaby::kVocalGroups) grp = aibaby::kVocalGroups - 1;
+              gk[grp] += 1.0;
+            }
+          }
+          for (uint32_t wi = 0; wi < nwin; ++wi) {
+            const uint32_t win = wins[wi];
+            for (uint32_t j : vsp) csync[win][j] += km1;
+            shist[win][hb] += 1.0;
+            sk[win] += kt;        // §72: for Var(k), the normaliser's scale
+            skk[win] += kt * kt;
+            for (uint32_t p = 0; p < aibaby::kVocalGroups; ++p) {
+              const double s = kt - gk[p];   // the rest of the module, exactly
+              gsp[win][p] += gk[p];
+              gspp[win][p] += gk[p] * gk[p];
+              gssp[win][p] += s;
+              gsspp[win][p] += s * s;
+              gscp[win][p] += gk[p] * s;
+            }
+          }
+        }
         if (in_w1 || in_w2 || in_lead) {
           for (uint32_t si = 0; si < net.spike_count(); ++si) {
             const uint32_t idx = net.spikes()[si];
@@ -19188,6 +19308,90 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           feat[g][win][kSdDrvNet].push_back(vn);
           feat[g][win][kSdDrvSim].push_back(vs);
           feat[g][win][kSdVmem].push_back(vm);
+          // ---- §72's TWO SPACES ----
+          //
+          // THE SUBTRAHEND IS EXACT, AND THAT IS WHY THIS IS NOT A RATE. Under
+          // independent Bernoulli spiking at the OBSERVED per-neuron rates
+          // p_j = n_j / T,
+          //
+          //   E[c_i] = SUM_t p_i * SUM_{j!=i} p_j
+          //          = T * p_i * (P - p_i)          with P = SUM_j p_j = K / T
+          //          = n_i * (K - n_i) / T
+          //
+          // so `excess_i` is ZERO IN EXPECTATION FOR ANY RATE PROFILE WHATEVER.
+          // §69 measured net vocal drive RISING under the dose, so a statistic
+          // that moved with rate would have read the dose and not the
+          // correlations; this one cannot. It is the only rate-free thing in
+          // the probe and the reason §72 is a readout rather than a mechanism.
+          const double T = gn[win] ? double(gn[win]) : 1.0;
+          double K = 0.0;
+          for (uint32_t j = 0; j < wv; ++j) K += bins[win][size_t(wa) + wc + j];
+          std::vector<double> vx(wv, 0.0);
+          for (uint32_t j = 0; j < wv; ++j) {
+            const double nj = bins[win][size_t(wa) + wc + j];
+            vx[j] = csync[win][j] - nj * (K - nj) / T;
+          }
+          std::vector<double> vh(kSdSyncBins, 0.0);
+          for (uint32_t k = 0; k < kSdSyncBins; ++k) vh[k] = shist[win][k] / T;
+          // §72's PRIMARY: the covariance divided by its own scale, which is a
+          // CORRELATION COEFFICIENT and therefore dimensionless.
+          //
+          //   cov_i = excess_i / T
+          //   rho_i = cov_i / sqrt( Var(x_i) * Var(S_i) )
+          //
+          // with `x_i` neuron i's binary per-tick spike and `S_i = k - x_i` the
+          // rest of the population. `Var(x_i) = p_i (1 - p_i)` exactly, and
+          // `Var(S_i) ~ Var(k)` because one neuron of `wv` moves the population
+          // count negligibly — an approximation, stated rather than hidden.
+          // Unlike the covariance, this does not scale with the rates, which is
+          // what the smoke showed `sync-exc` doing at +0.6297.
+          const double kbar = sk[win] / T;
+          const double vark = skk[win] / T - kbar * kbar;
+          std::vector<double> vrho(wv, 0.0);
+          if (vark > 0.0) {
+            for (uint32_t j = 0; j < wv; ++j) {
+              const double pj = bins[win][size_t(wa) + wc + j] / T;
+              const double varj = pj * (1.0 - pj);
+              if (varj <= 0.0) continue;
+              vrho[j] = (vx[j] / T) / std::sqrt(varj * vark);
+            }
+          }
+          // §72's PRIMARY: the same correlation coefficient at GROUP level, where
+          // ~21 spikes stand behind each estimate instead of 1.5, and every
+          // variance is computed from its own accumulated sums rather than
+          // approximated.
+          std::vector<double> vg(aibaby::kVocalGroups, 0.0);
+          for (uint32_t p = 0; p < aibaby::kVocalGroups; ++p) {
+            const double ma = gsp[win][p] / T, mb = gssp[win][p] / T;
+            const double va = gspp[win][p] / T - ma * ma;
+            const double vb = gsspp[win][p] / T - mb * mb;
+            const double cv = gscp[win][p] / T - ma * mb;
+            if (va > 0.0 && vb > 0.0) vg[p] = cv / std::sqrt(va * vb);
+          }
+          feat[g][win][kSdSyncExc].push_back(vx);
+          feat[g][win][kSdSyncRaw].push_back(vh);
+          feat[g][win][kSdSyncRho].push_back(vrho);
+          feat[g][win][kSdSyncGrp].push_back(vg);
+          // The two numbers that decide whether this space is VACUOUS, and the
+          // one that decides whether the correction worked. Accumulated on the
+          // OVERLAP window, which is where the primary is read.
+          if (win == kSdWBE) {
+            double aa = 0.0, ss = 0.0, ee = 0.0;
+            for (uint32_t j = 0; j < wv; ++j) {
+              aa += std::fabs(vrho[j]);
+              ss += vrho[j];
+              ee += vx[j];
+            }
+            sy_abs[g] += aa / double(wv ? wv : 1);
+            sy_n[g] += 1.0;
+            const double rate = K / T;
+            sy_sx[g] += ss; sy_sy[g] += rate;
+            sy_sxx[g] += ss * ss; sy_syy[g] += rate * rate; sy_sxy[g] += ss * rate;
+            // The SAME check on the registered-but-replaced statistic, kept so
+            // the reason for the replacement is a printed number and not a
+            // claim about a run nobody can see.
+            se_sx[g] += ee; se_sxx[g] += ee * ee; se_sxy[g] += ee * rate;
+          }
         }
       }
       // §70's PREMISE CHECK, accumulated on the B window and on the cells that
@@ -19263,6 +19467,18 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (pc_mn[g] > 0.0) row.rel_bmean = pc_m[g] / pc_mn[g];
     if (pc_an[g] > 0.0) row.rel_amean = pc_a[g] / pc_an[g];
     if (pc_trials[g] > 0.0) row.samp_frac = pc_samp[g] / pc_trials[g];
+    if (sy_n[g] > 1.0) {
+      const double n = sy_n[g];
+      row.sync_cells = n;
+      row.sync_abs = sy_abs[g] / n;
+      const double vx = sy_sxx[g] - sy_sx[g] * sy_sx[g] / n;
+      const double vy = sy_syy[g] - sy_sy[g] * sy_sy[g] / n;
+      const double cxy = sy_sxy[g] - sy_sx[g] * sy_sy[g] / n;
+      row.sync_rate_corr = (vx > 0.0 && vy > 0.0) ? cxy / std::sqrt(vx * vy) : 0.0;
+      const double ve = se_sxx[g] - se_sx[g] * se_sx[g] / n;
+      const double cey = se_sxy[g] - se_sx[g] * sy_sy[g] / n;
+      row.sync_exc_rate_corr = (ve > 0.0 && vy > 0.0) ? cey / std::sqrt(ve * vy) : 0.0;
+    }
     // §71's asymmetry contrast, computed BEFORE the fold split because it is
     // not a held-out readout: it is a per-trial physical measurement split by a
     // label the host knows. There is no classifier to leak through, and the
@@ -20597,6 +20813,180 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       sd_stat(asm_[kSdN71Dose][0][rr[k]], o2, os2);
       std::printf("      %s  %.4f +- %.4f  (oracle %.4f)   §70 read %.4f%s\n", rn[k], m, se,
                   o2, n70[k], o2 >= kSdBar ? "" : "   <- NOT TESTABLE");
+    }
+    std::printf("\n");
+  }
+
+  // ---- §72: IS THE SIGNAL IN THE CORRELATIONS WE NEVER MEASURED? ----
+  //
+  // §71 left two readings that predict its three numbers EXACTLY: the threshold
+  // destroys the signal, or our RATE readout cannot see what the threshold
+  // preserved. This block separates them, on the arm §71 already pinned.
+  {
+    const uint32_t a = kSdN71Dose;        // fresh, pre-pinned, confirmed
+    const uint32_t z = kSdN71Ref;         // the zero-dose arm: no depletion
+    auto cell = [&](uint32_t arm, uint32_t sp, double& m, double& se) {
+      sd_stat(mbe[arm][0][sp], m, se);
+    };
+    double sm = 0, sse = 0, rm = 0, rse = 0, om = 0, ose = 0, nm = 0, nse = 0;
+    double zm = 0, zse = 0, zo = 0, zos = 0, hm = 0, hse = 0;
+    double em = 0, ese = 0;
+    cell(a, kSdSyncGrp, sm, sse);          // THE PRIMARY, group level
+    cell(a, kSdSyncRho, em, ese);          // per-neuron: UNDERPOWERED, reported
+    cell(a, kSdStpPrimary, rm, rse);
+    cell(a, kSdSyncRaw, hm, hse);
+    cell(z, kSdSyncGrp, zm, zse);
+    sd_stat(asm_[a][0][kSdSyncGrp], om, ose);
+    sd_stat(nbe[a][0][kSdSyncGrp], nm, nse);
+    sd_stat(asm_[z][0][kSdSyncGrp], zo, zos);
+    double pdm = 0, pds = 0;
+    {
+      std::vector<double> t;
+      for (const SdOut& o : res[a])
+        if (o.ok && o.gap[0].scored)
+          t.push_back(o.gap[0].mile_be[kSdSyncGrp] - o.gap[0].mile_be[kSdStpPrimary]);
+      sd_stat(t, pdm, pds);
+    }
+    double abm = 0, abs_se = 0, rcm = 0, rcs = 0, ercm = 0, ercs = 0;
+    {
+      std::vector<double> va, vr, ve;
+      for (const SdOut& o : res[a])
+        if (o.ok && o.gap[0].scored && o.gap[0].sync_cells > 1.0) {
+          va.push_back(o.gap[0].sync_abs);
+          vr.push_back(o.gap[0].sync_rate_corr);
+          ve.push_back(o.gap[0].sync_exc_rate_corr);
+        }
+      sd_stat(va, abm, abs_se);
+      sd_stat(vr, rcm, rcs);
+      sd_stat(ve, ercm, ercs);
+    }
+
+    std::printf("  §72 IS THE SIGNAL IN THE CORRELATIONS? — the first feature space in\n"
+                "  this probe that is NOT a rate. Read on `%s`, the arm §71 pinned\n"
+                "  in advance and confirmed, at the overlap window.\n\n"
+                "    excess_i = c_i - n_i (K - n_i) / T, where c_i is neuron i's\n"
+                "    coincidences with any other vocal neuron. The subtrahend is EXACT for\n"
+                "    independent spiking at the OBSERVED per-neuron rates, so this is zero\n"
+                "    in expectation for any rate profile and a rate change cannot move it.\n\n",
+                kSdArms[a].name);
+
+    // THE DIMENSION-MATCHED RATE CONTROL, AND IT IS WHAT MAKES A CHANCE ORACLE
+    // INTERPRETABLE. `sync-grp` is nine-dimensional and so is `artic9` — but
+    // `artic9` is a RATE space. If a nine-dimensional RATE space scores a
+    // healthy oracle on this budget while the nine-dimensional CORRELATION
+    // space does not, the chance reading is a property of the SPACE and not of
+    // the sample, which is the only way to tell EMPTY from UNDERPOWERED.
+    // Printed, rather than worked out by hand after the fact.
+    double a9 = 0, a9s = 0;
+    sd_stat(asm_[a][0][kSdCoPrimary], a9, a9s);
+    const bool g_sync_dim = a9 >= kSdBar;
+    std::printf("    G-SYNC-DIM   `sync-grp` oracle (9 dims, CORRELATION)   %.4f\n"
+                "                 `artic9`   oracle (9 dims, RATE)          %.4f\n"
+                "                 -> %s\n",
+                om, a9,
+                g_sync_dim
+                    ? "this budget CAN score 9 dimensions, so a chance\n"
+                      "                    oracle above is EMPTINESS and not sample size"
+                    : "the rate space of the same size ALSO fails,\n"
+                      "                    so this budget cannot tell empty from underpowered");
+    // REPORTED, AND NO LONGER A GATE. §72 registered a vacuity threshold of
+    // 1e-6 — a number I invented — and it passed a mean |excess| of 0.0292 that
+    // the oracle then showed to be meaningless. The gate that does the work is
+    // the oracle, which is derived.
+    const bool g_sync_live = true;
+    const bool g_sync_rate = std::fabs(rcm) < 0.5;
+    std::printf("    mean |excess| per neuron, REPORTED ONLY        %.4f\n", abm);
+    std::printf("    G-SYNC-RATE  corr(summed statistic, population rate) across trials\n"
+                "                 `sync-rho`, THE PRIMARY        %+.4f +- %.4f   %s\n"
+                "                 `sync-exc`, registered then replaced  %+.4f +- %.4f\n"
+                "                 a pass that TRACKS RATE is not a synchrony result, and\n"
+                "                 the second line is why the primary moved: §72 registered\n"
+                "                 that a rate change could not move `sync-exc`, which is\n"
+                "                 true under the independence NULL and false for the\n"
+                "                 signal — for a fixed correlation the covariance scales\n"
+                "                 with the rates. The claim was mine and the smoke broke it.\n",
+                rcm, rcs, g_sync_rate ? "PASS" : "SEE LIMITATION", ercm, ercs);
+
+    std::printf("\n      space                       accuracy          oracle    null\n"
+                "      sync-grp  (PRIMARY, 9 grp) %.4f+-%.4f    %.4f  %.4f\n"
+                "      sync-rho  (per neuron)     %.4f+-%.4f   <- ~1.5 spikes each: NOISE\n"
+                "      vocal     (the rate)       %.4f+-%.4f\n"
+                "      sync-raw  (rate-sensitive) %.4f+-%.4f\n"
+                "      sync-grp at ZERO DOSE      %.4f+-%.4f    %.4f   <- the control\n\n"
+                "      PAIRED  sync-grp minus vocal, same trials  %+.4f +- %.4f (%.1f SE)\n"
+                "      the bar                                    %.3f\n",
+                sm, sse, om, nm, em, ese, rm, rse, hm, hse, zm, zse, zo,
+                pdm, pds, pds > 0.0 ? std::fabs(pdm) / pds : 0.0, kSdBar);
+
+    // ---- THE REGISTERED CLAUSES, AND THE ORDER IS PART OF THE REGISTRATION ----
+    //
+    // THE VACUOUS-ORACLE CASE COMES FIRST, and the smoke is why. The first
+    // version printed "HYPOTHESIS A SURVIVES ON EVIDENCE" and then, three lines
+    // later, a note saying the refusal was vacuous because the space's own
+    // oracle was at chance. Those two sentences contradict each other, and it is
+    // the §70 mistake exactly: a verdict that overruns its own caveat. §69's
+    // G-ORACLE rule is a GATE, so it is read as one, before any verdict.
+    const bool testable = om >= kSdBar;
+    const bool clears = sm >= kSdBar && testable;
+    const bool beats = pds > 0.0 && pdm >= 2.0 * pds;
+    const bool zero_dose_clears = zm >= kSdBar && zo >= kSdBar;
+    std::printf("\n");
+    if (!testable) {
+      std::printf("    -> VOID, NOT REFUSED. `sync-grp`'s OWN assembled oracle is %.4f,\n"
+                  "       under the %.3f bar: neither word is decodable from this space at\n"
+                  "       full scale, so no readout of it could have reached the bar and a\n"
+                  "       refusal here says nothing about correlations. §69's G-ORACLE rule,\n"
+                  "       applied to a space that did not exist when it was written.\n"
+                  "       %s\n",
+                  om, kSdBar,
+                  g_sync_dim
+                      ? "AND THE DIMENSION-MATCHED CONTROL MAKES THAT A RESULT: a\n"
+                        "       nine-dimensional RATE space scores its oracle on this very\n"
+                        "       budget, so the coincidence structure of this module is EMPTY\n"
+                        "       of word identity rather than merely thinly sampled.\n"
+                        "       HYPOTHESIS B IS NOT SUPPORTED, and hypothesis A is not\n"
+                        "       CONFIRMED either — a space with nothing in it cannot\n"
+                        "       adjudicate between them. What it does close is the cheap\n"
+                        "       readout: the next thing is a MECHANISM, the burst dose or\n"
+                        "       per-projection STP keying."
+                      : "AND THE DIMENSION-MATCHED CONTROL FAILS TOO, so this\n"
+                        "       budget cannot tell an empty space from an underpowered one\n"
+                        "       and NOTHING is concluded. The successor is a longer window or\n"
+                        "       a coarser statistic, not a verdict.");
+    } else if (!g_sync_live) {
+      std::printf("    -> VOID. There is no synchrony beyond independent spiking in this\n"
+                  "       module, so `sync-exc` is a space with nothing in it and no\n"
+                  "       readout of it could have said anything. HYPOTHESIS A survives by\n"
+                  "       default and NOT by evidence — the instrument could not have\n"
+                  "       detected B.\n");
+    } else if (zero_dose_clears) {
+      std::printf("    -> VOID, AND AN ARTEFACT. Synchrony carries same/different at %.4f\n"
+                  "       WITH NO DEPRESSION IN THE CREATURE, so the statistic is reading\n"
+                  "       something other than a depletion-borne correlation.\n",
+                  zm);
+    } else if (clears && beats) {
+      std::printf("    -> HYPOTHESIS B, AND IT IS THE EXPENSIVE OUTCOME. The threshold\n"
+                  "       PRESERVED the conjunction and our rate readout could not see it:\n"
+                  "       %.4f against the rate space's %.4f, paired %+.4f (%.1f SE), on a\n"
+                  "       testable oracle of %.4f. EVERY RATE-ONLY NULL SINCE §63 IS\n"
+                  "       RE-OPENED AS A MEASUREMENT ARTEFACT, which is more prior work than\n"
+                  "       any other outcome of this section invalidates, and is why this\n"
+                  "       clause is reported first.\n",
+                  sm, rm, pdm, pds > 0.0 ? pdm / pds : 0.0, om);
+    } else if (beats) {
+      std::printf("    -> CORRELATIONS CARRY SOME OF IT. `sync-exc` beats the rate space\n"
+                  "       (%+.4f +- %.4f) and stays under the %.3f bar at %.4f. The\n"
+                  "       successor is a RICHER coincidence statistic — lags, pairs, a\n"
+                  "       window sweep — and NOT a mechanism.\n",
+                  pdm, pds, kSdBar, sm);
+    } else {
+      std::printf("    -> HYPOTHESIS A SURVIVES ON EVIDENCE. The rate-corrected coincidence\n"
+                  "       readout does not beat the rate readout (%+.4f +- %.4f) and the\n"
+                  "       synchrony that exists (mean |excess| %.4f) does not carry the\n"
+                  "       label. §70 and §71 stand as written: the threshold really does\n"
+                  "       destroy it. The successor is the BURST DOSE (`burst_ms` ships 0)\n"
+                  "       or per-projection STP keying.\n",
+                  pdm, pds, abm);
     }
     std::printf("\n");
   }
