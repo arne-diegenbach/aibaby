@@ -15255,3 +15255,90 @@ gate lines — total slept trials, the earliest first-sleep tick — necessarily
 change, because they aggregate over arms. **§69's and §70's per-arm result
 columns are the regression gate and they must not move**; the pooled counts are
 not that gate and must not be quoted as if they were.
+
+## §71 RESULT — §70's LOCALISATION CONFIRMED, THE PROBE REFUSED, MY DERIVED SIGN REFUTED
+
+`--experiment samediff`, 1,680,000 ticks, 13 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934` UNCHANGED, `results/n71-samediff-1680k.log`.
+`verify PASS`, hash `ad96f882becbee92` unmoved, 24 experiments — §71 changed no
+kernel and no genome, and both were registered as gates.
+
+### THE RESULT THAT MATTERS: §70's LOCALISATION REPLICATES ON FRESH CREATURES
+
+Twelve creatures §70 never saw (seed offset 12), with the arm **pinned in
+advance** instead of selected off §70's own ladder:
+
+    rung                §71 (fresh, pre-pinned)   §70 (selected on its ladder)
+    1  drive            0.7175 +- 0.0278          0.7226      oracle 1.0000
+    2  membrane         0.6354 +- 0.0169          0.6463      oracle 0.9239
+    3  spikes           0.5469 +- 0.0144          0.5940      oracle 0.7498
+
+All three replicate within 1-2 SE. **§70's lead is now a VERDICT: the delivered
+drive carries same/different above the 0.650 bar, the membrane sits just under
+it, the spikes do not carry it, and rung 3's own oracle is 0.7498 so that loss
+is real rather than vacuous. THE LOSS IS AT THE THRESHOLD.** This is what §71
+was built to settle and it settles it.
+
+### THE PROBE IS REFUSED, AND THE REFUSAL IS CLEAN
+
+    probe at the dose, paired           -0.0081 +- 0.0280   0.3 SE
+    with the SELF-VOICE SILENCED        +0.0070 +- 0.0277   0.3 SE
+    the asymmetry co-primary            +0.1024 +- 2.1019   0.0 SE
+    MECHANISM NULL (zero dose)          +0.0217 +- 0.0291   0.7 SE — does NOT fire
+    no-dose asymmetry (must be flat)    +0.6942 +- 1.7208   0.4 SE — flat
+    G-EAR, paired one-tailed            +12.19 +- 0.44      28.0 SE — it ARRIVED
+
+The probe reaches the ear, the dose is live, the mechanism null stays silent and
+the probe **does nothing** — with or without the creature's own echo. The
+activity-silent literature's readout does not transfer to this creature.
+
+### MY DERIVED PREDICTION WAS REFUTED, IN THE DIRECTION THE SMOKE WARNED
+
+    A1B1 minus A0B0, offset-free    -9.595 +- 4.583   2.1 SE   PREDICTED POSITIVE
+
+The concavity argument — depletion is concave, so concentrating it on one
+channel set wastes less of it and a SAME trial should show the larger probe
+asymmetry — is **wrong about this creature**. The signed cells key to the **most
+recent** word instead of to the match, and the sign replicates the 300k smoke
+(-22.5 then, -9.6 here). **The sign was registered before the smoke, so this
+counts as a refutation and not as something to re-narrate.**
+
+### TWO THINGS I GOT WRONG IN THE BUILD, AND THEY ARE BOTH DISCLOSED
+
+- **THE SELF-VOICE ARMS WERE ADDED FOR A CONFOUND THAT DID NOT REPLICATE.** The
+  300k smoke showed a label-dependent asymmetry on the ZERO-DOSE arm, which is
+  why those two arms exist. At full size that signal is **flat** (0.4 SE) and
+  the mechanism null does not fire. The arms were therefore not needed for their
+  stated purpose — and they are what makes the refusal clean, because they show
+  the probe does nothing with the echo removed too. Reported as a wrong call
+  that paid off for a different reason, not as foresight.
+- **A LATENT MISALIGNMENT IN EVERY PAIRED STATISTIC, INCLUDING §69's.** The
+  pooled columns are built by pushing only cells that SCORED, so index k is the
+  k-th scored creature and not creature k, while `res[a][i]` is rep i. Two arms
+  scoring different creatures would have paired creature 3 against creature 4
+  positionally and silently, **with a SHRUNKEN SE** because a between-creature
+  difference would be sitting inside a within-creature one. **It did not bite:
+  624 gap-cells scored is 13 x 12 x 4, every cell, so filtered order equalled
+  rep order — luck, not design.** Every paired statistic now pairs BY REP INDEX
+  and requires both arms to have scored that rep. **The fix is a demonstrated
+  no-op on aligned data: every paired figure is byte-identical before and after
+  (carrier +0.1042 +- 0.0402, primary -0.0208 +- 0.0506, null -0.0833 +- 0.0602,
+  quiet +0.0417 +- 0.0387, consequence +0.0833 +- 0.0281), which is
+  `re-derive-after-an-estimator-fix` satisfied by measurement rather than by
+  argument.** §71's archived numbers therefore stand.
+
+### THE SUCCESSOR, AND IT IS A READOUT WE HAVE NEVER BUILT
+
+**EVERY FEATURE SPACE THIS PROJECT HAS EVER MEASURED IS A RATE OR A COUNT.** So
+"the threshold destroys the signal" and "our RATE readout cannot see what the
+threshold preserved" **predict the same three numbers above**, and nothing run so
+far distinguishes them. The literature pass during this run found the regime
+named: sparse synchrony in 0.4-0.6% of synapses changes output firing with input
+rates UNCHANGED, and spike-time synchronisation is independent of rate. A
+**synchrony feature space costs no genome change, no kernel change and no new
+mechanism** — it reads spikes already recorded, per tick instead of per window.
+Its caution is registered with it: depression can erase spatiotemporal structure
+and correlations inflate variability, so it needs §71's own two controls. See
+`README.md`'s References under *"Getting a graded signal through a spike
+threshold"*. Burst multiplexing is second and needs a dose, because
+`burst_ms = 0.0` ships DNA v37 off.

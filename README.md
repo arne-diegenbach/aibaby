@@ -20012,6 +20012,70 @@ creature has been measured to do.
   `match-at-the-operating-point`, applied to the one constant §70 chose by ladder.
   Salmasi's independence claim is directly testable against our own `tau` ladder.
 
+**Getting a graded signal through a spike threshold — the §72 lead.**
+Found 2026-11-14 after §71. **Nothing here is built.** §71 CONFIRMED §70's
+localisation on fresh pre-pinned creatures: the delivered drive carries
+same/different (0.7175 ± 0.0278, oracle 1.0000), the vocal MEMBRANE carries
+less (0.6354 ± 0.0169), and the SPIKES do not (0.5469 ± 0.0144 on a testable
+0.7498 oracle). The question is now narrow: **how does a circuit read a graded
+membrane signal out through a spike threshold without destroying it?**
+
+- **SYNCHRONY, AND IT EXPOSES A BLIND SPOT IN OUR OWN INSTRUMENT.** Rossant et
+  al. / Kuhn-style results: brief synchronous volleys raise a neuron's output
+  firing **with the input rates unchanged**, and in the balanced regime
+  **synchrony in 0.4–0.6% of synapses is enough** — *Sensitivity of noisy
+  neurons to coincident inputs*, J Neurosci 31(47):17193
+  <https://www.jneurosci.org/content/31/47/17193>, robust to jitter and to 50%
+  transmission failure. *Noise suppression and surplus synchrony by coincidence
+  detection* <https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3617020/> gives the
+  mechanism; *Single neuron firing properties impact correlation-based population
+  coding*, J Neurosci 32(4):1413 <https://www.jneurosci.org/content/32/4/1413>
+  reports spike-time synchronization **unaffected by firing rate**, "thus
+  enabling synchrony- and rate-based coding to operate independently", and
+  separates **coincidence detectors** (rate comodulation *and* synchronization)
+  from **integrators** (rate only). A rate-synchrony analysis adds that small
+  input synchrony becomes large output synchrony **because membranes sit close to
+  threshold**. **EVERY FEATURE SPACE THIS PROJECT HAS EVER BUILT IS A RATE OR A
+  COUNT** (`bins[win][neuron] += 1.0`), so if the conjunction survives into the
+  spike train as correlation rather than as rate, **our readout is blind to it by
+  construction** — a measurement gap, not a mechanism gap. §71's signature is
+  exactly the regime: a common-mode shift present in the membrane and absent
+  from the rate. **Needs NO genome and NO kernel change.**
+  **AND THE CAUTION IS IN THE SAME LITERATURE:** models of stochastic depressing
+  synapses report that at high input rates depression "erases from the synaptic
+  current any trace of the spatiotemporal structure of the input" and that spike
+  correlations "increase this variability enormously"
+  (<https://arxiv.org/pdf/1210.6989>), so the correlations may be noise rather
+  than signal here. The lead needs §71's own controls — the label-destroyed null
+  and the zero-dose mechanism null — and is not a free win.
+
+- **BURST MULTIPLEXING, AND IT USES M6's OWN WORD.** Naud & Sprekeler, *Sparse
+  bursts optimize information transmission in a multiplexed neural code*, PNAS
+  115 <https://www.pnas.org/doi/10.1073/pnas.1720995115> (preprint as *Burst
+  ensemble multiplexing*, <https://www.biorxiv.org/content/10.1101/143636v2.full>);
+  and *Neural burst codes disguised as rate codes*, Scientific Reports 11
+  <https://www.nature.com/articles/s41598-021-95037-z>. Burst rate and event rate
+  are **two channels in one spike train**, carrying dendritic and somatic input
+  respectively, and **"burst rate signals the CONJUNCTION of somatic and dendritic
+  inputs"** — a conjunction, which is what M6 asks for. The demultiplexing is
+  done by downstream populations **using short-term plasticity and disynaptic
+  inhibition**, which is machinery this creature already owns (DNA v36 on every
+  tract, plus the inhibitory `auditory -> vocal` limb). **Cost: `burst_ms = 0.0`
+  in `dna/default.toml`, so DNA v37 ships OFF and `burst_rate()` returns 0** —
+  this needs a host-side dose like §69's STP patch, which makes it a mechanism
+  change rather than a pure readout and ranks it second. **The authors call the
+  neocortical link "tentative" and the framework "supported mainly by
+  computational modeling, not yet confirmed experimentally in neocortex."**
+
+- **NOT A FINDING, RECORDED SO IT IS NOT LATER SOLD AS ONE.** §71's signed probe
+  cells keyed to the **most recent** word rather than to the match, against a
+  derived prediction that was refuted at 2.1 SE. The neonate references above
+  report left-lateralised repetition **ENHANCEMENT** to ABB and adjacency-only
+  sensitivity, so a recency-keyed enhancement does have a match in the infant
+  data. **That is post-hoc pattern-matching on a refuted prediction** — exactly
+  what pre-registration exists to prevent — and it needs its own registration
+  before it is anything at all.
+
 **Sequence generation, and why it needs more than STDP.**
 
 - Fiete, I. R., Senn, W., Wang, C. Z. H. & Hahnloser, R. H. R. (2010).

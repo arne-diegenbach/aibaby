@@ -19567,6 +19567,35 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     });
   }
 
+  // EVERY PAIRED DIFFERENCE IN THIS PROBE GOES THROUGH HERE, AND THE REASON IS
+  // A LATENT MISALIGNMENT THAT HAS BEEN IN §69 SINCE IT WAS WRITTEN.
+  //
+  // The pooled columns below (`mile`, `mbe`, ...) are built by pushing only the
+  // cells that SCORED, so index k in one of those vectors is the k-th scored
+  // creature and NOT creature k. `res[a][i]` is rep i — `parallel_reps` writes
+  // `out[i] = job(i)` — but a filtered vector loses that. Two arms that score
+  // different creatures therefore pair creature 3 of one against creature 4 of
+  // the other, positionally and silently, and the SE shrinks because a
+  // between-creature difference has been smuggled into a within-creature one.
+  //
+  // IT DID NOT BITE IN THIS RUN: 624 gap-cells scored is 13 arms x 12 creatures
+  // x 4 gaps, so every cell scored and the filtered order equals the rep order.
+  // That is luck, not design — one short arm would have been enough — so every
+  // paired statistic now pairs BY REP INDEX and requires both arms to have
+  // scored that rep. `plausible-wrong-number`: the misaligned version returns a
+  // number of exactly the right shape.
+  auto paired_rep = [&](uint32_t a, uint32_t b, const double (SdGapRow::*arr)[kSdSpaces],
+                        uint32_t sp, uint32_t g, double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[a].size() && i < res[b].size(); ++i) {
+      const SdOut& x = res[a][i];
+      const SdOut& y = res[b][i];
+      if (x.ok && y.ok && x.gap[g].scored && y.gap[g].scored)
+        d.push_back((x.gap[g].*arr)[sp] - (y.gap[g].*arr)[sp]);
+    }
+    sd_stat(d, m, se);
+  };
+
   // ---- §69's DOSE GATES, READ BEFORE ANY VERDICT ----
   //
   // A dose arm that patched nothing, or that patched something the kernel then
@@ -19796,13 +19825,9 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     // creature, so the between-creature variance cancels instead of being
     // carried into the error bar. The best rung is still printed, labelled as
     // selected on the data, and carries no verdict.
-    std::vector<double> dif;
-    const std::vector<double>& vp = mile[kSdStpCarrier][0][kSdStpPrimary];
-    const std::vector<double>& vs_ = mile[kSdArmShipped][0][kSdStpPrimary];
-    for (size_t i = 0; i < vp.size() && i < vs_.size(); ++i) dif.push_back(vp[i] - vs_[i]);
     double dm = 0, ds = 0, cm = 0, cs2 = 0;
-    sd_stat(dif, dm, ds);
-    sd_stat(vp, cm, cs2);
+    paired_rep(kSdStpCarrier, kSdArmShipped, &SdGapRow::milestone, kSdStpPrimary, 0, dm, ds);
+    sd_stat(mile[kSdStpCarrier][0][kSdStpPrimary], cm, cs2);
     // G-ORACLE, AND THE 1.68M RUN IS WHAT FORCED IT. The dose does not merely
     // fail to deliver a comparison — it DESTROYS THE REPRESENTATION BEING
     // COMPARED, monotonically in tau_rec. On the co-primary at gap 200 the
@@ -20183,15 +20208,19 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       // trials, so the paired per-creature difference between §68's simulated
       // drive and the kernel's measured one answers it directly, with an SE and
       // nothing chosen.
-      std::vector<double> sdif;
-      {
-        const std::vector<double>& vsim = mbe[ca][0][kSdDrvSim];
-        const std::vector<double>& vmes = mbe[ca][0][kSdDrvExc];
-        for (size_t i = 0; i < vsim.size() && i < vmes.size(); ++i)
-          sdif.push_back(vsim[i] - vmes[i]);
-      }
+      // Both columns come from the SAME arm here, so the filtered order is
+      // identical for the two of them and a positional pairing would in fact be
+      // safe — but it goes through `paired_rep` anyway so that no paired
+      // statistic in this probe is one audit away from the misalignment above.
       double sdm = 0, sds = 0;
-      sd_stat(sdif, sdm, sds);
+      paired_rep(ca, ca, &SdGapRow::mile_be, kSdDrvSim, 0, sdm, sds);
+      {
+        std::vector<double> t;
+        for (const SdOut& o : res[ca])
+          if (o.ok && o.gap[0].scored)
+            t.push_back(o.gap[0].mile_be[kSdDrvSim] - o.gap[0].mile_be[kSdDrvExc]);
+        sd_stat(t, sdm, sds);
+      }
       const bool flatters = sds > 0.0 && sdm >= 2.0 * sds;
       std::printf("\n    THE CONSEQUENCE — does the SIMULATION flatter the mechanism?\n"
                   "      §68's drive minus the kernel's, paired, same trials and units\n"
@@ -20283,11 +20312,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       sd_stat(mile[a][0][kSdStpPrimary], m, se);
     };
     auto paired = [&](uint32_t a, uint32_t b, double& m, double& se) {
-      std::vector<double> d;
-      const std::vector<double>& va = mile[a][0][kSdStpPrimary];
-      const std::vector<double>& vb = mile[b][0][kSdStpPrimary];
-      for (size_t i = 0; i < va.size() && i < vb.size(); ++i) d.push_back(va[i] - vb[i]);
-      sd_stat(d, m, se);
+      paired_rep(a, b, &SdGapRow::milestone, kSdStpPrimary, 0, m, se);
     };
     auto col = [&](uint32_t a, double SdGapRow::*f, double& m, double& se) {
       std::vector<double> v;
@@ -20449,12 +20474,8 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       uint32_t sl1 = 0, sl2 = 0, at1 = 0, at2 = 0;
       for (const SdOut& o : res[kSdN71Dose]) { sl1 += o.slept; at1 += o.attempted; }
       for (const SdOut& o : res[kSdN71DoseProbe]) { sl2 += o.slept; at2 += o.attempted; }
-      std::vector<double> bd;
-      const std::vector<double>& vb1 = mbe[kSdN71Dose][0][kSdDrvExc];
-      const std::vector<double>& vb2 = mbe[kSdN71DoseProbe][0][kSdDrvExc];
-      for (size_t i = 0; i < vb1.size() && i < vb2.size(); ++i) bd.push_back(vb2[i] - vb1[i]);
       double bdm = 0, bds = 0;
-      sd_stat(bd, bdm, bds);
+      paired_rep(kSdN71DoseProbe, kSdN71Dose, &SdGapRow::mile_be, kSdDrvExc, 0, bdm, bds);
       std::printf("\n    WHAT THE PAIRING ACTUALLY IS, stated rather than assumed. The probe\n"
                   "    sits entirely after B, so it cannot affect the SAME trial's during-B\n"
                   "    state. It CAN change the creature's ongoing trajectory, and trial N's\n"
