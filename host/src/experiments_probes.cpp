@@ -18639,8 +18639,26 @@ constexpr uint64_t kSdRoundTicks =
 // at 0.8269 just BEFORE B arrives, so the one moment both words are present is
 // DURING B. `audprobe` measured the ear classifying a word within 50 ms
 // (0.916), so B is legible in this window and A's trace is at its freshest.
-enum SdWin { kSdWA = 0, kSdWG, kSdWBE, kSdWB, kSdWS, kSdWinCount };
+// §73 APPENDS TWO, AND APPENDING IS THE POINT: every existing index keeps its
+// value, so §64-§71's columns are computed from the same windows they always
+// were and remain a bit-for-bit regression gate.
+//
+// THE SWEEP IS ALREADY HALF-BUILT. The four rungs are 100 / 200 / 400 / 900 ms
+// from B's onset, and two of them exist: `kSdWBE` IS the 400 ms rung, and
+// `kSdWB` IS the 900 ms rung, because B is exactly `kSdWord` = 900 ms long. So
+// only 100 and 200 are new, and the 900 ms ceiling is EXACT rather than chosen
+// — the window cannot outlast the word.
+enum SdWin {
+  kSdWA = 0, kSdWG, kSdWBE, kSdWB, kSdWS,
+  kSdWBE100, kSdWBE200,
+  kSdWinCount
+};
 constexpr uint64_t kSdOverlap = 400;  // width of kSdWBE
+// §73's four rungs, in event-budget order. 0.00373 spikes/tick/neuron on the
+// `tau1000` arm puts 0.37 / 0.75 / 1.49 / 3.36 spikes per neuron behind them.
+constexpr uint32_t kSdSweep = 4;
+constexpr uint64_t kSdSweepMs[kSdSweep] = {100, 200, 400, 900};
+constexpr uint32_t kSdSweepWin[kSdSweep] = {kSdWBE100, kSdWBE200, kSdWBE, kSdWB};
 
 // §65. PAIRS OF SPACES, FIXED BEFORE THE RUN: the space that carries A, and
 // the space that carries B. §64 measured A at 0.7727 on artic9 and B at 1.0000
@@ -18770,6 +18788,14 @@ struct SdGapRow {
   // than refusing. `sync_rate_corr` is the check that the correction worked: if
   // the summed excess still tracks the population rate across trials, a pass is
   // not a synchrony result.
+  // §73's SWEEP. Per rung and per space: same/different, its label-destroyed
+  // null, and THE ORACLE AT THAT WINDOW — which is the whole point. The ceiling
+  // has to be window-specific, because a longer window both adds events and
+  // dilutes A's trace, and only a ratio against a ceiling measured on the SAME
+  // window can tell those two apart.
+  double sw_mile[kSdSweep][kSdSpaces] = {};
+  double sw_null[kSdSweep][kSdSpaces] = {};
+  double sw_orac[kSdSweep][kSdSpaces] = {};
   double sync_abs = 0.0, sync_rate_corr = 0.0, sync_cells = 0.0;
   double sync_exc_rate_corr = 0.0;  // the same check on the REPLACED statistic
   uint32_t trials = 0;
@@ -19125,13 +19151,20 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         // overlap window out of B's first 400 ms would leave `kSdWB` only 500 ms
         // wide and silently weaken the assembled oracle relative to §63, which
         // is a change §64 did not register. `kSdWB` stays the whole of B.
-        uint32_t wins[2];
+        // §73 NESTS FOUR WINDOWS INSIDE B, so a tick near B's onset now belongs
+        // to FOUR of them at once and `wins[2]` would have overrun silently.
+        // The array is sized to the nesting with room to spare, and the order
+        // of the first two assignments is unchanged so the existing windows get
+        // the same ticks they always did.
+        uint32_t wins[8];
         uint32_t nwin = 0;
         if (in_a) wins[nwin++] = kSdWA;
         else if (t >= pre_from && t < b_on) wins[nwin++] = kSdWG;
         else if (in_b) {
-          wins[nwin++] = kSdWB;
-          if (t < b_on + kSdOverlap) wins[nwin++] = kSdWBE;
+          wins[nwin++] = kSdWB;                                      // 900 ms rung
+          if (t < b_on + kSdOverlap) wins[nwin++] = kSdWBE;          // 400 ms rung
+          if (t < b_on + kSdSweepMs[0]) wins[nwin++] = kSdWBE100;
+          if (t < b_on + kSdSweepMs[1]) wins[nwin++] = kSdWBE200;
         } else if (t >= b_off) wins[nwin++] = kSdWS;
         if (nwin == 0) continue;
 
@@ -19579,6 +19612,30 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // 0.510 / 0.742 during) — the motor code is a delayed copy. So the motor
       // spaces are priced on their post-word windows. NOT a maximum over
       // windows: that is selection dressed up as a ceiling.
+      // §73's four rungs. The oracle is ASSEMBLED FROM THE SAME WINDOW the
+      // accuracy is read on — decode A there, decode B there, XOR — because a
+      // ceiling borrowed from another window would move with the dilution this
+      // sweep exists to separate out.
+      for (uint32_t r = 0; r < kSdSweep; ++r) {
+        const uint32_t w = kSdSweepWin[r];
+        row.sw_mile[r][sp] = holdout_accuracy(feat[g][w][sp], ysame, train);
+        row.sw_null[r][sp] = holdout_accuracy(feat[g][w][sp], yshuf, train);
+        // THE CEILING IS CROSS-SPACE, AND §64 IS WHY. A ceiling assembled from
+        // ONE space at this window is not testable on any space this creature
+        // has: §71 measured, at 1.68M, `vocal` carrying B at 0.9234 and A at
+        // 0.5451, and `artic9` carrying A at 0.7727 and B at 0.5360. NO SINGLE
+        // SPACE CARRIES BOTH WORDS during B — which is §64's headline — so a
+        // same-space oracle is ~0.5 everywhere and voids every rung for a
+        // structural reason that has nothing to do with the window.
+        //
+        // §65's pair is the ceiling that exists: decode A from the MOTOR space
+        // and B from the SENSORY one, at THIS window, and XOR. It is still
+        // window-specific, so it still moves with dilution, which is the whole
+        // reason the primary is a ratio.
+        const double pa = holdout_accuracy(feat[g][w][kSdPairA[0]], ya, train);
+        const double pb = holdout_accuracy(feat[g][w][kSdPairB[0]], yb, train);
+        row.sw_orac[r][sp] = pa * pb + (1.0 - pa) * (1.0 - pb);
+      }
       const bool motor = (sp == 3 || sp == 4);  // artic9, artic7
       const double pa = motor ? row.decay[sp] : row.orac_a[sp];
       const double pb = motor ? row.ing_b[sp] : row.orac_b[sp];
@@ -20989,6 +21046,119 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   pdm, pds, abm);
     }
     std::printf("\n");
+  }
+
+  // ---- §73: WERE THE REFUSALS EVENT-STARVED? ----
+  //
+  // Every readout this project has refused was read on ~1.5 spikes per neuron,
+  // because every section since §63 used a 400 ms window and none of them
+  // varied it. This sweeps it 9x in events and asks whether the refusals move.
+  {
+    // THE ARM IS `shipped`, AND THAT IS A CORRECTION MADE BEFORE THE RUN.
+    // §73 registered the sweep on the dosed arm. §70 measured the dose
+    // DESTROYING the low-dimensional oracles (artic9 0.7320 -> 0.5384 at
+    // tau1000), so on that arm no window-specific ceiling is testable and the
+    // dilution control the ratio exists for is unavailable. The sections whose
+    // refusals this question is actually about — §63's 0.5104, §64, §65's
+    // creature-against-assembled gap — were all run on the UNDOSED creature,
+    // where §71 measured the cross-space ceiling healthy (A 0.7727 on artic9,
+    // B 1.0000 on auditory). So the sweep is read where its ceiling lives.
+    const uint32_t a = kSdArmShipped;
+    const uint32_t sp = kSdPrimary;  // `central`, §63's registered primary
+    std::printf("  §73 WERE THE REFUSALS EVENT-STARVED? — the overlap window swept on\n"
+                "  `%s`, space `%s`, everything else held.\n\n"
+                "    window   spikes/neuron   accuracy         oracle     ratio\n",
+                kSdArms[a].name, kSdSpaceName[sp]);
+    const double rate_per_neuron = 0.00373;  // §73's measured table
+    double ratio_m[kSdSweep] = {}, ratio_s[kSdSweep] = {};
+    bool rung_ok[kSdSweep] = {};
+    for (uint32_t r = 0; r < kSdSweep; ++r) {
+      std::vector<double> acc, orc, rat;
+      for (const SdOut& o : res[a])
+        if (o.ok && o.gap[0].scored) {
+          const double A = o.gap[0].sw_mile[r][sp];
+          const double O = o.gap[0].sw_orac[r][sp];
+          acc.push_back(A);
+          orc.push_back(O);
+          // THE RATIO IS THE PRIMARY, and its denominator is the oracle on THIS
+          // window. Dilution moves both; a budget effect moves only the top.
+          if (O > 0.5) rat.push_back((A - 0.5) / (O - 0.5));
+        }
+      double am = 0, as = 0, om = 0, os = 0;
+      sd_stat(acc, am, as);
+      sd_stat(orc, om, os);
+      sd_stat(rat, ratio_m[r], ratio_s[r]);
+      // A rung whose own oracle is under the bar is DROPPED, not refused on.
+      rung_ok[r] = om >= kSdBar;
+      std::printf("    %4llu ms      %5.2f        %.4f+-%.4f   %.4f    %+.3f+-%.3f%s\n",
+                  (unsigned long long)kSdSweepMs[r],
+                  rate_per_neuron * double(kSdSweepMs[r]), am, as, om,
+                  ratio_m[r], ratio_s[r],
+                  rung_ok[r] ? "" : "   <- oracle under the bar, DROPPED");
+    }
+
+    // THE SLOPE ACROSS ALL FOUR RUNGS, because the endpoints alone are 1 SE
+    // apart and §73 registered that as not enough. Per creature, the least
+    // squares slope of the ratio on sqrt(window): the sqrt prediction makes it
+    // POSITIVE, flat makes it ZERO.
+    std::vector<double> slopes;
+    for (const SdOut& o : res[a]) {
+      if (!(o.ok && o.gap[0].scored)) continue;
+      double sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0;
+      for (uint32_t r = 0; r < kSdSweep; ++r) {
+        if (!rung_ok[r]) continue;
+        const double O = o.gap[0].sw_orac[r][sp];
+        if (!(O > 0.5)) continue;
+        const double x = std::sqrt(double(kSdSweepMs[r]));
+        const double y = (o.gap[0].sw_mile[r][sp] - 0.5) / (O - 0.5);
+        sx += x; sy += y; sxx += x * x; sxy += x * y; n += 1.0;
+      }
+      if (n >= 3.0) {
+        const double den = sxx - sx * sx / n;
+        if (den > 0.0) slopes.push_back((sxy - sx * sy / n) / den);
+      }
+    }
+    double slm = 0, sls = 0;
+    sd_stat(slopes, slm, sls);
+    uint32_t n_ok = 0;
+    for (uint32_t r = 0; r < kSdSweep; ++r) n_ok += rung_ok[r] ? 1u : 0u;
+    std::printf("\n    SLOPE of the ratio on sqrt(window), per creature, over %u testable\n"
+                "    rungs:  %+.5f +- %.5f  (%.1f SE)   from %u creatures\n",
+                n_ok, slm, sls, sls > 0.0 ? std::fabs(slm) / sls : 0.0,
+                unsigned(slopes.size()));
+
+    const bool rises = sls > 0.0 && slm >= 2.0 * sls;
+    const bool falls = sls > 0.0 && slm <= -2.0 * sls;
+    std::printf("\n");
+    if (n_ok < 3) {
+      std::printf("    -> VOID. Only %u rungs have a testable oracle, so there is no trend\n"
+                  "       to read. §73 registered three as the minimum for a slope.\n", n_ok);
+    } else if (rises) {
+      std::printf("    -> THE REFUSALS WERE EVENT-STARVED, AT LEAST IN PART. The ratio\n"
+                  "       rises with sqrt(window) at %.1f SE, which is the shape a\n"
+                  "       noise-limited readout has. §63-§71's nulls are then UPPER BOUNDS\n"
+                  "       ON A BUDGET and not statements about the creature, and every one\n"
+                  "       of them needs re-reading. Reported first: it touches more prior\n"
+                  "       work than anything else this section could have found.\n",
+                  std::fabs(slm) / sls);
+    } else if (falls) {
+      std::printf("    -> DILUTION DOMINATES. The ratio FALLS with window (%.1f SE), so\n"
+                  "       400 ms was already generous and A's trace is decaying inside the\n"
+                  "       longer windows faster than the extra events help. The refusals\n"
+                  "       stand, and the trace decay is priced as a side result.\n",
+                  std::fabs(slm) / sls);
+    } else {
+      std::printf("    -> EVENTS ARE NOT THE CONSTRAINT. The slope is %+.5f +- %.5f, within\n"
+                  "       %.1f SE of flat across a NINE-FOLD range in events. §63-§71's\n"
+                  "       refusals stand as written and are not artefacts of one unswept\n"
+                  "       constant. The burst dose and per-projection STP keying become the\n"
+                  "       live routes on their own merits.\n",
+                  slm, sls, sls > 0.0 ? std::fabs(slm) / sls : 0.0);
+    }
+    std::printf("\n    §73 CANNOT PRODUCE A PASS AND WAS NOT MEANT TO: reaching %.3f from\n"
+                "    0.5469 needs ~10x the window under sqrt scaling, longer than the whole\n"
+                "    trial. This is a DIAGNOSTIC of ten sections' worth of refusals.\n\n",
+                kSdBar);
   }
 
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"

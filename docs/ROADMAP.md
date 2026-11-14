@@ -15664,3 +15664,35 @@ give the slope roughly 2.5x the resolution of the endpoints alone. **If the
 slope's SE still leaves the sqrt and flat predictions within 2 SE of each other,
 the registered reading is NO VERDICT at this budget**, and the honest successor
 is more creatures rather than more window.
+
+### §73 AMENDMENT — THE CEILING AND THE ARM, BOTH CORRECTED BEFORE THE RUN
+
+Two changes, made while building, both forced by measurements this project had
+already archived and which I should have applied in the registration.
+
+**1. THE CEILING IS CROSS-SPACE, BECAUSE A SAME-SPACE ONE CANNOT EXIST HERE.**
+§73 registered `(accuracy - 0.5) / (oracle - 0.5)` with the oracle assembled
+from the swept window. Built that way it voided **every rung**, and §64's
+headline is why — **NO SINGLE SPACE CARRIES BOTH WORDS during B.** §71's own
+1.68M log prints it: in the overlap window `vocal` carries B at **0.9234** and A
+at **0.5451**, while `artic9` carries A at **0.7727** and B at **0.5360**. A
+same-space ceiling is therefore ~0.5 everywhere, for a structural reason that
+has nothing to do with the window. The ceiling is now **§65's pair** — A from
+the motor space, B from the sensory one, both at the swept window — which
+exists, is testable, and **still moves with the window**, so the dilution
+control the ratio was registered for survives.
+
+**2. THE SWEEP RUNS ON `shipped`, NOT ON THE DOSED ARM.** §70 measured the dose
+destroying the low-dimensional oracles (`artic9` 0.7320 -> 0.5384 at `tau1000`),
+so on that arm no window-specific ceiling is testable at all and the ratio has
+no denominator. **The refusals this question is about were never dosed**: §63's
+0.5104, §64, and §65's creature-against-assembled gap were all measured on the
+undosed creature. The sweep is read where its ceiling lives, and the primary
+space moves with it to **`central`**, §63's own registered primary.
+
+**Both are disclosed corrections to a registration I wrote yesterday, not
+discoveries about the creature.** The registered clauses, the sqrt prediction,
+the slope-over-all-rungs rule and the "§73 cannot produce a pass" limit are
+unchanged. The `wins[]` growth passed its gate: **seven §64-§71 columns are
+byte-identical** across the change, including §69's carrier, §70's premise
+check, §71's asymmetry and §72's `sync-grp` cell.
