@@ -420,7 +420,18 @@ const Spec kSpecs[] = {
      "  the kernel runs the real Tsodyks-Markram recursion, and nobody had\n"
      "  compared them. Here A and B are one trial, so the comparison is PAIRED\n"
      "  on identical spikes. §69's own columns must reproduce EXACTLY: nothing\n"
-     "  added here draws a random number or touches kernel state."},
+     "  added here draws a random number or touches kernel state.\n"
+     "  §71 ADDS FOUR ARMS ON FRESH CREATURES (seed offset 12), because samediff\n"
+     "  is deterministic and re-reading §70's own trials to confirm a cell that\n"
+     "  §70's ladder selected would be circular. The probe is 60 ms of kWords[0]'s\n"
+     "  formants, 60 ms of silence, 60 ms of kWords[1]'s, placed in the 400 ms\n"
+     "  scoring window that was SILENCE in §63/§69/§70 — IDENTICAL on every trial,\n"
+     "  so it carries no label by construction. Its shape is forced by the\n"
+     "  synthesiser: VowelSource renders a two-formant vowel, not a click, and\n"
+     "  kWords[0]/[1] are the CORNER pair, so no single probe overlaps both. The\n"
+     "  derived one-tailed prediction is that |part1 - part2| is LARGER for SAME,\n"
+     "  because depletion is concave. `n71 ref+probe` is the MECHANISM NULL: with\n"
+     "  stp_use 0 there is no depletion, so a probe can carry nothing."},
     {"hushgate", 900000, Expect::kRead, Tier::kLong,
      "derived: §62. §60's successor, and it corrects §60. §60 reported the larynx's\n"
      "  MODULE-WIDE mean rate and threshold; the voicing gate reads neither --\n"

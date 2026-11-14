@@ -18494,6 +18494,26 @@ constexpr uint64_t kSdWord = 900;    // word duration; matches vocallearn's, but
                                      // owns its trial, so this is not the
                                      // shared-constant hazard.
 constexpr uint64_t kSdScore = 400;   // the scoring window, after B's offset
+// §71's PROBE. Two brief parts in a FIXED ORDER inside the scoring window —
+// kWords[0]'s formants, then kWords[1]'s — at the words' own amplitude, and
+// BYTE-IDENTICAL ON EVERY TRIAL, so the probe carries zero information about
+// `same` versus `different` by construction.
+//
+// THE SHAPE IS FORCED BY THE SYNTHESISER, not chosen. `VowelSource::render`
+// produces a TWO-FORMANT VOICED VOWEL and not a broadband click, so a probe
+// excites only the channels its own formants drive — and kWords[0] /a/
+// (780/1180) and kWords[1] /i/ (320/2500) are the CORNER pair, so no single
+// two-formant probe overlaps both. Karabay et al. (2025) measured decoding
+// IMPROVING with physical overlap between impulse and remembered item, so
+// overlap is wanted. Two parts, one per word, is the cheapest thing that has it.
+//
+// 60 ms per part because `audprobe` measured the ear classifying a word within
+// 50 ms (0.916); 60 ms of silence between them so the two responses are
+// separable; a 20 ms lead after B so the probe does not run into B's offset.
+// Total 200 ms inside a 400 ms window.
+constexpr uint64_t kSdProbeLead = 20;
+constexpr uint64_t kSdProbeDur = 60;
+constexpr uint64_t kSdProbeGap = 60;
 constexpr uint64_t kSdPre = 400;     // the decay window, ending at B's onset
 constexpr uint64_t kSdGaps[] = {200, 800, 2000, 5000};
 constexpr uint32_t kSdGapCount = sizeof(kSdGaps) / sizeof(kSdGaps[0]);
@@ -18670,6 +18690,32 @@ struct SdGapRow {
   double rel_bmean = 0.0;  // the MEASURED factor averaged over ALL of B, reported
   double rel_amean = 0.0;  // ...and DURING A, which is the vacuity gate's quantity
   double samp_frac = 0.0;  // tract synapses sampled at a transmission, per trial
+  // §71. THE DERIVED CO-PRIMARY, and its sign comes from the concavity of
+  // depletion rather than from the data. `d = 1-(1-U)^n` is concave, so
+  // d(2n) < 2d(n): when A == B one channel set is depleted TWICE (one probe
+  // part small, the other large) and when A != B two nearly-disjoint sets are
+  // each depleted ONCE (both parts medium). So |part1 - part2| is LARGER for
+  // SAME, one-tailed, and `asym_gap` is that contrast within the arm.
+  double asym_same = 0.0, asym_diff = 0.0, asym_gap = 0.0;
+  // THE SIGNED FOUR-CELL SIGNATURE, which is a far more specific claim than the
+  // scalar above and is the reason to print both. Part 1 is ALWAYS kWords[0]
+  // and part 2 ALWAYS kWords[1], so the prediction has a shape per cell:
+  //
+  //   A=0 B=0  the /a/ channels are doubly depleted  -> p1 - p2 NEGATIVE
+  //   A=1 B=1  the /i/ channels are doubly depleted  -> p1 - p2 POSITIVE
+  //   A!=B     both sets depleted once               -> p1 - p2 near the
+  //                                                     ORDER OFFSET alone
+  //
+  // That offset is real and is why the signed cells are printed: part 1 runs
+  // first, so part 2 always reads channels part 1 has already touched. It is
+  // constant across trials and cancels in a within-arm contrast, but inside an
+  // ABSOLUTE value it does not cancel cleanly, so the collapsed scalar can hide
+  // a structure that disagrees with the mechanism.
+  double sgn_cell[4] = {};  // indexed a*2+b
+  double sgn_n[4] = {};
+  double probe_aud = 0.0;  // auditory response to the probe — the ear-arrived gate
+  double probe_pre = 0.0;  // ongoing vocal rate BEFORE the probe — the SNR covariate
+  double probe_rel = 0.0;  // release factor the probe meets in the scoring window
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
   bool scored = false;
@@ -18751,12 +18797,16 @@ inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
 
 SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            uint32_t rep, float voicing_override, bool omit_b,
-                           float stp_use, float stp_rec) {
+                           float stp_use, float stp_rec, bool probe,
+                           uint32_t rep_off) {
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
+    // §71: `rep_off` shifts which creature this is. The host RNG below is
+    // derived from this same seed, so an offset arm gets fresh wiring and a
+    // fresh trial order together. At rep_off 0 the arithmetic is unchanged.
     const uint64_t seed = reinterpret_cast<const aibaby::DnaHeader*>(local.data())->seed +
-                          uint64_t(rep) * 7919ull;
+                          uint64_t(rep + rep_off) * 7919ull;
     std::memcpy(local.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
     if (voicing_override > 0.0f) {
       std::memcpy(local.data() + offsetof(aibaby::DnaHeader, vocal) +
@@ -18847,6 +18897,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   double pc_samp[kSdGapCount] = {}, pc_trials[kSdGapCount] = {};
   double pc_m[kSdGapCount] = {}, pc_mn[kSdGapCount] = {};  // the B-AVERAGE factor
   double pc_a[kSdGapCount] = {}, pc_an[kSdGapCount] = {};  // the factor DURING A
+  // §71. Per-trial probe responses, pushed in step with `lab_a`/`lab_b` so the
+  // asymmetry can be split by SAME versus DIFFERENT after the session.
+  std::vector<double> pb1[kSdGapCount], pb2[kSdGapCount], pbpre[kSdGapCount];
+  std::vector<double> pba[kSdGapCount];   // auditory response, for the ear gate
+  std::vector<double> pbrel[kSdGapCount]; // release factor in the scoring window
 
   size_t cell_at[kSdGapCount] = {};
   uint64_t tick_now = 0;
@@ -18899,6 +18954,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // depletion, two-tailed and labelled as such.
       std::vector<double> bf_sum(wa, 0.0), bf_n(wa, 0.0);
       std::vector<uint8_t> bf_done(wa, 0);
+      // §71's two probe parts, and the lead window just before them. `pre` is
+      // the ongoing vocal rate with no probe in it yet, which is what an
+      // SNR-on-active-firing account would have the readout riding on.
+      double p1_voc = 0.0, p2_voc = 0.0, pre_voc = 0.0;
+      double p1_aud = 0.0, p2_aud = 0.0;
 
       // THE TRACT INDEX IS REBUILT EVERY TRIAL, AND THAT IS CORRECTNESS RATHER
       // THAN CAUTION. `prune_synapses` COMPACTS THE POOL IN PLACE — survivors
@@ -18947,8 +19007,29 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         const bool in_b = t >= b_on && t < b_off;
         const Word& wa_ = kWords[a];
         const Word& wb_ = kWords[b];
+        // §71's PROBE. Identical on every trial of a probe arm: the same two
+        // words' formants, the same order, the same amplitude as a word, in the
+        // scoring window that was silence in §63, §69 and §70. It therefore
+        // carries no information about the label and all of its effect on a
+        // same/different readout has to come from the state it finds.
+        // THE PROBE'S THREE WINDOWS ARE DEFINED BY TIME ALONE, not by whether
+        // this arm has a probe in them, and that is what makes G-EAR able to
+        // fail. The first version gated the MEASUREMENT on `probe` too, so the
+        // no-probe arm measured 0 by construction and the "did the ear answer
+        // it" gate reduced to "is the response positive" — a gate that cannot
+        // fail cannot guard a rejection. The windows are measured on every arm;
+        // only the RENDER is conditional.
+        const bool in_w1 = t >= b_off + kSdProbeLead &&
+                           t < b_off + kSdProbeLead + kSdProbeDur;
+        const bool in_w2 = t >= b_off + kSdProbeLead + kSdProbeDur + kSdProbeGap &&
+                           t < b_off + kSdProbeLead + 2 * kSdProbeDur + kSdProbeGap;
+        const bool in_lead = t >= b_off && t < b_off + kSdProbeLead;
         if (in_a) voice.render(wa_.f0, wa_.f1, wa_.f2, 0.5f, pcm.data(), spt);
         else if (in_b && !omit_b) voice.render(wb_.f0, wb_.f1, wb_.f2, 0.5f, pcm.data(), spt);
+        else if (probe && in_w1)
+          voice.render(kWords[0].f0, kWords[0].f1, kWords[0].f2, 0.5f, pcm.data(), spt);
+        else if (probe && in_w2)
+          voice.render(kWords[1].f0, kWords[1].f1, kWords[1].f2, 0.5f, pcm.data(), spt);
         else voice.render(0.0f, wa_.f1, wa_.f2, 0.0f, pcm.data(), spt);
         ear.tick(s.brain, pcm.data(), spt);
         s.brain.step();
@@ -18981,6 +19062,20 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         for (uint32_t si = 0; si < net.spike_count(); ++si) {
           const uint32_t idx = net.spikes()[si];
           if (idx >= ms_v.begin && idx < ms_v.begin + wv) out.voc_spikes += 1.0;
+        }
+        // §71. The response to each probe part, and the ongoing rate in the
+        // lead before either arrives. Counted on the module totals rather than
+        // per neuron, because the registered statistic is the ASYMMETRY between
+        // the two parts and that is a scalar.
+        if (in_w1 || in_w2 || in_lead) {
+          for (uint32_t si = 0; si < net.spike_count(); ++si) {
+            const uint32_t idx = net.spikes()[si];
+            const bool isv = idx >= ms_v.begin && idx < ms_v.begin + wv;
+            const bool isa = idx >= ms_a.begin && idx < ms_a.begin + wa;
+            if (in_w1) { if (isv) p1_voc += 1.0; if (isa) p1_aud += 1.0; }
+            else if (in_w2) { if (isv) p2_voc += 1.0; if (isa) p2_aud += 1.0; }
+            else if (isv) pre_voc += 1.0;
+          }
         }
         // §70's RUNG 1, AND THE SAMPLING MOMENT IS THE WHOLE OF ITS VALIDITY.
         // `synapse_release`/`synapse_resource` return the pair the kernel
@@ -19133,6 +19228,17 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           pc_trials[g] += 1.0;
         }
       }
+      // §71's per-trial row, pushed in step with the labels below.
+      {
+        pb1[g].push_back(p1_voc);
+        pb2[g].push_back(p2_voc);
+        pbpre[g].push_back(pre_voc);
+        pba[g].push_back(p1_aud + p2_aud);
+        double rs = 0.0, rn = 0.0;
+        for (uint32_t i = 0; i < wa; ++i)
+          if (dcnt[kSdWS][i] > 0.0) { rs += dfac[kSdWS][i] / dcnt[kSdWS][i]; rn += 1.0; }
+        pbrel[g].push_back(rn > 0.0 ? rs / rn : 0.0);
+      }
       lab_a[g].push_back(a);
       lab_b[g].push_back(b);
     }
@@ -19157,6 +19263,35 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     if (pc_mn[g] > 0.0) row.rel_bmean = pc_m[g] / pc_mn[g];
     if (pc_an[g] > 0.0) row.rel_amean = pc_a[g] / pc_an[g];
     if (pc_trials[g] > 0.0) row.samp_frac = pc_samp[g] / pc_trials[g];
+    // §71's asymmetry contrast, computed BEFORE the fold split because it is
+    // not a held-out readout: it is a per-trial physical measurement split by a
+    // label the host knows. There is no classifier to leak through, and the
+    // label-destroyed control for it is arm `n71 ref+probe`, where the
+    // mechanism itself is absent — a null derived rather than shuffled.
+    if (pb1[g].size() == lab_a[g].size() && !pb1[g].empty()) {
+      double ss = 0.0, sd = 0.0, ns = 0.0, nd = 0.0;
+      double ta = 0.0, tp = 0.0, tr = 0.0;
+      for (size_t i = 0; i < pb1[g].size(); ++i) {
+        const double signed_d = pb1[g][i] - pb2[g][i];
+        const double asym = std::fabs(signed_d);
+        if (lab_a[g][i] == lab_b[g][i]) { ss += asym; ns += 1.0; }
+        else { sd += asym; nd += 1.0; }
+        const uint32_t cell = uint32_t(lab_a[g][i] * 2 + lab_b[g][i]);
+        if (cell < 4) { row.sgn_cell[cell] += signed_d; row.sgn_n[cell] += 1.0; }
+        ta += pba[g][i];
+        tp += pbpre[g][i];
+        tr += pbrel[g][i];
+      }
+      for (uint32_t c = 0; c < 4; ++c)
+        if (row.sgn_n[c] > 0.0) row.sgn_cell[c] /= row.sgn_n[c];
+      const double n = double(pb1[g].size());
+      row.asym_same = ns > 0.0 ? ss / ns : 0.0;
+      row.asym_diff = nd > 0.0 ? sd / nd : 0.0;
+      row.asym_gap = row.asym_same - row.asym_diff;
+      row.probe_aud = ta / n;
+      row.probe_pre = tp / n;
+      row.probe_rel = tr / n;
+    }
     // THE ALIGNMENT CHECK. `ctxsrc` once ran a feature space AHEAD of its labels
     // by the number of slept trials, pairing row i with the wrong word and
     // indexing past the end of `labels` — undefined behaviour, not a wrong
@@ -19296,25 +19431,78 @@ constexpr uint32_t kSdReps = 12;
 // `stp_facil_ms` stays 0: facilitation is not what §67 argued for, and the
 // kernel rejects `stp_use > 0` with `stp_recover_ms <= 0`, so the two are
 // always written together.
+// §71 ADDS TWO FIELDS AND FOUR ARMS. `probe` puts the two-part impulse in the
+// scoring window; `rep_off` shifts the seed so the arm runs on creatures no
+// earlier section has seen.
+//
+// THE SEED OFFSET IS LOAD-BEARING AND NOT A TIDINESS MEASURE. `samediff` is
+// deterministic, so re-pinning the carrier to `tau1000` and re-reading §70's
+// trials would be CIRCULAR — `pairing-on-discovery-sample` under a new name.
+// §70's localisation was selected after seeing its own ladder, so confirming it
+// requires creatures that were not in the sample that suggested it. The seed is
+// `header.seed + (rep + rep_off) * 7919`, and the host RNG is derived from that
+// same seed, so an offset arm gets fresh wiring AND a fresh trial order.
+//
+// The first seven arms carry `rep_off = 0`, so §69's and §70's columns are
+// bit-identical and remain a regression gate rather than a comparison.
 struct SdArmDef {
   const char* name;
   float vthr;
   bool omit_b;
   float stp_use;   // 0 leaves the tract exactly as it ships
   float stp_rec;   // tau_rec in ms
+  bool probe;      // §71: the two-part impulse in the scoring window
+  uint32_t rep_off;  // §71: seed offset, so the arm runs on FRESH creatures
   const char* what;
 };
-constexpr SdArmDef kSdArms[7] = {
-    {"shipped", 0.0f, false, 0.0f, 0.0f, "the creature as it ships"},
-    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
-    {"B-omitted", 0.0f, true, 0.0f, 0.0f, "silence where the second word goes — overwrite vs decay"},
-    {"stp tau100", 0.0f, false, 0.20f, 100.0f, "§68 predicts d' 0.2811 — the FLOOR rung"},
-    {"stp tau300", 0.0f, false, 0.20f, 300.0f, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
-    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, "§68 predicts d' 2.4110"},
-    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, "§68 predicts d' 2.8791 — the CEILING rung"},
+constexpr SdArmDef kSdArms[13] = {
+    {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+    {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, "silence where the second word goes — overwrite vs decay"},
+    {"stp tau100", 0.0f, false, 0.20f, 100.0f, false, 0, "§68 predicts d' 0.2811 — the FLOOR rung"},
+    {"stp tau300", 0.0f, false, 0.20f, 300.0f, false, 0, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
+    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, false, 0, "§68 predicts d' 2.4110"},
+    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, false, 0, "§68 predicts d' 2.8791 — the CEILING rung"},
+    // §71, all four on FRESH creatures (rep_off 12) and paired on the same seeds.
+    {"n71 ref", 0.0f, false, 0.0f, 0.0f, false, 12,
+     "no dose, no probe — §63's silent scoring window on fresh creatures"},
+    {"n71 ref+probe", 0.0f, false, 0.0f, 0.0f, true, 12,
+     "THE MECHANISM NULL: no depletion exists, so a probe can carry nothing"},
+    {"n71 tau1000", 0.0f, false, 0.20f, 1000.0f, false, 12,
+     "§70's localisation on creatures it never saw — the CONFIRMATION"},
+    {"n71 tau1000+probe", 0.0f, false, 0.20f, 1000.0f, true, 12,
+     "THE PRIMARY: read the synaptic trace with an impulse"},
+    // THE SELF-VOICE ROUTE, AND THE 300k SMOKE IS WHY THESE TWO EXIST.
+    //
+    // The smoke showed the asymmetry carrying a LABEL-DEPENDENT signal on the
+    // arm with NO DOSE, where depletion does not exist. There is a route for
+    // that which has nothing to do with synapses: the creature hears its own
+    // voice through DNA v69's delay line, and after two SAME words its
+    // articulatory posture differs from after two DIFFERENT ones, so the probe
+    // window's input is `probe + a label-dependent echo` rather than the probe
+    // alone. §64 measured B overwriting A, so the posture at B's offset is
+    // exactly where that difference would sit.
+    //
+    // `voicing_threshold` 1.15 is `quietecho`'s measured 0.000-voiced rung, so
+    // these two arms remove the self-voice and keep everything else. If the
+    // probe's effect survives here it is reading the SYNAPSE; if it vanishes it
+    // was reading the creature's own echo all along — which would be a finding
+    // about M6 and NOT a demonstration that a synaptic trace can be probed.
+    {"n71 tau1000 quiet", 1.15f, false, 0.20f, 1000.0f, false, 12,
+     "the dose with the self-voice silenced, no probe"},
+    {"n71 tau1000 quiet+probe", 1.15f, false, 0.20f, 1000.0f, true, 12,
+     "THE CONFOUND-FREE PRIMARY: probe, dose, and no self-heard echo"},
 };
-constexpr uint32_t kSdArmCount = 7;
+constexpr uint32_t kSdArmCount = 13;
 constexpr uint32_t kSdArmShipped = 0;
+// §71's four, and the pairing is by index: 7 against 9 is dose with no probe,
+// 8 against 7 is the mechanism null, 10 against 9 is THE PRIMARY.
+constexpr uint32_t kSdN71Ref = 7;
+constexpr uint32_t kSdN71RefProbe = 8;
+constexpr uint32_t kSdN71Dose = 9;
+constexpr uint32_t kSdN71DoseProbe = 10;
+constexpr uint32_t kSdN71Quiet = 11;
+constexpr uint32_t kSdN71QuietProbe = 12;
 constexpr uint32_t kSdStpFirst = 3;   // first dose arm
 constexpr uint32_t kSdStpCount = 4;   // the tau_rec ladder
 // §69's primary MOVES off `central`. Depression on `auditory -> vocal` does not
@@ -19372,8 +19560,10 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const bool ob = kSdArms[a].omit_b;
     const float su = kSdArms[a].stp_use;
     const float sr = kSdArms[a].stp_rec;
+    const bool pb = kSdArms[a].probe;
+    const uint32_t ro = kSdArms[a].rep_off;
     res[a] = parallel_reps<SdOut>(kSdReps, [&](uint32_t r) {
-      return run_samediff_session(blob, ticks, r, vt, ob, su, sr);
+      return run_samediff_session(blob, ticks, r, vt, ob, su, sr, pb, ro);
     });
   }
 
@@ -20083,6 +20273,313 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   auto sd_live_on_shipped = [](uint32_t sp) {
     return !(sp == kSdDrvExc || sp == kSdDrvNet);
   };
+  // ---- §71: READ THE SYNAPSE WITH A PROBE ----
+  //
+  // Four arms on creatures no earlier section has seen, paired on the same fresh
+  // seeds. The probe is byte-identical on every trial, so it carries nothing
+  // about the label and everything it buys must come from the state it finds.
+  {
+    auto arm_cell = [&](uint32_t a, double& m, double& se) {
+      sd_stat(mile[a][0][kSdStpPrimary], m, se);
+    };
+    auto paired = [&](uint32_t a, uint32_t b, double& m, double& se) {
+      std::vector<double> d;
+      const std::vector<double>& va = mile[a][0][kSdStpPrimary];
+      const std::vector<double>& vb = mile[b][0][kSdStpPrimary];
+      for (size_t i = 0; i < va.size() && i < vb.size(); ++i) d.push_back(va[i] - vb[i]);
+      sd_stat(d, m, se);
+    };
+    auto col = [&](uint32_t a, double SdGapRow::*f, double& m, double& se) {
+      std::vector<double> v;
+      for (const SdOut& o : res[a])
+        if (o.ok && o.gap[0].scored) v.push_back(o.gap[0].*f);
+      sd_stat(v, m, se);
+    };
+
+    std::printf("  §71 READ THE SYNAPSE WITH A PROBE — on %u creatures no earlier\n"
+                "  section has seen (seed offset %u), paired on the same fresh seeds.\n\n"
+                "    the probe   %llu ms of kWords[0]'s formants, %llu ms of silence,\n"
+                "                %llu ms of kWords[1]'s, starting %llu ms after B — inside\n"
+                "                the %llu ms scoring window that was SILENCE in §63/§69/§70.\n"
+                "                IDENTICAL ON EVERY TRIAL, so it carries no label.\n\n",
+                kSdReps, kSdArms[kSdN71Ref].rep_off, (unsigned long long)kSdProbeDur,
+                (unsigned long long)kSdProbeGap, (unsigned long long)kSdProbeDur,
+                (unsigned long long)kSdProbeLead, (unsigned long long)kSdScore);
+
+    // G-EAR: did the probe arrive at all? A probe the ear does not answer makes
+    // every column below vacuous, so it is read first and it can fail. The
+    // comparison is against THE SAME TWO WINDOWS ON THE PAIRED NO-PROBE ARM,
+    // which holds silence there — same seeds, same trials, same clock.
+    // THE TEST IS A PAIRED DIFFERENCE, NOT A RATIO, and the first version's 2x
+    // threshold was a number I invented (`derive-the-constant`). It failed on
+    // the smoke at 91.16 against 69.56 — and the reason it failed is itself the
+    // finding that forced the self-voice arms: those windows are NOT quiet
+    // without a probe, because the creature's own voice is driving its own ear
+    // through DNA v69's delay line. A probe can only ADD sound, so the gate is
+    // one-tailed on the paired per-creature difference and needs no constant.
+    double ea = 0, eas = 0, na = 0, nas = 0;
+    col(kSdN71DoseProbe, &SdGapRow::probe_aud, ea, eas);
+    col(kSdN71Dose, &SdGapRow::probe_aud, na, nas);
+    double edm = 0, eds = 0;
+    {
+      std::vector<double> d;
+      for (size_t i = 0; i < res[kSdN71DoseProbe].size() && i < res[kSdN71Dose].size(); ++i) {
+        const SdOut& p = res[kSdN71DoseProbe][i];
+        const SdOut& q = res[kSdN71Dose][i];
+        if (p.ok && q.ok && p.gap[0].scored && q.gap[0].scored)
+          d.push_back(p.gap[0].probe_aud - q.gap[0].probe_aud);
+      }
+      sd_stat(d, edm, eds);
+    }
+    const bool g_ear = eds > 0.0 && edm >= 2.0 * eds;
+    std::printf("    G-EAR     auditory response in the probe windows  %.2f +- %.2f spikes\n"
+                "              the SAME windows, paired no-probe arm   %.2f +- %.2f\n"
+                "              PAIRED difference, one-tailed           %+.2f +- %.2f (%.1f SE)\n"
+                "              -> %s\n"
+                "              (those windows are NOT quiet without a probe: the creature\n"
+                "               hears its OWN voice there, which is why the quiet arms exist)\n",
+                ea, eas, na, nas, edm, eds, eds > 0.0 ? std::fabs(edm) / eds : 0.0,
+                g_ear ? "THE PROBE ARRIVED" : "VOID — the ear did not answer it");
+
+    // G-DOSE-71: §69's dose gate covers arms 3-6 and nothing covers these two.
+    // A §71 dose arm that patched no projection would be bit-identical to its
+    // own reference and would print as a clean refusal of the probe.
+    uint32_t pmin = 0xffffffffu;
+    for (uint32_t a : {kSdN71Dose, kSdN71DoseProbe})
+      for (const SdOut& o : res[a])
+        if (o.ok && o.stp_patched < pmin) pmin = o.stp_patched;
+    const bool g_dose71 = pmin != 0xffffffffu && pmin > 0;
+    std::printf("    G-DOSE71  projections patched, worst of the two dose arms  %u   %s\n",
+                pmin == 0xffffffffu ? 0u : pmin, g_dose71 ? "PASS" : "VOID");
+
+    double r0 = 0, r0s = 0, r1 = 0, r1s = 0, d0 = 0, d0s = 0, d1 = 0, d1s = 0;
+    arm_cell(kSdN71Ref, r0, r0s);
+    arm_cell(kSdN71RefProbe, r1, r1s);
+    arm_cell(kSdN71Dose, d0, d0s);
+    arm_cell(kSdN71DoseProbe, d1, d1s);
+    double pm = 0, ps = 0, nm = 0, ns2 = 0;
+    paired(kSdN71DoseProbe, kSdN71Dose, pm, ps);   // THE PRIMARY
+    paired(kSdN71RefProbe, kSdN71Ref, nm, ns2);    // the mechanism null
+    double om = 0, os = 0, nullm = 0, nulls = 0;
+    sd_stat(asm_[kSdN71DoseProbe][0][kSdStpPrimary], om, os);
+    sd_stat(nul[kSdN71DoseProbe][0][kSdStpPrimary], nullm, nulls);
+
+    std::printf("\n    SAME vs DIFFERENT on `%s` at the scoring window\n\n"
+                "      arm                      accuracy          oracle\n"
+                "      n71 ref                  %.4f+-%.4f\n"
+                "      n71 ref+probe            %.4f+-%.4f     <- THE MECHANISM NULL\n"
+                "      n71 tau1000              %.4f+-%.4f\n"
+                "      n71 tau1000+probe        %.4f+-%.4f     %.4f  <- PRIMARY\n\n"
+                "      PRIMARY, paired   probe - no probe at the dose  %+.4f +- %.4f (%.1f SE)\n"
+                "      MECHANISM NULL    the same pair with NO dose    %+.4f +- %.4f (%.1f SE)\n"
+                "      label-destroyed   on the primary arm            %.4f\n"
+                "      the bar                                         %.3f\n",
+                kSdSpaceName[kSdStpPrimary], r0, r0s, r1, r1s, d0, d0s, d1, d1s, om,
+                pm, ps, ps > 0.0 ? std::fabs(pm) / ps : 0.0,
+                nm, ns2, ns2 > 0.0 ? std::fabs(nm) / ns2 : 0.0, nullm, kSdBar);
+
+    // THE DERIVED CO-PRIMARY, ONE-TAILED. The sign is the concavity of
+    // depletion and was registered before the run.
+    std::printf("\n    THE ASYMMETRY — |part1 - part2| in vocal spikes, split by the label.\n"
+                "    DERIVED PREDICTION, ONE-TAILED: LARGER for SAME, because depletion is\n"
+                "    concave and concentrating it on one channel set wastes less of it.\n\n"
+                "      arm                      same      different   gap\n");
+    for (uint32_t k = 0; k < 2; ++k) {
+      const uint32_t a = k ? kSdN71DoseProbe : kSdN71RefProbe;
+      double sm = 0, sse = 0, dm2 = 0, dse = 0, gm = 0, gse = 0;
+      col(a, &SdGapRow::asym_same, sm, sse);
+      col(a, &SdGapRow::asym_diff, dm2, dse);
+      col(a, &SdGapRow::asym_gap, gm, gse);
+      std::printf("      %-24s %.3f     %.3f       %+.4f +- %.4f (%.1f SE)%s\n",
+                  kSdArms[a].name, sm, dm2, gm, gse,
+                  gse > 0.0 ? std::fabs(gm) / gse : 0.0,
+                  a == kSdN71DoseProbe ? "  <- CO-PRIMARY" : "  <- must be flat");
+    }
+    double agm = 0, agse = 0;
+    col(kSdN71DoseProbe, &SdGapRow::asym_gap, agm, agse);
+    double ngm = 0, ngse = 0;
+    col(kSdN71RefProbe, &SdGapRow::asym_gap, ngm, ngse);
+
+    // THE SIGNED FOUR CELLS, which is the specific form of the prediction. The
+    // scalar above can move for reasons the mechanism does not predict; this
+    // cannot. Part 1 is always kWords[0] and part 2 always kWords[1].
+    std::printf("\n    THE SIGNED CELLS — part1 minus part2, per (A,B). The mechanism\n"
+                "    predicts NEGATIVE where both words were kWords[0] (its channels are\n"
+                "    doubly depleted, so part 1 is suppressed), POSITIVE where both were\n"
+                "    kWords[1], and the ORDER OFFSET alone on the two mixed cells.\n\n"
+                "      arm                      A0B0      A0B1      A1B0      A1B1\n");
+    for (uint32_t k = 0; k < 2; ++k) {
+      const uint32_t a = k ? kSdN71DoseProbe : kSdN71RefProbe;
+      std::printf("      %-24s", kSdArms[a].name);
+      for (uint32_t c = 0; c < 4; ++c) {
+        std::vector<double> v;
+        for (const SdOut& o : res[a])
+          if (o.ok && o.gap[0].scored && o.gap[0].sgn_n[c] > 0.0)
+            v.push_back(o.gap[0].sgn_cell[c]);
+        double m = 0, se = 0;
+        sd_stat(v, m, se);
+        std::printf("%+8.2f  ", m);
+      }
+      std::printf("%s\n", a == kSdN71DoseProbe ? "  <- the mechanism" : "  <- no dose");
+    }
+    // The predicted contrast, free of the order offset: the two SAME cells must
+    // move in OPPOSITE directions relative to the mixed cells, so their
+    // difference is the offset-free statistic.
+    std::vector<double> split;
+    for (const SdOut& o : res[kSdN71DoseProbe]) {
+      if (!(o.ok && o.gap[0].scored)) continue;
+      const SdGapRow& r = o.gap[0];
+      if (r.sgn_n[0] > 0.0 && r.sgn_n[3] > 0.0) split.push_back(r.sgn_cell[3] - r.sgn_cell[0]);
+    }
+    double spm = 0, spse = 0;
+    sd_stat(split, spm, spse);
+    std::printf("\n      A1B1 minus A0B0, which CANCELS the order offset   %+.3f +- %.3f"
+                " (%.1f SE)\n      -> predicted POSITIVE; this is the offset-free form of the"
+                " prediction\n",
+                spm, spse, spse > 0.0 ? std::fabs(spm) / spse : 0.0);
+
+    // Does the probe disturb what happens BEFORE it? It cannot, causally,
+    // within a trial — but it can change whether the creature sleeps later, and
+    // that would make a trial N differ between the paired arms. Reported as a
+    // number rather than assumed away, because the pairing leans on it.
+    {
+      double a1 = 0, s1 = 0, a2 = 0, s2 = 0;
+      sd_stat(mbe[kSdN71Dose][0][kSdDrvExc], a1, s1);
+      sd_stat(mbe[kSdN71DoseProbe][0][kSdDrvExc], a2, s2);
+      uint32_t sl1 = 0, sl2 = 0, at1 = 0, at2 = 0;
+      for (const SdOut& o : res[kSdN71Dose]) { sl1 += o.slept; at1 += o.attempted; }
+      for (const SdOut& o : res[kSdN71DoseProbe]) { sl2 += o.slept; at2 += o.attempted; }
+      std::vector<double> bd;
+      const std::vector<double>& vb1 = mbe[kSdN71Dose][0][kSdDrvExc];
+      const std::vector<double>& vb2 = mbe[kSdN71DoseProbe][0][kSdDrvExc];
+      for (size_t i = 0; i < vb1.size() && i < vb2.size(); ++i) bd.push_back(vb2[i] - vb1[i]);
+      double bdm = 0, bds = 0;
+      sd_stat(bd, bdm, bds);
+      std::printf("\n    WHAT THE PAIRING ACTUALLY IS, stated rather than assumed. The probe\n"
+                  "    sits entirely after B, so it cannot affect the SAME trial's during-B\n"
+                  "    state. It CAN change the creature's ongoing trajectory, and trial N's\n"
+                  "    A window inherits trial N-1's probe — so the arms are paired at the\n"
+                  "    CREATURE level (identical seed, wiring, cell list and trial order)\n"
+                  "    and NOT at the state level. The during-B gap prices that drift.\n"
+                  "      drive-exc DURING B    no probe %.4f   probe %.4f\n"
+                  "      paired drift          %+.4f +- %.4f (%.1f SE)\n"
+                  "      slept trials          no probe %u of %u   probe %u of %u\n",
+                  a1, a2, bdm, bds, bds > 0.0 ? std::fabs(bdm) / bds : 0.0, sl1, at1, sl2, at2);
+    }
+
+    // The two covariates an SNR account would ride on, printed as numbers so
+    // that account is visible rather than argued about.
+    double pr = 0, prs = 0, rl = 0, rls = 0;
+    col(kSdN71DoseProbe, &SdGapRow::probe_pre, pr, prs);
+    col(kSdN71DoseProbe, &SdGapRow::probe_rel, rl, rls);
+    std::printf("\n    WHAT THE PROBE MET, so an SNR account is visible as a number:\n"
+                "      ongoing vocal rate in the %llu ms before it   %.3f spikes\n"
+                "      release factor in the scoring window         %.4f (1.0 = rested)\n"
+                "    THE DISSOCIATION IS ARM `n71 ref+probe` AND NOT A REGRESSION, and that\n"
+                "    is a disclosed change: a per-neuron regression of drive on the release\n"
+                "    factor is PARTLY TAUTOLOGICAL, because the delivered drive is\n"
+                "    `W * n * f` and already contains `f` by construction. With `stp_use`\n"
+                "    at 0 there is no `f` to read at all, so that arm removes the mechanism\n"
+                "    instead of adjusting for it, which is the stronger control.\n",
+                (unsigned long long)kSdProbeLead, pr, rl);
+
+    // THE SELF-VOICE ARMS. Same dose, same probe, no self-heard echo.
+    double q0 = 0, q0s = 0, q1 = 0, q1s = 0, qpm = 0, qps = 0, qag = 0, qags = 0;
+    arm_cell(kSdN71Quiet, q0, q0s);
+    arm_cell(kSdN71QuietProbe, q1, q1s);
+    paired(kSdN71QuietProbe, kSdN71Quiet, qpm, qps);
+    col(kSdN71QuietProbe, &SdGapRow::asym_gap, qag, qags);
+    std::printf("\n    WITH THE SELF-VOICE SILENCED — `voicing_threshold` 1.15, quietecho's\n"
+                "    measured 0.000-voiced rung, and the 300k smoke is why these arms exist.\n"
+                "    The creature hears its own voice through DNA v69's delay line, and its\n"
+                "    posture after two SAME words differs from after two DIFFERENT ones, so\n"
+                "    the probe window's input is otherwise `probe + a LABEL-DEPENDENT ECHO`\n"
+                "    rather than the probe alone.\n\n"
+                "      n71 tau1000 quiet        %.4f+-%.4f\n"
+                "      n71 tau1000 quiet+probe  %.4f+-%.4f\n"
+                "      paired, probe - no probe %+.4f +- %.4f (%.1f SE)\n"
+                "      asymmetry gap            %+.4f +- %.4f (%.1f SE)\n"
+                "      -> if the probe's effect SURVIVES here it is reading the SYNAPSE; if\n"
+                "         it VANISHES it was reading the creature's own echo, which would be\n"
+                "         a finding about M6 and NOT about probing a synaptic trace.\n",
+                q0, q0s, q1, q1s, qpm, qps, qps > 0.0 ? std::fabs(qpm) / qps : 0.0,
+                qag, qags, qags > 0.0 ? std::fabs(qag) / qags : 0.0);
+
+    // ---- THE REGISTERED CLAUSES ----
+    // TWO-TAILED, because this is a NULL. A probe that moves same/different at
+    // zero dose is an artefact whichever way it moves it — the first version
+    // tested only the positive tail, which would have let a probe that
+    // systematically DEPRESSED the readout pass as a clean control.
+    const bool null_fires = ns2 > 0.0 && std::fabs(nm) >= 2.0 * ns2;
+    const bool quiet_survives = qps > 0.0 && qpm >= 2.0 * qps;
+    const bool null_clears = r1 >= kSdBar;
+    const bool moved = ps > 0.0 && pm >= 2.0 * ps;
+    const bool met = d1 >= kSdBar && om >= kSdBar;
+    const bool asym_ok = agse > 0.0 && agm >= 2.0 * agse;
+    std::printf("\n");
+    if (!g_ear || !g_dose71) {
+      std::printf("    -> VOID. %s, so nothing above is a finding about\n"
+                  "       reading a synaptic trace.\n",
+                  !g_ear ? "The probe did not reach the creature"
+                         : "A dose arm patched no projection");
+    } else if (null_clears || null_fires) {
+      std::printf("    -> THE MECHANISM NULL FIRES, so the probe's effect at the dose CANNOT\n"
+                  "       be attributed to depression: the same probe moves the readout with\n"
+                  "       NO DEPRESSION IN THE CREATURE (%.4f, paired %+.4f +- %.4f).\n"
+                  "       THE SELF-VOICE ARMS DECIDE WHAT TO DO WITH THAT: %s\n",
+                  r1, nm, ns2,
+                  quiet_survives
+                      ? "the effect SURVIVES with\n       the echo silenced, so the route is"
+                        " NOT the self-voice and the null's\n       cause has to be named"
+                        " before anything here is quoted."
+                      : "the effect does NOT survive\n       with the echo silenced, so the"
+                        " probe was reading the creature's OWN\n       VOICE and not a"
+                        " synaptic trace. VOID as a probe result — and a\n       REAL finding"
+                        " about where same/different information actually is.");
+    } else if (met && moved) {
+      std::printf("    -> M6 MET ON THE INPUT SIDE. The creature tells same from different\n"
+                  "       at %.4f against its own oracle of %.4f, the readout is a physical\n"
+                  "       impulse it already receives, the probe is what buys it (%+.4f,\n"
+                  "       %.1f SE), and the mechanism is DEPRESSION because the same probe\n"
+                  "       with no dose buys nothing. The asymmetry %s the derived\n"
+                  "       one-tailed prediction.\n",
+                  d1, om, pm, ps > 0.0 ? pm / ps : 0.0,
+                  asym_ok ? "CONFIRMS" : "does NOT confirm");
+    } else if (moved) {
+      std::printf("    -> THE RIGHT KIND OF READOUT AT THE WRONG SIZE. The probe MOVES the\n"
+                  "       readout (%+.4f +- %.4f, %.1f SE) and leaves it under the %.3f bar\n"
+                  "       at %.4f. The successor is the probe's amplitude, duration and\n"
+                  "       timing — NOT another mechanism.\n",
+                  pm, ps, pm / ps, kSdBar, d1);
+    } else if (asym_ok) {
+      std::printf("    -> THE TRACE IS THERE AND THE READOUT IS NOT. The derived asymmetry\n"
+                  "       confirms (%+.4f +- %.4f) — the probe response DOES depend on\n"
+                  "       whether the words matched — while the creature's own held-out\n"
+                  "       readout does not move (%+.4f +- %.4f). That is §65's shape again,\n"
+                  "       one stage later: present, recoverable, not computed.\n",
+                  agm, agse, pm, ps);
+    } else {
+      std::printf("    -> REFUSED. The probe does not move the readout (%+.4f +- %.4f) and\n"
+                  "       the derived asymmetry does not confirm (%+.4f +- %.4f). §70's\n"
+                  "       threshold localisation becomes the live route again.\n",
+                  pm, ps, agm, agse);
+    }
+    // §70's CONFIRMATION, on the fresh creatures, reported whatever the probe did.
+    std::printf("\n    §70's LOCALISATION ON FRESH CREATURES — the arm that was selected on\n"
+                "    §70's own ladder, now pinned in advance and run on seeds it never saw:\n");
+    const uint32_t rr[3] = {kSdDrvExc, kSdVmem, kSdStpPrimary};
+    const char* rn[3] = {"rung 1  drive   ", "rung 2  membrane", "rung 3  spikes  "};
+    const double n70[3] = {0.7226, 0.6463, 0.5940};
+    for (uint32_t k = 0; k < 3; ++k) {
+      double m = 0, se = 0, o2 = 0, os2 = 0;
+      sd_stat(mbe[kSdN71Dose][0][rr[k]], m, se);
+      sd_stat(asm_[kSdN71Dose][0][rr[k]], o2, os2);
+      std::printf("      %s  %.4f +- %.4f  (oracle %.4f)   §70 read %.4f%s\n", rn[k], m, se,
+                  o2, n70[k], o2 >= kSdBar ? "" : "   <- NOT TESTABLE");
+    }
+    std::printf("\n");
+  }
+
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"
               "  (`drive-exc`/`drive-net` are MEASURED from live STP state, which a\n"
               "   creature with the mechanism off does not have: blank, not zero.)\n\n    gap  ");

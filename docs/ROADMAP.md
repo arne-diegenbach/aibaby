@@ -15178,3 +15178,80 @@ Four arms added to `samediff`'s seven: ~11/7 of §70's wall time, about 45-50
 minutes. **No genome change — `dna/default.toml` is untouched and its md5 must
 stay `9f6faac320210cc8e9f5830adf066934`. No kernel change, so `verify`'s hash
 must stay `ad96f882becbee92`.** Both are gates, not expectations.
+
+### §71 AMENDMENT — WHAT THE SMOKE FORCED, BEFORE THE RUN
+
+Nine changes, all made while building and smoking, all recorded **before the
+run**. Four are guards that could not fail or constants I chose rather than
+derived — the same class four times in one session, and the 300k smoke caught
+every one. Two add arms. One corrects my own reasoning about the probe.
+
+**1. THE SELF-VOICE ARMS, AND THEY ARE THE BIGGEST CHANGE.** The smoke measured
+**69.56 auditory spikes in the probe windows with NO PROBE IN THEM**. Those
+windows are not quiet: the creature hears **its own voice** there through DNA
+v69's delay line, and §64 measured B overwriting A, so its posture after two
+SAME words differs from after two DIFFERENT ones. The probe window's input is
+therefore `probe + a LABEL-DEPENDENT ECHO`, not the probe alone — a route to
+same/different that has nothing to do with synapses. Two arms added at
+`voicing_threshold` 1.15, `quietecho`'s measured 0.000-voiced rung: `n71 tau1000
+quiet` and `n71 tau1000 quiet+probe`. **If the probe's effect survives there it
+is reading the SYNAPSE; if it vanishes it was reading the creature's own echo**,
+which would be a real finding about where same/different information sits and
+**not** a demonstration that a synaptic trace can be probed. 13 arms, ~55 min.
+
+**2. G-EAR COULD NOT FAIL.** The measurement was gated on `probe` as well as the
+render, so the no-probe arm measured 0 by construction and "did the ear answer
+it" reduced to "is the response positive". The probe's three windows are now
+defined **by time alone** and measured on every arm; only the render is
+conditional. `vacuity-gate-cannot-guard-a-rejection`.
+
+**3. AND ITS REPLACEMENT'S THRESHOLD WAS INVENTED.** The first fix required the
+response to be **2x** the no-probe baseline — a number I chose. It failed on the
+smoke at 91.16 against 69.56, *because* of change 1. A probe can only ADD sound,
+so the gate is now the **paired per-creature difference, one-tailed**, which
+needs no constant: the smoke reads +21.60 +- 1.01, 21.4 SE. `derive-the-constant`.
+
+**4. THE MECHANISM NULL WAS ONE-TAILED.** A probe that moves same/different at
+zero dose is an artefact whichever way it moves it; the first version would have
+passed a probe that systematically **depressed** the readout.
+
+**5. NOTHING COVERED §71's DOSE ARMS.** §69's `G-DOSE` reads arms 3-6. A §71
+dose arm that patched no projection would be bit-identical to its own reference
+and print as a clean refusal **of the probe**. `G-DOSE71` added over both.
+
+**6. THE COLLAPSED SCALAR CAN HIDE A STRUCTURE THAT CONTRADICTS THE MECHANISM.**
+`|part1 - part2|` is one number; the mechanism predicts a **four-cell signature**.
+Added: the signed `part1 - part2` per (A,B), plus **A1B1 minus A0B0**, which
+cancels any offset common to the two probe parts. This was added after the smoke
+showed the collapsed scalar carrying a label-dependent signal **on the arm with
+no dose**, where depletion does not exist — so it is instrument repair prompted
+by a confound, not a statistic chosen for its answer.
+
+**7. I HAD THE ORDER OFFSET'S CAUSE WRONG.** I reasoned part 2 would read lower
+because part 1 had already depleted its channels. The smoke shows `part1 -
+part2` **negative in all four cells** — part 2 reads *higher*. The offset is a
+**stimulus asymmetry between /a/ and /i/**, not a depletion-order effect: /i/'s
+F2 at 2500 Hz drives the ear differently from /a/'s at 1180. It is constant
+across trials either way, which is what the A1B1-A0B0 contrast needs, but the
+reason stated in the first draft was wrong and is corrected here rather than
+quietly.
+
+**8. THE SMOKE'S SIGNED CELLS RUN OPPOSITE TO DEPLETION, AND THAT IS REGISTERED
+AS A WARNING.** The pattern keys to the **most recent** word: when B is /i/ the
+/i/ probe part gets *more* response (A0B1 -74.58, A1B1 -53.81), where depletion
+predicts less. An echo of the word just heard predicts exactly that. The
+offset-free contrast reads **-22.52 +- 10.74 where the derived prediction is
+POSITIVE**. A smoke carries no sign, so this refutes nothing — but the sign was
+registered before the smoke and **a refusal on it will count as one.**
+
+**9. THE PAIRING IS AT THE CREATURE LEVEL, NOT THE STATE LEVEL.** The probe
+cannot touch the same trial's during-B state, but trial N inherits trial N-1's
+probe. The arms share seed, wiring, cell list and trial order; they do not share
+the creature's trajectory. The during-B drift is **printed with its SE** (smoke:
++0.0625 +- 0.0821, 0.8 SE) instead of being assumed away.
+
+**AND ONE BOOKKEEPING CONSEQUENCE.** `kSdArmCount` goes 7 -> 13, so the **pooled**
+gate lines — total slept trials, the earliest first-sleep tick — necessarily
+change, because they aggregate over arms. **§69's and §70's per-arm result
+columns are the regression gate and they must not move**; the pooled counts are
+not that gate and must not be quoted as if they were.
