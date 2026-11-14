@@ -15342,3 +15342,27 @@ and correlations inflate variability, so it needs §71's own two controls. See
 `README.md`'s References under *"Getting a graded signal through a spike
 threshold"*. Burst multiplexing is second and needs a dose, because
 `burst_ms = 0.0` ships DNA v37 off.
+
+### §71's CODE AUDIT — WHAT WAS CHECKED AND WHAT WAS NOT
+
+`results/n71-asan-300k.log`, `results/n71-verify.log`.
+
+    verify                 PASS, hash ad96f882becbee92 unmoved, 24 experiments
+    ASan + UBSan, 300k     156 of 156 sessions, ZERO findings, full report reached
+    cross-build agreement  the sanitizer binary reproduces the smoke EXACTLY
+                           (G-EAR 91.16 +- 1.25, primary -0.0208 +- 0.0506,
+                            A1B1-A0B0 -22.521 +- 10.740)
+
+The sanitizer build is `-fsanitize=address,undefined` at `RelWithDebInfo`, so it
+is different codegen from the release binary. **Undefined behaviour usually
+changes results between builds, so the exact numerical agreement is independent
+evidence against UB** on top of UBSan's own silence. It covers the 47 raw
+indexing sites §70 and §71 added — the CSR tract index, the per-window drive and
+membrane arrays, the four-cell `sgn_cell`, and the per-trial probe vectors.
+
+**WHAT WAS NOT CHECKED, STATED SO THE GAP IS NOT MISREAD AS COVERAGE.** This was
+not a line-by-line review of the codebase: `experiments_probes.cpp` is ~21k lines
+and `experiments_milestones.cpp` ~49k. What was reviewed by hand is **the code
+§70 and §71 added plus the paired-statistics machinery they touch** — which is
+where the misalignment above was found. Everything else is covered only by
+`verify`'s fast tier, and the Long and Teach tiers were not run.
