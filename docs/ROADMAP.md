@@ -15696,3 +15696,59 @@ the slope-over-all-rungs rule and the "§73 cannot produce a pass" limit are
 unchanged. The `wins[]` growth passed its gate: **seven §64-§71 columns are
 byte-identical** across the change, including §69's carrier, §70's premise
 check, §71's asymmetry and §72's `sync-grp` cell.
+
+## §73 RESULT — NO VERDICT, AND THAT IS THE REGISTERED OUTCOME
+
+`--experiment samediff`, 1,680,000 ticks, 13 arms × 12 creatures, genome md5
+`9f6faac320210cc8e9f5830adf066934` UNCHANGED, `results/n73-samediff-1680k.log`.
+No genome change, no kernel change.
+
+    window   spikes/neuron   accuracy          oracle    ratio
+     100 ms       0.37        0.5357 +- 0.0196  0.8019   +0.127 +- 0.090
+     200 ms       0.75        0.5138 +- 0.0217  0.7920   +0.062 +- 0.085
+     400 ms       1.49        0.5104 +- 0.0257  0.7727   +0.077 +- 0.102
+     900 ms       3.36        0.5396 +- 0.0224  0.6591   +0.307 +- 0.123
+
+    SLOPE on sqrt(window), per creature, 4 testable rungs, 12 creatures
+                                  +0.01007 +- 0.00741   (1.4 SE)
+    FLAT prediction  +0.00000     1.4 SE away
+    SQRT prediction  +0.01269     0.4 SE away   (c measured at the first rung)
+
+**THIS RUN CANNOT SEPARATE THEM, AND THE LEAN IS THE OPPOSITE OF A NEGATIVE.**
+The data fit the STARVED hypothesis at least as well as the flat one — 0.4 SE
+against 1.4 — so **"events are not the constraint" is NOT what §73 shows and
+must not be quoted as it.** All four rungs are testable, the oracle falls
+0.8019 -> 0.6591 across the sweep exactly as dilution predicts, and the ratio
+is the statistic that was registered to survive that.
+
+**THE SUCCESSOR IS THE ONE §73 REGISTERED FOR THIS CASE: MORE CREATURES, NOT
+MORE WINDOW.** The SE scales as 1/sqrt(n), so separating the two hypotheses at
+2 SE needs roughly **16 creatures** against the 12 run here — a cheap section,
+and the only one of the open routes that is cheap.
+
+### THE DEFECT, AND IT IS THE THIRD TIME IN FOUR SECTIONS
+
+**The first build printed "EVENTS ARE NOT THE CONSTRAINT" on these exact
+numbers.** It tested only `slope >= 2 SE` and called everything else flat, which
+is not the test §73 registered — the power note says in as many words that if
+the SE leaves sqrt and flat within 2 SE of each other the reading is NO VERDICT.
+A confident negative was being handed to data that lean the other way.
+
+That is the same shape as §70's verdict overrunning its own vacuity caveat and
+§72's doing it again: **a verdict branch that does not implement the clause its
+own registration wrote.** The fix prints BOTH distances, names the no-verdict
+case, states that the negative must not be quoted, and computes the creature
+count that would settle it. The run was repeated so the archived log carries the
+correct reading rather than one contradicting its registration.
+
+### WHAT ELSE THE RUN SETTLED, FOR FREE
+
+**§72's design refutation holds at full budget.** `sync-grp`'s own assembled
+oracle reads **0.5038** on 100 trials per gap, against 0.5156 on the 16-trial
+smoke that called it. The synchrony space carries nothing, and that is now
+measured at the budget the sections are run at rather than inferred from a smoke.
+
+**And the `wins[]` growth passed its gate a second time, at 1.68M**: §69's
+carrier (0.5124 +- 0.0245), §70's premise check (0.9229 +- 0.0002), §71's
+primary (-0.0081 +- 0.0280) and §71's localisation (rung 1 drive 0.7226 +-
+0.0169) are all byte-identical to §71's archived run.

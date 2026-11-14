@@ -21127,10 +21127,46 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 n_ok, slm, sls, sls > 0.0 ? std::fabs(slm) / sls : 0.0,
                 unsigned(slopes.size()));
 
-    const bool rises = sls > 0.0 && slm >= 2.0 * sls;
+    // THE NO-VERDICT CLAUSE, WHICH §73 REGISTERED AND THE FIRST BUILD DID NOT
+    // IMPLEMENT. The registration says: "if the slope's SE still leaves the
+    // sqrt and flat predictions within 2 SE of each other, the registered
+    // reading is NO VERDICT at this budget." Testing only `slope >= 2 SE` and
+    // calling everything else flat is NOT that test — it hands a confident
+    // negative to data that cannot support one, and on the 1.68M run it did
+    // exactly that while the sqrt hypothesis fitted BETTER than flat.
+    //
+    // The sqrt hypothesis is `ratio = c * sqrt(window)`, anchored at the first
+    // testable rung so that `c` is measured rather than chosen. Both it and
+    // zero are then compared against the observed slope.
+    double sqrt_pred = 0.0;
+    for (uint32_t r = 0; r < kSdSweep; ++r) {
+      if (!rung_ok[r]) continue;
+      sqrt_pred = ratio_m[r] / std::sqrt(double(kSdSweepMs[r]));
+      break;
+    }
+    const double d_flat = sls > 0.0 ? std::fabs(slm) / sls : 0.0;
+    const double d_sqrt = sls > 0.0 ? std::fabs(slm - sqrt_pred) / sls : 0.0;
+    const bool both_live = sls > 0.0 && d_flat < 2.0 && d_sqrt < 2.0;
+    std::printf("    the FLAT prediction  %+.5f  is %.1f SE from it\n"
+                "    the SQRT prediction  %+.5f  is %.1f SE from it"
+                "   (c measured at the\n      first testable rung, not chosen)\n",
+                0.0, d_flat, sqrt_pred, d_sqrt);
+    const bool rises = sls > 0.0 && slm >= 2.0 * sls && !both_live;
     const bool falls = sls > 0.0 && slm <= -2.0 * sls;
     std::printf("\n");
-    if (n_ok < 3) {
+    if (both_live && n_ok >= 3) {
+      std::printf("    -> NO VERDICT AT THIS BUDGET, AND THAT IS A REGISTERED OUTCOME.\n"
+                  "       The slope is %+.5f +- %.5f: FLAT sits %.1f SE away and the SQRT\n"
+                  "       prediction %.1f SE away, so this run cannot separate them. Note\n"
+                  "       which way that leans — the data fit the STARVED hypothesis at\n"
+                  "       least as well as the flat one, so 'events are not the constraint'\n"
+                  "       is NOT what this shows and must not be quoted as it.\n"
+                  "       §73 registered the successor for exactly this case: MORE\n"
+                  "       CREATURES, not more window. The SE scales as 1/sqrt(n), so\n"
+                  "       separating these two at 2 SE needs roughly %u creatures.\n",
+                  slm, sls, d_flat, d_sqrt,
+                  unsigned(12.0 * std::pow(2.0 * sls / std::fabs(sqrt_pred > 0.0 ? sqrt_pred : 1.0), 2.0) + 0.5));
+    } else if (n_ok < 3) {
       std::printf("    -> VOID. Only %u rungs have a testable oracle, so there is no trend\n"
                   "       to read. §73 registered three as the minimum for a slope.\n", n_ok);
     } else if (rises) {
