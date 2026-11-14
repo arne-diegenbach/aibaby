@@ -15366,3 +15366,118 @@ and `experiments_milestones.cpp` ~49k. What was reviewed by hand is **the code
 §70 and §71 added plus the paired-statistics machinery they touch** — which is
 where the misalignment above was found. Everything else is covered only by
 `verify`'s fast tier, and the Long and Teach tiers were not run.
+
+## §72 PRE-REGISTRATION — IS THE SIGNAL IN THE CORRELATIONS WE HAVE NEVER MEASURED?
+
+### THE TWO HYPOTHESES THAT PREDICT §71's NUMBERS EXACTLY
+
+§71 confirmed, pre-pinned on fresh creatures: drive 0.7175, membrane 0.6354,
+spikes 0.5469 with a testable 0.7498 oracle. Two readings survive that, and
+**they predict the same three numbers:**
+
+    A  the spike THRESHOLD destroys the signal        -> fix the neuron
+    B  our RATE readout cannot see what the threshold -> fix the instrument
+       preserved
+
+**EVERY FEATURE SPACE THIS PROJECT HAS EVER MEASURED IS A RATE OR A COUNT**
+(`bins[win][neuron] += 1.0`; artic9/artic7 are time-averaged group activities;
+§70's drive spaces are summed amounts). If the conjunction survives into the
+spike train as **correlation**, our readout has been blind to it by construction
+in every section since §63. The literature names this regime: synchrony in
+0.4-0.6% of synapses changes output firing with **input rates unchanged**,
+spike-time synchronisation is **independent of rate**, and shared presynaptic
+drive **generates** postsynaptic correlation — which is our case, because the
+depletion state is shared across vocal neurons fed by the same channels.
+
+### NO NEW ARMS, NO NEW SEEDS, NO GENOME AND NO KERNEL CHANGE
+
+§72 adds **two feature spaces** and nothing else. The dose arm it reads is §71's
+`n71 tau1000` — already fresh, already pre-pinned, already confirmed. So §69's,
+§70's and §71's columns all reproduce as regression gates, and the cost is the
+same 13-arm run.
+
+### THE STATISTIC IS RATE-CORRECTED BY CONSTRUCTION, AND THAT IS THE WHOLE DESIGN
+
+A per-tick population-count histogram would be **rate-confounded**: §69 measured
+net vocal drive RISING under the dose, so a rate change alone moves any raw
+count distribution and a classifier would read rate. The fix is not a covariate,
+it is the choice of statistic.
+
+Per vocal neuron `i`, over the `T` ticks of a window, with `n_i` its spikes and
+`K` the module's total:
+
+    c_i        = SUM_t  spike_i(t) * (k_t - spike_i(t))     its coincidences
+    E[c_i]     = n_i * (K - n_i) / T                        under INDEPENDENCE
+    excess_i   = c_i - n_i (K - n_i) / T                    THE FEATURE
+
+`E[c_i]` is exact for independent Bernoulli spiking at the observed per-neuron
+rates, so **`excess_i` is zero in expectation for any rate profile whatever** and
+a rate change cannot move it. It is also **192-dimensional, exactly like the
+rate space**, read in the same windows through the same held-out classifier — so
+the paired comparison between them differs in the feature and in nothing else.
+
+    sync-excess   the rate-corrected coincidence vector   <- THE PRIMARY SPACE
+    sync-raw      the per-tick count histogram            rate-sensitive, reported
+
+### THE PRIMARY, AND WHAT IS DELIBERATELY NOT REGISTERED
+
+    PRIMARY      `sync-excess` same/different at the overlap window, `n71 tau1000`,
+                 against the 0.650 bar and its OWN assembled oracle (G-ORACLE)
+    CO-PRIMARY   the PAIRED difference `sync-excess` minus `vocal`, same trials
+    CONTROLS     label-destroyed; and the ZERO-DOSE arm, where there is no
+                 depletion to correlate anything
+
+**THE SIGN OF THE COVARIANCE CHANGE IS NOT REGISTERED, AND THE REASON IS §71.**
+Whether concentrated depletion raises or lowers summed covariance depends on how
+the lost shared drive redistributes across neurons whose operating points we
+have not measured. **My last a-priori sign derivation was clean, registered, and
+REFUTED at 2.1 SE** (§71's concavity argument). So the covariance test is
+**TWO-TAILED and said to be two-tailed in advance**, rather than dressed in a
+derivation I cannot support. What IS directional is the readout comparison: only
+`sync-excess` ABOVE `vocal` means information was being missed.
+
+### REGISTERED CLAUSES
+
+- **`sync-excess` clears the bar on a testable oracle and beats `vocal` paired**
+  -> **HYPOTHESIS B.** The threshold preserved the conjunction and our rate
+  readout could not see it. Every rate-only null since §63 is then re-opened as
+  a measurement artefact, and this is reported FIRST because it invalidates more
+  prior work than any other outcome.
+- **Beats `vocal` but under the bar** -> correlations carry SOME of it. The
+  successor is a richer coincidence statistic (lags, pairs), not a mechanism.
+- **Does not beat `vocal`** -> **HYPOTHESIS A survives.** The threshold really
+  does destroy it, §70-§71 stand as written, and the successor is the burst dose
+  or per-projection STP keying.
+- **The zero-dose arm clears the bar on `sync-excess`** -> VOID and an artefact:
+  synchrony is carrying same/different with no depression in the creature.
+
+### VOID SHAPES
+
+- **`excess_i` is identically ~0 across the module** -> there is no synchrony
+  beyond independence to read, and the space is vacuous. **MEASURED, not
+  assumed**: the mean |excess| and the summed covariance are printed before any
+  verdict, and a near-zero reading VOIDS rather than refuses.
+- **`excess` still tracks the population rate across trials** -> the correction
+  did not work. The correlation between the per-trial summed excess and the
+  per-trial population rate is **printed**, and a pass that tracks rate is not a
+  synchrony result.
+- `sync-excess`'s own assembled oracle under the bar -> not testable, as §69's
+  G-ORACLE requires.
+- Any §69/§70/§71 column moves -> the new spaces perturbed the run. VOID, a bug.
+
+### POWER, IN THE CLAIM'S UNITS
+
+§71 measured SE 0.014-0.028 on these cells at this budget, so the design
+separates a space at the bar from one at chance (0.650 vs 0.500) at roughly 6 SE,
+and resolves a paired space-to-space difference at about 0.025. **It will not
+resolve a `sync-excess` sitting at 0.63**, and the registered reading of that is
+*no verdict at this resolution*.
+
+### AND THE CAUTION THAT COMES WITH THE LEAD
+
+The same literature that motivates this says depression at high input rates
+"erases from the synaptic current any trace of the spatiotemporal structure of
+the input" and that spike correlations "increase this variability enormously".
+**The correlations may be noise rather than signal**, which is exactly why the
+zero-dose arm and the label-destroyed null are registered as gates and not as
+reassurance.
