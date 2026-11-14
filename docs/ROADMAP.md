@@ -15555,3 +15555,112 @@ empty, and it is empty according to numbers §70 had already printed.
   memory this project wrote after §69 cost it a retracted result, and this is the
   second time I have made it. The control is now computed in the code, on the
   arm the verdict is read on, so it cannot be done by hand and got wrong again.
+
+## §73 PRE-REGISTRATION — WERE THE REFUSALS EVENT-STARVED? THE WINDOW IS THE LEVER NOBODY SWEPT
+
+### THE RECOMMENDATION CHANGED, AND THE ARITHMETIC IS WHY
+
+§72's result section named the burst dose as the successor. **That was wrong, and
+the budget table below is the reason.** §73 is registered instead, and it GATES
+the burst dose rather than following it.
+
+### THE BUDGET TABLE, COMPUTED BEFORE THE DESIGN AND NOT AFTER THE SMOKE
+
+This is the discipline §72 did not have. The vocal module fires 0.47 spikes/tick
+across **126** neurons on the `tau1000` arm — 0.00373 spikes/tick/neuron, a mean
+ISI of 268 ms:
+
+    window    spikes/neuron   burst events/neuron   per 14-neuron group
+     100 ms        0.37              0.07                   1.0
+     200 ms        0.75              0.15                   2.1
+     400 ms        1.49              0.30                   4.2   <- EVERY SECTION
+     900 ms        3.36              0.67                   9.4      SINCE §63
+
+**EVERY READOUT THIS PROJECT HAS REFUSED WAS READ ON 1.5 SPIKES PER NEURON.**
+§63, §64, §65, §69, §70, §71 all read 400 ms windows. That is the one quantity
+none of them varied, and it is the quantity §72 died on.
+
+**AND IT KILLS THE BURST DOSE AS THE NEXT STEP.** At the derived `burst_ms` of
+60 ms — 20.1% of spikes score as burst spikes at this rate, which is §68's
+"keep it graded" logic applied to the burst window — a burst readout has **0.30
+events per neuron** at 400 ms and **0.67** at 900 ms. It is starved worse than
+the synchrony space was, *before* adding §72's oracle-headroom bind. The burst
+dose is therefore not registered until §73 says whether events are the
+constraint.
+
+### WHAT §73 RUNS
+
+The overlap window swept while everything else is held: **100 / 200 / 400 / 900
+ms from B's onset**, nested, on the arms §71 already pinned. 400 ms reproduces
+§64-§71 exactly and is the regression gate; 900 ms is the whole of B and the
+ceiling, since the window cannot outlast the word.
+
+**NO genome change, NO kernel change, NO new mechanism, NO new arms.**
+
+**ONE STRUCTURAL CHANGE, AND IT IS THE ONLY RISK:** `uint32_t wins[2]` caps a
+tick at two windows, and nested windows put a tick in up to five. The array
+grows, and **§64-§71's columns must reproduce bit-for-bit afterwards** — that is
+the gate on the change, not an expectation.
+
+### THE PRIMARY, AND ITS CONFOUND RUNS THE OTHER WAY
+
+    PRIMARY   (accuracy - 0.5) / (oracle - 0.5) on `vocal`, `n71 tau1000`,
+              ACROSS THE FOUR WINDOWS
+    DERIVED   for a noise-limited readout d' scales as sqrt(N_events), and for
+              small effects accuracy - 0.5 scales with d'. So IF the refusals
+              are event-starved the ratio RISES as sqrt(window): 1.5x from
+              400 ms to 900 ms. IF it is FLAT, the refusals are real and the
+              400 ms window was never the problem.
+
+**THE CONFOUND IS REGISTERED AND IT OPPOSES THE EFFECT.** A longer window takes
+in more of B while A's trace decays inside it, so dilution pushes accuracy DOWN
+exactly where the budget pushes it UP. That is why the primary is a **RATIO**
+and not an accuracy: the denominator is **the assembled oracle on the same space
+and the same window** — named, as §61 requires, so nobody has to guess which
+ceiling. Dilution moves numerator and denominator together; a budget effect
+moves only the numerator.
+
+### THE HONEST LIMIT, STATED BEFORE THE RUN
+
+**§73 CANNOT PRODUCE A PASS AND IS NOT MEANT TO.** `vocal` reads 0.5469 at
+400 ms (§71), so `acc - 0.5 = 0.0469`. Reaching the 0.650 bar needs that to
+triple, which under sqrt scaling needs **(0.15/0.0469)^2 = 10x the window**, or
+~4100 ms — longer than the whole trial. So §73 is **DIAGNOSTIC**: it says
+whether ten sections of refusals were partly an artefact of one unswept
+constant, and it cannot itself clear the bar. Registering that now so the result
+is not read as a failed attempt at M6.
+
+### REGISTERED CLAUSES
+
+- **The ratio rises as sqrt(window) or faster** -> **THE REFUSALS WERE
+  EVENT-STARVED.** §63-§71's nulls are then upper bounds on a budget and not
+  statements about the creature, every one of them needs re-reading, and this is
+  reported FIRST because it touches the most prior work.
+- **The ratio rises but sub-sqrt** -> events are part of it. The successor
+  prices how much, and the burst dose stays closed because it is starved worse.
+- **The ratio is flat within SE** -> **EVENTS ARE NOT THE CONSTRAINT.** The
+  refusals stand as written, §72's bind is not a budget artefact, and the burst
+  dose or per-projection STP keying becomes the live route on its own merits.
+- **The ratio FALLS** -> dilution dominates and the 400 ms window was already
+  generous. Same consequence as flat, with the trace decay priced as a bonus.
+
+### VOID SHAPES
+
+- `vocal`'s oracle falls below the bar at a long window -> that window is not
+  testable and is dropped from the sweep, not refused on.
+- The 900 ms window overruns B on any gap -> it does not: B is 900 ms at every
+  gap, so the ceiling is exact rather than chosen.
+- Any §64-§71 column moves at the 400 ms rung -> the `wins[]` change perturbed
+  the run. VOID, and a bug.
+
+### POWER
+
+§71 measured SE 0.014-0.028 on these cells. The sqrt prediction from 400 to
+900 ms is a 1.5x change in `acc - 0.5`, i.e. 0.0469 -> 0.070, a difference of
+**0.023** against a paired SE of about 0.025. **That is 1 SE, and it is NOT
+enough.** So the primary is read across **all four** windows as a trend with its
+slope and SE, not as a two-point comparison — four rungs spanning 9x in events
+give the slope roughly 2.5x the resolution of the endpoints alone. **If the
+slope's SE still leaves the sqrt and flat predictions within 2 SE of each other,
+the registered reading is NO VERDICT at this budget**, and the honest successor
+is more creatures rather than more window.
