@@ -15752,3 +15752,148 @@ measured at the budget the sections are run at rather than inferred from a smoke
 carrier (0.5124 +- 0.0245), §70's premise check (0.9229 +- 0.0002), §71's
 primary (-0.0081 +- 0.0280) and §71's localisation (rung 1 drive 0.7226 +-
 0.0169) are all byte-identical to §71's archived run.
+
+## §74 PRE-REGISTRATION — THE SLOPE WITH ENOUGH CREATURES TO READ IT
+
+The question is §73's, unchanged: **does the readout's efficiency rise with the
+number of spikes in the overlap window (STARVED) or not (FLAT)?** §73 measured
+the slope of the oracle-normalised accuracy on `sqrt(window)` at **+0.01007 +-
+0.00741** over 12 creatures — flat 1.4 SE away, the sqrt prediction 0.4 SE away,
+so NO VERDICT, leaning starved.
+
+### WHAT §73's OWN SUCCESSOR FIGURE GOT WRONG — A PRE-FLIGHT, NOT A CORRECTION
+
+§73's output printed *"separating these two at 2 SE needs roughly 16 creatures"*.
+That figure is `12 * (2*SE / gap)^2`: the n at which the SE falls to **half the
+gap between the two hypotheses**, which is the n at which a verdict becomes
+*possible* if the estimate lands exactly on one of them. It is **not** the n at
+which a verdict is *likely*. At the slope §73 actually measured:
+
+    n = 16    SE 0.00642    flat 1.57 SE    sqrt 0.41 SE    -> STILL NO VERDICT
+
+The design is symmetric, so the firing probability is `P = Phi(gap/SE - 2)`:
+
+    n = 16    P(verdict) = 0.49      <- the registered figure is a COIN FLIP
+    n = 24    P(verdict) = 0.66
+    n = 42    P(verdict) = 0.89
+    n = 54    P(verdict) = 0.95
+
+Written as a number before the run, per `power-is-not-the-error-model`. §73's
+result stands exactly as archived; what was wrong was the cost of its successor.
+
+### TWO ASYMMETRIES THE SIZING HAS TO RESPECT
+
+**1. "Flat" is a point hypothesis; "sqrt" is a one-parameter family.** Flat says
+`b = 0` crisply. Sqrt says `b = c` where `c` must be estimated from the same
+data. The two directions therefore do not cost the same, and a design powered
+for one is not powered for the other.
+
+**2. §73's sqrt anchor is itself a 1.4 SE estimate.** `sqrt_pred` is the 100 ms
+ratio divided by 10, and that ratio was **+0.127 +- 0.090**, so the anchor
+carries SE 0.0090 — comparable to the slope's own 0.00741. §73's clause divided
+`slm - sqrt_pred` by `sls`, **the SE of the slope alone and not of the
+difference.** Under a four-rung equal-variance model, with `x = (10, 14.142, 20,
+30)` and `Sxx = 225.74`:
+
+    Var(b) = 0.004430 s^2    Var(c) = 0.01 s^2    Cov(b,c) = -0.000378 s^2
+    SD(b-c)/SD(b) = sqrt(0.0151863 / 0.0044300) = 1.85
+
+So the correct paired SE is **1.85x larger** than the one §73 divided by.
+**This did not change §73's reading** — `d_flat` was the binding term at 1.4,
+and `d_sqrt` stays under 2 at any larger SE — but at a larger n it would, and in
+the direction that matters: it would let `EVENTS ARE NOT THE CONSTRAINT` print
+on data that cannot support it. §74 computes that difference **paired per
+creature**, which gets the correlation right by construction rather than by
+model.
+
+With the paired SE, declaring FLAT needs the interval to exclude `c`: possible
+at n ~ 56, 80% powered at n ~ 113. **So §74 does not try to prove flat.** It is
+powered for the direction that bears on ten sections of refusals — if the window
+buys accuracy, every null in §63-§71 is an upper bound on a budget.
+
+### THE INTERCEPT WAS CHECKED AND REJECTED AS THE DISCRIMINATOR
+
+Fitting `y = a + b*x` per creature makes flat predict `a = mean ratio` and sqrt
+predict `a = 0`, with **no anchor at all** — which would have removed asymmetry
+2 outright. It is worse. `xbar = 18.54` is far from zero, so extrapolating to
+the intercept amplifies noise:
+
+    Var(a) = s^2 (1/4 + xbar^2/Sxx) = 1.7719 s^2    SD(a)/SD(b) = 20.0
+    separation on a:  0.143 / 0.148 = 0.96 SE per 12 creatures
+    separation on b:  0.0127 / 0.00741 = 1.71 SE per 12 creatures
+
+**The slope stays the primary.** Recorded because it was checked, not because it
+is used.
+
+### MORE WINDOW IS BLOCKED, AND §73 ALREADY MEASURED WHY
+
+The 900 ms rung's own assembled oracle reads **0.6591 against the 0.650 bar** —
+it clears by 0.009. A 1600 ms rung would drop under the bar and be unreadable,
+which is §72's bind for the third time. **More creatures is the only axis left,
+exactly as §73 registered.**
+
+### THE DESIGN
+
+One new arm, `n74 sweep`, **identical to `shipped` in every setting** (vthr 0,
+no omit, zero dose, no probe), differing only in `rep_off = 24`, which places it
+on **42 creatures no earlier section has seen** — §73's are 0-11, §71's are
+12-23. Rep counts become **per-arm**, so every existing column stays
+byte-identical and the regression gate survives. 42 is chosen so that
+`42 = 3 x 14` threads exactly, with no idle tail (`parallel_reps` warns that the
+tail costs more than the over-subscription).
+
+    PRIMARY     the fresh 42, pre-pinned      SE 0.00396   P(fire | sqrt) = 0.89
+    SECONDARY   pooled 54 (= 12 + 42)         SE 0.00349   P(fire | sqrt) = 0.95
+
+**Why the fresh arm is the primary and not the better-powered pooled 54.** The
+12 are the discovery sample, and the reason this section exists is that their
+lean was positive — had it been negative, this run might not have been made.
+That selection inflates a pooled estimate; the fresh 42 carry none of it. §71
+set the precedent, confirming §70's localisation on creatures it had never seen,
+and it worked. **The pooled figure is reported as the better-powered estimate
+and may strengthen or qualify the primary. It may never overturn it.**
+
+**The power figure is conditional and the condition is named:** 0.89 assumes the
+sqrt hypothesis holds *with the coefficient §73 measured*, and that coefficient
+is itself a 1.4 SE estimate. If the true `c` is smaller, the achieved power is
+lower (`calibrate-the-estimator-in-claim-units`).
+
+### THE BRANCHES, IN THIS ORDER, AND THE ORDER IS THE POINT
+
+§70's verdict overran its own vacuity caveat, §72's did it again, and §73's
+handed a confident negative to data leaning the other way — **three times in
+four sections.** The rule that came out of it is that the void and no-verdict
+branches get written and exercised FIRST, and the interesting ones last.
+
+1. **VOID** — fewer than 3 rungs with a testable oracle on the fresh arm, or its
+   own session gate fails. No verdict is computed and none is printed.
+2. **NO VERDICT** — the fresh slope is within 2 SE of 0 **and** the paired sqrt
+   distance is within 2 SE of 0. The lean is named, and the n required for each
+   side is printed. **This is the registered expectation for the flat side at
+   this budget**, so it is an outcome and not a failure.
+3. **STARVED** — the fresh slope is >= 2 SE above 0. §63-§71's nulls become
+   upper bounds on a budget and every one of them needs re-reading.
+4. **FLAT** — the fresh slope is within 2 SE of 0 **and** the paired sqrt
+   distance is >= 2 SE. **Only in this branch may "events are not the
+   constraint" be printed.**
+5. **DILUTION** — the fresh slope is <= -2 SE.
+
+And the cross-reading, registered so it cannot be chosen afterwards: **if the
+primary is NO VERDICT while the pooled 54 would have fired, the printed reading
+is NO VERDICT WITH A NAMED LEAN** — never the verdict.
+
+### THE SELF-CHECK, IN CODE RATHER THAN BY EYE
+
+§73's block is left untouched so its output stays byte-identical. §74's
+statistics are a **new single implementation** over a list of arms, and §74
+prints that implementation's `shipped`-only pass **against §73's archived
+figures** — if the lambda does not reproduce `+0.01007 +- 0.00741` exactly, the
+instrument is wrong and the section is void. A duplicated 60-line statistical
+block that drifts from its twin is the defect this avoids.
+
+### WHAT §74 CANNOT DO
+
+Restated from §73 so it is not quoted beyond its reach: **§74 cannot produce a
+PASS on M6 and is not meant to.** Reaching 0.650 from 0.5469 needs ~10x the
+window under sqrt scaling, longer than the whole trial. This is a **diagnostic
+of ten sections' worth of refusals**, not an attempt at the milestone.
