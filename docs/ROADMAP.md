@@ -15023,3 +15023,158 @@ under *"Reading a trace that is held in the synapses"* — an **impulse probe** 
 the scoring window, which needs no genome or kernel change and explains five of
 our own refusals, and **per-projection STP keying**, which addresses the damage
 and explicitly not the loss.
+
+## §71 PRE-REGISTRATION — READ THE SYNAPSE WITH A PROBE, AND CONFIRM §70 ON FRESH CREATURES
+
+### THE TWO QUESTIONS, AND WHY ONE RUN CAN CARRY BOTH
+
+§70 established that the conjunction **is** in the delivered drive at a
+sufficient dose (0.8377 at `tau3000`, oracle 1.000 at every dose) and **is not**
+in the ongoing spike rate (0.5940). The activity-silent working-memory
+literature says exactly that situation has a readout: a trace held in synaptic
+state is invisible in ongoing firing and becomes legible when a **brief
+task-irrelevant impulse** perturbs the network, because the hidden synaptic state
+shapes the response. §63 and §69 both read the ongoing rate in a **silent**
+scoring window — the one place that theory says the trace is not.
+
+§70 also left a localisation that is **selected on the data** and is not a
+verdict. Both questions live in different windows of the same trial, so one run
+answers both without confounding them:
+
+    during B          the §70 rungs, on FRESH creatures   -> confirms the localisation
+    the score window  the probe, where §63 read chance    -> tests the readout
+
+### THE CONFIRMATION MUST USE FRESH CREATURES, AND THIS IS NOT A DETAIL
+
+`samediff` is deterministic: re-pinning the carrier to `tau1000` and re-reading
+§70's trials would be **circular**, the same `pairing-on-discovery-sample` error
+under a new name. The seed is `header.seed + rep * 7919`, so §71's arms carry a
+**rep offset of +12** and run on twelve creatures §70 never saw. **The existing
+seven arms keep reps 0-11 untouched, so §69's and §70's columns remain a
+regression gate.**
+
+### THE PROBE IS TWO-PART, AND THE SHAPE IS FORCED BY THE SYNTHESISER
+
+`VowelSource::render` produces a **two-formant voiced vowel**, not a broadband
+click. A formant-shaped probe therefore excites only the channels its own
+formants drive, and /a/ (780/1180) and /i/ (320/2500) are the corner pair — no
+single two-formant probe overlaps both. Karabay et al. (2025) measured decoding
+**improving with physical overlap** between impulse and remembered item, so
+overlap is wanted, not avoided.
+
+So the probe is **two brief parts in a fixed order: /a/'s formants, then /i/'s**,
+60 ms each inside the 400 ms scoring window, at one fixed amplitude, **byte-
+identical on every trial**. `audprobe` measured the ear classifying a word within
+50 ms (0.916), so 60 ms is enough for the ear to answer. Being identical every
+trial, the probe carries **zero information about the label by construction** —
+`null-is-not-a-control` satisfied from the side where the null is derived rather
+than guessed.
+
+### THE DERIVED PREDICTION, WITH A SIGN, AND IT IS NOT "ACCURACY GOES UP"
+
+Depletion is **concave** in spike count: `d = 1-(1-U)^n`, so `d(2n) < 2d(n)`.
+§68 measured the two words' channel sets as nearly disjoint (cross-word cosine
+0.1378 against same-word 0.9359). Therefore, after A and B:
+
+    A == B    one channel set depleted TWICE       -> probe part on that word SMALL,
+                                                      the other part LARGE
+    A != B    two sets each depleted ONCE          -> both parts MEDIUM
+
+**The signal is the ASYMMETRY between the two probe parts: large when the words
+matched, small when they differed.** That is a magnitude computation on a scalar,
+not an XOR over two high-dimensional codes — which is precisely what §63's
+algebra said was missing and what the Miller/Desimone strand says brains
+actually do.
+
+Two consequences registered in advance:
+
+- **PRIMARY STATISTIC:** `|part1 - part2|`, per trial, one-tailed — **larger for
+  SAME than for DIFFERENT**. A sign, derived from the concavity, not fitted.
+- **A TOTAL-DRIVE READOUT IS PREDICTED TO FAIL** and its failure must not be read
+  as the probe failing: total depletion differs only by the concavity gap
+  `2d(n) - d(2n)`, while the asymmetry is first-order. **If the scalar asymmetry
+  works and a total fails, that is the prediction confirmed, not a mixed result.**
+
+### THE ARMS — FOUR, ALL PAIRED ON THE SAME FRESH SEEDS
+
+    1  shipped,  no probe    the reference, and §63's silent window again
+    2  shipped,  PROBE       THE MECHANISM NULL — see below
+    3  tau1000,  no probe    §70's localisation on creatures it never saw
+    4  tau1000,  PROBE       THE PRIMARY
+
+**ARM 2 IS THE CONTROL THAT MAKES THIS WORTH RUNNING.** With `stp_use = 0` there
+is no depletion anywhere, so a probe can carry **no** same/different information
+whatever else it does to the network. It is a null **derived from the mechanism**
+rather than from shuffling, and it fires against the one failure mode that would
+otherwise be invisible: a probe that improves decoding by waking the network up
+rather than by reading a synaptic trace.
+
+### THE TWO RIVAL EXPLANATIONS ARE ARMS, NOT DISCUSSION POINTS
+
+- **SPONTANEOUS REGENERATION.** Khanjanianpak & Valiadeh (arXiv:2607.14000) show
+  a residual synaptic configuration can restart activity **with no probe at all**.
+  Arms 1 and 3 are the paired no-probe controls; without them regeneration and
+  the probe's effect are indistinguishable.
+- **SNR ON A WEAK ACTIVE TRACE.** Barbosa et al. argued pinging reveals
+  electrically *active* memories, and Karabay et al. concede the impulse may only
+  raise signal-to-noise. **We can dissociate this and the human literature
+  cannot**, because §70's `synapse_resource`/`synapse_release` read the synaptic
+  state on the same trials: regress the probe asymmetry on (a) the **measured
+  depletion** asymmetry and (b) the **pre-probe ongoing rate** asymmetry. The
+  trace account predicts (a) carries it and (b) does not. **Both regressors are
+  printed with their identification, never asserted** —
+  `vacuity-gate-cannot-guard-a-rejection`.
+
+### THE PRIMARY, AND IT IS THE CREATURE'S OWN SPACE
+
+    PRIMARY      `vocal` at the scoring window, arm 4 against arm 3, PAIRED
+    CO-PRIMARY   the derived scalar |part1 - part2|, one-tailed
+    REPORTED     the §70 rungs (drive, membrane) in the same window
+
+M6 asks what the **creature** can express, so the primary stays the space §69
+pinned. The drive and membrane are reported because §70 showed they carry more,
+and a probe that works at the drive and not at the spikes would relocate the
+threshold finding rather than overturn it.
+
+### REGISTERED CLAUSES — AND THE MIDDLE BAND IS NAMED
+
+- **Arm 4 clears 0.650 against its own assembled oracle and arm 2 does not** ->
+  **M6 MET ON THE INPUT SIDE.** The creature tells same from different, the
+  readout is a physical probe it already receives, and the mechanism is
+  depression because the mechanism null is silent.
+- **Arm 4 moves above arm 3 beyond 2 SE but under the bar** -> the probe is the
+  right *kind* of readout at the wrong size. Successor is the probe's amplitude
+  and timing, not another mechanism.
+- **Arm 4 does not differ from arm 3** -> the probe refuses, and §70's threshold
+  localisation becomes the live route again.
+- **Arm 2 clears the bar** -> **VOID, AND IT IS AN ARTEFACT, NOT A FINDING.** A
+  probe carrying same/different without any depression in the creature means the
+  statistic is reading the stimulus or the fold, and nothing else in the section
+  may be quoted.
+
+### VOID SHAPES
+
+- The probe's own window is not scored, or the ear does not respond to it
+  (auditory rate in the probe window within noise of the silent arm's) -> the
+  probe never arrived. VOID.
+- `tau1000`'s rung-3 oracle falls below the bar on fresh creatures -> the dose
+  damages the code in these twelve as it did at `tau3000` in §70, and the
+  localisation arm is VOID rather than refusing.
+- Any §69 or §70 column on reps 0-11 moves -> the probe leaked out of its arm.
+  VOID, and a bug.
+
+### POWER, IN THE CLAIM'S OWN UNITS
+
+§70 measured SE 0.0169-0.0245 on these cells at this budget with twelve
+creatures. The design therefore resolves **a rung at the bar from one at chance**
+(0.650 against 0.500) at roughly 6 SE, and a **paired** arm-4-minus-arm-3
+difference at about 0.024. **It will NOT cleanly resolve an arm 4 sitting at
+0.63**, and the registered reading of that is *no verdict at this resolution*,
+stated now rather than discovered afterwards.
+
+### COST AND WHAT IS NOT TOUCHED
+
+Four arms added to `samediff`'s seven: ~11/7 of §70's wall time, about 45-50
+minutes. **No genome change — `dna/default.toml` is untouched and its md5 must
+stay `9f6faac320210cc8e9f5830adf066934`. No kernel change, so `verify`'s hash
+must stay `ad96f882becbee92`.** Both are gates, not expectations.
