@@ -16763,3 +16763,117 @@ mis-aimed, and that **no event budget addresses a per-module legibility problem.
 
 **CLOSED BY THIS AUDIT, DO NOT RE-OPEN:** decode-then-compare in any single space;
 the window and event axes as a route to the bar; the dose sweep.
+
+## §77 PRE-REGISTRATION — DOES THE COMPARISON SURVIVE TO THE MEMBRANE? THE ONE CELL §76's AUDIT LEFT STANDING
+
+Registered before the run. §76's audit closed decode-then-compare in every single
+space, closed the window and event axes, and closed the dose sweep across its
+measured range. It left exactly one cell: **§70's `vmem` at `stp tau3000` reads
+0.6686 on a testable oracle of 0.747 — above the 0.650 bar, one step before the
+spikes — and §70's own text labels that column SELECTED ON THE DATA.** §71 pinned
+and confirmed the tau1000 rung (membrane 0.6354 +- 0.0169, UNDER the bar) and
+§75's fresh tau3000 arm printed `drive-exc` alone with no ladder, so **the
+membrane at tau3000 has never been read on creatures §70 did not select it on.**
+
+### THE BRANCHES THAT PRODUCE NO VERDICT, WRITTEN FIRST
+
+This is the third section to write these before the pass branch, because §74 and
+§75 both landed on one.
+
+**VOID — `vmem`'s OWN assembled oracle on the primary arm is under 0.650.** Then
+no readout of that space could have reached the bar and the reading says nothing
+about the membrane, exactly as §72's `sync-grp` and §75's burst spaces. §70 read
+0.747 and §71 read 0.9239 at a lighter dose, so this fires with **probability
+under 1%** — but it is the gate, and it is checked before the primary is read.
+
+**NO VERDICT — the reading is at or above 0.650 but by less than 2 SE.** The
+project's convention for a bar claim is a 2-SE clearance (§75 cleared the drive at
+`0.8552 - 2(0.0158) = 0.8236`). The margin here is **0.0186**, a tenth of the
+drive's, so this branch is real: it fires with **probability 3.5% if §70's cell is
+exactly true**, and with high probability if the truth lies anywhere inside
+0.650-0.660. **In that case the registered statement is that the membrane sits AT
+the bar and the question is NOT worth more creatures** — n would have to pass 500
+— and the successor is the threshold pricing below, not a bigger arm.
+
+**IT DOES NOT REPLICATE — the reading is under 0.650.** §70's selected maximum
+does not survive fresh creatures and the membrane route dies for one arm, which is
+what §74 did to §73's selected window lean. **Sub-case, registered: a reading at
+or under 0.6354**, §71's confirmed tau1000 membrane, says the dose buys the
+membrane nothing beyond tau1000 and the tau3000 column was selection.
+
+### THE PRIMARY
+
+    arm         `n77 tau3000`, stp_use 0.20 / tau_rec 3000 ms on the merged
+                auditory -> vocal tract, everything else exactly as shipped
+    creatures   144 at `rep_off` 78 — seeds 78-221, which no section has
+                scored (§63-§70 used 0-11, §71 12-23, §74 24-65, §75 66-77)
+    space       `vmem`, the vocal module's membrane averaged over the window
+    window      B's first 400 ms, gap 200 — §64's overlap window, the one
+                moment both words are present, and the window §70's cell
+                and §71's confirmation were both read in
+    the bar     0.650, read against `vmem`'s OWN assembled oracle on this arm
+    verdict     the reading clears 0.650 by at least 2 SE
+
+**WHY 144 AND NOT 12.** §71 measured this quantity's SE at 0.0169 on 12
+creatures, so the per-creature SD is 0.0585 and the projected SE is 0.00488 at
+144. The registered firing probabilities, if §70's 0.6686 is the true value:
+
+    n      SE       2-SE bar    P(2-SE clearance)   P(NO VERDICT)
+     12   0.0169     0.6838          12%                84%
+     48   0.0084     0.6669          58%                42%
+     96   0.0060     0.6619          87%                13%
+    144   0.0049     0.6598        96.5%               3.5%
+
+**The SE is a BETWEEN-CREATURE SE and creatures are the thing it is uncertain
+about, which is why this arm is worth buying and §75's was not** — there the
+threshold carried a +-0.025 band from a measurement, against a 0.0274 margin, and
+no creature count touched it. Here the comparator is the FIXED 0.650 bar.
+[[aibaby-anchor-carries-its-own-error]] is the file that distinguishes these two
+cases and it is why this design exists in this shape.
+
+**AND THE SE IS PROJECTED, SO IT IS CHECKED.** `calibrate-the-estimator-in-claim-units`
+forbids projecting a windowed SE from a scaling law; this one is between-creature
+and does scale, but the run prints the achieved SE beside the reading, and if the
+achieved SE exceeds 0.0060 — the 96-creature value — the NO VERDICT branch is read
+instead of the pass branch, whatever the mean says.
+
+### WHAT ELSE IS READ, AND WHAT IT MAY NOT CLAIM
+
+The full five-rung ladder is printed for four arms in one table: the primary, §75's
+twelve at `rep_off` 66, §71's confirmed tau1000, and §70's discovery arm. **This
+is a REPORTING change. Every rung of every arm is already computed by the run that
+§75 shipped; nothing in the simulation moves, and the gate below proves it.**
+
+**THE SPIKE RUNG IS VOID AT THIS DOSE AND THAT IS REGISTERED IN ADVANCE.** §70
+measured `vocal`'s own oracle at 0.616 at tau3000, under the bar, so rung 3 cannot
+be tested here. **A pass on the membrane therefore may NOT be written as "the
+threshold destroys it"** — it establishes that the chain is intact THROUGH the
+membrane and that the loss is after it. The dose that makes the membrane readable
+is the dose that makes the spike code illegible, and §76 showed that trade-off is
+monotone across the whole measured ladder.
+
+**IT ALSO MAY NOT BE QUOTED AS A LICENSE FOR THE KERNEL CHANGE.**
+[[aibaby-synapse-type-specific-stp-lead]]'s prohibition stands: §75 withdrew it
+and the threshold ask is 1.96x as measured against 1.03x with the spike oracle
+repaired, so Route 2 still collapses onto the oracle repair and not onto this cell.
+
+### THE GATES
+
+    G-SESSIONS     366 of 366 — the sum over per-arm reps, 222 + 144
+    G-SELF         `shipped`'s §73 window slope, archived +0.01007 +- 0.00741.
+                   A new arm must not move a single archived column
+    G-SELF-N75     `drive-exc` on `n75 tau3000` must reproduce §75's published
+                   0.8552 to the printed precision. Same genome, same seeds,
+                   a reporting-only change: ANY deviation means the arm
+                   addition perturbed the seeding and the run is VOID
+    G-ORACLE-VMEM  `vmem`'s own assembled oracle on the primary arm >= 0.650
+    G-NULL         label-destroyed on `shipped`'s primary in [0.42, 0.58]
+                   — computed from arm 0 only, so a new arm cannot move it
+    REPORTED, NOT VOIDING: the slept-trial count moves BY CONSTRUCTION,
+    because 144 more sessions are counted into it
+
+### COST
+
+144 new sessions, 366 total, about 1.6 hours on 14 cores at §75's measured rate.
+No kernel change, no genome change: the genome md5 must stay
+`9f6faac320210cc8e9f5830adf066934`.
