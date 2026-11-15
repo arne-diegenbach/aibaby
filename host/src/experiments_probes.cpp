@@ -18561,13 +18561,29 @@ constexpr const char* kSdGapName[kSdGapCount] = {"200", "800", "2000", "5000"};
 //                design and reported rather than primary: §69 measured net
 //                vocal drive RISING under the dose, so a rate change alone
 //                moves this and a pass here is ambiguous.
-constexpr uint32_t kSdSpaces = 13;
+// §75 ADDS TWO, AND THEY ARE THE FIRST SPACES THAT READ THE *TIMING* OF A
+// SPIKE RATHER THAN THE FACT OF IT. Every space above is a count, a time
+// average of one, or a cross-neuron correlation. If the conjunction survives
+// into the spike train as WITHIN-NEURON temporal structure — spikes arriving in
+// pairs rather than spread out — nothing measured since §63 could have seen it.
+//
+//   burst-neu  per vocal neuron, the number of its spikes whose preceding ISI
+//              is at or under `kSdBurstMs`, MINUS the number an independent
+//              Bernoulli train at that neuron's OWN observed rate would give,
+//              divided by that count's own SD. 126-dimensional exactly like
+//              `vocal`, so the paired contrast between them differs in the
+//              feature and in nothing else.
+//   burst-grp  the same statistic pooled into the genome's nine motor groups,
+//              the unit `artic9` and `sync-grp` already use. 5.5 events per
+//              dimension at the overlap window against 0.39 per neuron.
+constexpr uint32_t kSdSpaces = 15;
 constexpr const char* kSdSpaceName[kSdSpaces] = {"auditory", "central", "vocal",
                                                  "artic9", "artic7",
                                                  "drive-exc", "drive-net",
                                                  "drive-sim", "vmem",
                                                  "sync-exc", "sync-raw", "sync-rho",
-                                                 "sync-grp"};
+                                                 "sync-grp",
+                                                 "burst-neu", "burst-grp"};
 constexpr uint32_t kSdDrvExc = 5;
 constexpr uint32_t kSdDrvNet = 6;
 constexpr uint32_t kSdDrvSim = 7;
@@ -18602,6 +18618,20 @@ constexpr uint32_t kSdSyncRho = 11;
 // invented. Each group-level correlation then rests on ~21 spikes instead of
 // 1.5, and every term is computed EXACTLY rather than approximated.
 constexpr uint32_t kSdSyncGrp = 12;
+// §75's TWO. `burst-neu` is THE PRIMARY and `burst-grp` the CO-PRIMARY, and
+// the pre-registration explains why the pricing had that the other way round:
+// §72's budget was the budget for a PARAMETER ESTIMATE, and a per-neuron burst
+// count is a SPARSE FEATURE. `vocal` is 126 dimensions of 1.72 spikes each and
+// carries a word at an oracle of 0.976; a count of 0.39 is informative in the
+// same way, and is not a badly-estimated anything.
+constexpr uint32_t kSdBurstNeu = 13;
+constexpr uint32_t kSdBurstGrp = 14;
+// DNA v37's own burst window, and 60 ms is §73's derived figure rather than a
+// chosen one: it is §68's "keep it graded" logic applied to the ISI, putting
+// the Poisson burst fraction near a fifth of spikes at this creature's rate.
+// It is used for BOTH the host-side indicator and the patched arm's genome, so
+// `G-BURST-DEF` compares two computations of the same definition.
+constexpr double kSdBurstMs = 60.0;
 // Population-count bins for `sync-raw`: 0, 1, ... 8, then 9-or-more.
 constexpr uint32_t kSdSyncBins = 10;
 // THE FIVE SPACES §69 READ ITS GATES ON, PINNED. `best_oracle` below is a MAX
@@ -18828,6 +18858,40 @@ struct SdOut {
   uint32_t syn_tract_end = 0;  // ...and the last, so a prune is visible
   uint64_t rel_reads = 0;      // synapse states read at a transmission
   uint64_t rel_zero = 0;       // ...of which the stored u was still exactly 0
+  // §75. THE LOAD-BEARING GATE, AND IT IS A CROSS-CHECK AND NOT A DIAGNOSTIC.
+  // The burst indicator is computed HOST-SIDE from `net.spikes()`, so it is a
+  // reimplementation of the kernel's own ISI test at network.cpp:2651. On the
+  // ONE arm where `burst_ms` is patched the kernel maintains `burst_rate_` from
+  // the same definition and exposes it, so the host replicates the kernel's EMA
+  // from its own indicator and compares. If my test is the kernel's these agree
+  // to float rounding; if it is not, `burst-neu` and `burst-grp` measure
+  // something nobody has named and every burst column is void.
+  //
+  // `bdef_dev` is a MAX over cells rather than a mean: a mean hides a handful
+  // of neurons whose indicator is wrong, and the failure mode here is exactly
+  // an off-by-one on a boundary condition that affects few cells badly.
+  // THE DEVIATION IS ABSOLUTE AND THE SCALE IS MEASURED, WHICH IS THE WHOLE
+  // DIFFERENCE BETWEEN THIS GATE AND A VACUOUS ONE. The EMA's unit is
+  // `1000/dt`, but it only ever reaches that for a tick, and its steady state
+  // at this creature's rate is near 1. Dividing the deviation by the UNIT would
+  // have made a tolerance of 1e-3 mean an absolute slack of 1.0 — the whole of
+  // the signal — so the gate would have passed on two unrelated columns. It is
+  // compared against `1e-3 * bdef_kmax` instead, where `bdef_kmax` is the
+  // largest value the kernel actually produced. `guard-measures-the-wrong-
+  // quantity`, caught by reading rather than by a smoke.
+  uint64_t bdef_cells = 0;   // (neuron, tick) pairs compared
+  double bdef_dev = 0.0;     // max |host - kernel|, ABSOLUTE
+  double bdef_kmax = 0.0;    // largest kernel burst_rate seen — sets the scale
+  // The inertness claim, as a checksum rather than as an assertion. FNV-1a over
+  // every (tick, neuron) vocal spike of the session. REPORTED, not voiding:
+  // the primary does not use the patch, so this tests a claim the pricing made
+  // about the kernel and is no longer a reason to stop.
+  uint64_t voc_hash = 1469598103934665603ull;
+  // The vocal module's neuron count, carried out of the session rather than
+  // written as 126 in the report. `derive-the-constant`: the module size is a
+  // genome property and a per-neuron budget quoted from a literal would be
+  // silently wrong on any other genome.
+  uint32_t voc_n = 0;
   bool ok = false;
 };
 
@@ -18880,7 +18944,7 @@ inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
 SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            uint32_t rep, float voicing_override, bool omit_b,
                            float stp_use, float stp_rec, bool probe,
-                           uint32_t rep_off) {
+                           uint32_t rep_off, float burst_ms) {
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
@@ -18917,6 +18981,27 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         }
       }
     }
+    // §75. THE INSTRUMENT ARM'S PATCH, AND IT IS NOT A DOSE. `burst_ms > 0`
+    // turns DNA v37's burst code on in the vocal module, which at the shipped
+    // `burst_refrac_scale = 1.0`, `burst_learn = 0.0` and
+    // `burst_baseline_tau_ms = 0.0` makes the kernel COMPUTE a burst rate and
+    // change not one spike — the two branches at network.cpp:2650/2664 write the
+    // same `refrac_until_` when the scale is 1. The patch exists so that
+    // `G-BURST-DEF` has a kernel-computed quantity to check the host's
+    // indicator against, and `voc_hash` tests the inertness claim rather than
+    // assuming it. Same non-owning-view discipline as the dose above.
+    if (burst_ms > 0.0f) {
+      aibaby::Dna bprobe;
+      if (bprobe.load(local.data(), local.size()) == aibaby::DnaStatus::kOk) {
+        const int32_t bv = bprobe.module_with_role(aibaby::ModuleRole::kVocal);
+        if (bv >= 0) {
+          const aibaby::DnaModule& bm = bprobe.module(uint32_t(bv));
+          const size_t base = size_t(reinterpret_cast<const uint8_t*>(&bm) - local.data());
+          std::memcpy(local.data() + base + offsetof(aibaby::DnaModule, burst_ms),
+                      &burst_ms, sizeof(burst_ms));
+        }
+      }
+    }
   }
   Session s;
   std::string error;
@@ -18932,6 +19017,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   const aibaby::ModuleState& ms_c = s.brain.network().module(uint32_t(cen));
   const aibaby::ModuleState& ms_v = s.brain.network().module(uint32_t(voc));
   const uint32_t wa = ms_a.count, wc = ms_c.count, wv = ms_v.count;
+  out.voc_n = wv;
 
   const double dt = double(s.dna.header().sim.dt_ms);
   const uint32_t spt = uint32_t(double(acfg.sample_rate) * dt / 1000.0 + 0.5);
@@ -18989,6 +19075,37 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   double sy_sx[kSdGapCount] = {}, sy_sy[kSdGapCount] = {};
   double sy_sxx[kSdGapCount] = {}, sy_syy[kSdGapCount] = {}, sy_sxy[kSdGapCount] = {};
   double se_sx[kSdGapCount] = {}, se_sxx[kSdGapCount] = {}, se_sxy[kSdGapCount] = {};
+  // §75's SESSION-LEVEL burst state, and the lifetime is the point. The kernel
+  // keys its ISI test off `last_spike_`, which is per-LIFE: a neuron entering a
+  // trial carries the tick it last fired on even if that was in the previous
+  // trial. So `last_v` spans the session and is NEVER reset.
+  //
+  // IT IS `uint32_t` AT 0 BECAUSE THE KERNEL'S IS, ARTEFACT INCLUDED. A neuron
+  // that has never fired carries `last_spike_ = 0`, so within `burst_ticks` of
+  // tick 0 its first spike scores as a burst spike — the kernel documents this
+  // at network.cpp:2641 and declines to fix it. The host reproduces it rather
+  // than improving on it, because `G-BURST-DEF` compares two computations of
+  // ONE definition and a better definition would fail the gate. Its reach is
+  // the first `kSdBurstMs` of the life, so at most the first trial's A window
+  // carries one spurious burst per neuron out of 900 ticks.
+  std::vector<uint32_t> last_v(wv, 0u);
+  // `uint32_t(burst_ms / dt + 0.5)` floored at 1, which is the kernel's own
+  // conversion at network.cpp:348 rather than a rounding of my own.
+  uint64_t burst_ticks = uint64_t(kSdBurstMs / dt + 0.5);
+  if (burst_ticks == 0) burst_ticks = 1;
+  // The host's replica of the kernel's EMA, kept in `Scalar` so the recursion is
+  // the kernel's arithmetic and not a wider version of it. Only maintained when
+  // the arm patched `burst_ms`, because only then is there a kernel value to
+  // compare against.
+  std::vector<aibaby::Scalar> bema(burst_ms > 0.0f ? wv : 0u, aibaby::Scalar(0));
+  // Both constants are the kernel's at network.cpp:218-222, recomputed from the
+  // same header fields and with the same zero fallback, so a genome that moved
+  // `rate_fast_tau_ms` moves both sides of `G-BURST-DEF` together.
+  const float rf_tau = s.dna.header().sim.rate_fast_tau_ms > 0.0f
+                           ? s.dna.header().sim.rate_fast_tau_ms
+                           : 50.0f;
+  const aibaby::Scalar bema_alpha = aibaby::Scalar(float(dt) / rf_tau);
+  const aibaby::Scalar bema_unit = aibaby::Scalar(1000.0f / float(dt));
 
   size_t cell_at[kSdGapCount] = {};
   uint64_t tick_now = 0;
@@ -19056,6 +19173,12 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                                              std::vector<double>(kSdSyncBins, 0.0));
       std::vector<uint32_t> vsp;  // the vocal neurons spiking on this tick
       vsp.reserve(wv);
+      // §75's own copy of the same list, built ABOVE the windowed-tick
+      // `continue` and therefore on every tick, with the bursty flag beside it.
+      std::vector<uint32_t> bvsp;
+      std::vector<uint8_t> bbst;
+      bvsp.reserve(wv);
+      bbst.reserve(wv);
       double sk[kSdWinCount] = {}, skk[kSdWinCount] = {};
       // §72's GROUP-LEVEL terms, all EXACT. For each of the nine motor groups:
       // its per-tick count, that count squared, the rest-of-module count, its
@@ -19066,6 +19189,19 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       double gssp[kSdWinCount][aibaby::kVocalGroups] = {};
       double gsspp[kSdWinCount][aibaby::kVocalGroups] = {};
       double gscp[kSdWinCount][aibaby::kVocalGroups] = {};
+      // §75. `bcnt[win][j]` is the number of neuron j's spikes in that window
+      // whose PRECEDING interval was at or under `kSdBurstMs`. It is counted
+      // per window from a `last_v` that is maintained for the WHOLE SESSION and
+      // not per trial or per window — the kernel's `last_spike_` is per-life, so
+      // resetting it here would make the host's test a different test.
+      //
+      // THE EDGE IS DISCLOSED AND ITS SIGN IS KNOWN. A spike in the first
+      // `kSdBurstMs` of a window can be bursty against a partner OUTSIDE the
+      // window, while the expectation below is computed from the WITHIN-window
+      // rate. So `bcnt` runs slightly above its own expectation at the window's
+      // front, by the same amount for both labels, and it cancels in a
+      // standardised contrast between labels rather than biasing one of them.
+      std::vector<std::vector<double>> bcnt(kSdWinCount, std::vector<double>(wv, 0.0));
 
       // THE TRACT INDEX IS REBUILT EVERY TRIAL, AND THAT IS CORRECTNESS RATHER
       // THAN CAUTION. `prune_synapses` COMPACTS THE POOL IN PLACE — survivors
@@ -19166,6 +19302,75 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           if (t < b_on + kSdSweepMs[0]) wins[nwin++] = kSdWBE100;
           if (t < b_on + kSdSweepMs[1]) wins[nwin++] = kSdWBE200;
         } else if (t >= b_off) wins[nwin++] = kSdWS;
+        // §75. THE ISI TEST, AND IT RUNS ABOVE THE `continue` ON PURPOSE.
+        //
+        // `last_v` has to see EVERY tick's spikes or the interval it reports is
+        // the interval since the last WINDOWED spike, which for a neuron whose
+        // previous spike fell in an unwindowed gap would be an overestimate and
+        // would score a real burst as isolated. The windowed-tick accumulators
+        // below keep their own `continue`; only this one block moves above it.
+        //
+        // IT IS A HOST-SIDE READ AND CHANGES NOTHING. No `step()`, no kernel
+        // state, no RNG draw — so every column archived since §63 must come back
+        // bit-identical, and `G-SELF` against §73's slope is what proves it did.
+        {
+          const aibaby::Network& bnet = s.brain.network();
+          // The kernel tests `uint32_t(tick_) - last_spike_[i]` DURING the tick
+          // and advances `tick_` at network.cpp:2784, after the neuron loop. So
+          // the tick whose spikes these are is `tick() - 1` read from here.
+          const uint32_t kt = uint32_t(bnet.tick() - 1u);
+          bvsp.clear();
+          for (uint32_t si = 0; si < bnet.spike_count(); ++si) {
+            const uint32_t idx = bnet.spikes()[si];
+            if (idx >= ms_v.begin && idx < ms_v.begin + wv) bvsp.push_back(idx - ms_v.begin);
+          }
+          // The inertness checksum, FNV-1a over (tick, neuron) for every vocal
+          // spike of the session. Order-dependent, which is what makes it a
+          // bit-identity test and not a count.
+          for (uint32_t j : bvsp) {
+            out.voc_hash = (out.voc_hash ^ uint64_t(kt)) * 1099511628211ull;
+            out.voc_hash = (out.voc_hash ^ uint64_t(j)) * 1099511628211ull;
+          }
+          // Bursty is computed for EVERY spiking neuron BEFORE any `last_v` is
+          // advanced, because the kernel tests against the previous spike and
+          // advances afterwards. Doing both in one pass would make a neuron's
+          // own spike its predecessor.
+          bbst.assign(bvsp.size(), 0u);
+          for (size_t q = 0; q < bvsp.size(); ++q)
+            bbst[q] = (kt - last_v[bvsp[q]]) <= uint32_t(burst_ticks) ? 1u : 0u;
+          for (uint32_t wi = 0; wi < nwin; ++wi)
+            for (size_t q = 0; q < bvsp.size(); ++q)
+              if (bbst[q]) bcnt[wins[wi]][bvsp[q]] += 1.0;
+          // `G-BURST-DEF`. Only on the arm that patched `burst_ms`, because only
+          // there does the kernel compute a burst rate to disagree with. The
+          // recursion is the kernel's at network.cpp:2652 and 2685: exactly one
+          // update per neuron per tick, towards the unit scale if the neuron
+          // spiked and the spike was bursty, towards zero otherwise.
+          if (!bema.empty()) {
+            for (uint32_t j = 0; j < wv; ++j) {
+              aibaby::Scalar tgt = aibaby::Scalar(0);
+              for (size_t q = 0; q < bvsp.size(); ++q)
+                if (bvsp[q] == j) { tgt = bbst[q] ? bema_unit : aibaby::Scalar(0); break; }
+              bema[j] += bema_alpha * (tgt - bema[j]);
+            }
+          }
+          for (size_t q = 0; q < bvsp.size(); ++q) last_v[bvsp[q]] = kt;
+          // The comparison, AFTER the host's own update, so both sides describe
+          // the state at the end of the same tick. Relative to the unit scale
+          // rather than to the kernel's own value, because the kernel's value
+          // passes through zero and a relative error there is unbounded for a
+          // deviation of no consequence.
+          if (!bema.empty()) {
+            for (uint32_t j = 0; j < wv; ++j) {
+              const double kv = double(bnet.burst_rate(ms_v.begin + j));
+              const double hv = double(bema[j]);
+              if (kv > out.bdef_kmax) out.bdef_kmax = kv;
+              const double dev = std::fabs(hv - kv);
+              if (dev > out.bdef_dev) out.bdef_dev = dev;
+              ++out.bdef_cells;
+            }
+          }
+        }
         if (nwin == 0) continue;
 
         const aibaby::Scalar* gp = s.brain.vocal_groups();
@@ -19405,6 +19610,62 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           feat[g][win][kSdSyncRaw].push_back(vh);
           feat[g][win][kSdSyncRho].push_back(vrho);
           feat[g][win][kSdSyncGrp].push_back(vg);
+          // ---- §75's TWO SPACES ----
+          //
+          // THE SUBTRAHEND IS EXACT AND THE DIVISOR IS DERIVED, which is §72's
+          // two corrections applied in the registration instead of one in the
+          // registration and one in the smoke. Under independent Bernoulli
+          // spiking at neuron j's OWN observed rate p_j = n_j / T, a spike is
+          // bursty exactly when the neuron also spiked in the preceding W
+          // ticks, so
+          //
+          //   q_j = 1 - (1 - p_j)^W            P(spiked in the previous W)
+          //   E_j = n_j * q_j                  expected bursty spikes
+          //   V_j = n_j * q_j * (1 - q_j)      and its variance
+          //
+          // `E` is zero-mean FOR ANY RATE PROFILE WHATEVER, exactly like
+          // `sync-exc`'s subtrahend — so a rate change cannot move the
+          // numerator. Dividing by `sqrt(V)` is the part `sync-exc` lacked: the
+          // excess's own SCALE grows with the rate even though its mean does
+          // not, which is what made §72 demote its primary mid-section. A
+          // standardised excess is dimensionless and cannot do that.
+          //
+          // `(1-p)^W` via expm1/log1p so it stays exact at the small p this
+          // creature actually fires at.
+          {
+            const double wexp = double(burst_ticks);
+            std::vector<double> bn(wv, 0.0);
+            std::vector<double> bg(aibaby::kVocalGroups, 0.0);
+            double ge[aibaby::kVocalGroups] = {}, gv[aibaby::kVocalGroups] = {};
+            double gb[aibaby::kVocalGroups] = {};
+            for (uint32_t j = 0; j < wv; ++j) {
+              const double nj = bins[win][size_t(wa) + wc + j];
+              const double bj = bcnt[win][j];
+              double ej = 0.0, vj = 0.0;
+              if (nj > 0.0 && T > 0.0) {
+                const double pj = nj / T;
+                const double qj = pj >= 1.0 ? 1.0 : -std::expm1(wexp * std::log1p(-pj));
+                ej = nj * qj;
+                vj = nj * qj * (1.0 - qj);
+              }
+              bn[j] = vj > 0.0 ? (bj - ej) / std::sqrt(vj) : 0.0;
+              uint32_t grp = wv ? uint32_t(uint64_t(j) * aibaby::kVocalGroups / wv) : 0u;
+              if (grp >= aibaby::kVocalGroups) grp = aibaby::kVocalGroups - 1;
+              gb[grp] += bj;
+              ge[grp] += ej;
+              gv[grp] += vj;
+            }
+            // THE GROUP FORM IS POOLED AT THE COUNTS AND NOT AT THE z SCORES.
+            // Averaging nine standardised per-neuron values would carry each
+            // neuron's 0.39-event noise into the group, which is the starvation
+            // the pooling exists to escape; summing the counts and standardising
+            // ONCE puts 5.5 events behind each dimension, which is the whole
+            // arithmetic in the pre-registration.
+            for (uint32_t p = 0; p < aibaby::kVocalGroups; ++p)
+              bg[p] = gv[p] > 0.0 ? (gb[p] - ge[p]) / std::sqrt(gv[p]) : 0.0;
+            feat[g][win][kSdBurstNeu].push_back(bn);
+            feat[g][win][kSdBurstGrp].push_back(bg);
+          }
           // The two numbers that decide whether this space is VACUOUS, and the
           // one that decides whether the correction worked. Accumulated on the
           // OVERLAP window, which is where the primary is read.
@@ -19740,24 +20001,29 @@ struct SdArmDef {
   // nothing but would have moved every pooled mean, which is the same thing as
   // losing the gate.
   uint32_t reps;
+  // §75: DNA v37's burst window, patched into the VOCAL MODULE of the blob copy.
+  // 0 leaves the genome exactly as it ships, which is what every arm but the
+  // instrument arm carries — and the primary burst columns are read on arms
+  // that carry 0, so the patch is not in the path of any verdict.
+  float burst_ms;
   const char* what;
 };
-constexpr SdArmDef kSdArms[14] = {
-    {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, "the creature as it ships"},
-    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
-    {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, "silence where the second word goes — overwrite vs decay"},
-    {"stp tau100", 0.0f, false, 0.20f, 100.0f, false, 0, kSdReps, "§68 predicts d' 0.2811 — the FLOOR rung"},
-    {"stp tau300", 0.0f, false, 0.20f, 300.0f, false, 0, kSdReps, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
-    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, false, 0, kSdReps, "§68 predicts d' 2.4110"},
-    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, false, 0, kSdReps, "§68 predicts d' 2.8791 — the CEILING rung"},
+constexpr SdArmDef kSdArms[16] = {
+    {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+    {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "silence where the second word goes — overwrite vs decay"},
+    {"stp tau100", 0.0f, false, 0.20f, 100.0f, false, 0, kSdReps, 0.0f, "§68 predicts d' 0.2811 — the FLOOR rung"},
+    {"stp tau300", 0.0f, false, 0.20f, 300.0f, false, 0, kSdReps, 0.0f, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
+    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, false, 0, kSdReps, 0.0f, "§68 predicts d' 2.4110"},
+    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, false, 0, kSdReps, 0.0f, "§68 predicts d' 2.8791 — the CEILING rung"},
     // §71, all four on FRESH creatures (rep_off 12) and paired on the same seeds.
-    {"n71 ref", 0.0f, false, 0.0f, 0.0f, false, 12, kSdReps,
+    {"n71 ref", 0.0f, false, 0.0f, 0.0f, false, 12, kSdReps, 0.0f,
      "no dose, no probe — §63's silent scoring window on fresh creatures"},
-    {"n71 ref+probe", 0.0f, false, 0.0f, 0.0f, true, 12, kSdReps,
+    {"n71 ref+probe", 0.0f, false, 0.0f, 0.0f, true, 12, kSdReps, 0.0f,
      "THE MECHANISM NULL: no depletion exists, so a probe can carry nothing"},
-    {"n71 tau1000", 0.0f, false, 0.20f, 1000.0f, false, 12, kSdReps,
+    {"n71 tau1000", 0.0f, false, 0.20f, 1000.0f, false, 12, kSdReps, 0.0f,
      "§70's localisation on creatures it never saw — the CONFIRMATION"},
-    {"n71 tau1000+probe", 0.0f, false, 0.20f, 1000.0f, true, 12, kSdReps,
+    {"n71 tau1000+probe", 0.0f, false, 0.20f, 1000.0f, true, 12, kSdReps, 0.0f,
      "THE PRIMARY: read the synaptic trace with an impulse"},
     // THE SELF-VOICE ROUTE, AND THE 300k SMOKE IS WHY THESE TWO EXIST.
     //
@@ -19775,9 +20041,9 @@ constexpr SdArmDef kSdArms[14] = {
     // probe's effect survives here it is reading the SYNAPSE; if it vanishes it
     // was reading the creature's own echo all along — which would be a finding
     // about M6 and NOT a demonstration that a synaptic trace can be probed.
-    {"n71 tau1000 quiet", 1.15f, false, 0.20f, 1000.0f, false, 12, kSdReps,
+    {"n71 tau1000 quiet", 1.15f, false, 0.20f, 1000.0f, false, 12, kSdReps, 0.0f,
      "the dose with the self-voice silenced, no probe"},
-    {"n71 tau1000 quiet+probe", 1.15f, false, 0.20f, 1000.0f, true, 12, kSdReps,
+    {"n71 tau1000 quiet+probe", 1.15f, false, 0.20f, 1000.0f, true, 12, kSdReps, 0.0f,
      "THE CONFOUND-FREE PRIMARY: probe, dose, and no self-heard echo"},
     // §74. IDENTICAL TO `shipped` IN EVERY SETTING — vthr 0, no omit, zero
     // dose, no probe — and differing ONLY in the seed offset. That is what
@@ -19787,12 +20053,42 @@ constexpr SdArmDef kSdArms[14] = {
     //
     // `rep_off = 24` places it past BOTH earlier blocks: §73's creatures are
     // 0-11 and §71's are 12-23, so 24-65 have never been scored by any section.
-    {"n74 sweep", 0.0f, false, 0.0f, 0.0f, false, 24, kSdN74Reps,
+    {"n74 sweep", 0.0f, false, 0.0f, 0.0f, false, 24, kSdN74Reps, 0.0f,
      "§73's sweep on 42 creatures no section has seen — the pre-pinned primary"},
+    // §75's TWO, AND NEITHER IS A DOSE ON THE PRIMARY.
+    //
+    // `burst-def` is an INSTRUMENT ARM. It is `shipped` at the same 12 seeds
+    // with DNA v37's burst code switched on in the vocal module, and it exists
+    // so that `G-BURST-DEF` can check the host's ISI test against a
+    // kernel-computed burst rate. It also carries the inertness claim as a
+    // reported checksum. The §75 primary is NOT read here — it is read on
+    // `n74 sweep`, which carries no patch at all.
+    {"burst-def", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, float(kSdBurstMs),
+     "DNA v37 ON in the vocal module — the kernel cross-check, not a dose"},
+    // `n75 tau3000` REPLICATES §70's REFUTATION AND NOTHING MORE. §70 read
+    // `drive-exc` 0.8377 at this dose on a testable oracle and put
+    // "the measured drive never carries the conjunction is REFUTED" into the
+    // record off a cell its own text calls SELECTED ON THE DATA. §74 has since
+    // watched a selected lean reverse sign on fresh creatures.
+    //
+    // `rep_off = 66` is past §74's 24-65, so these twelve creatures have never
+    // been scored. TWELVE AND NOT FORTY-TWO because the pre-registration's
+    // arithmetic killed the only question that needed power here: the kernel
+    // change's own threshold carries a +-0.025 band from the transmission
+    // factor's error against a 0.0274 margin, so no creature count decides it.
+    // Twelve detects a 2-SE reversal of the replication, which is what this arm
+    // is for and the only thing its result may claim.
+    {"n75 tau3000", 0.0f, false, 0.20f, 3000.0f, false, 66, kSdReps, 0.0f,
+     "§70's selected maximum on creatures it never saw — the REPLICATION"},
 };
-constexpr uint32_t kSdArmCount = 14;
+constexpr uint32_t kSdArmCount = 16;
 constexpr uint32_t kSdArmShipped = 0;
 constexpr uint32_t kSdArmN74 = 13;
+// §75's two, and the pairings are by index: 14 against 0 is the kernel
+// cross-check and the inertness checksum, 15 against 6 is the replication.
+constexpr uint32_t kSdArmBurstDef = 14;
+constexpr uint32_t kSdArmN75Stp = 15;
+constexpr uint32_t kSdArmStp3000 = 6;
 // §71's four, and the pairing is by index: 7 against 9 is dose with no probe,
 // 8 against 7 is the mechanism null, 10 against 9 is THE PRIMARY.
 constexpr uint32_t kSdN71Ref = 7;
@@ -19861,8 +20157,9 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const float sr = kSdArms[a].stp_rec;
     const bool pb = kSdArms[a].probe;
     const uint32_t ro = kSdArms[a].rep_off;
+    const float bm = kSdArms[a].burst_ms;
     res[a] = parallel_reps<SdOut>(kSdArms[a].reps, [&](uint32_t r) {
-      return run_samediff_session(blob, ticks, r, vt, ob, su, sr, pb, ro);
+      return run_samediff_session(blob, ticks, r, vt, ob, su, sr, pb, ro, bm);
     });
   }
 
@@ -20608,6 +20905,19 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   // column of real ones. `plausible-wrong-number`: it is blanked, not printed.
   auto sd_live_on_shipped = [](uint32_t sp) {
     return !(sp == kSdDrvExc || sp == kSdDrvNet);
+  };
+  // §75's budget, in the units the pre-registration quoted it in: vocal spikes
+  // per neuron across the overlap window, from the arm's OWN measured rate and
+  // the genome's OWN module size rather than from either as a literal.
+  auto sd_spk_per_neuron = [&](uint32_t a) {
+    double sp = 0.0, tk = 0.0, n = 0.0;
+    for (const SdOut& o : res[a]) {
+      if (!o.ok || o.voc_n == 0) continue;
+      sp += o.voc_spikes;
+      tk += o.voc_ticks;
+      n = double(o.voc_n);
+    }
+    return (tk > 0.0 && n > 0.0) ? (sp / tk) * double(kSdOverlap) / n : 0.0;
   };
   // ---- §71: READ THE SYNAPSE WITH A PROBE ----
   //
@@ -21549,6 +21859,281 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     }
     std::printf("\n    §74 CANNOT PRODUCE A PASS AND WAS NOT MEANT TO, exactly as §73.\n"
                 "    This is a DIAGNOSTIC of ten sections' worth of refusals.\n\n");
+  }
+
+  // ---- §75: IS THE SIGNAL IN THE TEMPORAL FINE STRUCTURE? ----
+  //
+  // Every space before these two is a count, a time-average of one, or a
+  // cross-neuron correlation. §75 asks the one remaining question a rate code
+  // cannot express: do the vocal module's spikes arrive in PAIRS differently
+  // when the two words matched than when they did not? The statistic is the
+  // excess of short-interval spikes over what independent spiking at the same
+  // observed rates would give, standardised by its own scale.
+  //
+  // THE GATES COME BEFORE THE PRIMARY, AND THE LOAD-BEARING ONE IS A
+  // REIMPLEMENTATION CHECK. The indicator is computed host-side from the spike
+  // list, so it is my code claiming to be the kernel's ISI test. One arm patches
+  // `burst_ms` so the kernel computes a burst rate from the same definition, and
+  // the host replicates the kernel's EMA from its own indicator. If those
+  // disagree, the two new spaces measure something nobody has named.
+  {
+    double bdef_dev = 0.0, bdef_kmax = 0.0;
+    uint64_t bdef_cells = 0;
+    uint32_t bdef_n = 0;
+    for (const SdOut& o : res[kSdArmBurstDef]) {
+      if (!o.ok) continue;
+      ++bdef_n;
+      if (o.bdef_dev > bdef_dev) bdef_dev = o.bdef_dev;
+      if (o.bdef_kmax > bdef_kmax) bdef_kmax = o.bdef_kmax;
+      bdef_cells += o.bdef_cells;
+    }
+    // THE DEVIATION IS A MAX, NOT A MEAN. A mean over 10^8 cells hides a
+    // handful of neurons whose indicator is wrong, and an off-by-one on a
+    // boundary condition is exactly that shape of failure.
+    //
+    // THE TOLERANCE IS A FRACTION OF THE MEASURED SCALE AND NOT OF THE UNIT.
+    // Both sides run the identical float recursion, so agreement should be to a
+    // few ULPs (~1e-6 here); one mis-scored spike, by contrast, moves the EMA by
+    // `alpha * unit` = 20, which is far ABOVE `bdef_kmax` itself. So the gate
+    // has a wide margin in the passing direction and no slack at all in the
+    // failing one, which is the only arrangement worth calling a gate.
+    const double kBdefTol = 1e-3 * bdef_kmax;
+    // `bdef_kmax` IS ITS OWN GATE AND IT IS THE ONE THAT CATCHES THE EASY
+    // MISTAKE. If the patch failed to land, the kernel's burst rate is a
+    // constant 0, the host's replica would also sit near 0 wherever the creature
+    // is quiet, and a deviation test ALONE WOULD PASS ON TWO EMPTY COLUMNS.
+    // `open-is-unfalsifiable-on-an-instrument`: the comparison has to be shown
+    // to have had something in it.
+    const bool bdef_live = bdef_kmax > 0.0 && bdef_cells > 0 && bdef_n > 0;
+    const bool g_bdef = bdef_live && bdef_dev < kBdefTol;
+    // The inertness claim, as a per-creature checksum. REPORTED and not
+    // voiding: the primary is read on `n74 sweep`, which carries no patch, so
+    // nothing in this section's verdict rests on the patch being inert.
+    uint32_t inert_ok = 0, inert_n = 0;
+    for (size_t i = 0; i < res[kSdArmBurstDef].size() && i < res[kSdArmShipped].size(); ++i) {
+      const SdOut& x = res[kSdArmBurstDef][i];
+      const SdOut& y = res[kSdArmShipped][i];
+      if (!x.ok || !y.ok) continue;
+      ++inert_n;
+      if (x.voc_hash == y.voc_hash) ++inert_ok;
+    }
+    std::printf("  §75 THE BURST READOUT — DOES THE TIMING OF A SPIKE CARRY WHAT ITS\n"
+                "  PRESENCE DOES NOT? (ROADMAP §75)\n\n"
+                "  the statistic     per unit, (observed short-ISI spikes - the Poisson\n"
+                "                    expectation at that unit's OWN rates) / its own SD.\n"
+                "                    Zero-mean for ANY rate profile, and dimensionless —\n"
+                "                    §72's two corrections applied before the run, not one\n"
+                "                    before and one after the smoke.\n"
+                "  burst window      %.0f ms (DNA v37's `burst_ms`, §73's derived figure)\n"
+                "  primary           `%s`, 126-dim, the exact analogue of `vocal`\n"
+                "  co-primary        `%s`, the genome's nine motor groups\n"
+                "  read on           `%s`, %u creatures at rep_off %u, ZERO DOSE,\n"
+                "                    gap 200, the 400 ms overlap window\n\n",
+                kSdBurstMs, kSdSpaceName[kSdBurstNeu], kSdSpaceName[kSdBurstGrp],
+                kSdArms[kSdArmN74].name, kSdArms[kSdArmN74].reps,
+                kSdArms[kSdArmN74].rep_off);
+    std::printf("    G-BURST-DEF    host EMA vs net.burst_rate(), %u creatures\n"
+                "                   cells compared       %llu\n"
+                "                   largest kernel rate  %.5f  <- SETS THE SCALE, and 0\n"
+                "                                                would mean the patch never\n"
+                "                                                landed and the gate is void\n"
+                "                   max |host - kernel|  %.3e  (tolerance %.3e, i.e.\n"
+                "                                                1e-3 of that scale)\n"
+                "                   -> %s\n",
+                bdef_n, (unsigned long long)bdef_cells, bdef_kmax, bdef_dev, kBdefTol,
+                g_bdef ? "PASS" : (bdef_live ? "FAIL" : "FAIL — NOTHING MEASURED"));
+    std::printf("    G-BURST-INERT  burst-def's vocal spike checksum vs shipped's\n"
+                "                   identical on %u of %u creatures\n"
+                "                   -> %s  (REPORTED, not voiding — the primary carries\n"
+                "                      no patch, so no verdict depends on this)\n\n",
+                inert_ok, inert_n,
+                (inert_n > 0 && inert_ok == inert_n) ? "PASS — the patch changes not one spike"
+                                                     : "FAIL — `burst_ms` is NOT observational");
+
+    // THE PRIMARY, AND ITS ORACLE IS `vocal`'s CONVENTION BY REGISTRATION.
+    // Both spaces are statistics of the vocal spike train, so both are read
+    // against the non-motor assembly `orac_a * orac_b + (1-orac_a)(1-orac_b)`,
+    // exactly as `vocal` is, and neither is in the motor set. `sw_orac` is NOT
+    // used here: it is `artic9 x auditory` and identical for every space, so
+    // quoting it per space would be `columns-move-with-the-primary` inverted.
+    const uint32_t bsp[2] = {kSdBurstNeu, kSdBurstGrp};
+    double bacc[2] = {}, base[2] = {}, bnul[2] = {}, bnse[2] = {};
+    double borc[2] = {}, bose[2] = {};
+    uint32_t bn = 0;
+    for (uint32_t k = 0; k < 2; ++k) {
+      sd_stat(mbe[kSdArmN74][0][bsp[k]], bacc[k], base[k]);
+      sd_stat(nbe[kSdArmN74][0][bsp[k]], bnul[k], bnse[k]);
+      sd_stat(asm_[kSdArmN74][0][bsp[k]], borc[k], bose[k]);
+    }
+    bn = uint32_t(mbe[kSdArmN74][0][kSdBurstNeu].size());
+    // The paired contrast against `vocal`: the same creatures, the same window,
+    // the same 126 dimensions, differing in the FEATURE and nothing else. It
+    // says whether the ISI bit paid for the events it discarded.
+    // `paired_rep` differences one ARM against another; the contrast wanted here
+    // is between two SPACES on ONE arm, so it is built directly.
+    double dvm[2] = {}, dvs[2] = {};
+    for (uint32_t k = 0; k < 2; ++k) {
+      std::vector<double> d;
+      for (const SdOut& o : res[kSdArmN74])
+        if (o.ok && o.gap[0].scored)
+          d.push_back(o.gap[0].mile_be[bsp[k]] - o.gap[0].mile_be[kSdStpPrimary]);
+      sd_stat(d, dvm[k], dvs[k]);
+    }
+    std::printf("    THE PRIMARY AND CO-PRIMARY, `%s`, %u creatures, gap 200,\n"
+                "    the 400 ms overlap window. The bar is %.3f read against each\n"
+                "    SPACE'S OWN assembled oracle, never against 1.000.\n\n"
+                "      space        same/diff        label-destroyed   own oracle      vs `vocal`\n",
+                kSdArms[kSdArmN74].name, bn, kSdBar);
+    for (uint32_t k = 0; k < 2; ++k)
+      std::printf("      %-11s  %.4f +- %.4f  %.4f +- %.4f   %.4f +- %.4f  %+.4f +- %.4f\n",
+                  kSdSpaceName[bsp[k]], bacc[k], base[k], bnul[k], bnse[k],
+                  borc[k], bose[k], dvm[k], dvs[k]);
+    {
+      double vm = 0, vs = 0;
+      sd_stat(mbe[kSdArmN74][0][kSdStpPrimary], vm, vs);
+      double vo = 0, vos = 0;
+      sd_stat(asm_[kSdArmN74][0][kSdStpPrimary], vo, vos);
+      std::printf("      %-11s  %.4f +- %.4f        (the comparator: same window, same\n"
+                  "                   oracle %.4f       126 dims, the COUNT instead of the\n"
+                  "                                        timing)\n\n",
+                  kSdSpaceName[kSdStpPrimary], vm, vs, vo);
+    }
+
+    // THE BRANCHES, IN THE ORDER THE PRE-REGISTRATION WROTE THEM, WHICH IS
+    // VOID FIRST. §70, §72 and §73 each overran a caveat their own registration
+    // had written; §74 broke that run by implementing the empty branches before
+    // the interesting one, and that clause then held on the data.
+    const bool g_orac = borc[0] >= kSdBar || borc[1] >= kSdBar;
+    const bool se_bug = (bn >= 2) && (!(base[0] > 0.0) || !(base[1] > 0.0));
+    const bool void_75 = !g_bdef || bn < 3 || se_bug;
+    if (void_75) {
+      std::printf("    -> VOID. %s\n"
+                  "       The burst columns say NOTHING about M6, and in particular they\n"
+                  "       do NOT refuse it. A reimplementation that does not reproduce the\n"
+                  "       definition it claims is not a measurement of anything.\n\n",
+                  !g_bdef ? "G-BURST-DEF did not pass: the host's ISI test is not the "
+                            "kernel's."
+                          : (bn < 3 ? "Fewer than 3 scored creatures on the primary arm."
+                                    : "An SE came back non-positive over n > 1, which is a bug."));
+    } else if (!g_orac) {
+      std::printf("    -> VACUOUS, AND THE PRE-REGISTRATION NAMED THIS AS THE MOST LIKELY\n"
+                  "       SINGLE OUTCOME. Neither burst space clears the %.3f bar on its\n"
+                  "       OWN oracle (%.4f, %.4f), so neither can carry either word's\n"
+                  "       identity — and a space that cannot hold one word cannot be asked\n"
+                  "       whether it holds the conjunction of two. THE REFUSAL IS VACUOUS\n"
+                  "       AND IS NOT A RESULT: it says the burst structure of %.2f spikes\n"
+                  "       per neuron cannot support the question, which is a statement\n"
+                  "       about the budget and not about the creature.\n"
+                  "       This is §72's lesson arriving as a GATE rather than as a regret.\n\n",
+                  kSdBar, borc[0], borc[1], sd_spk_per_neuron(kSdArmN74));
+    } else {
+      // Testable, so there is a reading. Three ways, and the middle one is the
+      // one §73 did not write.
+      for (uint32_t k = 0; k < 2; ++k) {
+        if (borc[k] < kSdBar) {
+          std::printf("      `%s`: oracle %.4f under the bar — NOT TESTABLE, skipped.\n",
+                      kSdSpaceName[bsp[k]], borc[k]);
+          continue;
+        }
+        const double lo = bacc[k] - 2.0 * base[k], hi = bacc[k] + 2.0 * base[k];
+        if (lo > kSdBar)
+          std::printf("      `%s`: %.4f +- %.4f CLEARS %.3f on a testable oracle %.4f.\n"
+                      "        THE TIMING CARRIES WHAT THE COUNT DOES NOT, and the paired\n"
+                      "        contrast against `vocal` is %+.4f +- %.4f.\n",
+                      kSdSpaceName[bsp[k]], bacc[k], base[k], kSdBar, borc[k],
+                      dvm[k], dvs[k]);
+        else if (hi < kSdBar)
+          std::printf("      `%s`: %.4f +- %.4f REFUSES %.3f on a testable oracle %.4f.\n"
+                      "        This refuses THE BURST READOUT on THIS creature at THIS\n"
+                      "        window. It is not 'M6 is closed', not 'the signal is\n"
+                      "        nowhere', and says nothing about any other window — §74\n"
+                      "        closed that axis by a bound and this cannot reopen it.\n",
+                      kSdSpaceName[bsp[k]], bacc[k], base[k], kSdBar, borc[k]);
+        else
+          std::printf("      `%s`: %.4f +- %.4f — NO VERDICT, the bar %.3f is inside the\n"
+                      "        2-SE band. ~%u creatures would separate them — a PROJECTION\n"
+                      "        at 1/sqrt(n), legitimate here only because each creature is\n"
+                      "        an independent unit, and advisory rather than load-bearing.\n"
+                      "        A near miss is NOT converted into either answer.\n",
+                      kSdSpaceName[bsp[k]], bacc[k], base[k], kSdBar,
+                      base[k] > 0.0
+                          ? uint32_t(double(bn) * std::pow(2.0 * base[k] /
+                                                           std::max(1e-9, std::fabs(bacc[k] - kSdBar)),
+                                                           2.0) + 0.5)
+                          : 0u);
+        if (std::fabs(dvm[k]) < 2.0 * dvs[k])
+          std::printf("        The contrast against `vocal` is %+.4f +- %.4f, inside 2 SE of\n"
+                      "        zero: the ISI bit neither added nor destroyed information, and\n"
+                      "        \"bursts carry nothing\" is NOT licensed — only \"bursts carry\n"
+                      "        nothing the count did not\".\n",
+                      dvm[k], dvs[k]);
+      }
+      std::printf("\n");
+    }
+
+    // ---- §75's SECOND ARM: REPLICATE §70's REFUTATION, AND NOTHING MORE ----
+    //
+    // §70 read `drive-exc` 0.8377 at `stp tau3000` on a testable oracle and put
+    // "the measured drive never carries the conjunction is REFUTED" into the
+    // record off a cell its own text calls SELECTED ON THE DATA. §74 has since
+    // watched a selected lean reverse sign on fresh creatures.
+    //
+    // THIS ARM CANNOT LICENSE THE KERNEL CHANGE AND IS NOT SIZED TO. Inverting
+    // the pricing's own best case gives a drive threshold of 0.8651, but that
+    // threshold moves +-0.025 with the transmission factor's own measurement
+    // error against a 0.0274 margin — `anchor-carries-its-own-error` again, in a
+    // design this time instead of in a headline. No creature count narrows it,
+    // because the creatures are not what it is uncertain about.
+    {
+      const double kN70Drive = 0.8377, kN70DriveSe = 0.0169;
+      double rm = 0, rs = 0, ro = 0, ros = 0;
+      sd_stat(mbe[kSdArmN75Stp][0][kSdDrvExc], rm, rs);
+      sd_stat(asm_[kSdArmN75Stp][0][kSdDrvExc], ro, ros);
+      const uint32_t rn = uint32_t(mbe[kSdArmN75Stp][0][kSdDrvExc].size());
+      // UNPAIRED ON PURPOSE. The two arms sit at different `rep_off`, so index i
+      // is a different creature in each and `paired_rep` would difference
+      // strangers. Both SEs are therefore carried, which is the whole lesson of
+      // this session's estimator fix.
+      const double dse = std::sqrt(rs * rs + kN70DriveSe * kN70DriveSe);
+      std::printf("    §75's REPLICATION — `%s`, %u creatures at rep_off %u,\n"
+                  "    `drive-exc` at gap 200, the overlap window.\n\n"
+                  "      fresh        %.4f +- %.4f   (oracle %.4f)\n"
+                  "      §70 archived %.4f +- %.4f   SELECTED ON THE DATA\n"
+                  "      difference   %+.4f +- %.4f  = %.1f SE, both errors carried\n\n",
+                  kSdArms[kSdArmN75Stp].name, rn, kSdArms[kSdArmN75Stp].rep_off,
+                  rm, rs, ro, kN70Drive, kN70DriveSe, rm - kN70Drive, dse,
+                  dse > 0.0 ? std::fabs(rm - kN70Drive) / dse : 0.0);
+      if (rn < 3 || !(rs > 0.0)) {
+        std::printf("      -> VOID: %u scored creatures and an SE of %.4f.\n\n", rn, rs);
+      } else if (ro < kSdBar) {
+        std::printf("      -> VACUOUS: the oracle %.4f is under the %.3f bar on the fresh\n"
+                    "         creatures, so neither the bar nor the archived figure can be\n"
+                    "         tested here. §70's refutation is NEITHER confirmed NOR denied.\n\n",
+                    ro, kSdBar);
+      } else if (rm + 2.0 * rs < kSdBar) {
+        std::printf("      -> §70's REFUTATION DOES NOT SURVIVE FRESH CREATURES. The drive\n"
+                    "         is below the %.3f bar at 2 SE, so \"a sufficient dose does put\n"
+                    "         it in the drive\" was a property of the twelve creatures it was\n"
+                    "         selected on. ROUTE 2 LOSES THE ONE PIECE OF EVIDENCE THAT MADE\n"
+                    "         IT A ROUTE, and the kernel change has nothing left to rest on.\n\n",
+                    kSdBar);
+      } else if (rm - 2.0 * rs > kSdBar) {
+        std::printf("      -> §70's REFUTATION REPLICATES. The drive clears the %.3f bar on\n"
+                    "         creatures §70 never saw, so the refutation stands.\n"
+                    "         THIS LICENSES NOTHING FURTHER. Route 2 stays exactly where the\n"
+                    "         pricing left it — a coin flip on three assumptions, two of\n"
+                    "         which this very ladder contradicts — and the threshold that\n"
+                    "         would decide it is softer than the margin it would be read\n"
+                    "         against. Route 2 remains CLOSED ON THE ARITHMETIC.\n\n",
+                    kSdBar);
+      } else {
+        std::printf("      -> NO VERDICT ON THE REPLICATION: the %.3f bar is inside the\n"
+                    "         2-SE band. Twelve creatures were sized to catch a 2-SE\n"
+                    "         REVERSAL and nothing finer, and this arm is NOT sized to\n"
+                    "         confirm 0.8377 — so it does not.\n\n",
+                    kSdBar);
+      }
+    }
   }
 
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"

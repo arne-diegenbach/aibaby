@@ -16410,3 +16410,191 @@ depends on it.** It tests a claim this document made about the kernel, which is
 worth testing and is no longer worth stopping for. Writing it the other way
 would be a gate that guards nothing — and `vacuity-gate-cannot-guard-a-rejection`
 is about gates aimed at the wrong proposition in exactly this way.
+
+## §75 RESULT — THE TIMING CARRIES A WORD BUT NOT A COMPARISON, AND THREE PRICINGS OF IT WERE WRONG
+
+`results/n75-samediff-1680k.log`, genome `9f6faac320210cc8e9f5830adf066934`
+unchanged, 222 of 222 sessions, every registered gate PASS.
+
+**Both registered branches fired, and neither was the interesting one.** The
+burst primary came back **VACUOUS**, which the pre-registration named as the most
+likely single outcome; the replication arm says **§70's refutation REPLICATES**
+and licenses nothing, which is exactly the branch that was written for it.
+
+### THE INSTRUMENT HELD, AND IT WAS PROVEN BOTH WAYS
+
+    G-SELF         shipped's sweep slope +0.01007 +- 0.00741
+                   §73 archived          +0.01007 +- 0.00741      MATCH
+    G-BURST-DEF    2,540,160,000 cells; kernel scale 105.857
+                   max |host - kernel|   0.000e+00               PASS
+    G-BURST-INERT  vocal spike checksum, 12 of 12 identical      PASS
+    G-SESSIONS     222 of 222                                    PASS
+
+**`G-SELF` MATCHING TO FIVE DIGITS IS THE LOAD-BEARING REGRESSION RESULT.** §75
+moved the vocal spike scan ABOVE the windowed-tick `continue`, added two feature
+spaces and took the arm table from 14 to 16. Every column archived since §63 came
+back bit-identical anyway, which is what that self-check exists to say.
+
+**`G-BURST-DEF` RETURNED EXACTLY ZERO OVER 2.54 BILLION COMPARISONS**, so the
+host-side ISI test is the kernel's at network.cpp:2651 and not an approximation
+of it. **AND THE GATE WAS SHOWN TO BE ABLE TO FAIL**: a deliberate build with
+`<=` changed to `<` — an off-by-one of ONE TICK — produced a deviation of
+**25.95 against a tolerance of 0.104**, firing `FAIL -> VOID`, archived at
+`results/n75-failprobe-300k.log`. A gate that has never failed is not known to
+be able to; this one is.
+
+**AND THE TOLERANCE ITSELF WAS A DEFECT CAUGHT BY READING.** It was first written
+as `1e-3` of the EMA's NOMINAL unit (`1000/dt`), while the quantity's steady
+state at this creature's rate is near 1 — an absolute slack of 1.0, the whole of
+the signal, on a gate that would then have passed on two unrelated columns. It is
+`1e-3` of `bdef_kmax`, the largest value the kernel actually produced, with
+`bdef_kmax > 0` as its own liveness clause. **The smoke could not have caught
+this: its deviation was exactly 0, which passes under a vacuous tolerance and a
+sound one alike.**
+
+`G-BURST-INERT` settles the pricing's central claim as a measurement rather than
+an argument: **`burst_ms > 0` changes not one spike.** 12 of 12 vocal spike
+checksums identical to `shipped`'s.
+
+### THE PRIMARY: VACUOUS, AND THE NUMBER THAT MATTERS IS NOT THE PRIMARY
+
+      space        same/diff         label-destroyed    own oracle
+      burst-neu    0.4983 +- 0.0124  0.4874 +- 0.0109   0.5179 +- 0.0036
+      burst-grp    0.5045 +- 0.0109  0.4912 +- 0.0127   0.5073 +- 0.0032
+      vocal        0.4995 +- 0.0103                     0.9585
+
+**0.5179 +- 0.0036 is not a near miss. It is 5 SE above chance and 36 SE BELOW
+the 0.650 bar**, on 42 creatures. The burst spaces cannot carry either word's
+identity, so asking them about the conjunction is vacuous, and the refusal is not
+a result about M6. The registered gate fired and the verdict stopped there.
+
+**BUT THE BURST SPACE IS NOT INFORMATION-FREE, AND THAT IS THE SECTION'S ONE
+POSITIVE FINDING.** Read off the ingredient columns at the overlap window:
+
+    space        A's trace    B ITSELF
+    burst-neu     0.5447       0.6507      <- the current word, well above chance
+    burst-grp     0.5025       0.5855
+    vocal         0.5451       0.9234
+    sync-rho      0.4810       0.5030      §72's rate-free spaces, for scale
+    sync-grp      0.4697       0.5084
+
+**`burst-neu` reads the word currently playing at 0.6507.** Among spaces that are
+rate-corrected by construction this is the first in the project to carry a word
+at all — §72's `sync-rho` and `sync-grp` sat at 0.503 and 0.508. (`sync-raw`
+reaches 0.6563 but is rate-SENSITIVE by design, so it is reading the rate.) **The
+ISI label on a spike does carry word identity. It is simply not enough.**
+
+### WHY 0.65 PER WORD IS NOWHERE NEAR THE BAR — THE ASSEMBLY IS QUADRATIC
+
+The oracle XORs two independent per-word decodes, so for a per-word accuracy `p`
+
+    assembled = p^2 + (1-p)^2
+
+and that function is FLAT near chance. Solving it at the bar:
+
+    assembled = 0.650  ->  p = 0.7739      THE PER-WORD DECODE A TESTABLE
+                                            ORACLE ACTUALLY REQUIRES
+    p = 0.6507         ->  assembled 0.5454   (measured 0.5179-0.5298)
+    p = 0.9234         ->  assembled 0.8585   `vocal`, for comparison
+
+**So the burst space is short by 0.123 on the per-word decode, and the XOR turns
+that into a 0.13 shortfall on the oracle.** This is why "it carries a word at
+0.65" and "its oracle is vacuous" are both true and not in tension.
+
+### THE DERIVED BOUND THAT CLOSES THE ROUTE — AND IT IS TAKEN OPTIMISTICALLY
+
+Labelled derived after the run, in §74's manner. Converting both accuracies to
+d' and scaling as `d' ~ sqrt(events)` — **the OPTIMISTIC law, the best a linear
+readout accumulating independent evidence can do, so the bound understates how
+short the route is:**
+
+    measured    0.6507  ->  d' 0.7744      at 49.6 module burst events (400 ms)
+    required    0.7739  ->  d' 1.5035
+    ratio 1.942, so events must rise by 3.77x  ->  187 events needed
+
+    available at 900 ms, the whole of B      111.6 events   -> STILL 1.68x SHORT
+    window that would reach 187 events       ~1500 ms
+
+**B IS 900 ms LONG AND THE WINDOW CANNOT OUTLAST THE WORD**, which §73
+established as an exact ceiling rather than a chosen one. So **even reading every
+spike of B, the burst readout falls 1.68x short of a testable oracle**, and there
+is no window left to spend. **The burst route is closed by a bound, not by a
+verdict** — the same shape as §74's closure of the window axis, and for the same
+reason: the quantity that would rescue it is capped by the trial.
+
+### THREE SUCCESSIVE PRICINGS OF THIS ROUTE WERE WRONG, INCLUDING MINE
+
+This is the part worth keeping, because the measurement contradicted every
+argument made about it in advance — in different directions.
+
+1. **§73 deferred the burst dose as "starved worse than §72's synchrony space"
+   at 0.30 events per neuron. CONCLUSION CORRECT**, though it priced a per-neuron
+   rate estimate rather than a classifier.
+2. **The pricing (d7c542c) said per-neuron was "dead on arithmetic" and the
+   group form "clears both binds". BOTH WRONG.** The per-neuron form is the
+   BETTER one — 0.6507 against the group form's 0.5855 — and neither clears.
+   Pooling 126 dimensions into 9 raised events-per-dimension 14x and **LOWERED**
+   the decode, because what it discarded was WHICH neuron burst. **Events per
+   dimension was not the binding constraint; dimensionality was.**
+3. **§75's own pre-registration argued the per-neuron form should be primary
+   because "a count of 0.39 is informative in the way a count of 1.72 is".
+   HALF REFUTED.** It is the better form, which that argument got right, but
+   0.39 events/neuron yielded 0.6507 where 1.72 yielded 0.9234 — **so the event
+   budget did bind after all**, just through the decode's d' rather than through
+   a noisy per-unit estimate.
+
+**THE TRANSFERABLE LESSON IS ABOUT BUDGETS.** "Events per unit" is the right
+budget for a PARAMETER ESTIMATE and the wrong one for a CLASSIFIER, where the
+quantity that binds is total evidence against dimensionality. §72's budget was
+imported into §75 twice, once as a kill and once as a rescue, and it was the
+wrong instrument both times. **The pre-flight that would have settled it in one
+line is the one this result ends with: convert the target accuracy into d',
+divide by the available events, and ask what window that implies.**
+
+### THE REPLICATION: §70's REFUTATION SURVIVES FRESH CREATURES
+
+      fresh (rep_off 66, 12)   0.8552 +- 0.0158   (oracle 1.0000)
+      §70 archived             0.8377 +- 0.0169   SELECTED ON THE DATA
+      difference               +0.0175 +- 0.0231  = 0.8 SE, both errors carried
+
+**It replicates, and it replicates slightly HIGHER.** §74 had just watched a
+selected lean reverse sign on fresh creatures, so this was a real test and the
+selected maximum passed it. "A sufficient dose does put the conjunction in the
+measured drive" stands as §70 wrote it, now on creatures §70 never saw, and
+`drive-exc` clears the 0.650 bar at 0.8552 - 2(0.0158) = 0.8236.
+
+**AND IT LICENSES NOTHING, EXACTLY AS REGISTERED.** Feeding the fresh drive
+through the pricing's own best case:
+
+    pred = 0.5 + 2(0.8552 - 0.5) * 0.4316 * 0.4759 = 0.6459     bar 0.650
+    short by 0.0041, down from the pricing's 0.0113
+
+**The margin narrowed by a factor of three and still did not cross** — and the
+threshold it is being read against carries a +-0.025 band from the transmission
+factor's own measurement error. **So the margin is now SIX TIMES SOFTER than the
+uncertainty in the thing it is measured against.** The replication therefore
+strengthens the pre-registration's finding rather than weakening it: no cheaper
+measurement decides Route 2, because the quantity that is uncertain is not the
+one creatures buy down.
+
+**ROUTE 2 REMAINS CLOSED ON THE ARITHMETIC.** The only thing that would decide it
+is making the kernel change and measuring the spikes directly, and that is a coin
+flip resting on three assumptions, two of which this same ladder contradicts
+(`drive-net` beats `drive-exc` at every rung; spike accuracy FALLS from tau1000
+to tau3000).
+
+### WHERE THIS LEAVES THE LINE
+
+**Both mechanism routes the pricing named are now closed, and neither closed on a
+refusal.** Route 1 (burst) closed on a derived bound with no window left to
+spend; Route 2 (per-projection STP) closed on a threshold softer than its own
+margin. §74 closed the window axis the same way. **Three consecutive sections
+have ended in bounds rather than verdicts, and that is the honest shape of the
+result**: the input-side comparison is not being refused for want of one more
+mechanism, it is being refused by the trial's own event budget.
+
+What remains untouched by any of this: §71's `drive -> membrane -> spikes`
+localisation, confirmed on fresh creatures and unmoved by §75's columns, which
+still says the loss is AT THE THRESHOLD and that 43.2% of the normalised drive is
+what survives it. **That is the one quantity in this line that a mechanism could
+still move, and nothing in §72-§75 has addressed it.**
