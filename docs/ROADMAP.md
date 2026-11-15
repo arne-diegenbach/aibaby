@@ -17275,3 +17275,105 @@ The §65 conjunctive combiner is accumulated on arm 0 only and is **not** given
 an arm dimension here. It is outside M6's readout class, so a dosed reading of
 it could not change the verdict, and widening an aggregation is not a print
 change. Registered as not done rather than left unmentioned.
+
+### §78 AMENDED BEFORE THE RUN — three amendments, each from the smoke or from a derivation, all disclosed here
+
+**AMENDMENT 1 — the majority gate as registered cannot pass.** The 300k smoke
+printed the one quantity the registration never checked: **8.0 held-out trials
+per creature.** On 8 trials a per-creature accuracy lands only on multiples of
+0.125, and 5/8 = 0.625 sits under the bar, so the registered test
+`accuracy >= 0.650` is really `accuracy >= 6/8 = 0.750` — a bar 0.10 above
+M6's. The identification curve the registration should have carried:
+
+    true accuracy   fraction reaching 6/8   gate (f - 2 SE > 0.5)
+      0.6200             0.3585 +- 0.0343          fail
+      0.6734             0.4849 +- 0.0357          fail   <- §77's measured value
+      0.7000             0.5518 +- 0.0355          fail
+      0.7500             0.6785 +- 0.0334          pass
+
+At the accuracy the project measured, the gate cannot pass: it would report M6
+unmet for a reason about the held-out budget, not about the creature. Same
+error shape as §77's SE ceiling refusing what its own clearance granted —
+[[aibaby-two-power-rules-can-contradict]], [[aibaby-guard-measures-the-wrong-quantity]].
+
+The amended reading is derived, not loosened. The clause exists to exclude a
+result carried by a minority of creatures, which is a claim about the
+BETWEEN-creature component — identifiable from 196 creatures even where 8
+trials cannot resolve one creature:
+
+    observed per-creature variance, production budget    0.007056
+    its SE over 196 creatures, var * sqrt(2/(n-1))       0.000715
+    upper 2-SE bound on the between-creature component   0.00143
+    -> between-creature SD at most                       0.0378
+    -> fraction of creatures whose TRUE accuracy exceeds
+       0.650, at the worst case of that bound AND with
+       the mean lowered by its own 2 SE                  0.62
+
+Stated honestly: under the only model this data identifies, the binary form of
+the clause REDUCES to the 2-SE clearance on the mean — a worst-case normal
+population has its majority above the bar exactly when its mean is. What
+survives of the clause as independent content is the heterogeneity bound and
+the worst-case fraction, and both are printed. The raw count stays in the
+output with its effective 0.750 bar stated beside it. If the measured
+between-creature variance lands at or below zero, the honest statement is
+"heterogeneity is under 0.038" and no finer figure — the tighter bound that
+arithmetic would print is the floor of what 8 trials can resolve, not a
+measurement of near-perfect homogeneity.
+
+**AMENDMENT 2 — A's trace on a dosed arm is the mechanism's own signature,
+derived here before production rather than discovered after it.** The smoke
+read A in `vmem` on the dosed arm at 0.6059 +- 0.0105, above chance by 10 SE,
+where §77's production log has A at 0.5008 on `shipped`. That is not an
+artefact to hope away; it is what the mechanism predicts. During B's first
+400 ms the vocal membrane is B's drive through A-depleted synapses,
+`vmem_i ~ b_i * r_i(A)`, and averaging over B (drawn uniformly by design)
+leaves `E[vmem_i | A] = E[b_i] * r_i(A)` — A's channel-usage pattern is
+linearly visible IN PROPORTION TO THE DEPRESSION DEPTH. A dose strong enough
+to carry the comparison is therefore a dose at which A is readable. The
+registered A-at-chance pass branch is structurally close to unreachable, and
+had it stood, every effective dose would have routed to the successor. §63
+Revision 2 already named the real disqualifier, and it is not a readable
+trace: it is PHYSICAL MIXING through the audible self-voice, and the arm that
+cuts it is silencing.
+
+**AMENDMENT 3 — the registered successor is folded in, and the claim condition
+routes through it.** §78 adds its one arm after all:
+
+    arm        `n78 quiet tau3000` — voicing_threshold 1.15 (quietecho's
+               0.000-voiced rung) PLUS stp_use 0.20 / tau_rec 3000 ms
+    creatures  196 at rep_off 274 — seeds 274-469, never scored by any
+               section (0-11, 12-23 §71, 24-65 §74, 66-77 §75, 78-273 §77)
+    primary    `vmem`, overlap window, gap 200, bar 0.650 on its own oracle
+    power      from §77's MEASURED per-creature SD 0.0840 (never §71's
+               0.0585): projected SE 0.0060, P(clear by 2 SE | true value
+               0.6734) about 0.96 — and the silenced truth may genuinely sit
+               lower, which is what the middle branch is for
+
+The branches that produce no milestone, first:
+
+    quiet vmem + 2 SE < 0.650  -> THE AUDIBLE ECHO WAS LOAD-BEARING. The §77
+                                  membrane result is reinterpreted as fed by
+                                  the acoustic loop, M6 is NOT met, and the
+                                  relational line must separate synapse from
+                                  echo before any further claim.
+    the bar inside the 2-SE band -> NO VERDICT at this n; the registered
+                                  statement is that silencing costs something
+                                  and the question of how much is not worth
+                                  more creatures until the oracle work lands.
+    quiet vmem - 2 SE > 0.650  -> the comparison survives with the self-voice
+                                  removed, and the claim below is read.
+
+`n71 tau1000 quiet` (existing, 12 creatures) prints the same contrast at
+tau1000 for free, print-only.
+
+**THE AMENDED M6 CLAIM CONDITION.** M6 is claimed only if: the total self-gate
+passes; §77's primary reproduces and clears by 2 SE; `n78 quiet tau3000`'s
+`vmem` clears by 2 SE on an oracle at or above 0.650; the run's
+label-destroyed and oracle gates hold. A readable A-trace is REPORTED with the
+derivation above as the mechanism's signature, not a disqualifier — the
+silencing arm now carries the weight the A-at-chance test was wrongly asked to
+carry. The three deviations (overlap window, non-shipped mechanism, void spike
+rung) must still be named in the claim or it is not made.
+
+**COST.** 196 new sessions, 614 total, about 2.8 hours. Genome md5 must stay
+`9f6faac320210cc8e9f5830adf066934`.
