@@ -15897,3 +15897,134 @@ Restated from §73 so it is not quoted beyond its reach: **§74 cannot produce a
 PASS on M6 and is not meant to.** Reaching 0.650 from 0.5469 needs ~10x the
 window under sqrt scaling, longer than the whole trial. This is a **diagnostic
 of ten sections' worth of refusals**, not an attempt at the milestone.
+
+### §74 RESULT — NO VERDICT AGAIN, AND §73's LEAN REVERSED SIGN
+
+`results/n74-samediff-1680k.log`. Genome md5 `9f6faac320210cc8e9f5830adf066934`,
+unchanged. `verify PASS`, pinned hash PASS. All gates PASS, 198 of 198 sessions.
+
+**THE INSTRUMENT VALIDATED ITSELF FIRST, AND IT COULD HAVE FAILED.** §74's single
+implementation, run on `shipped`'s twelve, reproduced §73 **exactly**:
+
+    SELF-CHECK   slope +0.01007 +- 0.00741   §73 archived +0.01007 +- 0.00741   MATCH
+
+and §73's whole printed block is **byte-identical** to its archived run, as are
+§69's carrier, §70's premise check and §71's primary and localisation. The
+per-arm rep counts bought 42 creatures for one arm without moving any column a
+previous section's verdict is read on.
+
+### THE PRIMARY
+
+    window    accuracy         oracle    ratio
+     100 ms   0.4888+-0.0127   0.8138    -0.018+-0.044
+     200 ms   0.4828+-0.0105   0.8070    -0.063+-0.051
+     400 ms   0.4878+-0.0115   0.7764    -0.060+-0.053
+     900 ms   3.36 spk/n       0.6872    -0.085+-0.090
+
+    PRIMARY, the fresh 42    slope -0.00552 +- 0.00616   0.9 SE from FLAT
+                             paired sqrt distance        0.4 SE from SQRT
+    SECONDARY, pooled 54     slope -0.00205 +- 0.00511   0.4 SE from FLAT
+
+All four rungs were testable on the fresh arm, so the registered four-rung
+design ran as priced. **The reading is NO VERDICT, which §74 registered as the
+expected outcome on the flat side — and the lean is NEGATIVE, the opposite of
+§73's.**
+
+### WHAT THIS WITHDRAWS, AND IT IS §73's HEADLINE
+
+§73's result was NO VERDICT *"and the lean is the opposite of a negative"*: the
+slope was +0.01007 and the sqrt hypothesis fitted better than flat. **On 42
+creatures pinned before this run the slope is NEGATIVE.** The two independent
+samples differ by
+
+    +0.01007 +- 0.00741  vs  -0.00552 +- 0.00616   ->  +0.01559 +- 0.00964 = 1.6 SE
+
+which is exactly what two draws from a near-zero true slope look like. **§73's
+positive lean was sampling noise, and "it leans starved" is withdrawn.** The
+pooled 54 — the most precise estimate this project has of this quantity — reads
+**-0.00205 +- 0.00511**, which is flat to 0.4 SE.
+
+That is the registered successor doing its job: §73 said *more creatures, not
+more window*, and more creatures said the lean was not there.
+
+### AND THE REFUTATION I COULD HAVE CLAIMED IS THE ERROR §74 WAS BUILT TO AVOID
+
+The tempting headline is that the fresh sample **refutes** §73's sqrt
+coefficient. Against `+0.01269` treated as a fixed number:
+
+    (-0.00552 - 0.01269) / 0.00616 = 3.0 SE     <- WRONG, and it is §73's own defect
+    (-0.00552 - 0.01269) / sqrt(0.00616^2 + 0.00900^2) = 1.7 SE   <- carrying the
+                                                                      anchor's error
+
+§73's coefficient came from the 100 ms ratio `+0.127 +- 0.090`, so it carries SE
+`0.0090` of its own. **Carrying it, the sqrt coefficient is NOT excluded at
+1.7 SE.** Writing "refuted at 3.0 SE" would have repeated, in the result, the
+precise estimator error this section was built to fix.
+
+**The clause held, too.** Even with the pooled slope 0.4 SE from flat, the paired
+sqrt distance is 0.4 SE from zero, so sqrt is not excluded and
+`EVENTS ARE NOT THE CONSTRAINT` **did not print.** §73's first build would have
+printed it on a null slope alone. That is the registered gate working on the
+data it was written for.
+
+### WHAT ACTUALLY CLOSES THE AXIS — A DERIVED BOUND, NOT A VERDICT
+
+Labelled as derived after the run, continuing §73's own registered arithmetic
+rather than replacing the primary. Take the **optimistic 2-SE edge** of the
+pooled estimate, `-0.00205 + 2(0.00511) = +0.00817` per `sqrt(ms)` — i.e. assume
+the window helps as much as this data can credibly allow:
+
+    ratio needed to reach the 0.650 bar at the 100 ms oracle 0.8138
+      (0.650 - 0.5) / (0.8138 - 0.5)                  = 0.4780
+    gain required from the fresh arm's -0.018          = 0.4960
+    x = 10 + 0.4960 / 0.00817 = 70.7  ->  window      = 5000 ms
+
+**Even on the most favourable reading of the data, reaching the bar needs a
+~5000 ms overlap window — far longer than the trial affords.** §73 estimated
+"~10x the window" from a positive slope it no longer has; the bound survives the
+sign flip because it is taken at the optimistic edge. **The window axis is
+closed quantitatively, without needing the slope's sign resolved.**
+
+### THE COST FIGURES, AND WHY THEY ARE A REASON TO STOP
+
+    STARVED   209 creatures for a 2-SE reading,  422 for 80% power
+    FLAT     1091 creatures for a 2-SE reading, 2203 for 80% power
+
+422 creatures is ~30 parallel rounds, perhaps two hours — **affordable, and not
+worth it.** It would establish a slope near `-0.005` whose sign flipped between
+samples and which the bound above shows cannot rescue any refusal. **The reason
+to stop is the bound, not the price.**
+
+### A SIDE OBSERVATION, NOT REGISTERED, AND IT CUTS AGAINST THE FRAMING
+
+The fresh arm reads **chance everywhere**: `central` at gap 200 is
+**0.5020 +- 0.0118** on 42 creatures against §63's 0.5104 on twelve, and all four
+sweep windows sit at or just below 0.5, which is why every ratio above is
+negative. **A negative ratio makes "ratio ∝ sqrt(window)" ill-posed as a model
+of a noise-limited readout** — there is no signal for extra events to amplify,
+so the sqrt law is being fitted to a quantity that has no positive part. That is
+a limitation of the registered framing on this arm, disclosed rather than
+converted into a verdict it was not registered to support.
+
+**The arm itself is sound**, which is why the observation is about the creature
+and not the instrument: vocal 0.54307 spikes/tick against `shipped`'s 0.54677,
+and assembled oracles 0.7287 / 0.6697 / 0.5385 / 0.5045 against 0.7320 / 0.6523
+/ 0.5279 / 0.4947. It is the same creature on different seeds.
+
+**And it strengthens every refusal from §63 on**: the input-side nulls were read
+on twelve creatures, and the fresh forty-two put the primary closer to exact
+chance than the discovery sample did.
+
+### WHERE THIS LEAVES THE LINE
+
+**The window axis is CLOSED** — by the bound, with the slope unresolved and the
+lean withdrawn. §73's question is answered to the extent it can be: the event
+budget is not what the refusals were about, and no affordable number of
+creatures would change that conclusion.
+
+The live routes are the two mechanisms, unchanged by this section and now the
+only ones left: the **burst dose** (`burst_ms` ships 0.0, DNA v37) and
+**per-projection STP keying** (the genome says per-projection, the kernel keys
+per module pair). Both face §72's bind — a dose that delivers the mechanism also
+destroys the low-dimensional oracle the verdict must be read against — and
+neither should be built without that priced first.
