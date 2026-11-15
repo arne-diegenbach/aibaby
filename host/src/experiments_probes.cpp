@@ -19679,6 +19679,13 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 }
 
 constexpr uint32_t kSdReps = 12;
+// §74's one new arm, and 42 is derived rather than round. The power is
+// `Phi(gap/SE - 2)` with `SE = 0.00741 * sqrt(12/n)` and `gap = 0.01269`, so
+// n = 42 gives 0.89 against the registered 16's 0.49. 42 is then rounded to
+// `3 x 14` threads exactly: `parallel_reps` sets `want = n` only while
+// `n <= 2 * want`, so above 28 the pool is 14 wide and an uneven tail idles
+// most of the machine. 42 is three full rounds with no tail.
+constexpr uint32_t kSdN74Reps = 42;
 // `quietecho` drove this ladder to 1.15 and measured the voiced fraction at
 // 0.000 with the articulator echo UNMOVED. That is the rung, and that is why
 // this arm is called acoustic-silenced and not larynx-silenced.
@@ -19726,24 +19733,31 @@ struct SdArmDef {
   float stp_rec;   // tau_rec in ms
   bool probe;      // §71: the two-part impulse in the scoring window
   uint32_t rep_off;  // §71: seed offset, so the arm runs on FRESH creatures
+  // §74: PER-ARM creature count. Every arm that existed before §74 carries
+  // `kSdReps` here, so its columns are bit-identical to §71's and §73's
+  // archived runs and the regression gate survives a change that exists only
+  // to buy creatures for ONE arm. Raising a global count would have re-rolled
+  // nothing but would have moved every pooled mean, which is the same thing as
+  // losing the gate.
+  uint32_t reps;
   const char* what;
 };
-constexpr SdArmDef kSdArms[13] = {
-    {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, "the creature as it ships"},
-    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
-    {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, "silence where the second word goes — overwrite vs decay"},
-    {"stp tau100", 0.0f, false, 0.20f, 100.0f, false, 0, "§68 predicts d' 0.2811 — the FLOOR rung"},
-    {"stp tau300", 0.0f, false, 0.20f, 300.0f, false, 0, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
-    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, false, 0, "§68 predicts d' 2.4110"},
-    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, false, 0, "§68 predicts d' 2.8791 — the CEILING rung"},
+constexpr SdArmDef kSdArms[14] = {
+    {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, "the creature as it ships"},
+    {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
+    {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, "silence where the second word goes — overwrite vs decay"},
+    {"stp tau100", 0.0f, false, 0.20f, 100.0f, false, 0, kSdReps, "§68 predicts d' 0.2811 — the FLOOR rung"},
+    {"stp tau300", 0.0f, false, 0.20f, 300.0f, false, 0, kSdReps, "§68 predicts d' 1.3076 — stpprobe's measured corner"},
+    {"stp tau1000", 0.0f, false, 0.20f, 1000.0f, false, 0, kSdReps, "§68 predicts d' 2.4110"},
+    {"stp tau3000", 0.0f, false, 0.20f, 3000.0f, false, 0, kSdReps, "§68 predicts d' 2.8791 — the CEILING rung"},
     // §71, all four on FRESH creatures (rep_off 12) and paired on the same seeds.
-    {"n71 ref", 0.0f, false, 0.0f, 0.0f, false, 12,
+    {"n71 ref", 0.0f, false, 0.0f, 0.0f, false, 12, kSdReps,
      "no dose, no probe — §63's silent scoring window on fresh creatures"},
-    {"n71 ref+probe", 0.0f, false, 0.0f, 0.0f, true, 12,
+    {"n71 ref+probe", 0.0f, false, 0.0f, 0.0f, true, 12, kSdReps,
      "THE MECHANISM NULL: no depletion exists, so a probe can carry nothing"},
-    {"n71 tau1000", 0.0f, false, 0.20f, 1000.0f, false, 12,
+    {"n71 tau1000", 0.0f, false, 0.20f, 1000.0f, false, 12, kSdReps,
      "§70's localisation on creatures it never saw — the CONFIRMATION"},
-    {"n71 tau1000+probe", 0.0f, false, 0.20f, 1000.0f, true, 12,
+    {"n71 tau1000+probe", 0.0f, false, 0.20f, 1000.0f, true, 12, kSdReps,
      "THE PRIMARY: read the synaptic trace with an impulse"},
     // THE SELF-VOICE ROUTE, AND THE 300k SMOKE IS WHY THESE TWO EXIST.
     //
@@ -19761,13 +19775,24 @@ constexpr SdArmDef kSdArms[13] = {
     // probe's effect survives here it is reading the SYNAPSE; if it vanishes it
     // was reading the creature's own echo all along — which would be a finding
     // about M6 and NOT a demonstration that a synaptic trace can be probed.
-    {"n71 tau1000 quiet", 1.15f, false, 0.20f, 1000.0f, false, 12,
+    {"n71 tau1000 quiet", 1.15f, false, 0.20f, 1000.0f, false, 12, kSdReps,
      "the dose with the self-voice silenced, no probe"},
-    {"n71 tau1000 quiet+probe", 1.15f, false, 0.20f, 1000.0f, true, 12,
+    {"n71 tau1000 quiet+probe", 1.15f, false, 0.20f, 1000.0f, true, 12, kSdReps,
      "THE CONFOUND-FREE PRIMARY: probe, dose, and no self-heard echo"},
+    // §74. IDENTICAL TO `shipped` IN EVERY SETTING — vthr 0, no omit, zero
+    // dose, no probe — and differing ONLY in the seed offset. That is what
+    // makes its per-creature slopes exchangeable with `shipped`'s and so
+    // poolable; any other difference would make the pooled 54 a mixture of two
+    // arms rather than one arm on more creatures.
+    //
+    // `rep_off = 24` places it past BOTH earlier blocks: §73's creatures are
+    // 0-11 and §71's are 12-23, so 24-65 have never been scored by any section.
+    {"n74 sweep", 0.0f, false, 0.0f, 0.0f, false, 24, kSdN74Reps,
+     "§73's sweep on 42 creatures no section has seen — the pre-pinned primary"},
 };
-constexpr uint32_t kSdArmCount = 13;
+constexpr uint32_t kSdArmCount = 14;
 constexpr uint32_t kSdArmShipped = 0;
+constexpr uint32_t kSdArmN74 = 13;
 // §71's four, and the pairing is by index: 7 against 9 is dose with no probe,
 // 8 against 7 is the mechanism null, 10 against 9 is THE PRIMARY.
 constexpr uint32_t kSdN71Ref = 7;
@@ -19820,12 +19845,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  primary           %s (the non-motor route)\n"
               "  co-primary        %s (the MOTOR route — reads differently)\n"
               "  round             %llu ticks; %llu rounds at this budget\n"
-              "  creatures         %u per arm, %u arms\n\n",
+              "  creatures         %u per arm on %u arms, %u on §74's sweep arm\n\n",
               (unsigned long long)kSdWord, (unsigned long long)kSdWord,
               (unsigned long long)kSdScore, kSdBar,
               kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary],
               (unsigned long long)kSdRoundTicks,
-              (unsigned long long)(ticks / kSdRoundTicks), kSdReps, kSdArmCount);
+              (unsigned long long)(ticks / kSdRoundTicks), kSdReps,
+              kSdArmCount - 1u, kSdN74Reps);
 
   std::vector<SdOut> res[kSdArmCount];
   for (uint32_t a = 0; a < kSdArmCount; ++a) {
@@ -19835,7 +19861,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     const float sr = kSdArms[a].stp_rec;
     const bool pb = kSdArms[a].probe;
     const uint32_t ro = kSdArms[a].rep_off;
-    res[a] = parallel_reps<SdOut>(kSdReps, [&](uint32_t r) {
+    res[a] = parallel_reps<SdOut>(kSdArms[a].reps, [&](uint32_t r) {
       return run_samediff_session(blob, ticks, r, vt, ob, su, sr, pb, ro);
     });
   }
@@ -19985,7 +20011,14 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   std::printf("  THE GATES\n\n");
-  const bool g_sessions = (n_ok == kSdArmCount * kSdReps);
+  // §74: the expected session count is now a SUM over per-arm rep counts, not a
+  // product. Writing `kSdArmCount * kSdReps` here after adding a 42-rep arm
+  // would have made the gate demand 14*12 = 168 against the 198 that actually
+  // run, so the gate would have FAILED and voided the run — a gate that cannot
+  // pass is as useless as one that cannot fail.
+  uint32_t n_want = 0;
+  for (uint32_t a = 0; a < kSdArmCount; ++a) n_want += kSdArms[a].reps;
+  const bool g_sessions = (n_ok == n_want);
   const bool g_align = (n_align == 0);
   const bool g_sleep = (slept_frac <= kSdSleepMax);
   const bool g_cells = (cell_empty == 0);
@@ -19993,7 +20026,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   const bool g_oracle = g_scored && (best_oracle >= kSdOracleFloor);
   const bool g_null = g_scored && (null_m >= kSdNullLo && null_m <= kSdNullHi);
   std::printf("    sessions that ran          %u of %u                      %s\n",
-              n_ok, kSdArmCount * kSdReps, g_sessions ? "PASS" : "FAIL");
+              n_ok, n_want, g_sessions ? "PASS" : "FAIL");
   std::printf("    feature rows == labels     %u misaligned                 %s\n",
               n_align, g_align ? "PASS" : "FAIL");
   std::printf("    slept trials               %u of %u = %.4f  (<= %.2f)  %s\n",
@@ -20019,8 +20052,9 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
 
   // ---- THE PRIMARY ----
-  std::printf("\n  THE PRIMARY — SAME vs DIFFERENT AT THE SCORING WINDOW, pooled over %u creatures\n\n",
-              kSdReps);
+  std::printf("\n  THE PRIMARY — SAME vs DIFFERENT AT THE SCORING WINDOW, pooled over\n"
+              "  each arm's creatures (%u, and %u on §74's sweep arm)\n\n",
+              kSdReps, kSdN74Reps);
   for (uint32_t a = 0; a < kSdArmCount; ++a) {
     if (kSdArms[a].omit_b) continue;  // same/different is undefined with no B
     std::printf("  arm %s (%s)\n", kSdArms[a].name, kSdArms[a].what);
@@ -20600,7 +20634,8 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "                %llu ms of kWords[1]'s, starting %llu ms after B — inside\n"
                 "                the %llu ms scoring window that was SILENCE in §63/§69/§70.\n"
                 "                IDENTICAL ON EVERY TRIAL, so it carries no label.\n\n",
-                kSdReps, kSdArms[kSdN71Ref].rep_off, (unsigned long long)kSdProbeDur,
+                kSdArms[kSdN71Ref].reps, kSdArms[kSdN71Ref].rep_off,
+                (unsigned long long)kSdProbeDur,
                 (unsigned long long)kSdProbeGap, (unsigned long long)kSdProbeDur,
                 (unsigned long long)kSdProbeLead, (unsigned long long)kSdScore);
 
@@ -21197,6 +21232,325 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 kSdBar);
   }
 
+  // ---- §74: THE SAME SWEEP, ON ENOUGH CREATURES TO READ IT ----
+  //
+  // §73 left NO VERDICT: slope +0.01007 +- 0.00741, flat 1.4 SE away and the
+  // sqrt prediction 0.4 SE away. §74 buys creatures, which §73 registered as
+  // the successor, and corrects two things in the estimator before spending
+  // them. Both corrections are registered in ROADMAP §74 and neither changes
+  // §73's archived reading.
+  {
+    struct SwStat {
+      double acc_m[kSdSweep], acc_s[kSdSweep];
+      double orc_m[kSdSweep];
+      double rat_m[kSdSweep], rat_s[kSdSweep];
+      bool rung_ok[kSdSweep];
+      uint32_t n_rung;
+      uint32_t r0;              // first testable rung — the anchor's rung
+      double slope_m, slope_s;  // per creature, the ratio's slope on sqrt(ms)
+      double dist_m, dist_s;    // per creature, slope MINUS its OWN anchor
+      uint32_t n_creature;
+      uint32_t n_dist;
+      uint32_t n_sess;  // scored sessions, INDEPENDENT of the rung set
+    };
+    const uint32_t sp = kSdPrimary;  // `central`, §63's registered primary
+    const double rate_per_neuron = 0.00373;
+
+    // ONE implementation, over a LIST of arms. §73's block above is left
+    // untouched so its output stays byte-comparable, and this lambda's
+    // `shipped`-only pass is checked IN CODE against §73's archived figures
+    // below. A duplicated sixty-line statistical block that drifts from its
+    // twin is the defect that avoids.
+    //
+    // `pin` PINS THE RUNG SET, AND THE 300k SMOKE IS WHY IT EXISTS. With each
+    // pass choosing its own rungs from its own oracle means, the fresh arm put
+    // FEWER THAN 3 RUNGS over the bar and scored no slopes at all, while the
+    // POOLED pass put 3 over and scored 31 — so pooling silently rescued a
+    // primary that was void, on a rung set the primary never had. That is not
+    // "the same estimator on more creatures", which is the one sentence that
+    // justifies printing the pooled figure beside the primary at all.
+    auto sweep = [&](const std::vector<uint32_t>& arms, const bool* pin) {
+      SwStat st = {};
+      for (uint32_t r = 0; r < kSdSweep; ++r) {
+        std::vector<double> acc, orc, rat;
+        for (uint32_t a : arms)
+          for (const SdOut& o : res[a])
+            if (o.ok && o.gap[0].scored) {
+              const double A = o.gap[0].sw_mile[r][sp];
+              const double O = o.gap[0].sw_orac[r][sp];
+              acc.push_back(A);
+              orc.push_back(O);
+              if (O > 0.5) rat.push_back((A - 0.5) / (O - 0.5));
+            }
+        double os = 0.0;
+        sd_stat(acc, st.acc_m[r], st.acc_s[r]);
+        sd_stat(orc, st.orc_m[r], os);
+        sd_stat(rat, st.rat_m[r], st.rat_s[r]);
+        st.rung_ok[r] = pin ? pin[r] : (st.orc_m[r] >= kSdBar);
+      }
+      st.r0 = kSdSweep;
+      for (uint32_t r = 0; r < kSdSweep; ++r)
+        if (st.rung_ok[r]) {
+          if (st.r0 == kSdSweep) st.r0 = r;
+          ++st.n_rung;
+        }
+      std::vector<double> slopes, dists;
+      for (uint32_t a : arms)
+        for (const SdOut& o : res[a]) {
+          if (!(o.ok && o.gap[0].scored)) continue;
+          ++st.n_sess;
+          double sx = 0, sy = 0, sxx = 0, sxy = 0, n = 0, anchor = 0;
+          bool has_anchor = false;
+          for (uint32_t r = 0; r < kSdSweep; ++r) {
+            if (!st.rung_ok[r]) continue;
+            const double O = o.gap[0].sw_orac[r][sp];
+            if (!(O > 0.5)) continue;
+            const double x = std::sqrt(double(kSdSweepMs[r]));
+            const double y = (o.gap[0].sw_mile[r][sp] - 0.5) / (O - 0.5);
+            sx += x; sy += y; sxx += x * x; sxy += x * y; n += 1.0;
+            if (r == st.r0) { anchor = y / x; has_anchor = true; }
+          }
+          if (n < 3.0) continue;
+          const double den = sxx - sx * sx / n;
+          if (!(den > 0.0)) continue;
+          const double b = (sxy - sx * sy / n) / den;
+          slopes.push_back(b);
+          // THE PAIRED SQRT DISTANCE, AND THIS IS §73's ESTIMATOR DEFECT.
+          //
+          // §73 divided `slope - sqrt_pred` by `sls`, the SE OF THE SLOPE
+          // ALONE. But `sqrt_pred` is itself a mean over creatures with its own
+          // error — the 100 ms ratio was +0.127 +- 0.090, so the anchor carries
+          // SE 0.0090 against the slope's 0.00741 — and it is CORRELATED with
+          // the slope, because the anchor's rung is one of the four rungs the
+          // slope is fitted through. Differencing INSIDE the creature gets that
+          // covariance right by construction rather than by model.
+          //
+          // Under the sqrt hypothesis y = c*x, so b and y(r0)/x(r0) estimate
+          // the same c and this difference is ZERO IN EXPECTATION. Under flat
+          // it is -mean_ratio/x(r0), i.e. NEGATIVE. So `|dist| >= 2 SE` is the
+          // test that EXCLUDES sqrt, and it is the only gate through which
+          // "events are not the constraint" is allowed to print.
+          if (has_anchor) dists.push_back(b - anchor);
+        }
+      sd_stat(slopes, st.slope_m, st.slope_s);
+      sd_stat(dists, st.dist_m, st.dist_s);
+      st.n_creature = uint32_t(slopes.size());
+      st.n_dist = uint32_t(dists.size());
+      return st;
+    };
+
+    // `chk` and `fr` choose their own rungs; `fr` is the PRIMARY, so the pooled
+    // pass is PINNED to the primary's rung set and is therefore the primary's
+    // estimator on more creatures. A void primary can no longer be rescued by
+    // pooling into a rung set it never had.
+    const SwStat chk = sweep({kSdArmShipped}, nullptr);
+    const SwStat fr = sweep({kSdArmN74}, nullptr);
+    const SwStat po = sweep({kSdArmShipped, kSdArmN74}, fr.rung_ok);
+
+    std::printf("  §74 THE SWEEP ON ENOUGH CREATURES TO READ IT — `%s`, %u creatures\n"
+                "  no section has seen (seed offset %u), identical to `%s` in every\n"
+                "  other setting so the two are poolable as ONE arm on more creatures.\n\n",
+                kSdArms[kSdArmN74].name, kSdArms[kSdArmN74].reps,
+                kSdArms[kSdArmN74].rep_off, kSdArms[kSdArmShipped].name);
+
+    // THE SELF-CHECK, AND IT CAN FAIL. §73's archived figures, transcribed from
+    // `results/n73-samediff-1680k.log`. The lambda runs the same arithmetic on
+    // the same twelve creatures, so it must reproduce them; if it does not, the
+    // instrument is wrong and §74's numbers mean nothing.
+    //
+    // AND IT IS SCOPED TO THE BUDGET IT WAS ARCHIVED AT. §73's figures are from
+    // a 1.68M run, so comparing a 300k smoke against them would fail for a
+    // MEASURED reason that is not a defect, void the section at every other
+    // budget, and leave the branches below unexercised by any smoke. Outside
+    // that budget the comparison is printed and labelled NOT A GATE, which is
+    // `open-is-unfalsifiable-on-an-instrument` applied honestly in both
+    // directions: at 1.68M it can fail and does gate; elsewhere it cannot fail
+    // and therefore does not claim to.
+    const double kN73Slope = 0.01007, kN73SlopeSe = 0.00741;
+    const uint64_t kN73Ticks = 1680000;
+    const bool at_budget = (ticks == kN73Ticks);
+    const bool self_match = std::fabs(chk.slope_m - kN73Slope) < 1e-5 &&
+                            std::fabs(chk.slope_s - kN73SlopeSe) < 1e-5 &&
+                            chk.n_creature == kSdReps;
+    const bool g_self = !at_budget || self_match;
+    std::printf("    SELF-CHECK — this section's ONE implementation, run on `%s`'s %u:\n"
+                "      slope %+.5f +- %.5f   §73 archived %+.5f +- %.5f   %s\n\n",
+                kSdArms[kSdArmShipped].name, chk.n_creature,
+                chk.slope_m, chk.slope_s, kN73Slope, kN73SlopeSe,
+                !at_budget ? "NOT A GATE at this budget (§73's are 1.68M)"
+                           : (self_match ? "MATCH" : "DIFFERS -> VOID"));
+
+    std::printf("    window   spikes/neuron   accuracy         oracle     ratio\n");
+    for (uint32_t r = 0; r < kSdSweep; ++r)
+      std::printf("    %4llu ms      %5.2f        %.4f+-%.4f   %.4f    %+.3f+-%.3f%s\n",
+                  (unsigned long long)kSdSweepMs[r],
+                  rate_per_neuron * double(kSdSweepMs[r]), fr.acc_m[r], fr.acc_s[r],
+                  fr.orc_m[r], fr.rat_m[r], fr.rat_s[r],
+                  fr.rung_ok[r] ? "" : "   <- oracle under the bar, DROPPED");
+
+    // The rung set and the anchor rung are PRINTED for each reading, not left
+    // implicit. `sweep` recomputes `rung_ok` from the oracle mean of the arms
+    // it is given, so the pooled pass can admit or drop a rung that the fresh
+    // pass did not. Every creature inside one pass uses the SAME rung set, so
+    // each reading is internally consistent — but a pooled figure fitted
+    // through a different rung set than the primary is not the primary's
+    // estimator, and that has to be visible rather than inferred.
+    auto two_lines = [&](const char* tag, const SwStat& s) {
+      std::printf("    %s\n"
+                  "      SLOPE on sqrt(window)   %+.5f +- %.5f   %.1f SE from FLAT (0)\n"
+                  "      PAIRED sqrt distance    %+.5f +- %.5f   %.1f SE from SQRT (0)\n"
+                  "      from %u creatures (%u for the distance), %u testable rungs,\n"
+                  "      anchored at %llu ms\n",
+                  tag, s.slope_m, s.slope_s,
+                  s.slope_s > 0.0 ? std::fabs(s.slope_m) / s.slope_s : 0.0,
+                  s.dist_m, s.dist_s,
+                  s.dist_s > 0.0 ? std::fabs(s.dist_m) / s.dist_s : 0.0,
+                  s.n_creature, s.n_dist, s.n_rung,
+                  (unsigned long long)(s.r0 < kSdSweep ? kSdSweepMs[s.r0] : 0));
+    };
+    std::printf("\n");
+    two_lines("PRIMARY — the fresh creatures, pre-pinned:", fr);
+    std::printf("\n");
+    two_lines("SECONDARY — pooled, better powered, MAY NOT OVERTURN THE PRIMARY:", po);
+    // THE DECOMPOSITION IS IN SCORED SESSIONS, NOT IN SLOPE COUNTS. The 300k
+    // smoke printed "pooled from 31 creatures (0 fresh + 7 of §73's)", because
+    // those counts are rung-set-dependent and the three passes had different
+    // rung sets. 31 != 0 + 7 is an arithmetic contradiction printed as if it
+    // were a decomposition — `plausible-wrong-number`. Sessions decompose.
+    std::printf("      pooled from %u scored sessions (%u fresh + %u of §73's\n"
+                "      discovery sample, whose positive lean is WHY this section\n"
+                "      exists), yielding %u slopes on the primary's rung set\n",
+                po.n_sess, fr.n_sess, chk.n_sess, po.n_creature);
+    // WHAT THE POOLED PASS WOULD HAVE CHOSEN ON ITS OWN, which is information
+    // rather than a gate. With `po` pinned to the primary's rungs the earlier
+    // "do they differ?" check could never fire, and a check that cannot fail
+    // does not belong in an instrument
+    // (`open-is-unfalsifiable-on-an-instrument`). This one can.
+    const SwStat po_own = sweep({kSdArmShipped, kSdArmN74}, nullptr);
+    if (po_own.n_rung != fr.n_rung || po_own.r0 != fr.r0)
+      std::printf("      NOTE: left to its own oracle means the pooled pass would have\n"
+                  "      taken %u rungs anchored at %llu ms against the primary's %u at\n"
+                  "      %llu ms. It is PINNED to the primary's set, so the figure above\n"
+                  "      is the primary's estimator on more creatures and not a second\n"
+                  "      estimator wearing its name.\n",
+                  po_own.n_rung,
+                  (unsigned long long)(po_own.r0 < kSdSweep ? kSdSweepMs[po_own.r0] : 0),
+                  fr.n_rung,
+                  (unsigned long long)(fr.r0 < kSdSweep ? kSdSweepMs[fr.r0] : 0));
+
+    const double fd_flat = fr.slope_s > 0.0 ? std::fabs(fr.slope_m) / fr.slope_s : 0.0;
+    const double fd_sqrt = fr.dist_s > 0.0 ? std::fabs(fr.dist_m) / fr.dist_s : 0.0;
+    const double pd_flat = po.slope_s > 0.0 ? std::fabs(po.slope_m) / po.slope_s : 0.0;
+    // The creature count that would settle each side AT THE OBSERVED EFFECT.
+    // Both figures are printed, because §73's successor note printed only the
+    // first and that is exactly what made its "roughly 16 creatures" a coin
+    // flip: 2 SE is the n at which a verdict becomes POSSIBLE, 2.8416 SE the n
+    // at which it is 80% LIKELY.
+    //
+    // A ZERO HERE WOULD BE A SENTINEL PRINTED AS A MEASUREMENT: "0 creatures"
+    // reads as "already settled" when it means "not computable". The figures
+    // are formatted into a buffer so an uncomputable one prints as `n/a`.
+    char nb[4][32];
+    auto need = [&](int slot, uint32_t n, double m, double se, double z) {
+      if (!(std::fabs(m) > 0.0) || !(se > 0.0) || n < 2)
+        std::snprintf(nb[slot], sizeof(nb[slot]), "n/a");
+      else
+        std::snprintf(nb[slot], sizeof(nb[slot]), "%u",
+                      unsigned(double(n) * std::pow(z * se / std::fabs(m), 2.0) + 0.5));
+      return nb[slot];
+    };
+    std::printf("\n    creatures that would settle each side at the effect measured here\n"
+                "    (the FIRST figure is the one §73's successor note printed, and the\n"
+                "    SECOND is the one it should have — 2 SE is POSSIBLE, 2.8416 is 80%%):\n"
+                "      STARVED   %s for a 2-SE reading, %s for 80%% power\n"
+                "      FLAT      %s for a 2-SE reading, %s for 80%% power\n",
+                need(0, fr.n_creature, fr.slope_m, fr.slope_s, 2.0),
+                need(1, fr.n_creature, fr.slope_m, fr.slope_s, 2.8416),
+                need(2, fr.n_dist, fr.dist_m, fr.dist_s, 2.0),
+                need(3, fr.n_dist, fr.dist_m, fr.dist_s, 2.8416));
+
+    // THE BRANCHES, IN THE ORDER §74 REGISTERED THEM, AND THE ORDER IS THE
+    // POINT. §70's verdict overran its own vacuity caveat, §72's did it again,
+    // and §73's handed a confident negative to data leaning the other way —
+    // three times in four sections. So VOID is written first, NO VERDICT
+    // second, and the interesting readings last.
+    // AN SE OF ZERO IS ONLY A BUG IF THERE WAS SOMETHING TO AVERAGE. The 300k
+    // smoke printed "an SE came back zero over n > 1, which is a bug" when the
+    // actual cause was ZERO creatures on an empty rung set — a message naming
+    // the wrong cause, which is the same defect class as a wrong number. The
+    // bug clause is now conditioned on n >= 2, so it can only fire for the
+    // reason it states.
+    const bool se_bug = (fr.n_creature >= 2 && !(fr.slope_s > 0.0)) ||
+                        (fr.n_dist >= 2 && !(fr.dist_s > 0.0));
+    const bool void_ = !g_self || fr.n_rung < 3 || fr.n_creature < 3 ||
+                       fr.n_dist < 3 || se_bug;
+    std::printf("\n");
+    if (void_) {
+      std::printf("    -> VOID, and these are the reasons:\n%s%s%s%s"
+                  "       No verdict is computed and none is printed.\n",
+                  !g_self ? "       - the self-check against §73 DIFFERS, so this "
+                            "section's estimator\n         is not §73's\n" : "",
+                  fr.n_rung < 3 ? "       - fewer than 3 rungs have a testable oracle "
+                                  "on the fresh arm\n" : "",
+                  (fr.n_creature < 3 || fr.n_dist < 3)
+                      ? "       - too few creatures yielded a slope on the rungs that "
+                        "were testable\n" : "",
+                  se_bug ? "       - an SE came back zero over n > 1, which is a bug "
+                           "and not a result\n" : "");
+    } else if (fd_flat < 2.0 && fd_sqrt < 2.0) {
+      std::printf("    -> NO VERDICT, AND §74 REGISTERED THIS AS THE EXPECTED READING ON\n"
+                  "       THE FLAT SIDE AT THIS BUDGET. The fresh slope is %+.5f +- %.5f,\n"
+                  "       %.1f SE from flat, and the paired sqrt distance is %.1f SE from\n"
+                  "       zero, so neither hypothesis is excluded. The lean is named and\n"
+                  "       not glossed: the slope is %s, so 'events are not the constraint'\n"
+                  "       REMAINS UNAVAILABLE as a reading of this experiment.\n",
+                  fr.slope_m, fr.slope_s, fd_flat, fd_sqrt,
+                  fr.slope_m > 0.0 ? "POSITIVE, which is the starved direction"
+                                   : "NEGATIVE, which is the dilution direction");
+      if (pd_flat >= 2.0)
+        std::printf("       AND THE CROSS-READING FIRES: the pooled %u would have reached\n"
+                    "       %.1f SE. That is NO VERDICT WITH A NAMED LEAN and NOT a\n"
+                    "       verdict — the pooled sample contains the discovery creatures,\n"
+                    "       which is why it was registered as unable to overturn.\n",
+                    po.n_creature, pd_flat);
+    } else if (fd_flat >= 2.0 && fd_sqrt >= 2.0) {
+      std::printf("    -> THE WINDOW BUYS ACCURACY, BUT NOT WITH THE SQRT SHAPE. The slope\n"
+                  "       is %+.5f +- %.5f (%.1f SE from flat) AND the paired sqrt distance\n"
+                  "       is %.1f SE from zero, so BOTH registered hypotheses are excluded.\n"
+                  "       The event budget is part of the constraint — §63-§71's nulls are\n"
+                  "       upper bounds on a budget — but the sqrt law that priced this\n"
+                  "       design is refuted, so no extrapolation from it survives.\n",
+                  fr.slope_m, fr.slope_s, fd_flat, fd_sqrt);
+    } else if (fr.slope_m >= 2.0 * fr.slope_s) {
+      std::printf("    -> THE REFUSALS WERE EVENT-STARVED, AT LEAST IN PART. The ratio\n"
+                  "       rises with sqrt(window) at %.1f SE on creatures pinned before the\n"
+                  "       run, and the paired sqrt distance is %.1f SE from zero, so the\n"
+                  "       sqrt law is not excluded. §63-§71's nulls are then UPPER BOUNDS\n"
+                  "       ON A BUDGET and not statements about the creature, and every one\n"
+                  "       of them needs re-reading. Reported first: it touches more prior\n"
+                  "       work than anything else this section could have found.\n",
+                  fd_flat, fd_sqrt);
+    } else if (fr.slope_m <= -2.0 * fr.slope_s) {
+      std::printf("    -> DILUTION DOMINATES. The ratio FALLS with window (%.1f SE), so\n"
+                  "       400 ms was already generous and A's trace decays inside the\n"
+                  "       longer windows faster than the extra events help. The refusals\n"
+                  "       stand, and the trace decay is priced as a side result.\n",
+                  fd_flat);
+    } else {
+      std::printf("    -> EVENTS ARE NOT THE CONSTRAINT. The slope is %+.5f +- %.5f, within\n"
+                  "       %.1f SE of flat across a NINE-FOLD range in events, AND the\n"
+                  "       paired sqrt distance is %.1f SE from zero, which EXCLUDES the\n"
+                  "       sqrt law rather than merely failing to confirm it. That second\n"
+                  "       clause is the one §73 did not have, and it is the only gate\n"
+                  "       through which this sentence is allowed to print. §63-§71's\n"
+                  "       refusals stand as written and are not artefacts of one unswept\n"
+                  "       constant.\n",
+                  fr.slope_m, fr.slope_s, fd_flat, fd_sqrt);
+    }
+    std::printf("\n    §74 CANNOT PRODUCE A PASS AND WAS NOT MEANT TO, exactly as §73.\n"
+                "    This is a DIAGNOSTIC of ten sections' worth of refusals.\n\n");
+  }
+
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"
               "  (`drive-exc`/`drive-net` are MEASURED from live STP state, which a\n"
               "   creature with the mechanism off does not have: blank, not zero.)\n\n    gap  ");
@@ -21328,7 +21682,11 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     for (uint32_t k = 0; k < 3; ++k) {
       const uint32_t sp = (k == 0) ? 0u : ((k == 1) ? kSdCoPrimary : 4u);
       std::vector<double> d;
-      for (uint32_t r = 0; r < kSdReps; ++r) {
+      // §74: both arms here carry `kSdReps`, but the bound is taken from the
+      // arms themselves rather than from a global, so a later per-arm change
+      // cannot silently truncate or overrun this pairing.
+      const uint32_t nr = std::min(kSdArms[0].reps, kSdArms[2].reps);
+      for (uint32_t r = 0; r < nr; ++r) {
         if (r >= res[0].size() || r >= res[2].size()) continue;
         if (!res[0][r].gap[g].scored || !res[2][r].gap[g].scored) continue;
         d.push_back(res[2][r].gap[g].ing_a[sp] - res[0][r].gap[g].ing_a[sp]);
