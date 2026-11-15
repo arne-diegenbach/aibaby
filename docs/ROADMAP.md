@@ -16598,3 +16598,168 @@ localisation, confirmed on fresh creatures and unmoved by §75's columns, which
 still says the loss is AT THE THRESHOLD and that 43.2% of the normalised drive is
 what survives it. **That is the one quantity in this line that a mechanism could
 still move, and nothing in §72-§75 has addressed it.**
+
+## §76 PRE-FLIGHT AUDIT — DECODE-THEN-COMPARE IS CLOSED IN EVERY SINGLE SPACE, AND MY OWN BOUND WAS REFUTED BY A NUMBER IN THE SAME LOG
+
+DERIVED FROM ARCHIVED LOGS, NO SESSIONS RUN. Sources: `results/n75-samediff-1680k.log`
+(every-space, overlap-window and scoring-window ingredient tables, `shipped`,
+12 creatures) and `results/n70-samediff-1680k.log` (the dose ladder and its
+per-rung oracles). Genome `9f6faac320210cc8e9f5830adf066934` throughout.
+
+The audit §75's result asked for: apply §75's own closing pre-flight — convert the
+TARGET accuracy to d', divide by AVAILABLE events, ask what window — to every
+readout the project has refused since §63, instead of to one space.
+
+### THE METHOD, AND THE ASSUMPTION IT TURNS ON
+
+For a readout that decodes each word and compares the decodes — which is exactly
+what the registered oracle prices — the achievable ceiling at the moment of
+decision is the XOR of the two marginal decodes measured AT THAT MOMENT:
+
+    O2 = p_A * p_B + (1 - p_A)(1 - p_B)
+
+and the bar is 0.650. Holding the stronger word fixed, the weaker word needs
+
+    p_weak = (0.650 - (1 - p_strong)) / (2 * p_strong - 1)
+
+Both accuracies convert to d' by `d' = 2*Phi^-1(acc)`, and under the OPTIMISTIC
+`d' ~ sqrt(events)` law the window factor needed is `(d'_need / d'_meas)^2`.
+**The ceiling is 2.25x: the 400 ms overlap window cannot outgrow B's 900 ms**,
+which §73 established as exact rather than chosen.
+
+### EVERY SPACE AT THE DECISION MOMENT — THE OVERLAP WINDOW, GAP 200
+
+`shipped`, 12 creatures. The at-chance band is +-2 SE = +-0.024, taken from the
+label-destroyed arm printed in the same window (0.4924 +- 0.0118).
+
+    space        A trace   B itself   O2      binding   needs    window x
+    auditory      0.5006    1.0000    0.5006    A       0.6500     inf
+    central       0.5029    0.6973    0.5011    A       0.8801     inf
+    vocal         0.5451    0.9234    0.5382    A       0.6771    16.5
+    artic9        0.7727    0.5360    0.5196    B       0.7750    69.9
+    artic7        0.7305    0.5339    0.5156    B       0.8254   121.1
+    drive-sim     0.5378    1.0000    0.5378    A       0.6500    16.5
+    vmem          0.5008    0.9544    0.5007    A       0.6651     inf
+    sync-exc      0.4853    0.5219    0.4994    A        >1        inf
+    sync-raw      0.4946    0.6563    0.4983    A       0.9798     inf
+    sync-rho      0.4810    0.5030    0.4999    B        >1        inf
+    sync-grp      0.4697    0.5084    0.4995    B        >1        inf
+    burst-neu     0.5447    0.6507    0.5135    A       0.9977   635.6
+    burst-grp     0.5025    0.5855    0.5004    A        >1        inf
+
+**NOT ONE SPACE REACHES THE BAR. The best O2 in the project is 0.5382** (`vocal`),
+and at §63's own scoring window the best is 0.5451 (`artic9`). Four spaces have
+their binding word AT CHANCE, where no event budget applies at all — **you cannot
+scale zero**. Four more are `>1`: the STRONGER word is itself so weak that the XOR
+cannot reach 0.650 even with the other word read PERFECTLY. The five that remain
+need 16.5x to 635.6x the window against a ceiling of 2.25x.
+
+Carried errors, per [[aibaby-anchor-carries-its-own-error]]: `p_strong` is a
+measurement, so the needed `p_weak` has its own band. At `p_strong +- 0.012` the
+needed accuracy moves by about +-0.005 and the window factors by a few percent.
+**No verdict in the table moves. The anchors at 1.0000 are ceilings and carry no
+error at all.**
+
+### AND HERE IS WHERE THE AUDIT REFUTED ITSELF
+
+`drive-sim` on **`shipped`**, same window, same gap, from §70's ladder:
+
+    rung 1c  drive-sim   0.6545   oracle 1.0000   null 0.5290
+
+**0.6545 CLEARS THE 0.650 BAR, on the creature as it ships, with no dose — and the
+table above says its ceiling is 0.5378.** The bound is refuted by a number in the
+same log, and the refutation is correct: **the XOR of marginal decodes bounds a
+DECODE-THEN-COMPARE readout and nothing else.** Same/different is a RELATION, and
+a relational quantity can carry it while neither word is separately decodable.
+That is §68 exactly — depletion's state depends on whether the two words shared
+channels (same-word cosine 0.9359 against cross-word 0.1378) — so the comparison
+falls out of the synapse's own state without either identity being legible.
+
+**WHAT THE AUDIT THEREFORE ESTABLISHES, STATED AT THE RIGHT SCOPE:**
+
+1. **Decode-then-compare is CLOSED in every single space**, by arithmetic, with no
+   window left to spend. §65's combiner framing — decode A, decode B, compare —
+   cannot reach the bar inside one module, and §72's synchrony, §75's bursts,
+   §73/§74's window and §63-§69's feature spaces are all instances of it.
+2. The one cross-module pair that clears it is **A from `artic9` x B from
+   `auditory` = 0.7727, and ONLY at gap 200** (0.6384 at gap 800 is already under
+   the bar, 0.5058 at 2000). A combiner is testable in a 200 ms window of the
+   trial space and nowhere else.
+3. **The bound says nothing about relational readouts, and the project has two
+   that clear the bar.** They are below, and they are where the line goes.
+
+### THE RELATIONAL CELLS — §70's LADDER, OVERLAP WINDOW, GAP 200
+
+Accuracy with each cell's OWN oracle in brackets. A cell whose oracle is under
+0.650 cannot be tested against the bar.
+
+    rung         shipped         tau100          tau300          tau1000         tau3000
+    drive-exc      n/a         0.5168 (1.000)  0.5460 (1.000)  0.7226 (1.000)  0.8377 (1.000)
+    drive-net      n/a         0.5419 (1.000)  0.5463 (1.000)  0.7497 (1.000)  0.8571 (1.000)
+    drive-sim   0.6545 (1.000) 0.7033 (1.000)  0.6870 (1.000)  0.7018 (1.000)  0.6874 (1.000)
+    vmem        0.5049 (0.957) 0.5374 (0.979)  0.5288 (0.976)  0.6463 (0.911)  0.6686 (0.747)
+    vocal       0.4934 (0.976) 0.5643 (0.936)  0.5135 (0.898)  0.5940 (0.740)  0.5640 (0.616)*
+
+**`vmem` AT tau3000 READS 0.6686 ON A TESTABLE ORACLE OF 0.747. THAT CLEARS THE
+BAR, ONE STEP BEFORE THE SPIKES, AND IT HAS NEVER BEEN REPLICATED.** §71 confirmed
+the tau1000 rung on fresh creatures and it reads 0.6354 +- 0.0169 — under the bar.
+§75 ran `n75 tau3000` at a fresh `rep_off` and printed `drive-exc` alone for that
+arm's overlap window, with no ladder: **the membrane at tau3000 has never been read
+on creatures §70 did not select it on.**
+§70's own text labels that whole column SELECTED ON THE DATA.
+
+### THE DOSE AXIS IS CLOSED ACROSS ITS MEASURED RANGE, NOT ONLY AT ITS ENDS
+
+Feeding each dose's own drive and its own spike-side oracle through §71's measured
+transmission (`pred = 0.5 + 2(d - 0.5) * T * (O - 0.5)`, `T = 0.4316`):
+
+    dose            drive-exc   spike oracle   predicted spikes
+    shipped           0.4934        0.9759          0.4973
+    tau100            0.5643        0.9360          0.5242
+    tau300            0.5460        0.8980          0.5158
+    tau1000           0.7226        0.7400          0.5461   <- the maximum
+    tau3000           0.8377        0.6160          0.5338
+    tau3000 fresh     0.8552        0.6160          0.5356
+
+**The product PEAKS AT tau1000 at 0.5461 and never approaches the bar.** The dose
+that makes the drive readable is the dose that destroys the readout, and the
+trade-off is MONOTONE: there is no sweet spot to find by sweeping it further.
+**DO NOT RE-SWEEP THE DOSE.** What the ask on the threshold is, exactly:
+
+    raw drive->spikes transmission, measured on fresh creatures   0.2156
+    needed to put SPIKES at the bar from tau1000's drive          0.6897  = 3.20x
+    needed from tau3000's fresh drive, oracle AS MEASURED         0.4223  = 1.96x
+    needed from tau3000's fresh drive, oracle REPAIRED to 0.9759  0.4437  = 1.03x
+
+**The entire remaining question is the oracle repair, not the transmission.** With
+the spike code's legibility restored the measured threshold is ALREADY within 3%
+of enough; without it the threshold must nearly double. That is one binary, and
+§75's three-assumption coin flip collapses onto it.
+
+### WHAT THIS SAYS ABOUT §73 AND §74
+
+§73/§74 swept the window on `central`, whose binding ingredient — A's trace — reads
+**0.5029 at that window, at chance**. The sweep was asking whether more events
+would amplify a quantity that is not there, which is why neither hypothesis could
+be separated and why the registered NO VERDICT was the honest outcome.
+**This does NOT license "events are not the constraint"** — that reading stays
+unavailable, and the slope's sign stays unresolved. It says the question was
+mis-aimed, and that **no event budget addresses a per-module legibility problem.**
+
+### THE RANKED NEXT STEPS, AND THE ONE I WOULD RUN
+
+1. **THE MEMBRANE AT tau3000, ONE ARM.** Re-read the full rung ladder — drive,
+   membrane, spikes, each with its own oracle — on a fresh `rep_off`, 12 creatures.
+   The instrument change is REPORTING, not mechanism: §75's arm already exists and
+   printed only `drive-exc`. Registered readings, both of which are results:
+   **vmem >= 0.650 on an oracle >= 0.650 -> the comparison is present above the bar
+   one step before the spikes, the loss is ENTIRELY the spike threshold, and §71's
+   43.2% becomes the whole story.** **vmem reverses -> the membrane route is dead
+   for one arm**, which is what §74 did to the window's selected lean.
+2. **The threshold's transmission**, which only becomes worth paying for if (1)
+   holds: the ask is 1.96x as measured, 1.03x with the spike oracle repaired.
+3. **The cross-module combiner at gap 200**, ceiling 0.7727 against the 0.650 bar —
+   §65's and §69's registered next build, still not built, and now priced.
+
+**CLOSED BY THIS AUDIT, DO NOT RE-OPEN:** decode-then-compare in any single space;
+the window and event axes as a route to the bar; the dose sweep.
