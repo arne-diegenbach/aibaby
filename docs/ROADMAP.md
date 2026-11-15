@@ -16168,3 +16168,245 @@ change is justified; if it reverses, the route is dead for the price of one arm.
 Steps 1 and 2 are both `samediff` arms and can run in **one** section at roughly
 the cost §74 just paid. **Neither is registered yet; this is the pricing, and the
 registration comes next.**
+
+## §75 PRE-REGISTRATION — IS THE SIGNAL IN THE TEMPORAL FINE STRUCTURE?
+
+The pricing above named two routes and an order. **The pre-flight changed both
+of them, and it changed them before anything was built, which is the only place
+a design change is free.** Route 1 got cheaper and lost its only risky step;
+Route 2's de-risk turned out to be undecidable at any creature count, so the arm
+is kept and **re-aimed at a question it can actually answer.**
+
+### THE BRANCHES THAT MUST EXIST, WRITTEN FIRST
+
+§70, §72 and §73 each overran a caveat their own registration had written, and
+§74 broke that run by writing the empty branches first. Same order here.
+
+**VOID — the section says nothing about M6:**
+
+- `G-BURST-DEF` fails. The burst statistic is computed HOST-SIDE from the spike
+  list (below), so it is a reimplementation of the kernel's own ISI test. If the
+  host's indicator does not reproduce `Network::burst_rate()` on the one arm
+  where the kernel computes it too, the new spaces measure something nobody has
+  named and **every burst column is void.** This is the load-bearing gate.
+- `assembled[burst-neu] < 0.650` **and** `assembled[burst-grp] < 0.650`. A space
+  that cannot carry either word's identity cannot be asked whether it carries
+  their conjunction, and a refusal there is **vacuous, not a result.** This is
+  §72's lesson as a gate rather than as a post-hoc regret, and **it is the most
+  likely single outcome of this section.**
+- Fewer than 3 scored creatures on the primary arm, or an SE that comes back
+  non-positive over n > 1.
+
+**NO VERDICT — the section is run, the primary is read, and it decides nothing:**
+
+- `burst-neu` and `burst-grp` both land with the bar 0.650 inside their 2-SE
+  band. The section then prints the creature count that would separate them and
+  **does not convert a near miss into either answer.**
+- The paired contrast `burst-neu − vocal` lands inside 2 SE of zero. The new
+  feature then neither added nor destroyed information, and **"bursts carry
+  nothing" is NOT licensed** — only "bursts carry nothing the count did not".
+
+**AND THE CLAUSE I AM MOST LIKELY TO WANT TO OVERRUN, NAMED NOW:** if the burst
+oracle clears and the burst accuracy is at chance, that is a refusal **of the
+burst readout on this creature at this window**, and it is NOT "M6 is closed",
+NOT "the signal is nowhere", and NOT a statement about any window other than the
+400 ms overlap. §73's axis is closed by a bound; this section cannot reopen it.
+
+### WHAT CHANGED IN THE PRE-FLIGHT, CHANGE ONE: THE DOSE IS NOT NEEDED AT ALL
+
+The pricing registered a `burst_ms` patch and a bit-identity gate to prove the
+patch was observational. **The patch is not needed for the readout.** The
+kernel's own test is
+
+    bursty = uint32_t(tick_) - last_spike_[i] <= burst_ticks_[m]      network.cpp:2651
+
+and the host already reads `net.spikes()` every windowed tick. Carrying one
+`last_spike` array host-side reproduces that test exactly, with **no genome
+patch, no allocation, no determinism-hash change and no dose** — so the primary
+is read on arms that are bit-identical to the ones already archived, and the
+pricing's gate has nothing left to guard.
+
+**ONE STRUCTURAL CHANGE, AND IT IS THE ONLY RISK:** the ISI test needs every
+tick's spikes, and the loop currently does `if (nwin == 0) continue;` before the
+vocal scan. The scan moves above that line. It is a host-side read with no
+effect on `step()`, so every archived column must stay bit-identical — and the
+existing self-check against §73's slope is what proves it did.
+
+**WHY THE PATCHED ARM SURVIVES ANYWAY, AND IT IS NOW AN INSTRUMENT AND NOT A
+DOSE.** `burst-def` runs 12 creatures at `rep_off 0` with `burst_ms = 60` patched
+into the vocal module, for one purpose: on that arm the kernel maintains
+`burst_rate_` and exposes it, so the host can replicate the kernel's EMA
+
+    r += alpha * ((bursty ? 1000/dt : 0) - r)     alpha = dt / rate_fast_tau_ms = 0.02
+
+from its OWN indicator and compare against `net.burst_rate(j)` neuron by neuron.
+**That is an exact, falsifiable check that my ISI test is the kernel's**, which
+no amount of plausible-looking output can provide. It also still carries the
+pricing's inertness claim as a free reported gate — `voc_hash`, a checksum over
+every (tick, neuron) vocal spike, must be identical to `shipped`'s per creature
+— but that claim is **no longer load-bearing for anything**, because the primary
+does not use the patch.
+
+`burst_baseline_tau_ms = 0.0` ships, so `burst_base_alpha_` is exactly zero and
+`burst_base()` is a permanent 0. The feature is `burst_rate` alone, and DNA v37's
+plasticity is dead **twice** — once at `any_burst_pair_`, once at a zero
+baseline. Disclosed, not discovered later.
+
+### CHANGE TWO: THE PRICING APPLIED THE WRONG BUDGET TO THE PER-NEURON FORM
+
+The pricing called the per-neuron burst space **"dead on arithmetic"** at 0.30
+events per neuron, and promoted the group form. **That is §72's budget applied to
+an object that is not §72's.** §72's per-neuron dimension was an *estimate of a
+correlation coefficient*, and 1.5 spikes makes such an estimate noise. A
+per-neuron burst count is a **sparse feature, not a parameter estimate** — and
+`vocal`, which is 126 dimensions of 1.72 spikes each, carries a word at an
+oracle of 0.976. A count of 0.39 is informative in exactly the way a count of
+1.72 is; it is not a badly-estimated anything.
+
+**So the correct budget for a classifier is the MODULE total, and the honest
+framing is a subtraction:** the burst space is `vocal` with 77% of its events
+discarded and one new bit added per surviving spike — *was this spike part of a
+burst?* The question is whether that bit pays for the events it costs.
+
+**THE BUDGET, RE-DERIVED ON THE ARM THE PRIMARY IS ACTUALLY READ ON.** The
+pricing's table used 0.00373 spikes/tick/neuron, which is the `tau1000` arm.
+`n74 sweep` measured **0.54307 spikes/tick** over 126 vocal neurons, so
+`p = 0.0043101` per neuron per tick, and at `burst_ms = 60` the Poisson burst
+fraction is
+
+    q = 1 - exp(-60 * 0.0043101) = 0.2279      (22.8%, not the pricing's 20.1%)
+
+    window    spk/neuron   burst/neuron   MODULE burst   GROUP burst   group SD
+     400 ms      1.724        0.393           49.5          5.50         2.06
+     900 ms      3.879        0.884          111.4         12.4          3.09
+
+**22.8% rather than 20.1% because the zero-dose arm fires faster than the dosed
+one the pricing's table was built from** — the budget is 17% better than priced,
+on the arm that matters.
+
+### THE TWO SPACES, AND BOTH ARE REGISTERED RATHER THAN ONE SELECTED
+
+The statistic is the **excess over the Poisson expectation at the unit's own
+observed rates, standardised by its own scale.** For unit `u` over a window of
+`T` ticks with `W = 60`:
+
+    p_j = n_j / T                       the neuron's own observed rate
+    q_j = 1 - (1 - p_j)^W               P(it spiked in the previous W ticks)
+    E_u = SUM_j n_j q_j                 expected bursty spikes, ANY rate profile
+    V_u = SUM_j n_j q_j (1 - q_j)
+    z_u = (B_u - E_u) / sqrt(V_u)       0 when V_u == 0
+
+`E_u` is **zero-mean under the independence model for any rate profile
+whatever**, which is §72's subtrahend move, and dividing by `sqrt(V_u)` is
+§72's *second* correction applied up front rather than after a smoke: the
+covariance form scaled with rate and `sync-exc` had to be demoted mid-section.
+A standardised excess cannot.
+
+- **`burst-neu`** — 126 dimensions, one per vocal neuron. **THE PRIMARY.** Most
+  events in total, and the exact dimensional analogue of `vocal`, so the paired
+  contrast differs in the feature and in nothing else.
+- **`burst-grp`** — 9 dimensions, the genome's own motor groups, the unit
+  `artic9` and `sync-grp` already use. **CO-PRIMARY**, and the form the pricing
+  predicted would clear: 5.50 events per dimension is a real count rather than a
+  sparse indicator.
+
+**THE ORACLE CONVENTION IS PINNED BEFORE THE RUN AND IT IS `vocal`'s.** Both
+spaces are statistics of the vocal spike train, so both take the non-motor
+assembly `orac_a * orac_b + (1-orac_a)(1-orac_b)` — A decoded during A, B
+decoded during B — exactly as `vocal` (sp 2) does, and neither is added to the
+motor set. **`sw_orac` is NOT the burst space's oracle:** it is `artic9 x
+auditory` and identical for every space, so quoting it per space would be
+`columns-move-with-the-primary` from the other side.
+
+**WHERE THE PRIMARY IS READ, PINNED:** `n74 sweep`, 42 creatures at `rep_off 24`,
+zero dose, no probe — gap 200, the 400 ms overlap window. §74 established that
+arm as the shipped creature on seeds no section had scored, and it reads chance
+on every rate space, so a burst reading above the bar there cannot be a rate
+effect in disguise. `shipped`'s 12 creatures are the paired discovery
+comparator. The other three windows come free from §73's sweep machinery and are
+**secondary** — §74 closed that axis by a bound and this section does not reopen
+it.
+
+### CHANGE THREE: ROUTE 2's DE-RISK IS UNDECIDABLE, AND THE ARITHMETIC SAYS SO
+
+The pricing registered a `stp tau3000` replication arm to test whether
+`drive-exc = 0.8377` holds on fresh creatures, and read that as the de-risk for
+the kernel change. **Invert the pricing's own best case and the test dissolves.**
+The best case predicts
+
+    pred = 0.5 + 2(d - 0.5) * T * (O - 0.5)        T = 0.4316, O = 0.9759
+
+so clearing the bar needs
+
+    d* = 0.5 + 0.150 / (2 * T * 0.4759) = 0.8651       measured 0.8377, short 0.0274
+
+**But `T` is a MEASUREMENT, not a constant** — §71's pinned chain, spikes 0.1878
+over drive 0.4350 — and `d*` moves with it:
+
+    T = 0.40  ->  d* = 0.8939
+    T = 0.46  ->  d* = 0.8425
+
+**The threshold's own band is about +-0.025, which is WIDER than the 0.0274
+margin the arm would be measuring.** No number of creatures narrows `d*`,
+because the creatures are not what `d*` is uncertain about. [[aibaby-anchor-carries-its-own-error]]
+was written earlier today about §73's estimator; **this is the same error,
+caught this time in a design instead of in a headline, and it is the second
+design it has changed today.**
+
+**SO THE ARM IS KEPT AND RE-AIMED.** It cannot license the kernel change, but
+there is a question at that exact cell worth 12 creatures on its own merits:
+§70 put a **refutation** into the record off it —
+
+> *"A SUFFICIENT DOSE DOES PUT IT IN THE DRIVE: stp tau3000 reads 0.8377 on a
+> testable oracle, so 'the measured drive never carries the conjunction' is
+> REFUTED. A selected maximum is allowed to do this and nothing more."*
+
+and §74 has just watched a selected lean **reverse sign** on fresh creatures.
+**`n75 tau3000` runs 12 creatures at `rep_off 66`** — past §74's 24-65 — and
+asks only what a replication can answer:
+
+- `drive-exc` at gap 200, overlap window, **below the bar 0.650 at 2 SE** ->
+  §70's refutation **does not survive fresh creatures**, and Route 2 loses the
+  one piece of evidence that made it a route at all.
+- **at or above the bar** -> the refutation **replicates**, and Route 2 stays
+  exactly where the pricing left it: a coin flip on three assumptions, two of
+  which the ladder already contradicts. **This outcome licenses nothing.**
+- the bar inside the 2-SE band -> no verdict on the replication.
+
+**Both branches are registered, and NEITHER branch licenses the kernel change.**
+Route 2 is therefore recorded as **closed on the arithmetic** until someone makes
+the kernel change and measures the spikes directly; the pre-flight's finding is
+that no cheaper measurement can decide it.
+
+Paired against the archived 0.8377 with its own SE (~0.017 on 12), the
+difference carries `SE = 0.017 * sqrt(2) = 0.024`, so 12 creatures detect a
+2-SE reversal and that is all this arm is sized for. **It is NOT sized to
+confirm 0.8377**, and the result must not say it did.
+
+### THE COST, AND IT IS THE CHEAPEST SECTION SINCE §72
+
+    burst-neu, burst-grp     NEW COLUMNS on every existing arm      0 sessions
+    burst-def                the kernel cross-check, rep_off 0      12 sessions
+    n75 tau3000              the replication, rep_off 66            12 sessions
+                                                                   -----------
+    198 archived + 24                                              222 sessions
+
+**12% more than §74 paid, against the pricing's 54 new sessions**, because the
+primary rides free on columns and the de-risk that needed 42 was the one the
+arithmetic killed. No kernel change, no dose on the primary, no new mechanism.
+
+### THE GATES, AND WHICH ONES CAN FAIL
+
+    G-SELF         §74's self-check: `shipped`'s sweep slope still
+                   +0.01007 +- 0.00741 at 1.68M                      VOID on fail
+    G-BURST-DEF    host EMA vs net.burst_rate(), max relative
+                   deviation < 1e-3 over all vocal neurons x trials  VOID on fail
+    G-BURST-ORAC   assembled[burst-neu] or [burst-grp] >= 0.650      VACUOUS on fail
+    G-BURST-INERT  burst-def's voc_hash == shipped's, per creature    REPORTED
+    G-SESSIONS     n_ok == sum of per-arm reps (222)                 VOID on fail
+
+`G-BURST-INERT` is reported and not voiding **because the primary no longer
+depends on it.** It tests a claim this document made about the kernel, which is
+worth testing and is no longer worth stopping for. Writing it the other way
+would be a gate that guards nothing — and `vacuity-gate-cannot-guard-a-rejection`
+is about gates aimed at the wrong proposition in exactly this way.
