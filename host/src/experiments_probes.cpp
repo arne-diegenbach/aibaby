@@ -19947,6 +19947,38 @@ constexpr uint32_t kSdReps = 12;
 // `n <= 2 * want`, so above 28 the pool is 14 wide and an uneven tail idles
 // most of the machine. 42 is three full rounds with no tail.
 constexpr uint32_t kSdN74Reps = 42;
+// §77's one new arm, and 140 is derived the same way 42 was. §71 measured THIS
+// quantity — `vmem` same/different on a dose arm — at an SE of 0.0169 on 12
+// creatures, so the per-creature SD is 0.0585 and the projected SE is
+// `0.0585 / sqrt(n)`. The margin that has to be cleared is §70's 0.6686 against
+// the 0.650 bar, which is 0.0186, so a 2-SE clearance needs SE <= 0.0093:
+//
+//     n     SE        P(2-SE clearance) if §70's cell is true
+//      12   0.0169          0.12
+//      48   0.0084          0.58
+//      96   0.0060          0.87
+//     140   0.0049          0.96
+//
+// AND 196 RATHER THAN 144 FOR THE SAME REASON 42 IS NOT 40: `parallel_reps`
+// runs a pool 14 wide on this machine, so 196 is FOURTEEN FULL ROUNDS with no
+// tail where 144 idles ten threads for a whole round.
+//
+// 140 -> 196 BECAUSE THE SMOKE MEASURED THE VARIANCE AND THE PROJECTION ABOVE
+// WAS OPTIMISTIC. `calibrate-the-estimator-in-claim-units` says to project an SE
+// from a MEASURED spread and not from a scaling law, and the 300k smoke at
+// n=140 printed SE 0.0134, so the per-creature SD is 0.1585 there against
+// §71's 0.0585 at the production budget. Decomposing `var = B + W/rounds` over
+// those two points gives W = 0.0264 and B = -0.0013, i.e. a between-creature
+// floor INDISTINGUISHABLE FROM ZERO: this variance is within-creature
+// estimation noise, so the production SD is sqrt(W/5.6) = 0.0687 and
+//
+//     n=140   SE 0.0058   only 3% under the registered 0.0060 SE ceiling
+//     n=196   SE 0.0049   22% under it, and P(2-SE clearance) 0.96
+//
+// At 140 the arm had a large chance of tripping MY OWN SE gate and returning NO
+// VERDICT with the mean sitting right. That is a design fault the smoke caught,
+// which is what the smoke is for.
+constexpr uint32_t kSdN77Reps = 196;
 // `quietecho` drove this ladder to 1.15 and measured the voiced fraction at
 // 0.000 with the articulator echo UNMOVED. That is the rung, and that is why
 // this arm is called acoustic-silenced and not larynx-silenced.
@@ -20008,7 +20040,7 @@ struct SdArmDef {
   float burst_ms;
   const char* what;
 };
-constexpr SdArmDef kSdArms[16] = {
+constexpr SdArmDef kSdArms[17] = {
     {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "the creature as it ships"},
     {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
     {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "silence where the second word goes — overwrite vs decay"},
@@ -20080,8 +20112,30 @@ constexpr SdArmDef kSdArms[16] = {
     // is for and the only thing its result may claim.
     {"n75 tau3000", 0.0f, false, 0.20f, 3000.0f, false, 66, kSdReps, 0.0f,
      "§70's selected maximum on creatures it never saw — the REPLICATION"},
+    // §77. THE ONE CELL §76's AUDIT LEFT STANDING.
+    //
+    // §76 closed decode-then-compare in every single space by arithmetic, closed
+    // the window and event axes, and closed the dose sweep across its measured
+    // range. What it could not close is one cell of §70's ladder: `vmem` at this
+    // dose reads 0.6686 on a testable oracle of 0.747 — ABOVE the 0.650 bar, one
+    // step before the spikes — off a column §70's own text calls SELECTED ON THE
+    // DATA. §71 pinned and confirmed the tau1000 rung at 0.6354, UNDER the bar,
+    // and §75's fresh tau3000 arm printed `drive-exc` alone with no ladder. So
+    // the membrane at tau3000 has never been read on creatures §70 did not
+    // select it on.
+    //
+    // 140 CREATURES AND NOT TWELVE, and the difference from §75's arm is the
+    // comparator. §75 was asking about a threshold that carried its own +-0.025
+    // measurement band against a 0.0274 margin, so no creature count decided it
+    // and the arm was cut to 12. This asks about the FIXED 0.650 bar, and
+    // between-creature SE is exactly what creatures buy down.
+    //
+    // `rep_off = 78` is past §75's 66-77, so seeds 78-217 have never been scored.
+    {"n77 tau3000", 0.0f, false, 0.20f, 3000.0f, false, 78, kSdN77Reps, 0.0f,
+     "§70's SELECTED membrane cell on 140 creatures it never saw — THE PRIMARY"},
 };
-constexpr uint32_t kSdArmCount = 16;
+constexpr uint32_t kSdArmCount = 17;
+constexpr uint32_t kSdArmN77 = 16;
 constexpr uint32_t kSdArmShipped = 0;
 constexpr uint32_t kSdArmN74 = 13;
 // §75's two, and the pairings are by index: 14 against 0 is the kernel
@@ -20141,13 +20195,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "  primary           %s (the non-motor route)\n"
               "  co-primary        %s (the MOTOR route — reads differently)\n"
               "  round             %llu ticks; %llu rounds at this budget\n"
-              "  creatures         %u per arm on %u arms, %u on §74's sweep arm\n\n",
+              "  creatures         %u per arm, %u on §74's sweep arm, %u on §77's\n\n",
               (unsigned long long)kSdWord, (unsigned long long)kSdWord,
               (unsigned long long)kSdScore, kSdBar,
               kSdSpaceName[kSdPrimary], kSdSpaceName[kSdCoPrimary],
               (unsigned long long)kSdRoundTicks,
               (unsigned long long)(ticks / kSdRoundTicks), kSdReps,
-              kSdArmCount - 1u, kSdN74Reps);
+              kSdN74Reps, kSdN77Reps);
 
   std::vector<SdOut> res[kSdArmCount];
   for (uint32_t a = 0; a < kSdArmCount; ++a) {
@@ -20350,8 +20404,8 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 
   // ---- THE PRIMARY ----
   std::printf("\n  THE PRIMARY — SAME vs DIFFERENT AT THE SCORING WINDOW, pooled over\n"
-              "  each arm's creatures (%u, and %u on §74's sweep arm)\n\n",
-              kSdReps, kSdN74Reps);
+              "  each arm's creatures (%u, %u on §74's sweep arm, %u on §77's)\n\n",
+              kSdReps, kSdN74Reps, kSdN77Reps);
   for (uint32_t a = 0; a < kSdArmCount; ++a) {
     if (kSdArms[a].omit_b) continue;  // same/different is undefined with no B
     std::printf("  arm %s (%s)\n", kSdArms[a].name, kSdArms[a].what);
@@ -22133,6 +22187,186 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                     "         confirm 0.8377 — so it does not.\n\n",
                     kSdBar);
       }
+    }
+  }
+
+  // ---- §77: DOES THE COMPARISON SURVIVE TO THE MEMBRANE? ----
+  //
+  // §76's audit closed decode-then-compare in every single space, closed the
+  // window and event axes and closed the dose sweep across its measured range,
+  // and left ONE cell standing: §70's `vmem` at tau3000, 0.6686 on a testable
+  // oracle, off a column its own text calls SELECTED ON THE DATA.
+  //
+  // EVERYTHING BELOW IS READ, NOT MEASURED ANEW. Every rung of every arm is
+  // already computed by the run §75 shipped; this section adds one arm and one
+  // table, and `G-SELF-N75` is here to prove the arm did not disturb the rest.
+  {
+    const uint32_t lad[5] = {kSdDrvExc, kSdDrvNet, kSdDrvSim, kSdVmem, kSdStpPrimary};
+    const char* lname[5] = {"1a drive-exc", "1b drive-net", "1c drive-sim",
+                            "2  vmem     ", "3  vocal     "};
+    const uint32_t larm[4] = {kSdArmN77, kSdArmN75Stp, kSdN71Dose, kSdArmStp3000};
+    std::printf("  §77 THE LADDER ON FRESH CREATURES — same/different at the OVERLAP\n"
+                "  window, gap %s, every rung read in ONE window. `(oracle)` is full\n"
+                "  scale in that space's own units on that arm, and a cell marked * has\n"
+                "  its OWN oracle under the %.3f bar: it CANNOT be tested against the\n"
+                "  bar whatever its accuracy says.\n\n",
+                kSdGapName[0], kSdBar);
+    std::printf("    rung           ");
+    for (uint32_t k = 0; k < 4; ++k) std::printf("%-25s", kSdArms[larm[k]].name);
+    std::printf("\n                   ");
+    for (uint32_t k = 0; k < 4; ++k) {
+      char hdr[40];
+      std::snprintf(hdr, sizeof(hdr), "rep_off %u, n %u", kSdArms[larm[k]].rep_off,
+                    kSdArms[larm[k]].reps);
+      std::printf("%-25s", hdr);
+    }
+    std::printf("\n");
+    for (uint32_t r = 0; r < 5; ++r) {
+      std::printf("    %s   ", lname[r]);
+      for (uint32_t k = 0; k < 4; ++k) {
+        double am = 0, as = 0, om = 0, os = 0;
+        sd_stat(mbe[larm[k]][0][lad[r]], am, as);
+        sd_stat(asm_[larm[k]][0][lad[r]], om, os);
+        char cell[48];
+        std::snprintf(cell, sizeof(cell), "%.4f+-%.4f (%.3f)%s", am, as, om,
+                      om >= kSdBar ? "" : "*");
+        std::printf("%-25s", cell);
+      }
+      std::printf("\n");
+    }
+    std::printf("\n      §70 read `vmem` 0.6686 (oracle 0.747) and `vocal` 0.5640\n"
+                "      (oracle 0.616) at this dose on the twelve creatures the cell was\n"
+                "      SELECTED on; §71 confirmed the tau1000 membrane at 0.6354 +- 0.0169.\n\n");
+
+    // G-SELF-N75. A REPORTING-ONLY change must not move a PUBLISHED column, and
+    // §75 published `drive-exc` on `n75 tau3000` at 0.8552 from exactly these
+    // seeds. `appending-rerolls-noise` is the file for what would go wrong, and
+    // this is where it would show.
+    const double kN75Drive = 0.8552;
+    double n75m = 0, n75s = 0;
+    sd_stat(mbe[kSdArmN75Stp][0][kSdDrvExc], n75m, n75s);
+    const bool g_self_n75 = std::fabs(n75m - kN75Drive) < 5e-5;
+    std::printf("    G-SELF-N75   `drive-exc` on `%s`: §75 published %.4f,\n"
+                "                 this run %.4f, |delta| %.2e            %s\n",
+                kSdArms[kSdArmN75Stp].name, kN75Drive, n75m,
+                std::fabs(n75m - kN75Drive), g_self_n75 ? "PASS" : "FAIL -> VOID");
+
+    double vm = 0, vs = 0, vo = 0, vos = 0, vnl = 0, vnls = 0;
+    sd_stat(mbe[kSdArmN77][0][kSdVmem], vm, vs);
+    sd_stat(asm_[kSdArmN77][0][kSdVmem], vo, vos);
+    sd_stat(nbe[kSdArmN77][0][kSdVmem], vnl, vnls);
+    const uint32_t vn = uint32_t(mbe[kSdArmN77][0][kSdVmem].size());
+    // The registered SE ceiling is the 96-creature projection. The SE is a
+    // PROJECTION, so it is checked rather than trusted: over this and the
+    // NO-VERDICT branch is read whatever the mean says.
+    const double kN77SeMax = 0.0060;
+    const double kN70Vmem = 0.6686, kN70VmemSe = 0.0169;
+    const double vdse = std::sqrt(vs * vs + kN70VmemSe * kN70VmemSe);
+    std::printf("    G-ORACLE-VMEM `vmem`'s OWN oracle on the primary arm %.4f  %s\n"
+                "    G-SE          achieved %.4f against the registered %.4f  %s\n\n",
+                vo, vo >= kSdBar ? "PASS" : "FAIL -> VOID",
+                vs, kN77SeMax, vs <= kN77SeMax ? "PASS" : "OVER -> NO VERDICT");
+    std::printf("    THE PRIMARY — `vmem`, `%s`, %u creatures at rep_off %u,\n"
+                "    gap %s, the overlap window. The bar is %.3f read against the\n"
+                "    oracle above, never against 1.000.\n\n"
+                "      fresh            %.4f +- %.4f   (oracle %.4f, null %.4f)\n"
+                "      §70 SELECTED     %.4f +- %.4f   SE borrowed from §71's reading of\n"
+                "                                        the SAME quantity at 12 creatures,\n"
+                "                                        because §70 printed none\n"
+                "      difference       %+.4f +- %.4f  = %.1f SE, both errors carried\n\n",
+                kSdArms[kSdArmN77].name, vn, kSdArms[kSdArmN77].rep_off, kSdGapName[0],
+                kSdBar, vm, vs, vo, vnl, kN70Vmem, kN70VmemSe, vm - kN70Vmem, vdse,
+                vdse > 0.0 ? std::fabs(vm - kN70Vmem) / vdse : 0.0);
+
+    // THE BRANCH ORDER IS DELIBERATE AND IT IS NOT THE PRE-REGISTRATION'S.
+    // G-SELF-N75 compares against a 1680k reading, so at ANY SHORTER BUDGET IT
+    // FAILS BY CONSTRUCTION. Putting it first in this chain would mean every
+    // smoke took the same branch and the registered readings below would reach
+    // production never having been executed once —
+    // `deferral-note-is-untested-code`: real rows cannot test a branch they
+    // never take. So the primary's own branches are read first and ALWAYS, and
+    // the gate voids the reading AFTERWARDS, in print, where it cannot be
+    // missed. The verdict is the same; what changes is that a smoke exercises
+    // the code that will carry it.
+    if (vn < 3 || !(vs > 0.0)) {
+      std::printf("      -> VOID: %u scored creatures and an SE of %.4f.\n\n", vn, vs);
+    } else if (vo < kSdBar) {
+      std::printf("      -> VOID, NOT REFUSED. `vmem`'s own oracle is %.4f, under the\n"
+                  "         %.3f bar, so no readout of the membrane could have reached the\n"
+                  "         bar on these creatures and the reading says NOTHING about it.\n"
+                  "         §69's G-ORACLE rule, and the branch §72 and §75 both landed on.\n\n",
+                  vo, kSdBar);
+    } else if (vs > kN77SeMax) {
+      std::printf("      -> NO VERDICT ON THE SE GATE. The achieved SE %.4f is over the\n"
+                  "         registered %.4f, so the arm is not the arm that was sized and\n"
+                  "         the pass branch is NOT read. This is the registered outcome\n"
+                  "         for a projection that did not hold, not a finding.\n\n",
+                  vs, kN77SeMax);
+    } else if (vm - 2.0 * vs > kSdBar) {
+      std::printf("      -> THE COMPARISON SURVIVES TO THE MEMBRANE. %.4f - 2(%.4f) =\n"
+                  "         %.4f clears the %.3f bar on %u creatures §70 never saw, so\n"
+                  "         §70's SELECTED cell REPLICATES and the membrane carries the\n"
+                  "         conjunction above the bar one step before the spikes.\n"
+                  "         WHAT THIS MAY NOT BE WRITTEN AS: rung 3's own oracle at this\n"
+                  "         dose is under the bar, so the SPIKE rung cannot be tested here\n"
+                  "         and \"the threshold destroys it\" is NOT what this shows. It\n"
+                  "         shows the chain is INTACT THROUGH THE MEMBRANE and the loss is\n"
+                  "         after it. It is also NOT a license for the kernel change: the\n"
+                  "         threshold ask is 1.96x as measured against 1.03x with the\n"
+                  "         spike oracle repaired, so Route 2 still collapses onto the\n"
+                  "         ORACLE REPAIR and not onto this cell.\n\n",
+                  vm, vs, vm - 2.0 * vs, kSdBar, vn);
+    } else if (vm + 2.0 * vs < kSdBar) {
+      std::printf("      -> §70's SELECTED MEMBRANE CELL DOES NOT REPLICATE. %.4f +\n"
+                  "         2(%.4f) = %.4f is under the %.3f bar, so the tau3000 column\n"
+                  "         was a property of the twelve creatures it was selected on —\n"
+                  "         which is what §74 found when it put §73's selected window lean\n"
+                  "         on fresh creatures. THE MEMBRANE ROUTE IS DEAD FOR ONE ARM.%s\n\n",
+                  vm, vs, vm + 2.0 * vs, kSdBar,
+                  vm + 2.0 * vs < 0.6354
+                      ? "\n         AND IT IS AT OR UNDER §71's CONFIRMED tau1000 RUNG (0.6354), so\n"
+                        "         the dose buys the membrane nothing beyond tau1000 either."
+                      : "");
+    } else {
+      std::printf("      -> NO VERDICT: the %.3f bar is inside the 2-SE band\n"
+                  "         [%.4f, %.4f]. THE REGISTERED STATEMENT FOR THIS BRANCH is\n"
+                  "         that the membrane sits AT the bar and the question is NOT\n"
+                  "         worth more creatures — separating it from the bar at 2 SE from\n"
+                  "         here would need n past 500 — so the successor is the threshold\n"
+                  "         pricing and not a bigger arm.\n\n",
+                  kSdBar, vm - 2.0 * vs, vm + 2.0 * vs);
+    }
+
+    if (!g_self_n75) {
+      std::printf("      -> AND THE READING ABOVE IS VOID. `drive-exc` on `%s` does not\n"
+                  "         reproduce §75's published %.4f, so this run's seeding is not\n"
+                  "         §75's and nothing read off it can be compared with anything.\n"
+                  "         AT A SHORT BUDGET THIS IS EXPECTED AND MEANS NOTHING: the\n"
+                  "         archived figure is a %llu-tick reading, and only a run at that\n"
+                  "         budget can be compared with it. At %llu ticks it is the gate.\n\n",
+                  kSdArms[kSdArmN75Stp].name, kN75Drive,
+                  (unsigned long long)1680000ull, (unsigned long long)1680000ull);
+    }
+
+    // THE POOLED READING, REPORTED AND NOT OVERTURNING. Both blocks are fresh
+    // for this quantity and carry the identical dose, so they are poolable as
+    // one arm on more creatures — §74's rule, and §74's limit: a pooled figure
+    // MAY NOT overturn the primary it was pooled with.
+    {
+      std::vector<double> both = mbe[kSdArmN77][0][kSdVmem];
+      for (double x : mbe[kSdArmN75Stp][0][kSdVmem]) both.push_back(x);
+      double bm = 0, bs = 0;
+      sd_stat(both, bm, bs);
+      double n75v = 0, n75vs = 0;
+      sd_stat(mbe[kSdArmN75Stp][0][kSdVmem], n75v, n75vs);
+      std::printf("      POOLED, reported only  %.4f +- %.4f over %u creatures\n"
+                  "        rep_off 78 block      %.4f +- %.4f\n"
+                  "        rep_off 66 block      %.4f +- %.4f\n"
+                  "      The two blocks %s on which side of the bar they sit; a\n"
+                  "      disagreement here is a SAMPLE-SIZE statement and voids the\n"
+                  "      pooled figure, never the primary.\n\n",
+                  bm, bs, uint32_t(both.size()), vm, vs, n75v, n75vs,
+                  ((vm >= kSdBar) == (n75v >= kSdBar)) ? "AGREE" : "DISAGREE");
     }
   }
 

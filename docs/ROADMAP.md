@@ -16805,7 +16805,7 @@ membrane nothing beyond tau1000 and the tau3000 column was selection.
 
     arm         `n77 tau3000`, stp_use 0.20 / tau_rec 3000 ms on the merged
                 auditory -> vocal tract, everything else exactly as shipped
-    creatures   144 at `rep_off` 78 — seeds 78-221, which no section has
+    creatures   140 at `rep_off` 78 — seeds 78-217, which no section has
                 scored (§63-§70 used 0-11, §71 12-23, §74 24-65, §75 66-77)
     space       `vmem`, the vocal module's membrane averaged over the window
     window      B's first 400 ms, gap 200 — §64's overlap window, the one
@@ -16822,7 +16822,7 @@ creatures, so the per-creature SD is 0.0585 and the projected SE is 0.00488 at
      12   0.0169     0.6838          12%                84%
      48   0.0084     0.6669          58%                42%
      96   0.0060     0.6619          87%                13%
-    144   0.0049     0.6598        96.5%               3.5%
+    140   0.0049     0.6598        96.1%               3.9%
 
 **The SE is a BETWEEN-CREATURE SE and creatures are the thing it is uncertain
 about, which is why this arm is worth buying and §75's was not** — there the
@@ -16874,6 +16874,44 @@ repaired, so Route 2 still collapses onto the oracle repair and not onto this ce
 
 ### COST
 
-144 new sessions, 366 total, about 1.6 hours on 14 cores at §75's measured rate.
+140 new sessions, 362 total, about 1.6 hours on 14 cores at §75's measured rate.
 No kernel change, no genome change: the genome md5 must stay
 `9f6faac320210cc8e9f5830adf066934`.
+
+### AMENDED BEFORE THE RUN, BOTH DISCLOSED
+
+**144 -> 140 creatures.** `parallel_reps` runs a pool 14 wide on this machine, so
+140 is TEN FULL ROUNDS with no tail where 144 idles ten threads for a whole round
+to buy 0.4% of power. The projected SE moves from 0.00488 to 0.00494 and the
+registered probability from 96.5% to 96.1%. Same reasoning §74 used to pick 42
+over 40, and the primary is unchanged in kind.
+
+**THE REFUSAL BRANCH IS READ AT 2 SE, SYMMETRICALLY WITH THE PASS BRANCH.** The
+text above says "the reading is under 0.650"; the implementation requires
+`mean + 2 SE < 0.650` before it will print a refutation, and sends everything
+between the two 2-SE tests to NO VERDICT. **This is strictly more conservative
+than what was registered** — a mean a hair under the bar is now NO VERDICT rather
+than a refutation — and it is disclosed here rather than defended later.
+
+**140 -> 196 CREATURES, BECAUSE THE SMOKE MEASURED THE VARIANCE AND THE TABLE
+ABOVE WAS OPTIMISTIC.** The 300k smoke ran the arm at n=140 and printed an SE of
+**0.0134**, so the per-creature SD is 0.1585 at that budget against §71's 0.0585
+at the production budget. Decomposing `var = B + W/rounds` across those two
+points:
+
+    W = 0.02643   B = -0.00129   -> the between-creature floor is
+                                    INDISTINGUISHABLE FROM ZERO, so this
+                                    variance is WITHIN-creature estimation noise
+    production SD = sqrt(W/5.6) = 0.0687
+
+    n = 140   SE 0.0058   3% under the registered 0.0060 ceiling   P 89%
+    n = 196   SE 0.0049   22% under it                             P 96%
+
+**At 140 the arm had a large chance of tripping ITS OWN SE GATE and returning NO
+VERDICT with the mean sitting right.** 196 is fourteen full rounds of 14 threads.
+The SE ceiling is NOT relaxed to fit the projection — that would be moving the
+goalpost after seeing the smoke — the creatures are bought instead. Cost rises to
+196 new sessions, **418 total**, about 1.9 hours. This is
+[[aibaby-calibrate-the-estimator-in-claim-units]] applied in the direction it was
+written for: **project the SE from a MEASURED spread, never from a scaling law,
+and let the smoke resize the design.**
