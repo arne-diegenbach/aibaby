@@ -16915,3 +16915,179 @@ goalpost after seeing the smoke — the creatures are bought instead. Cost rises
 [[aibaby-calibrate-the-estimator-in-claim-units]] applied in the direction it was
 written for: **project the SE from a MEASURED spread, never from a scaling law,
 and let the smoke resize the design.**
+
+## §77 RESULT — THE COMPARISON SURVIVES TO THE MEMBRANE, §70's SELECTED CELL REPLICATES, AND THE THRESHOLD'S PRICE CAME APART IN MY HANDS
+
+RUN: `results/n77-samediff-1680k.log`, 418 sessions, 1.9 h, genome md5
+`9f6faac320210cc8e9f5830adf066934` verified UNCHANGED at the run's first line.
+Every reading below was registered in `docs/ROADMAP.md` before the run and the
+branch that fired is the one the code printed, not one chosen afterwards.
+
+### THE GATES, READ IN THE REGISTERED ORDER
+
+    G-SESSIONS      418 of 418                                      PASS
+    G-SELF          §73 window slope on `shipped` +0.01007 +- 0.00741
+                    against the archived +0.01007 +- 0.00741         MATCH
+    G-SELF-N75      `drive-exc` on `n75 tau3000` 0.8552 against §75's
+                    published 0.8552, |delta| 2.03e-05               PASS
+    G-ORACLE-VMEM   `vmem`'s OWN oracle on the primary arm 0.7623    PASS
+    G-SE            achieved 0.0060 against the registered 0.0060    PASS
+    G-NULL          label-destroyed on `shipped` 0.5016 +- 0.0101    PASS
+    slept trials    18783 of 167200 = 0.1123 (<= 0.20)               PASS
+
+**G-SELF-N75 is the one that matters most and it is exact.** Adding an arm did
+not perturb the seeding: §75's twelve creatures reproduce their published drive
+to five decimal places, so the ladder below is a REPORTING change on the same
+simulation, as registered.
+
+### THE PRIMARY — IT CLEARS
+
+    `vmem`, `n77 tau3000`, 196 creatures at rep_off 78, gap 200,
+    the 400 ms overlap window, bar 0.650 read against the arm's OWN oracle
+
+      fresh          0.6734 +- 0.0060   (oracle 0.7623, null 0.5056)
+      2-SE floor     0.6615             > 0.650                CLEARS
+      clearance      +0.0234 over the bar = 3.9 SE
+      §70 SELECTED   0.6686 +- 0.0169   (SE borrowed from §71's reading of the
+                                         same quantity; §70 printed none)
+      difference     +0.0048 +- 0.0179  = 0.3 SE
+
+**§70's SELECTED cell REPLICATES on 196 creatures it never saw**, and the
+difference from the selected value is a third of one standard error — this is
+not a shrunken effect, it is the same number. The comparison is present ABOVE
+THE BAR one step before the spikes.
+
+**WHAT THIS MAY NOT BE WRITTEN AS, VERBATIM FROM THE PRE-REGISTRATION.** Rung 3's
+own oracle at this dose is 0.617, under the bar, so the SPIKE rung cannot be
+tested here and **"the threshold destroys it" is NOT what this shows.** It shows
+the chain is INTACT THROUGH THE MEMBRANE and that the loss is after it. **It is
+also NOT a license for the kernel change** — [[aibaby-synapse-type-specific-stp-lead]]'s
+prohibition stands, and the section below makes the case for it STRONGER, not weaker.
+
+### THE LADDER ON FRESH CREATURES — the registered four-arm table
+
+    rung           n77 tau3000 (196)        n75 tau3000 (12)         n71 tau1000 (12)         stp tau3000 (12)
+    1a drive-exc   0.8376+-0.0042 (0.999)   0.8552+-0.0158 (1.000)   0.7175+-0.0278 (1.000)   0.8377+-0.0170 (1.000)
+    1b drive-net   0.8584+-0.0039 (1.000)   0.8457+-0.0127 (1.000)   0.7733+-0.0138 (1.000)   0.8571+-0.0162 (1.000)
+    1c drive-sim   0.6852+-0.0048 (1.000)   0.7025+-0.0198 (1.000)   0.6697+-0.0238 (1.000)   0.6874+-0.0261 (1.000)
+    2  vmem        0.6734+-0.0060 (0.762)   0.6371+-0.0250 (0.719)   0.6354+-0.0169 (0.924)   0.6686+-0.0282 (0.747)
+    3  vocal       0.5504+-0.0051 (0.617)*  0.5574+-0.0198 (0.598)*  0.5469+-0.0144 (0.750)   0.5640+-0.0202 (0.616)*
+
+`*` = the cell's own oracle is under 0.650, so it CANNOT be tested against the bar.
+
+**`drive-sim` CLEARS THE BAR ON 196 FRESH CREATURES: 0.6852 +- 0.0048, oracle
+1.000, 2-SE floor 0.6756.** This is REPORTED, not a registered verdict — the arm
+was sized for `vmem` — but it is a pre-existing column read on seeds no section
+had scored, and it is §76's relational finding holding at sixteen times the n.
+The relational readout is the most robust thing on this table.
+
+### THE CHAIN, NORMALISED TO EACH RUNG'S OWN ORACLE
+
+§71's quantity, `(acc - 0.5) / (oracle - 0.5)`, now at a second dose:
+
+    arm                drive-exc   vmem     vocal    drive->mem   mem->spk
+    n77 tau3000 (196)    0.677      0.661    0.431      97.7%       65.2%
+    n71 tau1000  (12)    0.435      0.319    0.188      73.4%       58.7%
+
+**At tau3000 the membrane recovers 66.1% of its own ceiling against the drive's
+67.7% of its own** — the comparison is essentially NOT attenuated between drive
+and membrane. At tau1000 that step cost a quarter of it. This is the quantitative
+content of "survives to the membrane" and it is the new fact.
+
+**THE SPIKE COLUMN'S NORMALISATION DIVIDES BY 0.117** (`0.617 - 0.5`), a small
+denominator that is ITSELF a measurement with an error this run does not print.
+[[aibaby-anchor-carries-its-own-error]]: the 0.431 and the 65.2% are NOT
+quotable figures. They are the input to the next section, and that section is
+about how badly they behave.
+
+### §76's THRESHOLD PRICING CAME APART, AND IT CAME APART IN BOTH DIRECTIONS
+
+§76 priced the threshold ask by importing §71's tau1000 transmission to tau3000's
+drive. **This run measures tau3000's OWN transmission on 196 creatures, and the
+two ways of reading it now DISAGREE ABOUT WHETHER THE ASK IS ALREADY MET:**
+
+    RAW ratio, (spk - 0.5)/(drv - 0.5), no oracle normalisation
+      tau1000, 12 creatures (§71, what §76 used)          0.2156
+      tau3000, 196 creatures (THIS RUN)                   0.1493   <- WORSE
+      needed from this run's drive 0.8376                 0.4443
+      the ask, measured at the dose it will be paid at    2.98x    (§76 said 1.96x)
+
+    NORMALISED ratio, each rung against its own oracle
+      tau1000 (§76's T)                                   0.431
+      tau3000 (THIS RUN)                                  0.637    <- BETTER
+      spikes IF the oracle were repaired to 0.9759 and
+      THIS ratio survived the repair                      0.705    <- CLEARS THE BAR
+      §76's same arithmetic with tau1000's ratio          0.639    (its "1.03x")
+
+**The dose makes the threshold pass MORE of what the spike space can still
+express and LESS of the signal in absolute terms, and §76 quoted only the second
+framing's optimistic half.** Which number is the ask depends entirely on whether
+an oracle repair preserves the raw or the normalised transmission, and **this run
+cannot distinguish them.** The sensitivity is brutal: holding everything else,
+
+    vocal oracle 0.617 (as measured)  ->  repaired spikes 0.705   clears
+    vocal oracle 0.650                ->                  0.660   clears
+    vocal oracle 0.700                ->                  0.620   fails
+
+**The verdict flips inside a band narrower than the oracle's own plausible
+error.** §76's "the entire remaining question is the oracle repair" survives;
+its "1.03x" and its "1.96x" DO NOT — **neither figure may be quoted again.**
+Route 2 stays closed, and it stays closed for a BETTER reason than before: not
+because the ask is too big, but because **THE ASK IS NOT IDENTIFIED.** What would
+identify it is a measurement of the spike oracle's own error, which no run has
+made.
+
+### THE SECOND BLOCK, AND WHY IT IS NOT A DISAGREEMENT
+
+      rep_off 78 block   0.6734 +- 0.0060   (196)
+      rep_off 66 block   0.6371 +- 0.0250    (12)
+      difference         0.0363 +- 0.0257  = 1.4 SE
+      pooled             0.6714 +- 0.0058   (208) — REPORTED ONLY
+
+The run's own text says the blocks "DISAGREE on which side of the bar they sit".
+**They sit on opposite sides of the bar but they do not disagree**: 1.4 SE is
+consistent, and §75's twelve-creature 2-SE band [0.587, 0.687] contains the
+primary. The right statement is that **a twelve-creature reading cannot place
+this quantity relative to the bar at all** — which is exactly why 196 were
+bought — not that two blocks conflict. The pooled figure stays reported-only.
+
+### THE SIZING WAS LOAD-BEARING, AND MY SECOND PROJECTION WAS STILL 22% LOW
+
+    per-creature SD implied by the achieved SE (196)      0.0840
+    projected from the smoke's variance decomposition     0.0687   (1.22x low)
+    projected from §71's 12-creature SE                   0.0585   (1.44x low)
+
+    counterfactual at the registered n = 140:
+      SE 0.0071  ->  EXCEEDS the 0.0060 ceiling  ->  NO VERDICT
+      its own 2-SE band [0.6592, 0.6876] would have CLEARED the bar
+
+**At 140 creatures this run would have refused a verdict its own mean supported.**
+The resize was not cautious, it was necessary. Two lessons, both registered as
+memories:
+
+1. **An SD estimated on 12 units is not a basis for sizing** — §71's was 1.44x
+   low — and a smoke's variance decomposition, which is the fix
+   [[aibaby-calibrate-the-estimator-in-claim-units]] prescribes, was STILL 1.22x
+   low. Buy headroom against the projection, not to the projection.
+2. **A FIXED SE CEILING AND A 2-SE CLEARANCE RULE CAN DISAGREE.** Both were
+   registered here; at n = 140 the ceiling would have refused what the clearance
+   granted. The ceiling is a proxy for power, the clearance is power measured
+   against the actual bar, and the proxy can be the stricter of the two.
+   Registering both is registering a contradiction.
+
+### WHAT §77 CLOSES AND WHAT IT LEAVES
+
+**CLOSED:** whether §70's `vmem` tau3000 cell was selection — it was not, it
+replicates at 0.3 SE on 196 fresh creatures. The membrane route is ALIVE and the
+loss is AFTER the membrane. DO NOT re-run this cell; DO NOT buy more creatures
+for it.
+
+**NOT TESTED AND NOT TESTABLE AT THIS DOSE:** the spike rung, whose own oracle is
+0.617. The loss is located after the membrane and NOWHERE more precisely than that.
+
+**THE ONE THING THAT WOULD MOVE THE LINE:** the spike oracle's own error bar.
+Every remaining pricing of Route 2 divides by `oracle - 0.5` at the spike rung,
+that gap is 0.117 wide at this dose, and no run has ever printed its error. It is
+a REPORTING change on an existing column, the cheapest instrument in the project,
+and until it exists every threshold ask — §76's and this section's alike — is a
+number without an identified denominator.
