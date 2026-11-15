@@ -17377,3 +17377,97 @@ rung) must still be named in the claim or it is not made.
 
 **COST.** 196 new sessions, 614 total, about 2.8 hours. Genome md5 must stay
 `9f6faac320210cc8e9f5830adf066934`.
+
+### §78 RESULT — M6 IS MET, IN A SCOPED FORM, AND THE SCOPE IS PART OF THE CLAIM
+
+Run: `results/n78-samediff-1680k.log`, 614 of 614 sessions, run exit 0,
+genome md5 unchanged (`9f6faac320210cc8e9f5830adf066934`, archived as
+`results/n78-genome.toml`). Every run gate PASS; the total self-gate
+G-SELF-78 PASS — §77's `vmem` primary reprints 0.6734 and §75's
+`drive-exc` reprints 0.8552, both to printed precision.
+
+**The silenced dose (the reading the claim turned on).** `n78 quiet
+tau3000`, 196 fresh creatures at rep_off 274, `vmem` at the overlap
+window, gap 200:
+
+    silenced   0.6886 +- 0.0060   (own oracle 0.7180 +- 0.0057, null 0.5106)
+    heard      0.6734 +- 0.0060   (§77, same dose, different creatures)
+    tau1000    0.6129 +- 0.0289 quiet / 0.6354 +- 0.0169 heard (print-only, 12 each)
+
+The oracle gate holds (0.7180 >= 0.650) and the third registered branch
+fires: 0.6886 − 2(0.0060) = 0.6767 clears the bar with the self-voice
+removed. THE COMPARISON SURVIVES THE SILENCING — the membrane's
+same/different is not fed by the acoustic loop. The silenced mean sits
+0.0152 ABOVE the heard mean, but the arms are different creatures and the
+gap is 1.8 SE of the difference: the registered statement is "survives",
+never "silencing helps", and no such claim is made.
+
+**R2 — A's trace.** A reads in `vmem` on the dosed arms exactly as
+amendment 2 derived in advance: 0.6275 ± 0.0047 on §77's arm, 0.6242 ±
+0.0043 silenced, against 0.5008 on `shipped` in §77's log. Reported as
+the mechanism's signature (the depleted membrane carries A's channel
+pattern in proportion to depression depth), not a disqualifier.
+
+**R1 — the threshold ask is now identified.** First run to print the
+spike oracle's own error. On the primary arm: spike accuracy 0.5504,
+spike oracle 0.6169 ± 0.0044, 2-SE band [0.6081, 0.6257]; repair target
+(`shipped`'s own vocal oracle) 0.9759 ± 0.0098; crossing O* = 0.6601.
+The whole band lies BELOW O*, so the registered first branch fires: THE
+REPAIR IS PRICED SUFFICIENT — repaired prediction 0.7053, band [0.6910,
+0.7220], clearing 0.650 across the band. This is a statement about
+IDENTIFICATION only. It assumes the normalised transmission survives the
+repair, which nothing tests, and it is NOT a license for the kernel
+change — the registration said so in advance and the result does not
+upgrade it.
+
+**R3 — the majority clause, in the identified form.** At production
+budget the held-out count is 43.4 trials per creature (not the smoke's
+8), effective raw bar 0.668. Raw count 121 of 196 = 0.6173 ± 0.0347
+(reported, not governing — amendment 1). The identified reading:
+observed per-creature SD 0.0837 against 0.0711 from the trial budget
+alone; between-creature variance +0.001942 ± 0.000709; upper 2-SE bound
+on the between-creature SD 0.0580; worst-case fraction of creatures
+whose TRUE accuracy exceeds 0.650, with the mean lowered by its own
+2 SE, 0.5786. A MAJORITY HOLDS AT THE WORST CASE of the identified
+heterogeneity. Stated plainly, as the amendment required: the binary
+clause reduces to the 2-SE clearance; what it adds is the heterogeneity
+bound, and here the between-creature variance is measurably positive —
+creatures genuinely differ, SD between 0.044 and 0.058 — yet the
+worst case still leaves the majority above the bar.
+
+**R4 — THE CLAIM.** Every clause of the amended condition holds: the
+total self-gate, §77's primary reproduced and clearing by 2 SE, the
+silenced arm clearing by 2 SE on an oracle above the bar, the majority
+at worst-case heterogeneity, the run gates. M6 IS MET, IN A SCOPED
+FORM: the creature's own activity reports whether the second word was
+the same as the first, read off ONE module's population activity by the
+project's standard linear held-out classifier, above the 0.650 bar on
+196 creatures no section selected it on, and surviving removal of the
+audible self-voice on 196 more. The three deviations ARE the scope and
+travel with the claim or it is not made:
+
+  (a) THE WINDOW is §64's overlap window (B's first 400 ms), not M6's
+      "at the second word's offset". A weakening, recorded as one.
+  (b) THE MECHANISM is `stp tau3000`, which the creature DOES NOT SHIP
+      WITH — depression has shipped at zero on every tract since DNA
+      v36. This is a milestone met by a creature the project CAN
+      BUILD, not by the one it HAS.
+  (c) THE SPIKE RUNG IS VOID at this dose: the comparison is above the
+      bar AT THE MEMBRANE and does not reach the spike code any
+      downstream module reads.
+
+What may NOT be cited as this milestone: the §65 conjunctive combiner
+(0.7323 — two modules and a product term) and `drive-sim` (a host
+simulation), both outside the readout class fixed before the numbers.
+The §77 log section reprints §76's withdrawn 1.96x/1.03x prose verbatim
+(hardcoded before §77's result); the withdrawal stands and R1 above is
+the identified replacement.
+
+**What this closes and what it opens.** The relational line's milestone
+question is answered under this architecture-plus-mechanism. The open
+edges are exactly the deviations: (a) the post-offset window, (b)
+shipping the mechanism (the kernel-change question, for which R1 now
+supplies an identified price on the oracle side but no license), and
+(c) the threshold, where the loss still sits and where the only live
+quantity remains the spike code after repair. None of these is a
+registered next step; each would need its own registration.
