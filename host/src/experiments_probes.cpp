@@ -18830,6 +18830,11 @@ struct SdGapRow {
   double sync_exc_rate_corr = 0.0;  // the same check on the REPLACED statistic
   uint32_t trials = 0;
   uint32_t cell_min_train = 0, cell_min_test = 0;
+  // §78: the HELD-OUT count, which is what M6's majority-of-creatures clause
+  // actually turns on. A per-creature accuracy is itself an estimate, so the
+  // spread across creatures is part trial budget and part creature; without
+  // this number the two cannot be told apart. Already known at the split.
+  uint32_t test_n = 0;
   bool scored = false;
 };
 
@@ -19815,6 +19820,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     const std::vector<uint32_t> perm =
         sd_fold_split(lab_a[g], lab_b[g], train, row.cell_min_train, row.cell_min_test);
     if (train == 0 || train >= row.trials) continue;
+    row.test_n = row.trials - train;
 
     std::vector<int> ya, yb, ysame;
     for (uint32_t i : perm) {
@@ -20040,7 +20046,7 @@ struct SdArmDef {
   float burst_ms;
   const char* what;
 };
-constexpr SdArmDef kSdArms[17] = {
+constexpr SdArmDef kSdArms[18] = {
     {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "the creature as it ships"},
     {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
     {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "silence where the second word goes — overwrite vs decay"},
@@ -20133,8 +20139,26 @@ constexpr SdArmDef kSdArms[17] = {
     // `rep_off = 78` is past §75's 66-77, so seeds 78-217 have never been scored.
     {"n77 tau3000", 0.0f, false, 0.20f, 3000.0f, false, 78, kSdN77Reps, 0.0f,
      "§70's SELECTED membrane cell on 140 creatures it never saw — THE PRIMARY"},
+    // §78 AMENDMENT 3. The registered successor, folded in before the run.
+    //
+    // The smoke read A's trace at 0.6059 on the dosed arm and the derivation
+    // says it must: `vmem` during B is B's drive through A-depleted synapses,
+    // so A is linearly visible in proportion to the depression depth, and the
+    // A-at-chance branch was structurally unreachable at any effective dose.
+    // §63 Revision 2 named the disqualifier that matters — PHYSICAL MIXING
+    // through the audible self-voice — and the arm that cuts it is silencing.
+    // `voicing_threshold` 1.15 is quietecho's measured 0.000-voiced rung, the
+    // same setting the two §71 quiet arms already carry at tau1000.
+    //
+    // 196 creatures because the power comes from §77's MEASURED per-creature
+    // SD of 0.0840 (never §71's twelve-creature 0.0585): projected SE 0.0060,
+    // P(clear by 2 SE | true value 0.6734) about 0.96. `rep_off = 274` is past
+    // §77's 78-273, so these seeds have never been scored by any section.
+    {"n78 quiet tau3000", 1.15f, false, 0.20f, 3000.0f, false, 274, kSdN77Reps, 0.0f,
+     "the dose with the self-voice silenced, 196 fresh creatures — the M6 control"},
 };
-constexpr uint32_t kSdArmCount = 17;
+constexpr uint32_t kSdArmCount = 18;
+constexpr uint32_t kSdArmN78Q = 17;
 constexpr uint32_t kSdArmN77 = 16;
 constexpr uint32_t kSdArmShipped = 0;
 constexpr uint32_t kSdArmN74 = 13;
@@ -20323,6 +20347,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::vector<double> mbe[kSdArmCount][kSdGapCount][kSdSpaces];   // §64 overlap window
   std::vector<double> nbe[kSdArmCount][kSdGapCount][kSdSpaces];
   std::vector<double> iabe[kSdArmCount][kSdGapCount][kSdSpaces], ibbe[kSdArmCount][kSdGapCount][kSdSpaces];
+  // §78. ALREADY COMPUTED PER CREATURE, NEVER COLLECTED. `oa`/`ob` are the
+  // assembled oracle's two COMPONENTS, so the oracle's own error can be READ
+  // instead of asserted — every pricing of the threshold divides by
+  // `oracle - 0.5` and no run has ever printed its spread. `tst` is the
+  // held-out count behind each per-creature accuracy.
+  std::vector<double> oa[kSdArmCount][kSdGapCount][kSdSpaces], ob[kSdArmCount][kSdGapCount][kSdSpaces];
+  std::vector<double> tst[kSdArmCount][kSdGapCount];
   uint32_t scored_cells = 0;
   for (uint32_t a = 0; a < kSdArmCount; ++a)
     for (const SdOut& o : res[a])
@@ -20340,7 +20371,10 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
           nbe[a][g][sp].push_back(o.gap[g].null_be[sp]);
           iabe[a][g][sp].push_back(o.gap[g].ing_a_be[sp]);
           ibbe[a][g][sp].push_back(o.gap[g].ing_b_be[sp]);
+          oa[a][g][sp].push_back(o.gap[g].orac_a[sp]);
+          ob[a][g][sp].push_back(o.gap[g].orac_b[sp]);
         }
+        tst[a][g].push_back(double(o.gap[g].test_n));
       }
 
   // PINNED TO §69's FIVE SPACES. This is a MAX, so admitting §70's four could
@@ -22212,13 +22246,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "  bar whatever its accuracy says.\n\n",
                 kSdGapName[0], kSdBar);
     std::printf("    rung           ");
-    for (uint32_t k = 0; k < 4; ++k) std::printf("%-25s", kSdArms[larm[k]].name);
+    for (uint32_t k = 0; k < 4; ++k) std::printf("%-32s", kSdArms[larm[k]].name);
     std::printf("\n                   ");
     for (uint32_t k = 0; k < 4; ++k) {
       char hdr[40];
       std::snprintf(hdr, sizeof(hdr), "rep_off %u, n %u", kSdArms[larm[k]].rep_off,
                     kSdArms[larm[k]].reps);
-      std::printf("%-25s", hdr);
+      std::printf("%-32s", hdr);
     }
     std::printf("\n");
     for (uint32_t r = 0; r < 5; ++r) {
@@ -22227,10 +22261,13 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
         double am = 0, as = 0, om = 0, os = 0;
         sd_stat(mbe[larm[k]][0][lad[r]], am, as);
         sd_stat(asm_[larm[k]][0][lad[r]], om, os);
-        char cell[48];
-        std::snprintf(cell, sizeof(cell), "%.4f+-%.4f (%.3f)%s", am, as, om,
+        char cell[64];
+        // §78 PRINTS THE ORACLE'S OWN ERROR. §77 computed this SE into a
+        // variable and discarded it, and then could not say whether the
+        // threshold ask was identified. It is the same number either way.
+        std::snprintf(cell, sizeof(cell), "%.4f+-%.4f (%.3f+-%.3f)%s", am, as, om, os,
                       om >= kSdBar ? "" : "*");
-        std::printf("%-25s", cell);
+        std::printf("%-32s", cell);
       }
       std::printf("\n");
     }
@@ -22368,6 +22405,323 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                   bm, bs, uint32_t(both.size()), vm, vs, n75v, n75vs,
                   ((vm >= kSdBar) == (n75v >= kSdBar)) ? "AGREE" : "DISAGREE");
     }
+  }
+
+  // ---- §78: THE M6 MILESTONE TEST, AND THE ORACLE'S OWN ERROR BAR ----
+  //
+  // ONE ARM AND SOME PRINTF. The oracle's components, the overlap-window
+  // ingredients and the held-out counts are all computed per creature by the
+  // run §75 shipped and had never been printed; §77 could therefore say
+  // neither whether M6 was met nor whether the threshold ask was even
+  // IDENTIFIED. Amendment 3 folded in the registered successor arm —
+  // `n78 quiet tau3000`, the dose with the self-voice silenced — because the
+  // derivation shows A's trace is the mechanism's own signature and the only
+  // disqualifier left standing is physical mixing. `G-SELF-78` proves the
+  // existing columns did not move.
+  {
+    const uint32_t lad[5] = {kSdDrvExc, kSdDrvNet, kSdDrvSim, kSdVmem, kSdStpPrimary};
+    const char* lname[5] = {"1a drive-exc", "1b drive-net", "1c drive-sim",
+                            "2  vmem     ", "3  vocal     "};
+    const uint32_t larm[6] = {kSdArmN78Q,  kSdArmN77,    kSdArmN75Stp,
+                              kSdN71Dose,  kSdN71Quiet,  kSdArmStp3000};
+    const uint32_t lnarm = 6;
+
+    std::printf("  §78 THE M6 MILESTONE TEST — three clauses of §61's milestone that no\n"
+                "  section has ever evaluated: the ERROR on the oracle the bar is read\n"
+                "  against, what is legible IN the verdict window on a DOSED arm, and\n"
+                "  M6's MAJORITY-OF-CREATURES requirement — plus the one control the\n"
+                "  claim turns on, the dose with the self-voice silenced.\n\n"
+                "  WHAT IS INSIDE M6's READOUT CLASS, fixed before the numbers: ONE\n"
+                "  module's population activity, one linear held-out readout. The §65\n"
+                "  conjunctive combiner (TWO modules and a product term) and `drive-sim`\n"
+                "  (a HOST depletion simulation with pinned U and tau) are OUTSIDE it and\n"
+                "  MAY NOT be cited as the milestone whatever they read.\n\n");
+
+    // G-SELF-78 IS TOTAL, AND IT IS NOT FIRST IN ANY BRANCH CHAIN. §77's smoke
+    // taught this: a gate that compares against a 1680k figure fails by
+    // construction at every shorter budget, so if it gated the readings the
+    // registered branches would reach production never once executed.
+    double s77 = 0, s77e = 0, s75 = 0, s75e = 0;
+    sd_stat(mbe[kSdArmN77][0][kSdVmem], s77, s77e);
+    sd_stat(mbe[kSdArmN75Stp][0][kSdDrvExc], s75, s75e);
+    const bool g_self_78 =
+        std::fabs(s77 - 0.6734) < 5e-5 && std::fabs(s75 - 0.8552) < 5e-5;
+    std::printf("    G-SELF-78    §77's `vmem` primary 0.6734 -> %.4f;  §75's\n"
+                "                 `drive-exc` 0.8552 -> %.4f           %s\n\n",
+                s77, s75, g_self_78 ? "PASS" : "FAIL -> VOID");
+
+    // ---- R2: THE INGREDIENTS AT THE OVERLAP WINDOW, PER ARM ----
+    //
+    // This column exists for `shipped` and has NEVER been printed for a dosed
+    // arm, which means §77's verdict was read in a window whose contents were
+    // only ever checked on the creature without the mechanism.
+    std::printf("    R2 — WHAT IS LEGIBLE IN THE VERDICT WINDOW (§64's overlap window,\n"
+                "    gap %s). A's trace first, then B's identity. `shipped` has been\n"
+                "    printed since §64; the DOSED arms never have.\n\n",
+                kSdGapName[0]);
+    for (uint32_t which = 0; which < 2; ++which) {
+      std::printf("      %s\n      rung         ", which == 0 ? "A's TRACE" : "B's IDENTITY");
+      for (uint32_t k = 0; k < lnarm; ++k) std::printf("%-22s", kSdArms[larm[k]].name);
+      std::printf("\n");
+      for (uint32_t r = 0; r < 5; ++r) {
+        std::printf("      %s ", lname[r]);
+        for (uint32_t k = 0; k < lnarm; ++k) {
+          double m = 0, e = 0;
+          sd_stat(which == 0 ? iabe[larm[k]][0][lad[r]] : ibbe[larm[k]][0][lad[r]], m, e);
+          char cell[40];
+          std::snprintf(cell, sizeof(cell), "%.4f+-%.4f", m, e);
+          std::printf("%-22s", cell);
+        }
+        std::printf("\n");
+      }
+      std::printf("\n");
+    }
+    double iam = 0, ias = 0, ibm = 0, ibs = 0;
+    sd_stat(iabe[kSdArmN77][0][kSdVmem], iam, ias);
+    sd_stat(ibbe[kSdArmN77][0][kSdVmem], ibm, ibs);
+    const bool a_readable = ias > 0.0 && std::fabs(iam - 0.5) > 2.0 * ias;
+    std::printf("      A in `vmem` on the §77 arm  %.4f +- %.4f  ->  %s\n"
+                "      B in the same cell          %.4f +- %.4f\n"
+                "      AMENDMENT 2, derived before this run: `vmem` during B is B's\n"
+                "      drive through A-depleted synapses, so A's channel-usage pattern\n"
+                "      is linearly visible IN PROPORTION TO THE DEPRESSION DEPTH. A\n"
+                "      readable A at an effective dose is the MECHANISM'S SIGNATURE,\n"
+                "      reported and not disqualifying. The disqualifier that matters is\n"
+                "      PHYSICAL MIXING through the audible self-voice, and the silenced\n"
+                "      arm below is the control that carries that weight.\n\n",
+                iam, ias, a_readable ? "ABOVE CHANCE (predicted)" : "AT CHANCE",
+                ibm, ibs);
+
+    // ---- THE SILENCED ARM — THE CONTROL THE CLAIM TURNS ON ----
+    //
+    // `n78 quiet tau3000` is the §77 dose with the creature's voice held below
+    // audibility, on 196 creatures no section has scored. If the membrane's
+    // same/different survives, it is not being fed by the acoustic loop; if it
+    // dies, the audible echo was load-bearing and §77's result is
+    // reinterpreted, which is a finding about M6 and not a nuisance.
+    double qm = 0, qs = 0, qo = 0, qos = 0, qn_ = 0, qns = 0;
+    sd_stat(mbe[kSdArmN78Q][0][kSdVmem], qm, qs);
+    sd_stat(asm_[kSdArmN78Q][0][kSdVmem], qo, qos);
+    sd_stat(nbe[kSdArmN78Q][0][kSdVmem], qn_, qns);
+    const uint32_t qn = uint32_t(mbe[kSdArmN78Q][0][kSdVmem].size());
+    double q1m = 0, q1s = 0, u1m = 0, u1s = 0;
+    sd_stat(mbe[kSdN71Quiet][0][kSdVmem], q1m, q1s);
+    sd_stat(mbe[kSdN71Dose][0][kSdVmem], u1m, u1s);
+    std::printf("    THE SILENCED DOSE — `vmem`, overlap window, gap %s, bar %.3f on\n"
+                "    the arm's own oracle.\n\n"
+                "      n78 quiet tau3000   %.4f +- %.4f  (oracle %.4f +- %.4f,\n"
+                "                           null %.4f, n %u)\n"
+                "      §77 unsilenced      %.4f +- %.4f  (the same dose, heard)\n"
+                "      tau1000  quiet/heard  %.4f +- %.4f  /  %.4f +- %.4f\n"
+                "                           (print-only, 12 creatures each)\n\n",
+                kSdGapName[0], kSdBar, qm, qs, qo, qos, qn_, qn,
+                s77, s77e, q1m, q1s, u1m, u1s);
+    // Registered three-way, refusal branches first. No fixed SE ceiling —
+    // §77's lesson — the 2-SE tests carry the whole decision and the middle
+    // band IS the no-verdict.
+    int quiet_branch;  // 0 void, 1 echo load-bearing, 2 no verdict, 3 survives
+    if (qn < 3 || !(qs > 0.0) || qo < kSdBar) {
+      quiet_branch = 0;
+      std::printf("      -> VOID%s. ", qo < kSdBar ? ", NOT REFUSED" : "");
+      std::printf("The silenced arm's own oracle is %.4f%s so the\n"
+                  "         membrane cannot be tested against the bar on this arm and\n"
+                  "         nothing about mixing is decided.\n",
+                  qo, qo < kSdBar ? ", under the bar," : ",");
+    } else if (qm + 2.0 * qs < kSdBar) {
+      quiet_branch = 1;
+      std::printf("      -> THE AUDIBLE ECHO WAS LOAD-BEARING. With the self-voice\n"
+                  "         silenced the membrane's same/different falls under the bar\n"
+                  "         by 2 SE, so §77's result is reinterpreted: the comparison\n"
+                  "         above the bar was fed by the acoustic loop, M6 is NOT met,\n"
+                  "         and the relational line must separate synapse from echo\n"
+                  "         before any further claim.\n");
+    } else if (qm - 2.0 * qs > kSdBar) {
+      quiet_branch = 3;
+      std::printf("      -> THE COMPARISON SURVIVES THE SILENCING. %.4f - 2(%.4f) =\n"
+                  "         %.4f clears the %.3f bar with the self-voice removed, so\n"
+                  "         the membrane's same/different is not fed by the acoustic\n"
+                  "         loop and the claim below may be read.\n",
+                  qm, qs, qm - 2.0 * qs, kSdBar);
+    } else {
+      quiet_branch = 2;
+      std::printf("      -> NO VERDICT at this n: the bar sits inside the 2-SE band.\n"
+                  "         The registered statement is that silencing costs something\n"
+                  "         and how much is not worth more creatures until the oracle\n"
+                  "         work lands.\n");
+    }
+    std::printf("\n");
+
+    // ---- R1: THE ORACLE'S ERROR BAR, AND THE CROSSING DERIVED IN ADVANCE ----
+    double so = 0, sos = 0, sa = 0, sas = 0, rep = 0, reps = 0;
+    sd_stat(asm_[kSdArmN77][0][kSdStpPrimary], so, sos);   // the spike oracle + ITS ERROR
+    sd_stat(mbe[kSdArmN77][0][kSdStpPrimary], sa, sas);    // the spike accuracy
+    sd_stat(asm_[0][0][kSdStpPrimary], rep, reps);         // `shipped`'s oracle = repair target
+    std::printf("    R1 — THE ORACLE'S OWN ERROR, and the components behind it, on the\n"
+                "    primary arm. Every pricing of the threshold divides by\n"
+                "    `oracle - 0.5` and no run has ever printed this spread.\n\n"
+                "      rung           accuracy          oracle            A-component       B-component\n");
+    for (uint32_t r = 0; r < 5; ++r) {
+      double am = 0, as = 0, om = 0, os = 0, qa = 0, qas = 0, qb = 0, qbs = 0;
+      sd_stat(mbe[kSdArmN77][0][lad[r]], am, as);
+      sd_stat(asm_[kSdArmN77][0][lad[r]], om, os);
+      sd_stat(oa[kSdArmN77][0][lad[r]], qa, qas);
+      sd_stat(ob[kSdArmN77][0][lad[r]], qb, qbs);
+      std::printf("      %s %.4f+-%.4f   %.4f+-%.4f   %.4f+-%.4f   %.4f+-%.4f\n",
+                  lname[r], am, as, om, os, qa, qas, qb, qbs);
+    }
+    // THE CROSSING, DERIVED BEFORE THE RUN AND RE-DERIVED HERE FROM THE SAME
+    // MEASUREMENTS: repaired(O) = 0.5 + (acc-0.5)(O_rep-0.5)/(O-0.5), which is
+    // DECREASING in O, so a LOWER measured oracle predicts a HIGHER repaired
+    // spike accuracy. It crosses the bar at O* below.
+    const double num = (sa - 0.5) * (rep - 0.5);
+    const double ostar = 0.5 + num / (kSdBar - 0.5);
+    const double olo = so - 2.0 * sos, ohi = so + 2.0 * sos;
+    const double rp = (so > 0.5) ? 0.5 + num / (so - 0.5) : 0.0;
+    const double rp_lo = (olo > 0.5) ? 0.5 + num / (olo - 0.5) : 0.0;  // the HIGH prediction
+    const double rp_hi = (ohi > 0.5) ? 0.5 + num / (ohi - 0.5) : 0.0;  // the LOW one
+    std::printf("\n      spike accuracy %.4f, repair target (`shipped`'s own oracle)\n"
+                "      %.4f +- %.4f  ->  numerator %.6f, crossing O* = %.4f\n"
+                "      measured spike oracle %.4f +- %.4f, 2-SE band [%.4f, %.4f]\n"
+                "      repaired prediction %.4f, band [%.4f, %.4f]\n",
+                sa, rep, reps, num, ostar, so, sos, olo, ohi, rp, rp_hi, rp_lo);
+    if (!(sos > 0.0) || !(so > 0.5)) {
+      std::printf("      -> VOID: the oracle's spread is degenerate or it sits at chance,\n"
+                  "         so no band exists and nothing is identified.\n");
+    } else if (ohi < ostar) {
+      std::printf("      -> THE REPAIR IS PRICED SUFFICIENT. The oracle's whole 2-SE band\n"
+                  "         lies BELOW O* = %.4f, so the repaired prediction clears the\n"
+                  "         %.3f bar across it. THIS MAY NOT BE WRITTEN AS 'THE REPAIR\n"
+                  "         WORKS': the arithmetic assumes THE NORMALISED TRANSMISSION\n"
+                  "         SURVIVES THE REPAIR and nothing tests that assumption. It is\n"
+                  "         a statement about IDENTIFICATION, and it is NOT a license for\n"
+                  "         the kernel change.\n",
+                  ostar, kSdBar);
+    } else if (olo > ostar) {
+      std::printf("      -> THE REPAIR IS PRICED INSUFFICIENT across the oracle's whole\n"
+                  "         2-SE band. Route 2 is closed on the arithmetic as well as on\n"
+                  "         the assumption.\n");
+    } else {
+      std::printf("      -> THE ASK IS STILL NOT IDENTIFIED. The oracle's 2-SE band\n"
+                  "         STRADDLES O* = %.4f, so the same data prices the repair both\n"
+                  "         sufficient and insufficient. §77's reading stands: the ask is\n"
+                  "         not too big, it is unidentified — and now that is MEASURED\n"
+                  "         rather than suspected.\n",
+                  ostar);
+    }
+    std::printf("\n");
+
+    // ---- R3: M6's MAJORITY CLAUSE, IN THE FORM THE DATA IDENTIFIES ----
+    //
+    // AMENDMENT 1. The smoke printed 8 held-out trials per creature, so the
+    // registered per-creature test `>= 0.650` was `>= 6/8 = 0.750` in
+    // disguise and could not pass at the accuracy the project measured. The
+    // amended reading bounds the BETWEEN-creature component, which 196
+    // creatures identify even where 8 trials cannot resolve one creature, and
+    // asks what fraction of creatures have a TRUE accuracy above the bar at
+    // the worst case of that bound with the mean lowered by its own 2 SE.
+    // Under this model the binary clause REDUCES to the 2-SE clearance; what
+    // survives as independent content is the bound and the worst-case
+    // fraction, and both are printed. The raw count is reported with its
+    // effective bar beside it so nobody reads it as a test of 0.650.
+    {
+      const std::vector<double>& v = mbe[kSdArmN77][0][kSdVmem];
+      const uint32_t ntot = uint32_t(v.size());
+      double tm = 0, tse = 0;
+      sd_stat(tst[kSdArmN77][0], tm, tse);
+      const double eff_bar = tm > 0.0 ? std::ceil(kSdBar * tm - 1e-9) / tm : kSdBar;
+      uint32_t nclr = 0;
+      for (double x : v) if (x >= kSdBar) ++nclr;
+      const double frac = ntot ? double(nclr) / double(ntot) : 0.0;
+      const double fse = ntot ? std::sqrt(frac * (1.0 - frac) / double(ntot)) : 0.0;
+      // The observed spread, against what the held-out budget alone would give.
+      const double obs_sd = s77e * std::sqrt(double(ntot ? ntot : 1));
+      const double obs_var = obs_sd * obs_sd;
+      const double bin_sd = tm > 0.0 ? std::sqrt(s77 * (1.0 - s77) / tm) : 0.0;
+      const double btw_var = obs_var - bin_sd * bin_sd;
+      const double var_se = ntot > 1 ? obs_var * std::sqrt(2.0 / double(ntot - 1)) : 0.0;
+      const double btw_max = (btw_var > 0.0 ? btw_var : 0.0) + 2.0 * var_se;
+      const double bsd = btw_max > 0.0 ? std::sqrt(btw_max) : 0.0;
+      double implied = s77 - 2.0 * s77e > kSdBar ? 1.0 : 0.0;
+      if (bsd > 0.0) {
+        const double z = (s77 - 2.0 * s77e - kSdBar) / bsd;
+        implied = 0.5 * (1.0 + std::erf(z / std::sqrt(2.0)));
+      }
+      const bool g_major = ntot > 1 && implied > 0.5;
+      std::printf("    R3 — M6's MAJORITY CLAUSE, in the form the data identifies\n"
+                  "    (amendment 1: the registered per-creature count tested %.3f in\n"
+                  "    disguise and could not pass; it is reported, not governing).\n\n"
+                  "      held-out trials per creature                    %.1f +- %.1f\n"
+                  "      raw count at the effective %.3f bar            %u of %u = %.4f +- %.4f\n"
+                  "      observed per-creature SD                        %.4f\n"
+                  "      ...which the trial budget alone would give       %.4f\n"
+                  "      between-creature variance (obs - budget)        %+.6f +- %.6f\n"
+                  "      upper 2-SE bound on the between-creature SD     %.4f\n"
+                  "      worst-case fraction of creatures whose TRUE\n"
+                  "      accuracy exceeds %.3f (mean lowered by 2 SE)    %.4f\n"
+                  "      -> %s\n",
+                  eff_bar, tm, tse, eff_bar, nclr, ntot, frac, fse, obs_sd, bin_sd,
+                  btw_var, var_se, bsd, kSdBar, implied,
+                  g_major ? "A MAJORITY HOLDS AT THE WORST CASE OF THE IDENTIFIED\n"
+                            "         HETEROGENEITY (which, stated plainly, is the 2-SE\n"
+                            "         clearance again: the clause adds the bound, not a new test)"
+                          : "NO MAJORITY AT THE WORST CASE -> M6 IS NOT CLAIMED");
+      if (btw_var <= 0.0)
+        std::printf("      The measured between-creature component is AT OR BELOW ZERO.\n"
+                    "      The honest statement is that heterogeneity is under %.4f and\n"
+                    "      no finer figure is identified — the floor of what %.0f trials\n"
+                    "      can resolve, not a measurement of near-perfect homogeneity.\n",
+                    bsd, tm);
+
+      // ---- R4: THE M6 VERDICT, AND THE THREE DEVIATIONS IT MUST NAME ----
+      //
+      // AMENDMENT 3: the claim routes through the SILENCED arm, not through
+      // A-at-chance — a readable A is the mechanism's signature (R2), and
+      // mixing is what had to be excluded.
+      const bool prim = (s77 - 2.0 * s77e) > kSdBar;
+      std::printf("\n    R4 — THE M6 VERDICT\n\n"
+                  "      §77's primary clears by 2 SE          %s\n"
+                  "      the silenced dose survives            %s\n"
+                  "      majority at worst-case heterogeneity  %s\n"
+                  "      the total self-gate                   %s\n"
+                  "      A's trace in the window               %s — reported\n\n",
+                  prim ? "yes" : "NO", quiet_branch == 3 ? "yes" : "NO",
+                  g_major ? "yes" : "NO", g_self_78 ? "yes" : "NO",
+                  a_readable ? "readable (the mechanism's signature)" : "at chance");
+      if (prim && quiet_branch == 3 && g_major && g_self_78) {
+        std::printf("      -> M6 IS MET, IN A SCOPED FORM, AND THE SCOPE IS PART OF THE\n"
+                    "         CLAIM. The creature's own activity reports whether the second\n"
+                    "         word was the same as the first, read off ONE module's\n"
+                    "         population activity by the project's standard linear held-out\n"
+                    "         classifier, above the %.3f bar on %u creatures no section\n"
+                    "         selected it on. THE THREE DEVIATIONS, stated in the same\n"
+                    "         breath because a milestone that needs them is still a\n"
+                    "         milestone and writing them down is the difference between\n"
+                    "         claiming it and overclaiming it:\n"
+                    "         (a) THE WINDOW is §64's overlap window, B's first 400 ms,\n"
+                    "             NOT M6's 'at the second word's offset'. A WEAKENING of a\n"
+                    "             registered clause, recorded as one.\n"
+                    "         (b) THE MECHANISM is `stp tau3000`, WHICH THE CREATURE DOES\n"
+                    "             NOT SHIP WITH — depression has shipped at ZERO on every\n"
+                    "             tract since DNA v36. This is a milestone met by a\n"
+                    "             creature the project CAN BUILD, not by the one it HAS.\n"
+                    "         (c) THE SPIKE RUNG IS VOID at this dose, so the comparison is\n"
+                    "             above the bar AT THE MEMBRANE and does not reach the\n"
+                    "             spike code any downstream module reads.\n",
+                    kSdBar, ntot);
+      } else {
+        std::printf("      -> M6 IS NOT MET. The failing clause is named above and the\n"
+                    "         registered successor follows from it, not from a fresh\n"
+                    "         hypothesis.\n");
+      }
+    }
+    if (!g_self_78)
+      std::printf("\n    AND EVERY READING IN §78 IS VOID. Adding an arm at a fresh\n"
+                  "    rep_off and printing new columns must move NOTHING that was\n"
+                  "    published — §77 proved that pattern to 2e-05 — so a moved anchor\n"
+                  "    is a bug and not a result. AT A SHORT BUDGET THIS IS EXPECTED\n"
+                  "    AND MEANS NOTHING: both anchors are 1680k readings and only a\n"
+                  "    run at that budget can be compared with them.\n");
+    std::printf("\n");
   }
 
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"
