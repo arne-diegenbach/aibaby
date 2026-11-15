@@ -16028,3 +16028,143 @@ only ones left: the **burst dose** (`burst_ms` ships 0.0, DNA v37) and
 per module pair). Both face §72's bind — a dose that delivers the mechanism also
 destroys the low-dimensional oracle the verdict must be read against — and
 neither should be built without that priced first.
+
+## PRICING THE TWO REMAINING ROUTES — BEFORE EITHER IS REGISTERED
+
+§74 closed the window axis and left two mechanisms. §72's bind was the stated
+reason not to build either. **Priced here against the archived columns, and the
+first thing the pricing does is narrow that bind.**
+
+### §72's BIND IS NOT GENERAL — IT WAS A BIND ON A NINE-DIMENSIONAL READOUT
+
+The bind as carried forward was *"no dose has both a live mechanism and a
+testable oracle."* **That is not what the dose ladder says.** Its own oracle
+column, from `results/n74-samediff-1680k.log`:
+
+    ARM           oracle(vocal)   testable at bar 0.650
+    shipped        0.9759          YES
+    stp tau100     0.9359          YES
+    stp tau300     0.8980          YES
+    stp tau1000    0.7402          YES
+    stp tau3000    0.6164          NO — a refusal here is VACUOUS
+
+**`vocal` stays testable to tau1000, and §71's spike rung had oracle 0.7498.**
+What falls under the bar at tau1000 is `artic9` (0.5384), a NINE-dimensional
+space — which is exactly the comparison §72 needed and nothing more. **Only
+tau3000 is vacuous, and only on the dimensionality §72 happened to require.**
+Carrying "§72's bind" as a general obstacle overstated it.
+
+### ROUTE 1 — THE BURST READOUT. IT IS NOT A MECHANISM AT ALL
+
+`burst_ms = 0.0` ships DNA v37 off, which is why this was filed as a mechanism
+needing a dose. **Tracing every consumer of burst state in `core/` says the dose
+is PURELY OBSERVATIONAL at the shipped settings:**
+
+    network.cpp:2650-2653   burst_rate_/burst_base_ accumulate      <- state only
+    network.cpp:2660-2661   refrac *= burst_refrac_[m]              <- GATED on < 1.0,
+                            and all 6 modules ship burst_refrac_scale = 1.0
+    network.cpp:3196-3201   burst-dependent plasticity              <- GATED on
+                            any_burst_pair_, and NO projection ships burst_learn != 0
+    senses.cpp:534-553      f1_burst_weight readout                 <- GATED on > 0,
+                            and it ships 0.0
+    network.cpp:608,3741    allocate and reset                      <- memory only
+
+**So setting `burst_ms > 0` computes the burst rate and changes NOT ONE SPIKE.**
+Consequences, and they are the whole pricing:
+
+1. **It costs NO oracle damage, by construction.** The oracles stay at
+   `shipped`'s — `vocal` 0.9759, `central` 0.7707, `artic9` 0.7320. §72's
+   oracle-headroom bind **does not apply to this route at all**, because there is
+   no dose to degrade anything.
+2. **It is a READOUT, not a mechanism.** [[aibaby-every-readout-is-a-rate]]
+   concluded *"the successor is a mechanism, not another readout"* on the grounds
+   that no readout had both events and oracle room. **This one has both**, and
+   that conclusion needs amending rather than quoting.
+3. **One free gate that can fail and tests the claim directly:** patch `burst_ms`
+   on a new arm at `rep_off = 0`, the same twelve creatures as `shipped`, and
+   require its spike-derived columns to be **bit-identical** to `shipped`'s. If
+   they are not, the patch is not observational and the section is void. That
+   turns the central premise of this pricing into a gate instead of an assumption.
+
+**THE EVENT BUDGET, WHICH IS THE REAL CONSTRAINT AND IS WHERE §73 DEFERRED THIS.**
+§73 priced the burst dose and deferred it: at the derived `burst_ms` of 60 ms,
+20.1% of spikes score as burst spikes, giving **0.30 burst events per neuron at
+400 ms** — starved worse than §72's synchrony space. That deferral is now
+discharged, and the budget splits by form:
+
+    window    spk/neuron   burst/neuron   burst events IN THE MODULE (126 vocal)
+     100 ms      0.37          0.07            9.4
+     200 ms      0.75          0.15           18.9
+     400 ms      1.49          0.30           37.8
+     900 ms      3.36          0.67           85.0
+
+- **PER-NEURON: dead on arithmetic**, 0.30 events behind each estimate. §73 was
+  right and this does not change.
+- **GROUP-LEVEL: 37.8 events at 400 ms and 85.0 at 900 ms**, against §72's group
+  form, whose estimator was **fine** at ~21 events and which died on the oracle,
+  not on the events. **So the group-level burst space clears both binds.**
+
+**WHAT CAN STILL REFUSE IT, AND IT MUST BE MEASURED NOT ASSUMED:** the assembled
+oracle **on the burst feature space itself**. §72's lesson is that a derived
+space has its own oracle, and `vocal`'s 0.9759 **cannot be inherited by a space
+built from 38 burst events.** If the burst space's own oracle is under 0.650 the
+refusal is vacuous and the route closes exactly as §72's did.
+
+**COST: one host-side genome patch and one feature space. No kernel change, no
+dynamics change, no new mechanism.** The cheapest route open.
+
+### ROUTE 2 — PER-PROJECTION STP KEYING. PRICED, AND IT LANDS INSIDE THE NOISE
+
+`stp_id_[kMaxModules][kMaxModules]` (network.h:1203) keys STP state by MODULE
+PAIR, so "depress the excitatory limb and not the inhibitory one between the
+same two modules" is inexpressible. Making it expressible is a **kernel change**,
+the most invasive of the two.
+
+The case for it: §69 found net drive RISES under the dose because depressing
+inhibition is disinhibition, so the dose delivers the mechanism **and** a
+confound at once. If the oracle damage is the confound's, excitatory-only keying
+keeps the mechanism and the oracle.
+
+**Priced on §71's pinned chain** (the fresh-creature confirmation, not §70's
+selected figures), normalising each rung to its own oracle:
+
+    drive 0.4350   membrane 0.3194   spikes 0.1878
+    threshold transmission drive -> spikes = 0.4316  (it keeps 43.2%)
+
+Best case for the change — the oracle fully restored to `shipped`'s 0.9759, the
+drive at tau3000's `drive-exc` of 0.8377, transmission unchanged:
+
+    predicted spikes = 0.5 + 0.6754 * 0.4316 * 0.4759 = 0.6387
+    bar 0.650  ->  SHORT BY 0.0113, which is INSIDE the SEs on these columns
+    transmission needed 0.4667 vs 0.4316 measured -> 8.1% better required
+
+**So it is not refused and it does not clear. It is a coin flip**, and it rests
+on three chained optimistic assumptions:
+
+(a) the oracle damage is **wholly** the inhibitory limb's — and the data already
+    push back: `drive-net` beats `drive-exc` at **every** rung (0.8571 vs 0.8377
+    at tau3000, 0.7497 vs 0.7226 at tau1000), so removing the inhibitory limb
+    removes signal too;
+(b) `drive-exc = 0.8377` at tau3000 replicates — and **§70's own text labels that
+    cell "SELECTED ON THE DATA", licensing a falsification and not a figure.**
+    §74 just watched a selected lean reverse on fresh creatures;
+(c) transmission holds at 43.2% from tau1000 to tau3000 — yet measured spike
+    accuracy **falls** from 0.5940 to 0.5640 as the dose rises, so it may be
+    worse at high dose, not equal.
+
+**THE DE-RISK COSTS ONE ARM AND NO KERNEL CHANGE.** Assumption (b) is the load
+bearing one and it is testable with the pattern §74 just used: a `stp tau3000`
+arm at a fresh `rep_off`, twelve sessions. **If 0.8377 replicates, the kernel
+change is justified; if it reverses, the route is dead for the price of one arm.**
+
+### THE ORDER, AND BOTH FIT IN ONE SECTION
+
+1. **The burst readout** — cheapest, clears both binds, needs only a patch and a
+   readout, and carries a bit-identity gate that can fail.
+2. **The tau3000 replication arm** — twelve sessions, decides whether Route 2's
+   kernel change is worth making.
+3. **The kernel change itself** — only if (2) holds.
+
+Steps 1 and 2 are both `samediff` arms and can run in **one** section at roughly
+the cost §74 just paid. **Neither is registered yet; this is the pricing, and the
+registration comes next.**
