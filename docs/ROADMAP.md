@@ -17091,3 +17091,187 @@ that gap is 0.117 wide at this dose, and no run has ever printed its error. It i
 a REPORTING change on an existing column, the cheapest instrument in the project,
 and until it exists every threshold ask — §76's and this section's alike — is a
 number without an identified denominator.
+
+## §78 PRE-REGISTRATION — THE M6 MILESTONE TEST, AND THE ORACLE'S OWN ERROR BAR
+
+Registered before the run. **§78 ADDS NO ARM, NO CREATURE, NO TICK AND NO
+GENOME CHANGE.** Every quantity below is already computed per creature by the
+run §77 shipped and simply never printed: `asm_` (the assembled oracle) holds a
+per-creature value whose SE §77 computed into a variable and discarded, and
+`iabe`/`ibbe` hold the overlap-window ingredients for every arm while only
+`shipped` has ever been printed. This section prints them and reads a milestone
+against them.
+
+### WHY A MILESTONE SECTION AT ALL
+
+§61 wrote M6 — *"present a word, leave a gap, present a second word; the
+creature's own activity reports whether the second was the same"* — and
+fifteen sections have measured around it without ever testing it as a
+milestone. §77 put one cell above the bar. **Three clauses of M6 have never
+been evaluated: its majority-of-creatures requirement, the legibility of A in
+the window the verdict is read in, and the error on the oracle the bar is read
+against.** All three are free. Until they are read, "M6 is met" is not a claim
+anyone has earned.
+
+**WHAT IS AND IS NOT INSIDE M6's READOUT CLASS, FIXED HERE BEFORE THE NUMBERS.**
+M6 says *a module's population activity*, singular, and the project's readout is
+a standardised nearest-centroid held-out classifier. So:
+
+    INSIDE    `vmem`, `vocal`, `auditory`, `central`, `artic9/7` — one module,
+              one linear held-out readout
+    OUTSIDE   the §65 conjunctive combiner (0.7323 at gap 200 on `shipped`):
+              TWO modules and a PRODUCT TERM
+    OUTSIDE   `drive-sim` (0.6545 on `shipped`, 0.6852 at n=196): a HOST-side
+              depletion simulation with PINNED U and tau, not a module
+
+**Neither OUTSIDE cell may be cited as the milestone**, whatever it reads. They
+say the comparison is RECOVERABLE from the creature's activity, which is §65's
+published verdict and not M6.
+
+### THE BRANCHES THAT PRODUCE NO MILESTONE, WRITTEN FIRST
+
+Fourth section running to write these before the pass branch.
+
+**VOID — THE SELF-GATE IS NOW TOTAL.** Nothing changes but `printf`, so **every
+published column must reproduce EXACTLY.** `G-SELF-78` requires §77's primary
+`vmem` at 0.6734 and §75's `drive-exc` at 0.8552, both to printed precision. A
+deviation means a print change moved the simulation, and no reading in this
+section is worth anything if that happened. **Probability: this gate has never
+failed on a reporting-only change (§77's fired at 2.03e-05), so under 2% — but
+it is the first gate read.**
+
+**M6 NOT CLAIMED — A IS READABLE IN THE VERDICT WINDOW.** If A's identity in
+`vmem` on the dosed arm is above chance by more than 2 SE, the milestone is
+**not claimed in this section.** §63 Revision 2's argument stands — the readout
+is linear, same/different is XOR, and a linear readout of a superposition cannot
+produce XOR, so a surviving trace is not the trivial solution — **but the
+failure mode Revision 2 named as the real one is PHYSICAL MIXING, and the
+acoustic-silenced arm that cuts it HAS NEVER BEEN RUN AT A DOSE.** Registered
+successor, so that a readable trace produces a build and not a defence: **§79
+adds `acoustic-silenced + stp tau3000`**, 196 creatures at a fresh `rep_off`.
+**Probability: `shipped` reads A at 0.5008 in this window, but no dosed arm has
+ever been read, and depression at tau3000 changes what the membrane integrates.
+I will not put a number on this one beyond "genuinely open".**
+
+**M6 NOT CLAIMED — THE MAJORITY CLAUSE FAILS AS WRITTEN.** M6 requires the bar
+on *a majority of creatures*. If the fraction of creatures whose own accuracy
+clears 0.650 is not above 0.5 by 2 SE, **M6 is reported NOT MET even though the
+pooled mean clears.** Registered now because this is the branch it would be
+tempting to re-interpret afterwards. From §77's achieved spread (per-creature SD
+0.0840, mean 0.6734) the expected fraction is **0.61 +- 0.035**, clearing 0.5 by
+3.2 SE, so this fires with **probability about 1%** — but it is a normal
+approximation to a bounded quantity and it has never once been measured.
+
+**AND THE CAVEAT ON THAT CLAUSE IS REGISTERED BEFORE THE NUMBER, NOT AFTER IT.**
+§77's variance decomposition found the between-creature component
+**indistinguishable from zero** (B = -0.00129). If that holds, **the per-creature
+spread is dominated by each creature's own trial budget and the majority count
+is a statement about that budget, not about creatures.** The honest form of M6's
+clause under B = 0 is stronger than a majority: the population is homogeneous
+and the pooled mean IS each creature's accuracy. **Both are printed. The
+majority count is the one that governs the verdict, because it is what M6 says.**
+
+### R1 — THE ORACLE'S ERROR BAR, AND WHAT IT DECIDES
+
+Print, in every cell of §77's ladder, the assembled oracle's **SE across
+creatures**, plus its two components `orac_a` and `orac_b` with theirs.
+
+**THE CROSSING IS DERIVED IN ADVANCE.** §77 left the threshold ask unidentified
+because the repaired-spike prediction divides by `oracle - 0.5` at the spike
+rung. With the spike accuracy at 0.5504 and the repair target at `shipped`'s
+0.9759, the prediction is
+
+    repaired(O) = 0.5 + (0.5504 - 0.5) * (0.9759 - 0.5) / (O - 0.5)
+                = 0.5 + 0.023986 / (O - 0.5)
+
+and it crosses the 0.650 bar at **O* = 0.6599**. The measured O is 0.617, which
+is 0.043 BELOW the crossing. So the three-way, with the sign NOT constrained:
+
+    the oracle's 2-SE band lies ENTIRELY BELOW 0.6599  -> the repair is priced
+                                                         SUFFICIENT
+    ENTIRELY ABOVE                                     -> INSUFFICIENT
+    STRADDLES 0.6599                                   -> the ask stays NOT
+                                                         IDENTIFIED, and Route 2
+                                                         stays closed on that
+                                                         ground
+
+**Rough expectation, stated so it can be wrong: the accuracy SEs at n=196 are
+about 0.005 and the oracle is a product of two decodes, so a band of roughly
++-0.01 is likely and "entirely below" is the most probable branch — call it
+70%, straddling 30%.** The oracle is a NONLINEAR function of two decodes and
+nobody has ever printed its spread, so that number is a guess and is labelled
+one.
+
+**WHAT A "SUFFICIENT" READING MAY NOT BE WRITTEN AS.** The whole arithmetic
+assumes **the normalised transmission survives the repair**, and nothing tests
+that assumption. So R1 decides **IDENTIFICATION, not success**: "sufficient"
+means *under the named assumption, the repair prices out*. It is NOT "the repair
+works" and it is NOT a license for the kernel change —
+[[aibaby-synapse-type-specific-stp-lead]]'s prohibition stands, and §75 is the
+section that withdrew it for exactly this class of reasoning.
+
+### R2 — THE INGREDIENTS AT THE OVERLAP WINDOW, PER ARM
+
+Print A's trace and B's identity in §64's overlap window, with SEs, for the four
+ladder arms across all five rungs. **This column exists for `shipped` and has
+never been printed for a dosed arm**, which means §77's verdict was read in a
+window whose contents were only ever checked on the undosed creature.
+
+    A AT CHANCE in `vmem` on the dosed arm  -> the relational claim is airtight
+      in its strongest available form: same/different above the bar in a window
+      where A's identity is NOT LINEARLY RECOVERABLE AT ALL. M6 is claimed in
+      the scoped form below.
+    A READABLE                              -> M6 NOT CLAIMED, §79 is the
+      successor named above.
+
+### R3 — THE MAJORITY CLAUSE AND THE TRIAL BUDGET
+
+Print, for the primary arm: the count and fraction of creatures whose own
+accuracy clears 0.650 with the binomial SE of that fraction; the mean and
+minimum per-cell trial count; and the between/within variance split re-estimated
+at the production budget.
+
+### R4 — THE M6 VERDICT, AND THE THREE DEVIATIONS IT MUST NAME
+
+M6 is claimed **only if** `G-SELF-78` passes, R2 reads A at chance, R3's
+fraction clears 0.5 by 2 SE, §77's primary reproduces, and the existing
+label-destroyed and oracle gates hold. **If it is claimed, the claim must state
+all three of these in the same breath, and if any cannot be stated truthfully
+M6 is reported NOT MET:**
+
+    (a) THE WINDOW IS §64's OVERLAP WINDOW, not M6's "at the second word's
+        offset". This is a WEAKENING of a registered clause and is recorded as
+        one, the way §63 Revision 2 recorded its own.
+    (b) THE MECHANISM IS `stp tau3000`, WHICH THE CREATURE DOES NOT SHIP WITH.
+        Depression has shipped at ZERO on every tract since DNA v36. The
+        milestone would be met by a creature the project can build, not by the
+        creature the project has.
+    (c) THE SPIKE RUNG IS VOID AT THIS DOSE (own oracle 0.617), so the
+        comparison is above the bar at the MEMBRANE and does not reach the
+        spike code any downstream module reads.
+
+**A milestone that needs three qualifications is still a milestone, and writing
+them down is the difference between claiming it and overclaiming it.**
+
+### THE GATES
+
+    G-SELF-78    §77's `vmem` primary 0.6734 and §75's `drive-exc` 0.8552,
+                 both to printed precision. TOTAL: a print-only change must
+                 move NOTHING
+    G-SELF       §73's archived window slope +0.01007 +- 0.00741 on `shipped`
+    G-ORACLE-VMEM `vmem`'s own oracle on the primary arm >= 0.650
+    G-NULL       label-destroyed on `shipped`'s primary in [0.42, 0.58]
+    G-SESSIONS   418 of 418 — unchanged, because no arm is added
+
+### COST
+
+**Zero new creatures.** 418 sessions re-run to print per-creature quantities the
+log cannot hold, about 1.9 hours on 14 cores. Genome md5 must stay
+`9f6faac320210cc8e9f5830adf066934`.
+
+### WHAT §78 DELIBERATELY DOES NOT DO
+
+The §65 conjunctive combiner is accumulated on arm 0 only and is **not** given
+an arm dimension here. It is outside M6's readout class, so a dosed reading of
+it could not change the verdict, and widening an aggregation is not a print
+change. Registered as not done rather than left unmentioned.
