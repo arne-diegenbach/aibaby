@@ -17471,3 +17471,91 @@ supplies an identified price on the oracle side but no license), and
 (c) the threshold, where the loss still sits and where the only live
 quantity remains the spike code after repair. None of these is a
 registered next step; each would need its own registration.
+
+### §79 PRE-REGISTRATION — M6'S OWN WINDOW: deviation (a), tested as written
+
+**THE QUESTION.** §78's claim carries deviation (a): the milestone was read
+at §64's overlap window (B's first 400 ms), where M6's own wording is "at
+the second word's offset". §79 reads the SAME quantity at the window M6
+names — `kSdWS`, the 400 ms after B's offset — and either removes the
+deviation or confirms it as real scope. Either outcome is informative and
+both are written below before any number is seen.
+
+**WHY THIS IS A READOUT AND NOT A MECHANISM.** The instrument has computed
+same/different at `kSdWS` in every space on every arm since §63
+(`row.milestone`), with its null, ingredients and per-creature vectors
+aggregated — and has never printed the `vmem` cells on the dosed arms (the
+arm tables print `central`/`artic9` only; the EVERY-SPACE tables are the
+shipped arm only). §79 adds a print block. No new arm, no new window, no
+new feature. The runs are seed-deterministic, so the re-run reproduces the
+§77/§78 numbers exactly, which is the self-gate.
+
+**NO DIRECTION IS REGISTERED** (§70's lesson). For the record, both priors
+exist: §63 measured the post-offset A-trace at chance in every space on
+shipped, which argues the comparison dies with the drive; but the
+depression state (tau_rec 3000 ms) outlives the membrane's own time
+constant, and after both words the depletion pattern is a joint function
+of (A,B) — same words deplete the same channels twice — so residual drive
+through the doubly-used synapses could keep it legible. The window
+answers; the registration does not.
+
+**THE CELLS.** `vmem` at `kSdWS`, gap 200, read against the arm's own
+assembled `vmem` oracle (window-independent by construction: A decoded
+during A, B during B):
+
+    primary      `n77 tau3000`, 196 creatures (rep_off 78)
+    co-primary   `n78 quiet tau3000`, 196 creatures (rep_off 274) — the
+                 control MOVES WITH the primary; a window verdict read
+                 without its silencing control would repeat §69's
+                 columns error in reverse
+    print-only   the drive rungs and `vocal` at the same window, both
+                 arms, with SEs; the 12-creature arms
+
+**GATES, in reading order.**
+
+    G-SELF-79   §77's overlap primary reprints 0.6734, §75's drive-exc
+                0.8552, §78's silenced overlap cell 0.6886, all to
+                printed precision — else every §79 reading is VOID
+    G-ORACLE    each arm's own `vmem` oracle >= 0.650, else that arm's
+                cell is VOID, NOT REFUSED
+    G-NULL      label-destroyed at `kSdWS` on each read arm in
+                [0.42, 0.58]
+
+**THE BRANCHES, no-milestone first.** On the primary:
+
+    mean + 2 SE < 0.650   -> DEVIATION (a) IS CONFIRMED AS SCOPE: the
+                             comparison lives in the overlap window and
+                             dies with the drive. §78's claim stands
+                             EXACTLY as written, three deviations and
+                             all. This is not a failure of M6.
+    bar inside the band   -> NO VERDICT on the deviation at this n; it
+                             stands as written.
+    mean - 2 SE > 0.650   -> read the co-primary. Only if the silenced
+                             arm ALSO clears by 2 SE on its own oracle
+                             (and G-NULL holds on both) is deviation (a)
+                             REMOVED: M6's window clause is met as
+                             written and the claim is restated with TWO
+                             deviations, (b) and (c), which remain
+                             untouched by any outcome here. If the
+                             silenced arm fails to clear while the heard
+                             one clears, the post-offset reading is
+                             CONFOUNDED BY THE ACOUSTIC LOOP and
+                             deviation (a) stands; that asymmetry is
+                             reported as a finding about the echo.
+
+If deviation (a) is removed, the amended majority reading (§78 R3: trial
+budget, between-creature bound, worst-case fraction, raw count reported
+beside its effective bar) is computed at the new window and must hold, or
+the removal is not made.
+
+**POWER.** Projected SE at n=196 from §77's measured per-creature SD
+0.0840 is 0.0060; every SD projection in this project has come in low,
+and the post-offset SD has never been measured, so the middle branch is
+expected to be live, not decorative. No SE ceiling is registered
+(two-power-rules): the 2-SE clearance is the only power rule.
+
+**COST.** One print block, then the exact production invocation re-run:
+614 sessions, ~2.8 h, genome md5 unchanged
+(`9f6faac320210cc8e9f5830adf066934`). Smoke first with the exact command
+plus `--ticks 300000 --allow-short` (exits 1): G-SELF-79 must FAIL at
+smoke by construction, and every branch line must be reachable.
