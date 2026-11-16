@@ -1557,7 +1557,10 @@ const Spec kSpecs[] = {
 // What it costs: the creature is now nearly silent WHILE it listens (voiced
 // fraction 0.276 -> 0.010), because the mean-subtracted term is negative during
 // input. That is a real behavioural change and not only an added burst.
-constexpr uint64_t kPinnedHash = 0xad96f882becbee92ull;
+// DNA v75 (§80, 2026-11-16): the auditory->vocal tract ships its depression —
+// stp_use 0.20 / tau_rec 3000 on both projections, the §69/§77 dose. The hash
+// moves because the genome moved; README.md "DNA v75" is the changelog entry.
+constexpr uint64_t kPinnedHash = 0xdad1a8dd8ba39330ull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {

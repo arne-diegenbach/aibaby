@@ -17718,3 +17718,23 @@ within-run); then ~4.6 h samediff (1006 sessions), fast verify,
 calibrate, and the ~12 h long/teach tiers. Genome md5 CHANGES by design;
 the v75 genome is archived as `results/n80-genome.toml` before the run,
 and v74 remains archived as `results/n78-genome.toml`.
+
+### §80 AMENDED BEFORE THE RUN — the smoke found the registration's two gates in contradiction
+
+The first v75 smoke VOIDED ITSELF at the §69 dose gates: `G-LIVE` requires
+every dose arm's vocal drive to DIFFER from `shipped`, and on v75 the
+`stp tau3000` arm's patch writes the bytes the genome already carries, so
+its drive is bit-identical to `shipped` — which is exactly what §80's own
+G-IDENT requires. The registration demanded difference and identity of the
+same arm at once; the smoke refused before computing anything, which is
+the gate doing its job on a premise that v75 breaks.
+
+THE AMENDMENT, derived, not loosened: an arm whose (use, tau) equal the
+genome's own shipped values is a NO-OP dose, and the correct demand on it
+is IDENTITY (G-IDENT), not difference. G-LIVE now exempts exactly those
+arms and prints the exemption with the shipped values. On every pre-v75
+genome the shipped values are 0/0, no arm matches, and G-LIVE is
+bit-for-bit its old self — the §69-§79 record is untouched. The same
+error family as §78 amendment 1: a guard whose premise encodes the old
+genome ([[aibaby-guard-measures-the-wrong-quantity]],
+[[aibaby-two-power-rules-can-contradict]]).

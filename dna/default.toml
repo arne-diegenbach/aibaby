@@ -2699,8 +2699,8 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
-stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
-stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_use = 0.20            # DNA v75 (§80): the §69/§77 dose, shipped. 0 was the v36-v74 tract
+stp_recover_ms = 3000.0   # tau_rec: §77's membrane cell — same/different above the M6 bar
 stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
 
@@ -2949,8 +2949,9 @@ hebb = 0.0                # DNA v23: per-pathway Hebbian rate, 0 = reward-gated 
 apical = 0                # DNA v25: 1 terminates on the target's apical tuft
 exuberance = 1.0          # DNA v28: born at density x this, pruned back by experience
 birth_weight = 1.0        # DNA v30: born at weight x this; set to 1/exuberance
-stp_use = 0.0             # DNA v36: dynamic synapse. 0 = constant weight, the pre-v36 tract
-stp_recover_ms = 0.0      # tau_rec: how fast released resources come back
+stp_use = 0.20            # DNA v75 (§80): the dose patches BOTH auditory->vocal tracts,
+                          # and the kernel keys STP by the module pair — shipped together
+stp_recover_ms = 3000.0   # tau_rec: §77's membrane cell
 stp_facil_ms = 0.0        # tau_facil: how long raised utilisation lasts. 0 = pure depression
 burst_learn = 0.0         # DNA v37: learn from the target's burst deviation, not from reward
 

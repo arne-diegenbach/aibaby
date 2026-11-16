@@ -1,0 +1,93 @@
+experiment: samediff
+  SHORT RUN — 300000 ticks against a minimum of 672000. derived: §63, M6 run one. Word A, a gap, word B, and a held-out readout
+  asked whether B was the SAME word as A -- the smallest operation that
+  cannot be done without holding something. A and B come from a BALANCED
+  four-cell list, so 'same' is 50/50 and B's identity carries nothing about
+  the label by construction. One round is 16800 ticks (four gaps: 200, 800,
+  2000, 5000 ms), and 40 rounds is the floor for a held-out split at every
+  gap. §61's decay gate is demoted to INTERPRETIVE here: the readout is a
+  linear nearest-centroid and same/different is XOR, which a linear readout
+  of a superposition cannot produce -- so a surviving trace of A does not
+  make the milestone trivial. §61's larynx-silenced arm is renamed
+  ACOUSTIC-silenced: quietecho took the voiced fraction 0.773 -> 0.000 with
+  the articulator echo UNMOVED, so the knob cuts the self-heard loop only.
+  §69 ADDS FOUR DOSE ARMS and they are the first that move something other
+  than `voicing_threshold`: `stp_use` 0.20 and `stp_recover_ms` on a
+  100/300/1000/3000 ms ladder, patched into the auditory->vocal projections
+  of the SESSION'S BLOB COPY. `dna/default.toml` is never written and the
+  shipped hash must not move. The dose is the MERGED tract because the
+  kernel keys STP by the (source, target) module pair; §68 priced that
+  substitution at 1.2744 against the excitatory limb's 1.3076. §69's
+  primary MOVES to `vocal`: depression here does not feed `central`.
+  §70 ADDS NO ARM AND NO TICK. It adds four FEATURE SPACES on the same
+  trials, because §68 measured 153.5 SE in the delivered drive and §69
+  measured 0.8 SE in the vocal spikes and nothing said what lies between:
+  the MEASURED delivered drive `w*u*R/U` read from the live kernel at the
+  moment of transmission (excitatory and signed), §68's own arithmetic
+  `1-(1-U)^n` on the same trial's spike counts, and the vocal MEMBRANE.
+  The primary is the PREMISE CHECK -- §68 simulated depletion host-side
+  with no within-word recovery over pairs that never physically occurred,
+  the kernel runs the real Tsodyks-Markram recursion, and nobody had
+  compared them. Here A and B are one trial, so the comparison is PAIRED
+  on identical spikes. §69's own columns must reproduce EXACTLY: nothing
+  added here draws a random number or touches kernel state.
+  §71 ADDS FOUR ARMS ON FRESH CREATURES (seed offset 12), because samediff
+  is deterministic and re-reading §70's own trials to confirm a cell that
+  §70's ladder selected would be circular. The probe is 60 ms of kWords[0]'s
+  formants, 60 ms of silence, 60 ms of kWords[1]'s, placed in the 400 ms
+  scoring window that was SILENCE in §63/§69/§70 — IDENTICAL on every trial,
+  so it carries no label by construction. Its shape is forced by the
+  synthesiser: VowelSource renders a two-formant vowel, not a click, and
+  kWords[0]/[1] are the CORNER pair, so no single probe overlaps both. The
+  derived one-tailed prediction is that |part1 - part2| is LARGER for SAME,
+  because depletion is concave. `n71 ref+probe` is the MECHANISM NULL: with
+  stp_use 0 there is no depletion, so a probe can carry nothing.
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+
+  M6 RUN ONE — DOES THE CREATURE TELL SAME FROM DIFFERENT? (ROADMAP §63)
+
+  trial             word A 900 ms | gap G | word B 900 ms | score 400 ms
+  gaps              200 / 800 / 2000 / 5000 ms, interleaved in one session
+  the control       A and B drawn from a BALANCED four-cell list, so
+                    'same' is 50/50 and B's identity carries nothing
+                    about the label BY CONSTRUCTION
+  the bar           0.650, read against the ASSEMBLED oracle (decode A
+                    from A's window, B from B's, XOR the decodes)
+  primary           central (the non-motor route)
+  co-primary        artic9 (the MOTOR route — reads differently)
+  round             16800 ticks; 17 rounds at this budget
+  creatures         12 per arm, 42 on §74's sweep arm, 196 on §77's
+
+  §69 THE DOSE — stp_use 0.20 on the MERGED auditory->vocal tract
+
+    arm                  projections patched   vocal spikes/tick
+    shipped                       0               0.51003   <- the reference
+    acoustic-silenced             0               0.53930
+    B-omitted                     0               0.52484
+    stp tau100                    2               0.48715
+    stp tau300                    2               0.49172
+    stp tau1000                   2               0.49881
+    stp tau3000                   2               0.51003
+    n71 ref                       0               0.48879
+    n71 ref+probe                 0               0.47248
+    n71 tau1000                   2               0.47209
+    n71 tau1000+probe             2               0.45593
+    n71 tau1000 quiet             2               0.50348
+    n71 tau1000 quiet+probe          2               0.45011
+    n74 sweep                     0               0.50128
+    burst-def                     0               0.51003
+    n75 tau3000                   2               0.50476
+    n77 tau3000                   2               0.49933
+    n78 quiet tau3000             2               0.52926
+    n80 shipped                   0               0.49858
+    n80 shipped quiet             0               0.52744
+
+    G-DOSE  every dose arm wrote at least one projection   PASS
+    G-LIVE  every dose arm's vocal drive differs from it   FAIL
+
+  -> VOID. The dose did not reach the creature, so NOTHING below
+     would have been a finding about depression. No verdict is
+     computed. (A refusal is the expected outcome of §69, which is
+     exactly why this gate returns instead of printing one.)

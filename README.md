@@ -26324,3 +26324,26 @@ internal checks but not of the conclusion we drew from it. One shape, three cost
 whole what we verified of the part. Each one cost a handful of searches to catch. Not catching this
 one would have left a note in our own records telling every future session to distrust every
 threshold in the project.
+
+## DNA v75: the auditory->vocal tract ships its depression (2026-11-16)
+
+### What moved and why
+
+Both `auditory -> vocal` projections (the `either`-source and the `inhibitory`-source
+tracts) go from `stp_use = 0.0 / stp_recover_ms = 0.0` to **`stp_use = 0.20 /
+stp_recover_ms = 3000.0`** — byte-for-byte the §69 dose that §70 selected, §77 confirmed on
+196 fresh creatures (`vmem` 0.6734 ± 0.0060 against its own oracle 0.7623, over the M6
+0.650 bar), §78 showed survives silencing the self-voice (0.6886 ± 0.0060 on 196 more), and
+§78 claimed M6 on in scoped form. The scope's deviation (b) was exactly this line of the
+genome: the mechanism was patched per-session by the instrument, never shipped. §80's
+pre-registration (docs/ROADMAP.md) carries the full battery and the revert branches: the
+change ships only if `verify`/`calibrate`/`verify-long`/`verify-teach` hold on v75 AND M6
+transfers to the shipped creature on 196 seeds no section has scored (`samediff` arms
+`n80 shipped` / `n80 shipped quiet`, with G-IDENT proving the patch path and the genome
+express the same creature).
+
+The pinned determinism hash moves with the genome, as it must; the new value is recorded in
+`host/src/experiments.cpp` with this entry as its changelog line. Every samediff G-SELF
+anchor from §75-§79 is a v74 record and fails by construction on v75 — those sections'
+claims are untouched and live in the v74 logs (`results/n77/n78/n79-*.log`,
+`results/n78-genome.toml`).

@@ -20046,7 +20046,7 @@ struct SdArmDef {
   float burst_ms;
   const char* what;
 };
-constexpr SdArmDef kSdArms[18] = {
+constexpr SdArmDef kSdArms[20] = {
     {"shipped", 0.0f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "the creature as it ships"},
     {"acoustic-silenced", 1.15f, false, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "voicing_threshold 1.15 — quietecho's 0.000-voiced rung"},
     {"B-omitted", 0.0f, true, 0.0f, 0.0f, false, 0, kSdReps, 0.0f, "silence where the second word goes — overwrite vs decay"},
@@ -20156,8 +20156,19 @@ constexpr SdArmDef kSdArms[18] = {
     // §77's 78-273, so these seeds have never been scored by any section.
     {"n78 quiet tau3000", 1.15f, false, 0.20f, 3000.0f, false, 274, kSdN77Reps, 0.0f,
      "the dose with the self-voice silenced, 196 fresh creatures — the M6 control"},
+    // §80. THE TRANSFER ARMS — NO PATCH, because DNA v75 ships the dose. On a
+    // v74 genome these two are plain undosed creatures and their §80 block is
+    // VOID by its own oracle gate; on v75 they ARE the shipped creature at
+    // scale. `rep_off` 470/666 sit past every scored block (0-11, 12-23, 24-65,
+    // 66-77, 78-273, 274-469), so no section has seen these seeds.
+    {"n80 shipped", 0.0f, false, 0.0f, 0.0f, false, 470, kSdN77Reps, 0.0f,
+     "the creature as it ships, 196 fresh creatures — the M6 transfer test"},
+    {"n80 shipped quiet", 1.15f, false, 0.0f, 0.0f, false, 666, kSdN77Reps, 0.0f,
+     "the shipped creature with the self-voice silenced, 196 fresh creatures"},
 };
-constexpr uint32_t kSdArmCount = 18;
+constexpr uint32_t kSdArmCount = 20;
+constexpr uint32_t kSdArmN80S = 18;
+constexpr uint32_t kSdArmN80Q = 19;
 constexpr uint32_t kSdArmN78Q = 17;
 constexpr uint32_t kSdArmN77 = 16;
 constexpr uint32_t kSdArmShipped = 0;
@@ -20289,10 +20300,37 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     voc_rate[a] = tk > 0.0 ? sp / tk : 0.0;
     stp_min[a] = (mn == 0xffffffffu) ? 0u : mn;
   }
+  // §80 AMENDMENT, caught by the v75 smoke and disclosed in the ROADMAP: on a
+  // genome that SHIPS the dose, an arm whose patch writes the bytes the blob
+  // already carries is a NO-OP dose. Requiring it to differ from `shipped`
+  // (G-LIVE) and requiring it to be identical to `shipped` (§80's G-IDENT)
+  // cannot both stand; identity is the correct demand for exactly those arms,
+  // so G-LIVE exempts them and says so. On every pre-v75 genome the shipped
+  // values are 0/0, no arm matches, and the gate is bit-for-bit its old self.
+  float ship_use = 0.0f, ship_rec = 0.0f;
+  {
+    aibaby::Dna gprobe;
+    if (gprobe.load(blob.data(), blob.size()) == aibaby::DnaStatus::kOk) {
+      const int32_t pa = gprobe.module_with_role(aibaby::ModuleRole::kAuditory);
+      const int32_t pv = gprobe.module_with_role(aibaby::ModuleRole::kVocal);
+      for (uint32_t pi = 0; pa >= 0 && pv >= 0 && pi < gprobe.projection_count(); ++pi) {
+        const aibaby::DnaProjection& pr = gprobe.projection(pi);
+        if (int32_t(pr.src) != pa || int32_t(pr.dst) != pv) continue;
+        ship_use = pr.stp_use;
+        ship_rec = pr.stp_recover_ms;
+        break;
+      }
+    }
+  }
   bool dose_vacuous = false, dose_inert = false;
+  uint32_t noop_arms = 0;
   for (uint32_t k = 0; k < kSdStpCount; ++k) {
     const uint32_t a = kSdStpFirst + k;
     if (stp_min[a] == 0) dose_vacuous = true;
+    if (kSdArms[a].stp_use == ship_use && kSdArms[a].stp_rec == ship_rec) {
+      ++noop_arms;
+      continue;
+    }
     if (voc_rate[kSdArmShipped] > 0.0 &&
         std::fabs(voc_rate[a] - voc_rate[kSdArmShipped]) <
             1e-9 * voc_rate[kSdArmShipped])
@@ -20307,6 +20345,11 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               dose_vacuous ? "FAIL" : "PASS");
   std::printf("    G-LIVE  every dose arm's vocal drive differs from it   %s\n",
               dose_inert ? "FAIL" : "PASS");
+  if (noop_arms)
+    std::printf("            (%u arm%s exempt: the genome ships use %.2f / tau %.0f,\n"
+                "             so that patch is a NO-OP and §80's G-IDENT demands\n"
+                "             identity instead — §80 amendment, disclosed)\n",
+                noop_arms, noop_arms == 1 ? "" : "s", ship_use, ship_rec);
   if (dose_vacuous || dose_inert) {
     std::printf("\n  -> VOID. The dose did not reach the creature, so NOTHING below\n"
                 "     would have been a finding about depression. No verdict is\n"
@@ -22893,6 +22936,166 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
       std::printf("\n    AND EVERY READING IN §79 IS VOID: a moved anchor is a bug, not\n"
                   "    a result. AT A SHORT BUDGET THIS IS EXPECTED AND MEANS NOTHING —\n"
                   "    all three anchors are 1680k readings.\n");
+    std::printf("\n");
+  }
+
+  // ---- §80: SHIPPING THE MECHANISM — deviation (b), tested as DNA v75 ----
+  //
+  // On v75 the genome itself carries stp_use 0.20 / tau_rec 3000 on the
+  // auditory->vocal tract, so arm `stp tau3000`'s patch writes the bytes the
+  // blob already holds and its 12 sessions at rep_off 0 must be BIT-IDENTICAL
+  // to `shipped`'s — G-IDENT, the identity gate the change makes free. On a
+  // v74 genome the two differ everywhere and the `n80` arms are undosed
+  // creatures whose oracle gate voids this block, so the section is inert
+  // until the genome actually ships the dose.
+  {
+    // G-IDENT: exact equality, not a tolerance — same seeds, same bytes, same
+    // kernel path must give the same doubles.
+    uint64_t ident_cells = 0, ident_bad = 0;
+    for (uint32_t g = 0; g < kSdGapCount; ++g)
+      for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        const std::vector<double>* pairs[4][2] = {
+            {&mile[kSdArmShipped][g][sp], &mile[kSdArmStp3000][g][sp]},
+            {&mbe[kSdArmShipped][g][sp], &mbe[kSdArmStp3000][g][sp]},
+            {&asm_[kSdArmShipped][g][sp], &asm_[kSdArmStp3000][g][sp]},
+            {&nul[kSdArmShipped][g][sp], &nul[kSdArmStp3000][g][sp]}};
+        for (uint32_t q = 0; q < 4; ++q) {
+          const std::vector<double>& a = *pairs[q][0];
+          const std::vector<double>& b = *pairs[q][1];
+          if (a.size() != b.size()) { ++ident_bad; continue; }
+          for (size_t i = 0; i < a.size(); ++i) {
+            ++ident_cells;
+            if (a[i] != b[i]) ++ident_bad;
+          }
+        }
+      }
+    const bool g_ident = ident_cells > 0 && ident_bad == 0;
+    std::printf("  §80 SHIPPING THE MECHANISM — DNA v75 carries the §69 dose in the\n"
+                "  genome; the `n80` arms are the SHIPPED creature at 196 fresh seeds.\n"
+                "  On a pre-v75 genome this block voids itself and means nothing.\n\n"
+                "    G-IDENT   `shipped` vs `stp tau3000` at rep_off 0, every per-creature\n"
+                "              value in four columns across all gaps and spaces:\n"
+                "              %llu compared, %llu unequal   %s\n\n",
+                (unsigned long long)ident_cells, (unsigned long long)ident_bad,
+                g_ident ? "PASS — the patch path and the genome express the same creature"
+                        : "FAIL -> EVERY §80 READING IS VOID");
+
+    double pm = 0, ps = 0, po = 0, pos = 0, pnl = 0, pnls = 0;
+    sd_stat(mbe[kSdArmN80S][0][kSdVmem], pm, ps);
+    sd_stat(asm_[kSdArmN80S][0][kSdVmem], po, pos);
+    sd_stat(nbe[kSdArmN80S][0][kSdVmem], pnl, pnls);
+    const uint32_t pn = uint32_t(mbe[kSdArmN80S][0][kSdVmem].size());
+    double qm = 0, qs = 0, qo = 0, qos = 0, qnl = 0, qnls = 0;
+    sd_stat(mbe[kSdArmN80Q][0][kSdVmem], qm, qs);
+    sd_stat(asm_[kSdArmN80Q][0][kSdVmem], qo, qos);
+    sd_stat(nbe[kSdArmN80Q][0][kSdVmem], qnl, qnls);
+    const uint32_t qn = uint32_t(mbe[kSdArmN80Q][0][kSdVmem].size());
+    const bool g_nul_p = pnl >= kSdNullLo && pnl <= kSdNullHi;
+    const bool g_nul_q = qnl >= kSdNullLo && qnl <= kSdNullHi;
+    std::printf("    THE TRANSFER TEST — `vmem`, overlap window, gap %s, bar %.3f on\n"
+                "    each arm's own oracle.\n\n"
+                "      PRIMARY     n80 shipped        %.4f +- %.4f  (oracle %.4f +- %.4f,\n"
+                "                                      null %.4f %s, n %u)\n"
+                "      CO-PRIMARY  n80 shipped quiet  %.4f +- %.4f  (oracle %.4f +- %.4f,\n"
+                "                                      null %.4f %s, n %u)\n\n",
+                kSdGapName[0], kSdBar,
+                pm, ps, po, pos, pnl, g_nul_p ? "PASS" : "FAIL", pn,
+                qm, qs, qo, qos, qnl, g_nul_q ? "PASS" : "FAIL", qn);
+
+    int tbranch;  // 0 void, 1 no transfer, 2 no verdict, 3 primary clears
+    if (pn < 3 || !(ps > 0.0) || po < kSdBar || !g_nul_p) {
+      tbranch = 0;
+      std::printf("      -> VOID%s. The primary's own oracle is %.4f (null gate %s):\n"
+                  "         either this genome does not ship the dose, or the cell\n"
+                  "         cannot be tested. No transfer claim either way.\n",
+                  po < kSdBar ? ", NOT REFUSED" : "", po, g_nul_p ? "PASS" : "FAIL");
+    } else if (pm + 2.0 * ps < kSdBar) {
+      tbranch = 1;
+      std::printf("      -> M6 DOES NOT TRANSFER TO THE SHIPPED CREATURE. %.4f +\n"
+                  "         2(%.4f) = %.4f sits under the %.3f bar on 196 creatures\n"
+                  "         that grew up with the mechanism in the genome. The\n"
+                  "         registered consequence: v75 is REVERTED and this refusal\n"
+                  "         is the §80 result.\n",
+                  pm, ps, pm + 2.0 * ps, kSdBar);
+    } else if (pm - 2.0 * ps > kSdBar) {
+      tbranch = 3;
+      std::printf("      -> the primary clears by 2 SE; the verdict turns on the\n"
+                  "         silenced co-primary and the majority below.\n");
+    } else {
+      tbranch = 2;
+      std::printf("      -> NO VERDICT at this n: the bar sits inside the primary's\n"
+                  "         2-SE band. The registered consequence: v75 is reverted\n"
+                  "         pending a registered re-ask, and nothing is claimed.\n");
+    }
+    std::printf("\n");
+
+    if (tbranch == 3) {
+      const bool co_void = qn < 3 || !(qs > 0.0) || qo < kSdBar;
+      const bool co_clear = !co_void && (qm - 2.0 * qs > kSdBar) && g_nul_q;
+      const bool co_fail = !co_void && (qm + 2.0 * qs < kSdBar);
+      // The amended majority reading (§78 R3) at the primary.
+      const double obs_sd = ps * std::sqrt(double(pn));
+      const double obs_var = obs_sd * obs_sd;
+      double tm = 0, tse = 0;
+      sd_stat(tst[kSdArmN80S][0], tm, tse);
+      const double eff_bar = tm > 0.0 ? std::ceil(kSdBar * tm - 1e-9) / tm : kSdBar;
+      uint32_t nclr = 0;
+      for (double x : mbe[kSdArmN80S][0][kSdVmem]) if (x >= kSdBar) ++nclr;
+      const double bin_sd = tm > 0.0 ? std::sqrt(pm * (1.0 - pm) / tm) : 0.0;
+      const double btw_var = obs_var - bin_sd * bin_sd;
+      const double var_se = pn > 1 ? obs_var * std::sqrt(2.0 / double(pn - 1)) : 0.0;
+      const double btw_max = (btw_var > 0.0 ? btw_var : 0.0) + 2.0 * var_se;
+      const double bsd = btw_max > 0.0 ? std::sqrt(btw_max) : 0.0;
+      double implied = pm - 2.0 * ps > kSdBar ? 1.0 : 0.0;
+      if (bsd > 0.0) {
+        const double z = (pm - 2.0 * ps - kSdBar) / bsd;
+        implied = 0.5 * (1.0 + std::erf(z / std::sqrt(2.0)));
+      }
+      const bool g_major = pn > 1 && implied > 0.5;
+      std::printf("      majority: raw %u of %u at the effective %.3f bar;\n"
+                  "      between-creature SD bound %.4f; worst-case fraction above\n"
+                  "      %.3f with the mean lowered by 2 SE: %.4f  -> %s\n\n",
+                  nclr, pn, eff_bar, bsd, kSdBar, implied,
+                  g_major ? "HOLDS" : "DOES NOT HOLD");
+      // Deviation (c) re-read on the shipped creature: the spike rung's own
+      // oracle, and its cell only if that oracle reaches the bar.
+      double vo = 0, vos = 0, vm = 0, vs = 0;
+      sd_stat(asm_[kSdArmN80S][0][kSdStpPrimary], vo, vos);
+      sd_stat(mbe[kSdArmN80S][0][kSdStpPrimary], vm, vs);
+      std::printf("      the spike rung on n80 shipped: own oracle %.4f +- %.4f,\n"
+                  "      cell %.4f +- %.4f  -> %s\n\n",
+                  vo, vos, vm, vs,
+                  vo < kSdBar
+                      ? "oracle under the bar: deviation (c) STANDS"
+                      : (vm - 2.0 * vs > kSdBar
+                             ? "the spike code CLEARS — deviation (c) RESOLVES, read it"
+                             : "testable and does not clear: (c) resolves AGAINST the spikes"));
+      if (co_clear && g_major && g_ident) {
+        std::printf("      -> M6 TRANSFERS TO THE SHIPPED CREATURE, pending the verify\n"
+                    "         battery: deviation (b) is removed ONLY IF fast, long and\n"
+                    "         teach tiers pass on v75 — this run cannot see those and\n"
+                    "         the claim is NOT made from this log alone.\n");
+      } else if (co_fail) {
+        std::printf("      -> CONFOUNDED BY THE ACOUSTIC LOOP ON THE SHIPPED CREATURE:\n"
+                    "         the heard arm clears and the silenced arm falls under the\n"
+                    "         bar by 2 SE. No transfer claim; the asymmetry is the\n"
+                    "         §80 result and v75 does not ship on it.\n");
+      } else if (co_void) {
+        std::printf("      -> the co-primary is VOID%s (oracle %.4f): no transfer claim\n"
+                    "         whatever the heard arm says.\n",
+                    qo < kSdBar ? ", NOT REFUSED" : "", qo);
+      } else if (!g_major) {
+        std::printf("      -> the majority clause DOES NOT HOLD on the shipped arm; no\n"
+                    "         transfer claim.\n");
+      } else if (!g_ident) {
+        std::printf("      -> G-IDENT FAILED: the claim chain is void regardless of the\n"
+                    "         cells above.\n");
+      } else {
+        std::printf("      -> NO VERDICT on the co-primary: the bar sits inside its 2-SE\n"
+                    "         band. Nothing is claimed and v75 is reverted pending a\n"
+                    "         registered re-ask.\n");
+      }
+    }
     std::printf("\n");
   }
 
