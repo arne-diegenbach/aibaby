@@ -17559,3 +17559,43 @@ expected to be live, not decorative. No SE ceiling is registered
 (`9f6faac320210cc8e9f5830adf066934`). Smoke first with the exact command
 plus `--ticks 300000 --allow-short` (exits 1): G-SELF-79 must FAIL at
 smoke by construction, and every branch line must be reachable.
+
+### §79 RESULT — DEVIATION (a) IS CONFIRMED AS SCOPE: the comparison lives in the overlap window and dies with the drive
+
+Run: `results/n79-samediff-1680k.log`, 614 of 614 sessions, run exit 0,
+genome md5 unchanged. G-SELF-79 PASS — all three 1680k anchors reprint
+exactly (0.6734, 0.8552, 0.6886), so the §78 claim's own numbers are
+untouched by the new print block, as a deterministic re-run must be.
+
+The registered cells at M6's own window (post-offset, B's offset +
+400 ms), gap 200:
+
+    PRIMARY     n77 tau3000        0.5123 +- 0.0054  (oracle 0.7623, null PASS)
+    CO-PRIMARY  n78 quiet tau3000  0.5251 +- 0.0047  (oracle 0.7180, null PASS)
+
+The oracle gate HOLDS (0.7623 >= 0.650), so this is a real refusal and
+not a void: the first registered branch fires. 0.5123 + 2(0.0054) =
+0.5230 sits far under the 0.650 bar. DEVIATION (a) IS CONFIRMED AS
+SCOPE — §78's claim stands exactly as written, three deviations and
+all, and this is not a failure of M6.
+
+**What the refusal teaches, within the derivation already registered.**
+Amendment 2's mechanism statement said `vmem` during B is B's drive
+through A-depleted synapses. §79 completes it: remove the drive and the
+depression state, which demonstrably persists (tau_rec 3000 ms), has
+nothing to push through the synapses and the membrane goes quiet. The
+comparison is carried by DRIVE THROUGH DEPLETED SYNAPSES, not by the
+depletion state itself — the state is a stored term that only reads out
+under load. The speculative half of the §79 registration (residual
+drive might keep it legible) is refuted; §63's prior (the post-offset
+trace is at chance) extends to the dosed membrane. The co-primary's
+0.5251 +- 0.0047 is a few SE above chance and far under the bar; no
+registered reading attaches to it and none is invented here.
+
+**Standing prohibitions from this section.** Deviation (a) is now
+MEASURED scope, not an untested weakening: do not re-run the window
+question at this dose or this n — the refusal is powered (SE 0.0054
+against a 0.127 shortfall). Removing deviation (a) would need a
+mechanism that sustains drive through the depleted synapses after B's
+offset — which is a new mechanism, which §69's rule prices as its own
+registered line, not a §79 re-run.
