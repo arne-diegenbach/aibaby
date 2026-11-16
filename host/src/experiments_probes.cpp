@@ -22724,6 +22724,178 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("\n");
   }
 
+  // ---- §79: M6'S OWN WINDOW — deviation (a), tested as written ----
+  //
+  // A PRINT BLOCK AND NOTHING ELSE. `row.milestone` has been same/different
+  // at the POST-OFFSET window (kSdWS, B's offset + 400 ms) since §63, in
+  // every space on every arm, and the `vmem` cells on the dosed arms were
+  // never printed — §78's claim therefore carries deviation (a), read at the
+  // overlap window where M6 says "at the second word's offset". The
+  // registered branches either remove that deviation or confirm it as scope,
+  // and the silencing control MOVES WITH the primary: a removal needs BOTH
+  // 196-creature arms to clear at the new window.
+  {
+    const uint32_t lad[5] = {kSdDrvExc, kSdDrvNet, kSdDrvSim, kSdVmem, kSdStpPrimary};
+    const char* lname[5] = {"1a drive-exc", "1b drive-net", "1c drive-sim",
+                            "2  vmem     ", "3  vocal     "};
+    const uint32_t larm[6] = {kSdArmN78Q,  kSdArmN77,    kSdArmN75Stp,
+                              kSdN71Dose,  kSdN71Quiet,  kSdArmStp3000};
+    const uint32_t lnarm = 6;
+
+    std::printf("  §79 M6'S OWN WINDOW — the same quantity at the window the milestone\n"
+                "  NAMES: the 400 ms after B's offset. Computed since §63, never printed\n"
+                "  for `vmem` on a dosed arm. Both outcomes were registered before any\n"
+                "  number was seen: removal of §78's deviation (a), or its confirmation\n"
+                "  as real scope. Deviations (b) and (c) are untouched by either.\n\n");
+
+    // G-SELF-79 IS TOTAL AND NOT FIRST IN ANY BRANCH CHAIN (§77's smoke
+    // lesson): all three anchors are 1680k readings and FAIL by construction
+    // at any shorter budget.
+    double s77 = 0, s77e = 0, s75 = 0, s75e = 0, s78 = 0, s78e = 0;
+    sd_stat(mbe[kSdArmN77][0][kSdVmem], s77, s77e);
+    sd_stat(mbe[kSdArmN75Stp][0][kSdDrvExc], s75, s75e);
+    sd_stat(mbe[kSdArmN78Q][0][kSdVmem], s78, s78e);
+    const bool g_self_79 = std::fabs(s77 - 0.6734) < 5e-5 &&
+                           std::fabs(s75 - 0.8552) < 5e-5 &&
+                           std::fabs(s78 - 0.6886) < 5e-5;
+    std::printf("    G-SELF-79   §77 overlap primary 0.6734 -> %.4f;  §75 drive-exc\n"
+                "                0.8552 -> %.4f;  §78 silenced 0.6886 -> %.4f  %s\n\n",
+                s77, s75, s78, g_self_79 ? "PASS" : "FAIL -> VOID");
+
+    std::printf("    THE LADDER AT THE POST-OFFSET WINDOW, gap %s (print-only beyond\n"
+                "    the two 196-creature `vmem` cells)\n\n      rung         ",
+                kSdGapName[0]);
+    for (uint32_t k = 0; k < lnarm; ++k) std::printf("%-22s", kSdArms[larm[k]].name);
+    std::printf("\n");
+    for (uint32_t r = 0; r < 5; ++r) {
+      std::printf("      %s ", lname[r]);
+      for (uint32_t k = 0; k < lnarm; ++k) {
+        double m = 0, e = 0;
+        sd_stat(mile[larm[k]][0][lad[r]], m, e);
+        char cell[40];
+        std::snprintf(cell, sizeof(cell), "%.4f+-%.4f", m, e);
+        std::printf("%-22s", cell);
+      }
+      std::printf("\n");
+    }
+    std::printf("\n");
+
+    // THE TWO REGISTERED CELLS. The assembled oracle is window-independent by
+    // construction (A decoded during A, B during B), so the denominator is
+    // the same one §77/§78 read — printed again here rather than assumed.
+    double pm = 0, ps = 0, po = 0, pos = 0, pnl = 0, pnls = 0;
+    sd_stat(mile[kSdArmN77][0][kSdVmem], pm, ps);
+    sd_stat(asm_[kSdArmN77][0][kSdVmem], po, pos);
+    sd_stat(nul[kSdArmN77][0][kSdVmem], pnl, pnls);
+    const uint32_t pn = uint32_t(mile[kSdArmN77][0][kSdVmem].size());
+    double qm = 0, qs = 0, qo = 0, qos = 0, qnl = 0, qnls = 0;
+    sd_stat(mile[kSdArmN78Q][0][kSdVmem], qm, qs);
+    sd_stat(asm_[kSdArmN78Q][0][kSdVmem], qo, qos);
+    sd_stat(nul[kSdArmN78Q][0][kSdVmem], qnl, qnls);
+    const uint32_t qn79 = uint32_t(mile[kSdArmN78Q][0][kSdVmem].size());
+    const bool g_nul_p = pnl >= kSdNullLo && pnl <= kSdNullHi;
+    const bool g_nul_q = qnl >= kSdNullLo && qnl <= kSdNullHi;
+    std::printf("      PRIMARY     n77 tau3000        %.4f +- %.4f  (oracle %.4f +- %.4f,\n"
+                "                                      null %.4f %s, n %u)\n"
+                "      CO-PRIMARY  n78 quiet tau3000  %.4f +- %.4f  (oracle %.4f +- %.4f,\n"
+                "                                      null %.4f %s, n %u)\n\n",
+                pm, ps, po, pos, pnl, g_nul_p ? "PASS" : "FAIL", pn,
+                qm, qs, qo, qos, qnl, g_nul_q ? "PASS" : "FAIL", qn79);
+
+    // Registered three-way on the primary, refusal branches first; then the
+    // co-primary only if the primary clears.
+    int wbranch;  // 0 void, 1 confirmed scope, 2 no verdict, 3 primary clears
+    if (pn < 3 || !(ps > 0.0) || po < kSdBar || !g_nul_p) {
+      wbranch = 0;
+      std::printf("      -> VOID%s. The primary cell cannot be tested against the bar\n"
+                  "         at this window (oracle %.4f, null gate %s) and nothing\n"
+                  "         about deviation (a) is decided.\n",
+                  po < kSdBar ? ", NOT REFUSED" : "", po, g_nul_p ? "PASS" : "FAIL");
+    } else if (pm + 2.0 * ps < kSdBar) {
+      wbranch = 1;
+      std::printf("      -> DEVIATION (a) IS CONFIRMED AS SCOPE. %.4f + 2(%.4f) =\n"
+                  "         %.4f sits under the %.3f bar: the comparison lives in the\n"
+                  "         overlap window and dies with the drive. §78's claim stands\n"
+                  "         EXACTLY as written, three deviations and all. This is not\n"
+                  "         a failure of M6.\n",
+                  pm, ps, pm + 2.0 * ps, kSdBar);
+    } else if (pm - 2.0 * ps > kSdBar) {
+      wbranch = 3;
+      std::printf("      -> the primary clears by 2 SE at M6's own window; the verdict\n"
+                  "         now turns on the co-primary below.\n");
+    } else {
+      wbranch = 2;
+      std::printf("      -> NO VERDICT on deviation (a) at this n: the bar sits inside\n"
+                  "         the primary's 2-SE band. The deviation stands as written.\n");
+    }
+    std::printf("\n");
+
+    if (wbranch == 3) {
+      const bool co_void = qn79 < 3 || !(qs > 0.0) || qo < kSdBar;
+      const bool co_clear = !co_void && (qm - 2.0 * qs > kSdBar) && g_nul_q;
+      const bool co_fail = !co_void && (qm + 2.0 * qs < kSdBar);
+      // The amended majority reading (§78 R3), computed AT THIS WINDOW. A
+      // removal that kept §78's overlap-window majority would read a verdict
+      // on one window against a supporting column from another.
+      const double obs_sd = ps * std::sqrt(double(pn));
+      const double obs_var = obs_sd * obs_sd;
+      double tm = 0, tse = 0;
+      sd_stat(tst[kSdArmN77][0], tm, tse);
+      const double eff_bar = tm > 0.0 ? std::ceil(kSdBar * tm - 1e-9) / tm : kSdBar;
+      uint32_t nclr = 0;
+      for (double x : mile[kSdArmN77][0][kSdVmem]) if (x >= kSdBar) ++nclr;
+      const double bin_sd = tm > 0.0 ? std::sqrt(pm * (1.0 - pm) / tm) : 0.0;
+      const double btw_var = obs_var - bin_sd * bin_sd;
+      const double var_se = pn > 1 ? obs_var * std::sqrt(2.0 / double(pn - 1)) : 0.0;
+      const double btw_max = (btw_var > 0.0 ? btw_var : 0.0) + 2.0 * var_se;
+      const double bsd = btw_max > 0.0 ? std::sqrt(btw_max) : 0.0;
+      double implied = pm - 2.0 * ps > kSdBar ? 1.0 : 0.0;
+      if (bsd > 0.0) {
+        const double z = (pm - 2.0 * ps - kSdBar) / bsd;
+        implied = 0.5 * (1.0 + std::erf(z / std::sqrt(2.0)));
+      }
+      const bool g_major_ws = pn > 1 && implied > 0.5;
+      std::printf("      majority at this window: raw %u of %u at the effective %.3f\n"
+                  "      bar; between-creature SD bound %.4f; worst-case fraction\n"
+                  "      above %.3f with the mean lowered by 2 SE: %.4f  -> %s\n\n",
+                  nclr, pn, eff_bar, bsd, kSdBar, implied,
+                  g_major_ws ? "HOLDS" : "DOES NOT HOLD");
+      if (co_clear && g_major_ws) {
+        std::printf("      -> DEVIATION (a) IS REMOVED. `vmem` clears the %.3f bar by\n"
+                    "         2 SE at the window M6 names, on both the heard and the\n"
+                    "         silenced 196-creature arms, with the majority holding at\n"
+                    "         worst-case heterogeneity at this window. The M6 claim is\n"
+                    "         restated with TWO deviations: (b) the non-shipped\n"
+                    "         mechanism and (c) the void spike rung, both untouched.\n",
+                    kSdBar);
+      } else if (co_fail) {
+        std::printf("      -> CONFOUNDED BY THE ACOUSTIC LOOP, AND THAT IS A FINDING.\n"
+                    "         The heard arm clears at M6's window while the silenced arm\n"
+                    "         falls under the bar by 2 SE: what survives B's offset in\n"
+                    "         the heard membrane is fed by the audible echo, not the\n"
+                    "         synapses. Deviation (a) STANDS, and the asymmetry is the\n"
+                    "         reportable result of this section.\n");
+      } else if (co_void) {
+        std::printf("      -> the co-primary is VOID%s (oracle %.4f), so no removal is\n"
+                    "         made whatever the heard arm says. Deviation (a) STANDS.\n",
+                    qo < kSdBar ? ", NOT REFUSED" : "", qo);
+      } else if (!g_major_ws) {
+        std::printf("      -> the majority clause DOES NOT HOLD at this window, so no\n"
+                    "         removal is made. Deviation (a) STANDS.\n");
+      } else {
+        std::printf("      -> NO VERDICT on the co-primary: the bar sits inside its\n"
+                    "         2-SE band. No removal is made and deviation (a) STANDS;\n"
+                    "         the registered statement is that this n does not resolve\n"
+                    "         the silenced arm at this window.\n");
+      }
+    }
+    if (!g_self_79)
+      std::printf("\n    AND EVERY READING IN §79 IS VOID: a moved anchor is a bug, not\n"
+                  "    a result. AT A SHORT BUDGET THIS IS EXPECTED AND MEANS NOTHING —\n"
+                  "    all three anchors are 1680k readings.\n");
+    std::printf("\n");
+  }
+
   std::printf("  EVERY SPACE, shipped arm, same/different only\n"
               "  (`drive-exc`/`drive-net` are MEASURED from live STP state, which a\n"
               "   creature with the mechanism off does not have: blank, not zero.)\n\n    gap  ");
