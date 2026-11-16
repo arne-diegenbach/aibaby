@@ -17768,3 +17768,45 @@ are small and toward target: vocal 3.99 -> 4.13 Hz (target 5.00, flagged
 (target 7.22). Registered reading going forward: calibrate counts against
 v75 only in its DELTA from v74, and that delta is benign. The
 pre-existing somato staleness is project housekeeping, logged, not §80's.
+
+**§80 STAGE 3 — THE SAMEDIFF RUN LANDED (2026-11-16).**
+`results/n80-samediff-1680k.log`, exit 0, 1006/1006 sessions, genome md5
+`e7964689c26c5e074950341c37e50fe8` printed at launch and matching
+`results/n80-genome.toml`.
+
+  - G-IDENT PASS at full budget: per-session vocal spike counts exactly
+    equal across all 12 session pairs, and 0 of 2496 behavioural cells
+    unequal. The patch path and the genome express the same creature.
+  - G-LIVE PASS with the one registered exemption printed.
+  - ONE REGISTERED PREDICTION WAS WRONG, in the benign direction, and is
+    disclosed rather than banked: the by-construction clause said every
+    samediff G-SELF anchor FAILS on v75 and §78's R4 prints NOT MET.
+    Instead EVERY ANCHOR REPRINTED EXACTLY (0.6734, 0.8552, and §79's
+    three). The reason is G-IDENT's own premise extended to every dosed
+    arm: a dose arm patches the session blob to exactly the values the
+    genome now ships, and no other genome field moved, so a dosed arm's
+    blob on v75 is bit-identical to v74's. The v74 records were never
+    cross-genome ON THE DOSED ARMS; only the undosed arms (`shipped`,
+    `acoustic-silenced`, `B-omitted`, `n71 ref(+probe)`, `n74 sweep`,
+    `burst-def`) run a different creature on v75, and no absolute was
+    registered or read on any of them.
+  - THE TRANSFER TEST, branches in registered order:
+      primary `n80 shipped`        0.6639 +- 0.0065  oracle 0.7416 (holds),
+                                   null 0.5025 PASS, n 196
+      primary - 2 SE = 0.6509 > 0.650 -> the clearing branch, by 0.0009.
+      co-primary `n80 shipped quiet` 0.6801 +- 0.0054  oracle 0.7230,
+                                   null 0.4954 PASS; - 2 SE = 0.6693 > bar.
+      majority (§78 R3 arithmetic on the shipped vector): raw 122/196 at
+      the effective 0.667 bar; between-creature SD bound 0.0689;
+      worst-case fraction above 0.650 is 0.5058 -> HOLDS, BY 0.0058.
+      That margin is THIN and travels with the transfer claim.
+      spike rung on `n80 shipped`: own oracle 0.6115 +- 0.0041 < 0.650
+      -> void there, DEVIATION (c) STANDS on the shipped creature.
+  - Branch taken: M6 TRANSFERS TO THE SHIPPED CREATURE. The silenced
+    co-primary clears by more than the heard primary (same pattern as
+    §78; no "silencing helps" reading — different creatures, no
+    registered contrast). Deviation (b) is removed ONLY IF `verify-long`
+    and `verify-teach` pass on v75; this log cannot see those and the
+    claim is NOT made from it alone.
+
+Stage 4 launched: `verify-long`, then `verify-teach`, sequential.
