@@ -17599,3 +17599,122 @@ against a 0.127 shortfall). Removing deviation (a) would need a
 mechanism that sustains drive through the depleted synapses after B's
 offset — which is a new mechanism, which §69's rule prices as its own
 registered line, not a §79 re-run.
+
+### §80 PRE-REGISTRATION — SHIPPING THE MECHANISM: deviation (b), tested as a genome change
+
+**THE QUESTION.** §78's claim carries deviation (b): the mechanism is
+`stp tau3000`, which the creature does not ship with — depression has
+shipped at zero on every tract since DNA v36. §80 ships it and asks two
+things in a fixed order: does the creature that HAS the mechanism still
+do everything the project has measured it doing, and does M6 transfer to
+it. The milestone claim moves from "a creature the project CAN BUILD" to
+"the creature it HAS" only if both answers are yes.
+
+**THE CHANGE — DNA v75, and nothing else.** Both `auditory -> vocal`
+projection blocks in `dna/default.toml` (the `either`-source and the
+`inhibitory`-source tracts) get `stp_use = 0.20`, `stp_recover_ms =
+3000.0`; `stp_facil_ms` stays 0 (pure depression — facilitation was
+never the argument, and the kernel rejects use without recovery). These
+are byte-for-byte the fields and values the §69 dose arms patch into the
+session blob, on the same merged tract (the kernel keys STP state by the
+module pair, so the dose was never expressible more narrowly). NO OTHER
+FIELD MOVES: a compensating recalibration of any other constant is a
+second genome change and would be its own registration, not a §80 rider.
+
+**WHAT IS KNOWN TO FAIL BY CONSTRUCTION, stated before any run.**
+
+  - The `determinism` pinned hash MOVES — that is what a genome change
+    is. The registered procedure is the one the verify code itself
+    states: record the new hash, update `kPinnedHash` with a changelog
+    line naming DNA v75, re-run. A moved hash is not a battery failure.
+  - Every samediff G-SELF gate (§75/§77/§78/§79 anchors) FAILS on v75:
+    those are the v74 genome's records and remain exactly that. The §78
+    R4 block will print NOT MET on the v75 log for this reason alone;
+    the v74 claim is unaffected. No cross-genome absolute is read in
+    either direction (the calibration invariant).
+
+**G-IDENT — the identity gate the change makes free.** On v75 the
+`stp tau3000` arm's patch writes the values the genome already carries,
+so its 12 sessions at rep_off 0 must be BIT-IDENTICAL to `shipped`'s:
+every printed column equal to printed precision. Any daylight between
+them means the patch path and the genome path do not express the same
+creature, and every §80 reading is VOID.
+
+**THE REGRESSION BATTERY, in run order, cheap kills first.** No old
+absolute numbers are compared — each experiment is read against its own
+Spec expectation, which is what `verify` is for.
+
+    1. `verify` (fast tier)      every experiment as expected after the
+                                 hash update. There are no Expect-FAIL
+                                 guards in the table (checked), so no
+                                 label encodes "stp off"; an
+                                 Expect-OPEN milestone flipping to PASS
+                                 is ESCALATED FOR ITS OWN READ, not
+                                 counted as failure or silently banked.
+    2. `calibrate`               depression lowers delivered drive on
+                                 the tract; if the operating points move
+                                 enough to read stale, that IS the cost
+                                 of shipping, named. FAIL -> revert.
+    3. `samediff` on v75         the M6 transfer test below (~4.6 h).
+    4. `verify-long`, then
+       `verify-teach`            the real battery (~12 h + teach tier).
+                                 `samediff` inside the long tier is
+                                 Expect-READ and cannot fail on content.
+
+    ANY battery failure (other than the two by-construction items) ->
+    DNA v75 IS REVERTED, the failing experiment's output is the §80
+    result — what depression on this tract costs the creature — and
+    M6 keeps all three deviations. The project has done exactly this
+    before ("BUILT, recalibrated, NOT SHIPPED: it buys nothing").
+
+**THE M6 TRANSFER TEST.** Two arms join `samediff`, both unpatched on
+stp (the genome now carries the dose):
+
+    n80 shipped        196 creatures, rep_off 470 (seeds 470-665, never
+                       scored by any section)
+    n80 shipped quiet  voicing_threshold 1.15, 196 creatures, rep_off
+                       666 (seeds 666-861)
+
+Primary: `vmem`, overlap window, gap 200, bar 0.650 on the arm's own
+assembled oracle, 2-SE clearance; the silenced arm must clear the same
+way (the control moves with the primary); the amended majority reading
+(§78 R3) at the primary; label-destroyed in [0.42, 0.58]; G-IDENT
+total. Branches, no-milestone first:
+
+    an arm's own oracle < 0.650  -> that arm VOID, NOT REFUSED; no
+                                    transfer claim either way
+    primary + 2 SE < 0.650       -> M6 DOES NOT TRANSFER to the shipped
+                                    creature; v75 is reverted (a genome
+                                    change that does not buy its purpose
+                                    does not ship) and the refusal is
+                                    the result
+    bar inside either 2-SE band  -> NO VERDICT; v75 is reverted pending
+                                    a registered re-ask, and nothing is
+                                    claimed
+    both clear, majority holds,
+    battery all green            -> DEVIATION (b) IS REMOVED. v75 ships.
+                                    The claim is restated and the spike
+                                    rung's own oracle on `n80 shipped`
+                                    is read: if it is under the bar,
+                                    deviation (c) stands and the claim
+                                    carries (c) alone; if it reaches the
+                                    bar, the spike cell is read against
+                                    it and (c) is resolved by that cell,
+                                    whichever way it goes.
+
+**POWER.** Projected SE at n=196 from §77's measured SD 0.0840 is
+0.0060 (every projection here has come in low; the no-verdict branch is
+live). No SE ceiling. Note the prior is NOT neutral and is stated so the
+result cannot be quietly re-read: the v75 shipped creature differs from
+the v74 dosed arm only in which bytes carry the dose, BUT its creatures
+develop from hatch with depression on — §77's arms grew up with it too
+(the patch lands at hatch), so transfer is EXPECTED and a failure would
+be a finding about the fresh seed blocks, to be taken seriously, not
+explained away.
+
+**COST.** DNA edit + two arms + hash update; smoke samediff with the
+exact command at 300k (exit 1; G-IDENT must PASS even at smoke — it is
+within-run); then ~4.6 h samediff (1006 sessions), fast verify,
+calibrate, and the ~12 h long/teach tiers. Genome md5 CHANGES by design;
+the v75 genome is archived as `results/n80-genome.toml` before the run,
+and v74 remains archived as `results/n78-genome.toml`.
