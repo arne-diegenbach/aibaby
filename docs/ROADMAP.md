@@ -17751,3 +17751,20 @@ the per-session vocal spike counts (`voc_spikes`, `voc_ticks`) must be
 EXACTLY equal across the 12 session pairs, which no readout column can
 fake. Error family: a guard comparing a column that is not on the space
 the claim is about ([[aibaby-columns-move-with-the-primary]]).
+
+**§80 BATTERY, STAGE 1 (fast verify + calibrate).** `verify` fast tier on
+v75: determinism PASS, pinned hash PASS, 24 of 24 experiments as expected,
+no open milestone flipped (`results/n80-verify-fast.log`). `calibrate`
+FAILS on v75 — and the registered revert clause does NOT fire, for a
+reason the registration should have anticipated and now discloses: the
+IDENTICAL verdict fails on the archived v74 genome, run like-for-like
+(`results/n80-calibrate-v74.log` vs `results/n80-calibrate.log`): the same
+somato module stale at the same reading (4.05 Hz vs target 4.56, -0.51)
+and the same "amplitude floor thin (structural)" line, which the output
+itself says is not fixable by retuning. The failure PREDATES the change
+and is not a cost of shipping depression. The deltas attributable to v75
+are small and toward target: vocal 3.99 -> 4.13 Hz (target 5.00, flagged
+"by design" on both), vision 2.48 -> 2.44, expression 7.39 -> 7.28
+(target 7.22). Registered reading going forward: calibrate counts against
+v75 only in its DELTA from v74, and that delta is benign. The
+pre-existing somato staleness is project housekeeping, logged, not §80's.
