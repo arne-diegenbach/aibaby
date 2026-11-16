@@ -17738,3 +17738,16 @@ bit-for-bit its old self — the §69-§79 record is untouched. The same
 error family as §78 amendment 1: a guard whose premise encodes the old
 genome ([[aibaby-guard-measures-the-wrong-quantity]],
 [[aibaby-two-power-rules-can-contradict]]).
+
+**§80 AMENDMENT 2, from the second smoke.** G-IDENT as registered compared
+"every per-creature value in four columns across all gaps and spaces" and
+FAILED 305 of 2880 — every mismatch in `drive-exc`/`drive-net`, which are
+read from live STP state only on arms the table DECLARES dosed ("blank,
+not zero" on `shipped` is the instrument's own documented rule). Those two
+columns measure instrument availability, not creature behaviour, and
+identity cannot be asked of them. Amended: G-IDENT compares the 13
+behavioural spaces, and the behavioural claim is WIDENED, not narrowed —
+the per-session vocal spike counts (`voc_spikes`, `voc_ticks`) must be
+EXACTLY equal across the 12 session pairs, which no readout column can
+fake. Error family: a guard comparing a column that is not on the space
+the claim is about ([[aibaby-columns-move-with-the-primary]]).

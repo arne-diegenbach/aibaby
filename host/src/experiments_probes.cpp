@@ -22951,9 +22951,26 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   {
     // G-IDENT: exact equality, not a tolerance — same seeds, same bytes, same
     // kernel path must give the same doubles.
+    // §80 AMENDMENT 2, caught by the second smoke and disclosed: `drive-exc`
+    // and `drive-net` are read from LIVE STP state only on arms the table
+    // DECLARES dosed ("blank, not zero" on `shipped`), so those two columns
+    // measure instrument availability, not creature behaviour, and identity
+    // cannot be asked of them. The behavioural check is widened instead: the
+    // per-session vocal spike counts must be EXACTLY equal, which no readout
+    // column can fake.
+    uint64_t ident_sess = 0, ident_sbad = 0;
+    for (size_t i = 0; i < res[kSdArmShipped].size() && i < res[kSdArmStp3000].size();
+         ++i) {
+      const SdOut& x = res[kSdArmShipped][i];
+      const SdOut& y = res[kSdArmStp3000][i];
+      if (!x.ok || !y.ok) continue;
+      ++ident_sess;
+      if (x.voc_spikes != y.voc_spikes || x.voc_ticks != y.voc_ticks) ++ident_sbad;
+    }
     uint64_t ident_cells = 0, ident_bad = 0;
     for (uint32_t g = 0; g < kSdGapCount; ++g)
       for (uint32_t sp = 0; sp < kSdSpaces; ++sp) {
+        if (sp == kSdDrvExc || sp == kSdDrvNet) continue;
         const std::vector<double>* pairs[4][2] = {
             {&mile[kSdArmShipped][g][sp], &mile[kSdArmStp3000][g][sp]},
             {&mbe[kSdArmShipped][g][sp], &mbe[kSdArmStp3000][g][sp]},
@@ -22969,13 +22986,18 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
           }
         }
       }
-    const bool g_ident = ident_cells > 0 && ident_bad == 0;
+    const bool g_ident =
+        ident_cells > 0 && ident_bad == 0 && ident_sess > 0 && ident_sbad == 0;
     std::printf("  §80 SHIPPING THE MECHANISM — DNA v75 carries the §69 dose in the\n"
                 "  genome; the `n80` arms are the SHIPPED creature at 196 fresh seeds.\n"
                 "  On a pre-v75 genome this block voids itself and means nothing.\n\n"
-                "    G-IDENT   `shipped` vs `stp tau3000` at rep_off 0, every per-creature\n"
-                "              value in four columns across all gaps and spaces:\n"
+                "    G-IDENT   `shipped` vs `stp tau3000` at rep_off 0. Per-session vocal\n"
+                "              spike counts, exactly equal: %llu sessions, %llu unequal.\n"
+                "              Readout columns across all gaps and the 13 spaces that are\n"
+                "              creature behaviour (drive-exc/net are read only on DECLARED\n"
+                "              dose arms — instrument availability, excluded and disclosed):\n"
                 "              %llu compared, %llu unequal   %s\n\n",
+                (unsigned long long)ident_sess, (unsigned long long)ident_sbad,
                 (unsigned long long)ident_cells, (unsigned long long)ident_bad,
                 g_ident ? "PASS — the patch path and the genome express the same creature"
                         : "FAIL -> EVERY §80 READING IS VOID");
