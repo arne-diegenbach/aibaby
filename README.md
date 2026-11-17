@@ -21581,6 +21581,131 @@ the line opened** — and the thing to be careful about is `hcdrive`'s prohibiti
 coupling.** The honest bar is `hcsweep`'s own, the lesson surviving the gesture, and the honest
 risk is that reciprocal inhibition costs the lesson the way the bump kernel's gesture did.
 
+### Checked 2026-11-18: aimed at the THRESHOLD, which §76 calls the only live quantity
+
+A literature pass run while §80's `verify-long` tier was in flight, aimed at the one quantity
+this record still calls live: the loss between the vocal **membrane**, which carries the
+same/different conjunction (§77 0.6734, §78 silenced 0.6886, §80 shipped 0.6639 ± 0.0065),
+and the vocal **spike code**, which does not (§80 0.5430 ± 0.0057 on an oracle of 0.6115,
+whose whole band sits below §78's crossing `O*` 0.6601). **The grep-first rule paid for the
+fifth time and then paid again**: `noise_amp` is already in this file twice with a verdict,
+and the strongest hit turned out to be about a field this creature has owned since DNA v36
+and has never switched on.
+
+- **THE STRONGEST HIT, AND IT IS THIS CREATURE'S §80 CONFIGURATION ALMOST EXACTLY.**
+  Torres, J. J., Elices, I. & Marro, J. (2015). *Efficient transmission of subthreshold
+  signals in complex networks of spiking neurons.* arXiv:1410.3992v2 [physics.bio-ph].
+  <https://arxiv.org/pdf/1410.3992> — spiking neurons, Hebbian conductances, **and
+  short-term synaptic plasticity**, asking how *weak subthreshold* stimuli are transmitted
+  as the noise level varies. Two findings bear directly on the threshold ask. First, the
+  efficient transmission appears **around the transition and critical points separating the
+  network's dynamic phases**, "for well-defined different levels of stochasticity" — a
+  sharper statement than textbook stochastic resonance, because it says the optimum is *at a
+  phase boundary* rather than at an arbitrary noise amplitude. Second, and this is the entry:
+  facilitation competing with depression produces "**a dependency with the level of
+  facilitation, of the level of noise at which the subthreshold signals are processed and
+  detected and an enhancing of the detection quality for large facilitation**." Verified
+  against the PDF's own abstract and body, not a search snippet.
+- **WHY THAT LANDS ON A FIELD WE ALREADY OWN AND HAVE NEVER USED.** The project's STP is a
+  per-synapse Tsodyks–Markram synapse with three fields, and **`stp_facil_ms` is 0 on every
+  tract in the shipped genome and stays 0 in DNA v75**, which moved only `stp_use` and
+  `stp_recover_ms`. So Torres et al.'s "large facilitation" regime has never been visited
+  here, on the one tract whose dose machinery is already built, smoked and shipped
+  (`auditory -> vocal`). **This is a dose on an existing mechanism, not a kernel change**,
+  which is the distinction §78's "identification only, no kernel license" turns on.
+- **AND THE TWO-TAILED RISK THAT MUST BE REGISTERED BEFORE IT IS BUILT, derived rather than
+  feared.** This creature's M6 mechanism *is* depression — `delivered(B) = weight x
+  resources_remaining(A)`, the multiplicative conjunction §67 proposed and §69–§80 built.
+  Torres et al. describe facilitation as **competing with** depression, and facilitation
+  replenishes what depression spends. So the predicted outcome is genuinely two-sided:
+  facilitation may lift the spike rung's oracle past `O*` **while flattening the membrane
+  conjunction that the milestone is currently read on.** Any registration here carries the
+  membrane as a co-primary and a refusal clause for *spike up, membrane down*, which is the
+  two-tailed discipline [[aibaby-repetition-detector-lead]] already imposes on this family.
+- **THE `noise_amp` ROUTE IS CORRECTLY LOCATED AND STRUCTURALLY CONFOUNDED, which the genome
+  settled and the literature could not.** The textbook route to the same place is noise:
+  additive noise at a threshold maximises transmission of a *subthreshold* signal at a
+  particular non-zero level, and the benefit is largely confined to subthreshold signals.
+  That is the regime by this kernel's own arithmetic — `noise_amp` enters
+  `core/src/network.cpp:2588` **inside the pre-threshold `drive` term**, and the §78 loss is
+  a graded membrane signal failing to cross a spike threshold. **But `vocal` is the only
+  module in the shipped genome with `explore_scale = 1.0`** (every other module ships 0.0,
+  annotated "not a motor module; keeps its plain `noise_amp`"), and in that drive term the
+  scale selects between `xi_eff`, the random variable, and `drive_comp_`. So the only
+  *stochastic* noise channel at a spike threshold in this creature is `vocal`'s, and on
+  `vocal` the noise **is** the exploration drive. The clean experiment — move the noise
+  without moving exploration — is unavailable without a kernel change. This is the
+  "moves two things at once" objection the v73 and v74 sections already recorded, derived a
+  second time for the *global level* and **stronger** than it was for the per-neuron spread.
+  Those two refusals do not otherwise transfer: they are about per-neuron spread aimed at the
+  **F1 naming ceiling**, and the 2026-10-31 pass is about the population-vector centroid.
+  This is a different axis and a different dependent variable.
+- **THE HOMEOSTAT DOES NOT AUTOMATICALLY CANCEL EITHER ROUTE, and the argument is about
+  moment order rather than hope.** IP writes `threshold_[i] = clampf(threshold_[i] +
+  ip_rate * err, t_min, t_max)` on `rate_ema_ - ip_target`, a **first moment**, clamped into
+  the genome's [0.20, 4.00]; subthreshold transmission depends on the **variance** relative
+  to the distance to threshold. Restoring a mean rate therefore does not restore the
+  transmission, because the information a threshold passes is not a function of the rate
+  alone. What a compensating homeostat does is turn the manipulation into a joint
+  *(noise, threshold)* move — which is why this needs the operating-point discipline
+  [[aibaby-match-at-the-operating-point]] demands, and why §60's measured saturation of the
+  homeostat is a reading to look up rather than an assumption to make.
+  Three homeostatic-timescale references were surfaced and are recorded **unverified**, from
+  search abstracts only, and nothing above leans on their numbers: *M-Current Inhibition in
+  Hippocampal Excitatory Neurons Triggers Intrinsic and Synaptic Homeostatic Responses at
+  Different Temporal Scales* (<https://www.jneurosci.org/content/40/19/3694>), *Effects of
+  Cellular Homeostatic Intrinsic Plasticity on Dynamical and Computational Properties of
+  Biological Recurrent Neural Networks* (<https://www.jneurosci.org/content/33/38/15032>),
+  and *Homeostatic mechanisms regulate distinct aspects of cortical circuit dynamics*
+  (<https://www.pnas.org/doi/10.1073/pnas.1918368117>). **Verify before any arithmetic
+  rests on a timescale.**
+- **A REFUSAL THE SAME PASS GENERATED FOR FREE, recorded so it is not built.** Facilitation
+  is also the obvious reach for M6's **deviation (a)**, the post-offset window, because
+  calcium-mediated facilitation is the activity-silent literature's own memory substrate
+  (Mongillo/Barak/Tsodyks, already in this list). **For (a) it is refused by §79's
+  measurement before any build**: §79 read the post-offset window at 0.5123 ± 0.0054 on a
+  *holding* oracle, and the mechanism statement that came out of it is that a synaptic state
+  reads out **nothing without drive through it**. Facilitation is also a synaptic state
+  modulating drive, so it inherits that refusal exactly. Removing (a) needs *drive* in the
+  post-offset window — a new population (§67's "expensive route") or unprompted regeneration
+  from the silent state (arXiv:2607.14000, already carried here as a caution) — which is a
+  mechanism line under §69's rule and not this one. **Facilitation bears on (c), not (a),
+  and the two must not be conflated.**
+- **THREE COMPARISON POINTS FOR THE GOAL, none of them a lead for this creature.** Raviv, H.,
+  Tsyhanov, A., Gousios, K., Altenhof, A., Wang, H., Chen, B., Raviv, O., Rosenwein, T.,
+  Lew-Williams, C., Hasenfratz, L. & Hasson, U. (2026). *The First 1000 Days: An Agent-Based
+  Model of Early Language Acquisition.* bioRxiv, <https://doi.org/10.64898/2026.03.28.715023>,
+  v2 posted 27 April 2026 — a learning agent trained incrementally on ultra-dense daily
+  recordings of individual children **without prior linguistic knowledge**, which discovered
+  speech units matching the English phoneme inventory and acquired thousands of words while
+  mirroring individual developmental trajectories. Perceptual and lexical rather than
+  articulatory, so it is a complement to this project and not a rival. Also *From perception
+  to production: how acoustic invariance facilitates articulatory learning*
+  (<https://arxiv.org/pdf/2509.05849>, EMNLP 2025), which states plainly that it has **no
+  vocal exploration or babbling phase** — the thing this creature has had since the start —
+  and *Computational modeling of early language learning from acoustic speech and audiovisual
+  input without linguistic priors* (<https://arxiv.org/pdf/2603.08359>).
+  **ONE LINE OF THE FIRST PAPER CUTS AGAINST A CLOSURE OF OURS AND IS RECORDED WITHOUT
+  RE-OPENING IT**: their learning "relied not only on linguistic input but also on the
+  rehearsal of past experiences at the end of each training day." This project refuted its
+  sleep-consolidation line and closed both classical routes. Their rehearsal is a
+  training-schedule device in a non-spiking agent, so it is **neither** of the two routes
+  this project built and refused, and it is **not** a licence to re-open them — but it is the
+  strongest external reason on record to think the capability is real even though our two
+  implementations of it were not.
+
+**What the pass leaves pointing somewhere, and it is a derivation before a dose.** The
+facilitation entry is the only one of these that is cheap, un-confounded and aimed at the
+live quantity, but it must not be registered until §80 lands, because the dose is defined
+relative to whichever genome ships. The pre-flight is arithmetic rather than a run: express
+the §78/§80 membrane conjunction's distance from `vocal`'s threshold (1.0) in units of the
+fluctuation `noise_amp = 0.22` actually delivers, since both routes only operate while the
+signal sits within roughly a noise SD of threshold. Many SDs below and neither route can
+reach it and the line dies with no creature spent. **What would refuse the whole line
+independently**: §80's shipped spike oracle (0.6115) and §78's (0.6169) being statistically
+the same across a genome change that moved delivered drive, which would say the spike code's
+ceiling is not set by how much drive arrives at all.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
