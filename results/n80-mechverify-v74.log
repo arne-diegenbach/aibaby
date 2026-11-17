@@ -1,0 +1,37 @@
+experiment: mechverify
+  instrument        mechverify   trial seed 000000000135b90d   18 mechanisms
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  one pinned hash per mechanism that ships OFF, each on a genome where
+  that mechanism alone is switched on. A variant must MATCH its pin and
+  DIFFER from the shipped creature: an enabled mechanism that hashes the
+  same as the off one is inert, and pinning it would lock in a test that
+  cannot fail.
+
+  shipped baseline   452fae7c21627950 at 120000 ticks
+                     049c4c09a84d13e5 at 1300000 ticks
+
+    mechanism                  dna   ticks     expected           measured           verdict
+    shape bank                 v46   120000    9945f7d9b1d66af8   9945f7d9b1d66af8   ok
+    predictive coding          v15   120000    a2512d68027bf089   a2512d68027bf089   ok
+    eligibility baseline       v16   120000    42235f24c989d110   42235f24c989d110   ok
+    presynaptic centring       v17   120000    fa66feecb9076995   fa66feecb9076995   ok
+    per-pathway Hebbian        v23   120000    5c61a074fb1c06b8   5c61a074fb1c06b8   ok
+    pooling interneurons       v24   120000    10d0b3d2c87eefe7   10d0b3d2c87eefe7   ok
+    apical compartment         v25   120000    fcac41189f27f6e3   fcac41189f27f6e3   ok
+    oscillations               v26   120000    85d749ecc88f024f   85d749ecc88f024f   ok
+    critical period            v28   120000    0fbb7302eb5c157a   0fbb7302eb5c157a   ok
+    plateau-gated plasticity   v29   120000    28af3c91f5061efe   28af3c91f5061efe   ok
+    lateral competition        v32   120000    bc950d221bd13da2   bc950d221bd13da2   ok
+    dynamic synapses           v36   120000    884a7e3406948c4d   884a7e3406948c4d   ok
+    burst plasticity           v37   120000    fb7996436247bb6d   fb7996436247bb6d   ok
+    competitive pruning        v38   1300000   6f20f43f8c32f90e   6f20f43f8c32f90e   ok
+    per-module elig tau        v39   120000    febd01fa5ecaf55f   febd01fa5ecaf55f   ok
+    dendritic error            v40   120000    36b11772efe81961   36b11772efe81961   ok
+    topographic tract          v43   120000    831a047c2989bc76   831a047c2989bc76   ok
+    inhibitory plasticity      v50   120000    ae8f00ea1c735799   ae8f00ea1c735799   ok
+
+  18 mechanisms, 0 drifted, 0 vacuous, 0 unpinned, 0 broken
+
+  PASS — every off-by-default mechanism still behaves exactly as it
+  did when its hash was recorded, and every one of them does something.

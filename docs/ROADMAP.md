@@ -17810,3 +17810,86 @@ pre-existing somato staleness is project housekeeping, logged, not §80's.
     claim is NOT made from it alone.
 
 Stage 4 launched: `verify-long`, then `verify-teach`, sequential.
+
+**§80 STAGE 4, INTERIM — read while `verify-long` is still running (2026-11-17).**
+Three findings, two of them defects in §80's own pre-registration rather
+than facts about v75. Nothing is re-pinned, reverted or stopped here.
+
+**(1) `mechverify` FAILS on v75, and the control says it is a pin move.**
+It holds one pinned hash per mechanism that ships off, each on a genome
+with that mechanism alone switched on. On v75 all 18 drifted
+(`0 vacuous, 0 unpinned, 0 broken` — every variant still differs from
+shipped, so none went inert). It is `Expect::kPass, Tier::kLong`, so the
+tier verdict will read FAIL; it is not in the fast tier, which is why
+stage 1 was 24/24 green.
+The like-for-like control, the same move that cleared stage 2's
+`calibrate` failure: `mechverify` on the archived v74 genome
+(`results/n78-genome.toml`, md5 `9f6faac320210cc8e9f5830adf066934`)
+prints 18 of 18 `ok` and PASS (`results/n80-mechverify-v74.log`). The
+pins were therefore valid immediately before the edit, and the drift is
+FORCED: each pin hashes a genome derived from the shipped one, so no
+genome edit can leave any of them intact. This is the same object class
+as the `determinism` hash, whose move §80 registered as by-construction
+with a defined remedy.
+**§80's by-construction list was INCOMPLETE — it named only
+`determinism`.** That is a defect in my pre-registration, disclosed here
+rather than quietly absorbed. The remedy `mechverify`'s own failure text
+prescribes (record the new hashes, move the pins, changelog line naming
+DNA v75) is DEFERRED to the §80 verdict, because the pins must record
+whichever genome ships and re-pinning now would have to be undone on a
+revert.
+One semantic casualty to repair whichever way §80 goes: `dynamic
+synapses v36` is listed there as a mechanism that SHIPS OFF, which v75
+makes untrue. `0 vacuous` says that row still tests something, but its
+premise line is now wrong.
+
+**(2) v75 is not the cost; the suite grew, and my "~12 h" was stale.**
+On the 57 experiments common to `results/verify-long-default-baseline.log`
+(2026-10-26) and this run, October took 18.60 h and v75 took 17.10 h —
+a ratio of 0.92, slightly FASTER, which is the direction depression
+predicts for delivered drive. October's own log already totalled 37.30 h;
+the "~12 h" in stage 3 traces to a stale source comment in `run_verify`
+("measured at ELEVEN HOURS AND FORTY-EIGHT MINUTES"). The fast+long set
+is now 117 specs against 84 timed in October. At 27.2 h this run had 90
+banners and 89 timed experiments (25.60 h), with cost heavily skewed —
+`blockwhere` alone 6.2 h, four experiments half the elapsed time. The 27
+remaining sum to 15.78 h of October time, 14.5 h scaled by 0.92, nine of
+them 5.6M-tick experiments. Projected total ≈ 42 h.
+
+**(3) §80's claim condition CANNOT BE SATISFIED AS WRITTEN, and that is
+the second mis-registration.** Open item 11 (2026-10-30, above) already
+establishes that `verify-teach` cannot pass on `dna/default.toml`: seven
+`kTeach` instruments refuse for an absent `kContext` module, `run_verify`
+counts a false `kRead` as `failed`, and `ok = det && hash_ok &&
+failed == 0`. So "deviation (b) removed ONLY IF fast, long and teach
+tiers pass" conditioned the M6 transfer claim on a gate that was
+structurally unpassable before §80 touched anything.
+Re-smoked on v75, each standalone with `--ticks 120000 --allow-short`:
+`boundprobe`, `ctxgrid`, `ctxvocab`, `dirbudget`, `dlvry`, `silence`,
+`ctxgain` all exit 1 with "this genome has no kContext module" — the
+documented reason, unchanged by v75, before any simulation and so at
+zero wall cost. (The exit codes were first read through a pipe, which
+reported grep's status: "a pipeline eats a failing exit", caught and
+re-run.)
+**Registered reading, written BEFORE the teach tier has produced a
+number:** the teach gate is read as NO FAILURE BEYOND THOSE SEVEN
+`kContext` REFUSALS, each confirmed above to exit 1 for that reason on
+v75. An eighth failure, or any of the seven failing for a different
+reason, is a real battery failure and reverts v75.
+
+**The honest count: THREE of §80's gates have now needed an amendment**
+— G-LIVE (the no-op dose arm), G-IDENT (instrument availability vs
+behaviour), and the battery's by-construction list, twice over
+(`mechverify`'s pins, the teach tier's structural FAIL). Every battery
+failure so far is pre-existing or forced, and each was established by a
+like-for-like control rather than asserted — but the amendment count
+travels with the claim.
+
+**Sizing the teach tier, which has never been run to completion here**
+(no verify-teach log exists in `results/`): 48 of the 55 specs actually
+simulate, totalling 214.6 Mticks of budget. The long tier's own measured
+rate on its five 5.6M-tick experiments is 968-3983 s per Mtick (mean
+1903), which puts the teach tier at roughly 2.4 to 10 days — and that
+rate may not transfer, since teach experiments differ in arm count and
+so in how well they fill a 14-wide pool. Whether to spend that is a
+call for the project owner and is surfaced, not pre-empted, here.
