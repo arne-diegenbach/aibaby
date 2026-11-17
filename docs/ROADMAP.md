@@ -17893,3 +17893,139 @@ rate on its five 5.6M-tick experiments is 968-3983 s per Mtick (mean
 rate may not transfer, since teach experiments differ in arm count and
 so in how well they fill a 14-wide pool. Whether to spend that is a
 call for the project owner and is surfaced, not pre-empted, here.
+
+## §81 — LITERATURE LEAD, NOT BUILT: facilitation is the field we own and never switched on
+
+**THIS IS NOT A PRE-REGISTRATION AND MUST NOT BE READ AS ONE.** No clause here is
+committed, no arm is defined, and nothing may be run against it until §80 lands —
+the dose is defined relative to whichever genome ships, so registering it while
+v75's fate is open would fix a dose to a genome that may be reverted. Found
+2026-11-18 from a literature pass while §80's `verify-long` tier was in flight.
+Full citations with verdicts are in `README.md`'s References section under
+*"Checked 2026-11-18: aimed at the THRESHOLD"* — read those rather than
+re-searching.
+
+### THE FINDING, AND WHY IT IS AIMED AT THE ONE LIVE QUANTITY
+
+Torres, Elices & Marro (2015, arXiv:1410.3992) study subthreshold signal
+transmission in **spiking** networks **with short-term synaptic plasticity** —
+this creature's §80 configuration — and report transmission peaking **around the
+transition and critical points separating the network's dynamic phases**, plus
+"an enhancing of the detection quality for **large facilitation**" and a
+facilitation-dependent shift in the noise level at which weak signals are best
+detected.
+
+§76 calls the membrane-to-spike loss the only live quantity, and §77–§80 have now
+measured both ends of it:
+
+    §80  shipped MEMBRANE     0.6639 +- 0.0065   on its own oracle 0.7416
+    §80  shipped SPIKE rung   0.5430 +- 0.0057   on its own oracle 0.6115
+    §78  spike oracle         0.6169 +- 0.0044   whole band below O* 0.6601
+
+The membrane carries the conjunction and the spike code does not. That is a
+graded signal failing to cross a threshold, which is the **only** regime in which
+anything in this lead operates.
+
+**`stp_facil_ms` is 0 on every tract in the shipped genome, and DNA v75 left it
+0** — v75 moved `stp_use` and `stp_recover_ms` only. So the regime Torres et al.
+single out has never been visited here, on the one tract whose dose machinery is
+already built, smoked and shipped. **It is a dose on an existing mechanism (v36's
+Tsodyks–Markram synapse), not a kernel change**, which is the distinction §78's
+"identification only, no kernel license" turns on.
+
+### THE TWO-TAILED RISK, DERIVED AND NOT FEARED
+
+This creature's M6 mechanism **is** depression: `delivered(B) = weight x
+resources_remaining(A)`, the multiplicative conjunction §67 proposed and §69–§80
+built. Torres et al. describe facilitation as **competing with** depression, and
+facilitation replenishes what depression spends. So the predicted outcome is
+genuinely two-sided: facilitation may lift the spike rung's oracle past `O*`
+while **flattening the membrane conjunction the milestone is currently read on**.
+Any registration therefore carries the membrane as a **co-primary** and writes
+the *spike up, membrane down* clause explicitly, which is the two-tailed
+discipline §67's family already imposes.
+
+### THE NOISE ROUTE IS CORRECTLY LOCATED AND LOOKS WORSE THE CLOSER IT IS READ
+
+The textbook route to the same place is noise, and it is correctly located:
+`noise_amp` enters `core/src/network.cpp:2588` **inside the pre-threshold `drive`
+term**. Three facts read out of the genome and the kernel make it the weaker
+route, and two of them are structural rather than quantitative.
+
+  - **The confound is structural, not incidental.** `vocal` is **the only module
+    in the shipped genome with `explore_scale = 1.0`**; every other module ships
+    0.0, annotated "not a motor module; keeps its plain `noise_amp`". In the
+    drive term that scale selects between `xi_eff`, the random variable, and
+    `drive_comp_`. **So the only stochastic noise channel at a spike threshold in
+    this creature is `vocal`'s, and there the noise IS the exploration drive.**
+    Moving it without moving exploration needs a kernel change, which §75 and §78
+    both refuse on this line. This is the v73/v74 "moves two things at once"
+    objection, derived a second time for the *global level* and stronger than it
+    was for the per-neuron spread. Those refusals do not otherwise transfer: they
+    are about per-neuron SPREAD aimed at the F1 NAMING ceiling, and the
+    2026-10-31 readout pass is about the population-vector centroid.
+  - **The available amplitude is small against the threshold's own scale.**
+    `rng.signed_uniform()` is `uniform()*2 - 1`, so uniform on [-1, 1] with
+    SD `1/sqrt(3)` = 0.5774. At `vocal`'s shipped `noise_amp` = 0.22 the
+    per-tick fluctuation is bounded by +-0.22 with SD 0.1270.
+  - **And the homeostat has unused clamp headroom to cancel an increase.** IP
+    writes `threshold_[i] = clampf(threshold_[i] + ip_rate*err, t_min, t_max)` on
+    `rate_ema_ - ip_target` — a **first moment** — clamped into the genome's
+    [0.20, 4.00].
+
+### THE PRE-FLIGHT IS ARITHMETIC, AND A PLAUSIBLE WRONG NUMBER WAS ALREADY CAUGHT
+
+The obvious pre-flight is to express the membrane's distance from threshold in
+units of the fluctuation actually delivered, because every route here only
+operates while the signal sits within roughly a noise SD of threshold. **The
+genome's `threshold = 1.0` for `vocal` is the BIRTH value and using it would have
+been the plausible wrong number.** `thrpatch` already prints the runtime figure
+at minutes of cost: **+2.45643** at its fork, still moving **+0.56217** over a
+60,000-tick leg on the free arm. IP has driven the threshold 1.46 above birth and
+has 1.54 of clamp headroom left.
+
+**A CORRECTION TO THAT PRINT'S LABEL, recorded because it misleads a reader.**
+`thrpatch` prints "larynx mean threshold", but `mean_thr`
+(`host/src/experiments_milestones.cpp:3640`) averages `threshold(n)` over
+`ms.begin .. ms.begin + ms.count` for the **whole vocal module**. The number is
+the vocal module's mean threshold, not the larynx subset's.
+
+So the noise amplitude is about 9% of the threshold's present magnitude, and the
+regulator that would oppose it still holds roughly 63% of that magnitude in
+reserve. **That narrows the pass to facilitation on arithmetic, before any
+creature is spent.**
+
+**WHAT IS STILL MISSING, stated precisely so it is not guessed.** Two numbers,
+neither printed by any current log: the **mean vocal membrane in the scoring
+window**, and the **vocal module's mean threshold at `samediff`'s own operating
+point of 1,680,000 ticks** rather than `thrpatch`'s 60,000. The accessors exist
+(`network().threshold(n)`, and `vmem` is already accumulated for the `kSdVmem`
+feature as a window mean), so this is a print, not an experiment. The second
+number matters in both directions and must not be assumed: if IP has driven the
+vocal threshold to `t_max` = 4.00 by 1.68M ticks then the homeostat is
+**saturated** (which is §60's finding on a different line) and cannot cancel a
+noise change — while the distance the signal has to cross is larger still.
+
+### WHAT WOULD REFUSE THE WHOLE LINE
+
+  - The membrane-to-threshold distance coming back at many noise SDs: neither
+    route can reach it and the line dies with no creature spent.
+  - §80's shipped spike oracle (0.6115 +- 0.0041) and §78's (0.6169 +- 0.0044)
+    being statistically the same across a genome change that moved delivered
+    drive, which would say the spike code's ceiling is **not** set by how much
+    drive arrives at all, and no dose on the arriving drive can move it.
+
+### AND A REFUSAL THIS PASS GENERATED FOR FREE
+
+Facilitation is also the obvious reach for M6's **deviation (a)**, the
+post-offset window, because calcium-mediated facilitation is the activity-silent
+literature's own memory substrate. **For (a) it is refused by §79's measurement
+before any build**: §79 read that window at 0.5123 +- 0.0054 on a *holding*
+oracle, and the mechanism statement that came out of it is that a synaptic state
+reads out **nothing without drive through it**. Facilitation is also a synaptic
+state modulating drive, so it inherits the refusal exactly. Removing (a) needs
+*drive* in the post-offset window — a new population (§67's "expensive route") or
+unprompted regeneration from the silent state (arXiv:2607.14000, carried in the
+References as a caution) — which is a mechanism line under §69's rule and not
+this one. **Facilitation bears on (c), not (a), and conflating them would cost a
+run.**
