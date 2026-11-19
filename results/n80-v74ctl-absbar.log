@@ -1,0 +1,6 @@
+experiment: absbar
+  this genome has no kContext module, and contexts are ON in every arm
+  because `g2cond` says conditional learning fails without them. Build one:
+
+    tools/ctxgenome.sh ctx.toml
+    ./build/aibaby --dna ctx.toml --experiment absbar

@@ -1,0 +1,73 @@
+experiment: eligprobe
+  session           600.0 s x 5 creatures, object + its word, shuffled
+  instrument        eligprobe   trial seed 00000000013b36b2   200 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the question      is the eligibility trace on vision->vocal
+                    DIFFERENT for the two objects? If it is not, no
+                    reward schedule can make the voice conditional.
+
+  seed  cen->voc  shuffled  arc full  arc match mean|e|   corr(A,B)   vis cred vis n
+  0     0.680     0.560     0.930     0.850     7.83e-03  +0.937      0.860    930
+  1     0.540     0.470     0.860     0.830     7.36e-03  +0.936      0.760    998
+  2     0.660     0.470     0.940     0.920     7.56e-03  +0.929      0.770    943
+  3     0.630     0.450     0.600     0.640     7.73e-03  +0.930      0.690    966
+  4     0.510     0.510     0.820     0.820     7.86e-03  +0.940      0.550    1027
+
+  tract sizes       central->vocal 1532 synapses, arcuate 4632
+  mean |e|          central->vocal 7.669e-03, arcuate 4.088e-03
+  live fraction     see per-seed column; a trace at 0 is no trace
+
+  which object, read off the eligibility trace:
+    vision->vocal         0.726   (shuffled 0.498)   1027 synapses, mean |e| 8.146e-03, corr(A,B) +0.945
+      ^ THE TRACT THAT CARRIES THE OBJECT. The rows below are the
+        original diagnosis and were measured on a non-participant
+        (central->vocal) and on the tract carrying the WORD.
+    vision->vocal, CREDIT  0.726   <- what reward actually
+                                    multiplies. E[dw] ~ Cov(R,e) +
+                                    E[R]E[e]; the baseline cancels the
+                                    second term, so THIS is the row
+                                    that decides whether reward can
+                                    make the voice conditional.
+
+    --- the same tract, as a RATE deviation instead of a trace ---
+    seed  rate x    r(A,B)    vis dev   vis raw
+    0     0.450     +0.361    0.510     0.810
+    1     0.580     +0.266    0.550     0.820
+    2     0.520     +0.314    0.420     0.700
+    3     0.440     +0.290    0.440     0.650
+    4     0.420     +0.284    0.580     0.830
+    (fast-slow)_pre x (fast-slow)_post  0.482   (shuffled 0.514)
+      corr(A,B) +0.303   <- read against the trace's +0.945 above.
+      A scalar reward multiplying a mostly-shared pattern acts on
+      what is shared; a rule whose pattern is less shared does not
+      have that problem. This is the number that prices the build.
+    vision deviation alone   0.500   (raw rate, uncentred: 0.762)
+    vocal  deviation alone   0.580
+      ^ which END carries it. If the raw rate matches the centred
+        one, per-neuron centring is buying nothing and `covar`'s
+        refutation stands as written.
+    central->vocal        0.604   (shuffled 0.492)
+    arcuate, full         0.830
+    arcuate, size-matched 0.812   <- the control that matters
+    what reward multiplies 0.604   (the DNA v16 credit: equals the
+                                 row above when the baseline is off)
+
+  the postsynaptic common mode (e_ij ~ r_i * r_j * K):
+    variance explained by the per-target factor alone  0.099
+    which object, after dividing that factor out       0.472
+
+  how much of the trace is the same either way:
+    corr(mean e | A, mean e | B)  central->vocal   +0.935
+    corr(mean e | A, mean e | B)  arcuate, matched +0.816
+
+  inside one creature: which central cells feed the conditional part?
+    central neurons with |d'| > 0.5   18.7%  (mean |d'| 0.301)
+    trace from the top-decile cells   0.566
+    trace from the bottom decile      0.516   (same synapse count)
+
+    A correlation near 1 means the trace is the same whichever object
+    the creature is looking at, and R-STDP can then only scale the tract.
+    The size-matched arcuate is the honest comparison: it has the same
+    number of features, so a difference between the two rows is about
+    the signal and not about the width of the classifier.

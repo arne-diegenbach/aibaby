@@ -18141,3 +18141,109 @@ one instrument's pass carry another.
 **NO BRANCH HERE SHIPS v75 ON THE BATTERY'S STRENGTH.** The best available outcome is
 B, which only declines to refuse it.
 
+
+## §80 STAGE 6 — THE VERDICT: BRANCH A FIRED. DNA v75 IS REVERTED (2026-11-19)
+
+**8 OF 8 INSTRUMENTS THAT FAILED ON v75 PASS ON v74.** Same binary, same tick counts,
+a genome whose every VALUE is identical to the shipped one except the two lines v75
+moved (`diff` over comment-stripped files shows no value difference). Branch A was
+registered in stage 6's predecessor before this control ran, and it fired.
+
+    instrument   v74 control   v75 in the battery
+    restate      rc=0 PASS     FAIL
+    eligprobe    rc=0 PASS     FAIL (arcuate control 0.668 < 0.700)
+    partprobe    rc=0 PASS     FAIL (refused)
+    condprobe    rc=0 PASS     FAIL (both controls < 0.700)
+    g3probe      rc=0 PASS     FAIL (echo 0.575 < 0.700)
+    pairprobe    rc=0 PASS     FAIL (echo 0.550 < 0.700)
+    imitate      rc=0 PASS     FAIL
+    quietecho    rc=0 PASS     FAIL (echo 0.728 < 0.750)
+
+### THE SINGLE NUMBER THAT DECIDES IT
+
+`quietecho` declares its own primary in its own header: **`artic` drops voicing and
+loudness, SO IT IS THE PRIMARY.** On 36 creatures per arm, paired:
+
+    arm        artic v74        artic v75        shuffled
+    shipped    0.790 +- 0.008   0.519 +- 0.007   ~0.50
+    deaf       0.796            0.525            ~0.50
+    deaf+.95   0.796            0.525            ~0.50
+    loud       0.714            0.526            ~0.50
+
+**v75 DRIVES THE ARTICULATOR ECHO TO CHANCE IN EVERY ARM.** Not degraded: chance. The
+`echo` column (imitate's eleven features, whose feature 10 is the voiced fraction) fell
+0.865 -> 0.728 alongside it, and `eligprobe`'s size-matched arcuate trace -- the row
+that instrument calls "the control that matters" -- fell 0.812 -> 0.668.
+
+THE WORD STILL REACHES THE EAR. `aud WHILE` reads 353.2 on v74 and 351.8 on v75, and
+`its EAR` 0.627 -> 0.554. Arrival is intact; what v75 destroyed is the READOUT AT THE
+LARYNX. That is the mechanism stated plainly: depression on auditory->vocal is what
+delivers the M6 conjunction AND what delivers the echo, and `delivered(B) = weight x
+resources_remaining(A)` cannot starve one without starving the other.
+
+**THE PRICE, IN ONE LINE: 0.0009 OF M6 TRANSFER MARGIN FOR 0.271 OF THE ARTICULATOR
+ECHO.** §80 stage 3 cleared the 0.650 bar at 0.6509. That is what the dose bought.
+
+### TWO OF MY OWN CLASSIFICATIONS ARE WITHDRAWN
+
+**`restate` IS NOT A FORCED PIN MOVE.** On v74 with this binary it prints `restate
+PASS — every pinned number still describes this creature`. Its pins were valid TODAY;
+v75 broke them. Stage 5 filed it beside `mechverify` and `hush` and that was wrong.
+The genuinely forced class is `determinism`, `mechverify` and `hush` -- and
+`determinism` and the pinned hash PASSED anyway, so the forced class that actually
+fired is `mechverify` and `hush`, two instruments, not four.
+
+**`partprobe` DID NOT MERELY SCORE LOWER.** It ran 1972.1 s to completion on v74 and
+REFUSED AT 133.3 s on v75 -- a fifteenfold cut in the work it could do. A refusal that
+cheap is itself a reading: there was not enough creature left for the probe to proceed.
+
+### WHAT STANDS, AND WHAT IS WITHDRAWN
+
+**M6's TRANSFER TO THE SHIPPED CREATURE IS WITHDRAWN.** Stage 3's transfer primary was
+the arm named `n80 shipped` -- an UNDOSED arm on the v75 genome. With v75 reverted that
+arm describes no creature this project ships. **M6 returns to the §78 scoped form: a
+measurement on a DOSED ARM, a session-blob patch, never a shipped property.** The three
+§78 deviations stand and a FOURTH joins them: **THE DOSE IS NOT SHIPPABLE.** Anyone
+quoting 0.6509 against 0.650 must now also quote 0.519 against 0.790.
+
+**THREE OF THE FOURTEEN ARE UNCONTROLLED AND ARE LABELLED SO HERE.** `repdrift`
+(3205.5 s), `interleave` (5422.6 s) and `maskretain` (7377.4 s) are `kRead` instruments
+whose printed verdicts read as content (`REFUTED -- no slope in this range`, `NO ARM
+RESCUES IT at 2 SE`, a structural claim plus the test that would settle it). Controlling
+them costs 4.4 h and CANNOT CHANGE THE SHIP DECISION, which is already made against v75
+on eight instruments. They stay OPEN and unattributed; a post-revert long tier would
+settle them.
+
+### THE REVERT, AS MADE
+
+`dna/default.toml`: both auditory->vocal blocks back to `stp_use = 0.0` and
+`stp_recover_ms = 0.0`, with a comment at each naming the dose, the date, and the
+articulator-echo collapse, so the next reader does not re-ship it. Values are identical
+to v74; only comments were added. `mechverify`'s 18 pins are therefore NOT moved and
+must NOT be -- they were never stale, and the shipped genome is back on the genome they
+were pinned to. Being confirmed now by re-running `verify`, `mechverify`, `restate`,
+`condprobe` and `quietecho` on the reverted shipped genome.
+
+### THE OPEN ITEMS THIS LEAVES
+
+1. `absbar` is registered `Expect::kRead` and returns FALSE on the structural "no
+   kContext module" refusal, while its four siblings `f3name`, `f3grid`, `f3comp` and
+   `f3seq` are also `kRead` and return TRUE on the same refusal. SAME REFUSAL, TWO
+   REPORTINGS. Fix the registration, not the creature.
+2. OPEN ITEM 11 IS NOT TEACH-TIER-ONLY. It bites in the long tier through `absbar`.
+   That is a correction to the item as written on 2026-10-30.
+3. THE TEACH TIER IS STILL UNSPENT: 2.4-10 days, never once run to completion in this
+   repo, and unpassable as §80 registered it. The `&&` short-circuit spared it.
+4. The long tier had not been run since 2026-10-26 while the suite grew from 84 timed
+   specs to 117. **A GATE THAT IS ONLY READ ONCE A MONTH CANNOT PRICE A GENOME EDIT.**
+   v75 shipped on 2026-11-16 and its damage was invisible to the fast tier, which was
+   24/24 green on it.
+
+### WHAT THIS GIVES §81 FOR FREE
+
+§81's facilitation lead doses THE SAME TRACT. §80 has now measured what that tract
+carries: **the articulator echo, and it can be taken to chance.** So §81, when it is
+registered, MUST CARRY `quietecho`'s `artic` COLUMN AS A GUARD, not as a secondary --
+a facilitation dose that lifts the spike oracle while flattening the echo is the same
+bad trade §80 just made, and the fast tier WILL NOT CATCH IT. The §80 blocker on §81
+("do not register until §80 lands") is now cleared.

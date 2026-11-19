@@ -1,0 +1,154 @@
+experiment: partprobe
+  instrument        partprobe   trial seed 000000000135bdde   214 trials per creature
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          `ctxself` refused DNA v52 at p = 0.540 where a
+                    SUPERVISED readout of the same population reaches
+                    0.740. Is the loss the fixed CUT -- in which case a
+                    learned partition recovers it -- or something else?
+  the bar           BUILD only if an unsupervised partition reaches
+                    p >= 0.65. The effect scales as (2p - 1) and the
+                    oracle index buys 65 Hz, so 0.65 keeps ~30% (~20 Hz,
+                    detectable at n=9 paired). Below it the mechanism is
+                    too small to be a route to naming however significant.
+  read-only         no learning, no genome field, nothing shipped.
+
+  seed   features           supervised batch km  online    onl+consc   AS KERNEL fixed
+  0      articulator groups 0.822     0.822     0.638     0.690       0.860     0.710
+  0      off-axis neurons   0.505     0.495     0.495     0.509       0.477     0.430
+  0      EAR, host window   1.000     1.000     0.503     1.000       1.000     0.495
+  0      EAR, self window   1.000     1.000     0.621     1.000       0.981     0.495
+  0      EAR ema @ reward   1.000     1.000     0.596     1.000       1.000     0.514
+  1      articulator groups 0.598     0.505     0.605     0.619       0.561     0.757
+  1      off-axis neurons   0.579     0.598     0.509     0.577       0.636     0.495
+  1      EAR, host window   1.000     1.000     0.690     1.000       1.000     0.449
+  1      EAR, self window   1.000     1.000     0.828     1.000       1.000     0.458
+  1      EAR ema @ reward   1.000     1.000     0.518     1.000       1.000     0.449
+  2      articulator groups 0.841     0.551     0.512     0.731       0.570     0.645
+  2      off-axis neurons   0.589     0.421     0.447     0.540       0.551     0.533
+  2      EAR, host window   1.000     1.000     0.552     1.000       1.000     0.449
+  2      EAR, self window   1.000     1.000     0.655     0.966       0.991     0.439
+  2      EAR ema @ reward   1.000     1.000     0.449     1.000       1.000     0.439
+  3      articulator groups 0.607     0.495     0.523     0.669       0.692     0.551
+  3      off-axis neurons   0.523     0.411     0.436     0.507       0.364     0.495
+  3      EAR, host window   1.000     1.000     0.565     1.000       1.000     0.411
+  3      EAR, self window   1.000     1.000     0.819     1.000       1.000     0.421
+  3      EAR ema @ reward   1.000     1.000     0.565     1.000       1.000     0.411
+  4      articulator groups 0.542     0.467     0.477     0.515       0.495     0.495
+  4      off-axis neurons   0.589     0.486     0.502     0.544       0.533     0.533
+  4      EAR, host window   1.000     1.000     0.575     1.000       1.000     0.477
+  4      EAR, self window   1.000     1.000     0.738     1.000       0.963     0.477
+  4      EAR ema @ reward   1.000     1.000     0.509     1.000       1.000     0.505
+  5      articulator groups 0.832     0.430     0.554     0.638       0.701     0.458
+  5      off-axis neurons   0.617     0.617     0.519     0.620       0.626     0.439
+  5      EAR, host window   1.000     1.000     0.738     1.000       1.000     0.477
+  5      EAR, self window   1.000     1.000     0.672     1.000       0.972     0.486
+  5      EAR ema @ reward   1.000     1.000     0.509     1.000       1.000     0.495
+  6      articulator groups 0.832     0.897     0.689     0.776       0.813     0.682
+  6      off-axis neurons   0.617     0.579     0.492     0.650       0.645     0.411
+  6      EAR, host window   1.000     1.000     0.501     1.000       1.000     0.467
+  6      EAR, self window   1.000     1.000     0.600     0.956       0.925     0.467
+  6      EAR ema @ reward   1.000     1.000     0.467     1.000       1.000     0.449
+  7      articulator groups 0.813     0.664     0.661     0.689       0.738     0.673
+  7      off-axis neurons   0.533     0.514     0.507     0.560       0.579     0.505
+  7      EAR, host window   1.000     1.000     0.518     1.000       1.000     0.486
+  7      EAR, self window   1.000     1.000     0.486     1.000       0.991     0.477
+  7      EAR ema @ reward   1.000     1.000     0.582     1.000       1.000     0.486
+  8      articulator groups 0.776     0.710     0.693     0.698       0.766     0.495
+  8      off-axis neurons   0.495     0.486     0.489     0.494       0.486     0.430
+  8      EAR, host window   1.000     1.000     0.616     1.000       1.000     0.486
+  8      EAR, self window   0.991     0.991     0.782     0.991       1.000     0.542
+  8      EAR ema @ reward   1.000     1.000     0.486     1.000       1.000     0.505
+
+  features           supervised     batch k-means  online         onl+conscience AS KERNEL RUNS fixed cut
+  articulator groups 0.740 +/-0.040 0.616 +/-0.055 0.594 +/-0.027 0.670 +/-0.025 0.688 +/-0.041 0.607 +/-0.036
+  off-axis neurons   0.561 +/-0.016 0.512 +/-0.024 0.489 +/-0.009 0.556 +/-0.018 0.544 +/-0.030 0.475 +/-0.016
+  EAR, host window   1.000 +/-0.000 1.000 +/-0.000 0.584 +/-0.028 1.000 +/-0.000 1.000 +/-0.000 0.466 +/-0.009
+  EAR, self window   0.999 +/-0.001 0.999 +/-0.001 0.689 +/-0.038 0.990 +/-0.006 0.980 +/-0.008 0.474 +/-0.012
+  EAR ema @ reward   1.000 +/-0.000 1.000 +/-0.000 0.520 +/-0.017 1.000 +/-0.000 1.000 +/-0.000 0.472 +/-0.012
+
+  ONLINE+CONSCIENCE over 16 random inits per creature:
+    share of inits that essentially solve it (>=0.90)
+      groups 0.00, neurons 0.00, EAR 1.00 +/- 0.00
+    busiest cluster, mean over inits (1.000 is a dead unit)
+      groups 0.621, neurons 0.656, ear 0.500
+
+  shuffled control (k-means, z): groups 0.474, neurons 0.461,
+                                ear-host 0.493, ear-self 0.492
+  the creature called 1522 of 2800 ticks a word (host window: 900)
+  BOUNDARY-FREE: ear rate EMA sampled at reward time, no gate at all
+    supervised 1.000   conscience 1.000   AS KERNEL 1.000   fixed 0.472
+    (`ctxsrc` read the ear at 0.541 in this window from SPIKE COUNTS in
+     the bin. An EMA carries the preceding second, so it still holds a
+     word that ended 400 ticks ago -- a different measurement, not a
+     better decoder.)
+  gate episodes per trial       4.27   (the kernel latches the LAST)
+  of ALL gated ticks, word      0.55
+  of the LAST episode, word     0.20   <- what the creature latches on
+
+  what the CUT costs       0.740 supervised -> 0.670 unsupervised, same
+                           features (articulator groups) -- and the BEST learned boundary
+                           buys only +0.062 over the fixed one
+  what the SPACE costs     0.740 groups -> 0.561 neurons, both supervised.
+                           THE LARGEST SINGLE TERM, and it is the space
+                           v52 actually reads
+  fixed cut on neurons     0.475 here vs p = 0.540 in `ctxself` -- NOT a
+                           decomposition: different genome (no context
+                           module), read-only not taught, 600k not 3.4M.
+                           Side by side only
+  best unsupervised        0.670 +/- 0.025  (articulator groups, online+conscience)
+  the bar                  0.65
+  EAR, online+conscience   1.000 +/- 0.000  <-- what the creature could run
+  the ear, batch k-means   1.000  (8 restarts; the rule class's ceiling)
+  the ear, supervised      1.000
+  the ear, v52's OWN rule  0.466 -- a fixed cut of the auditory code is at
+                           CHANCE, so nothing here is reachable by moving
+                           v52's index to the ear. The partition must be
+                           learned, which is the opposite of what the
+                           motor-state rows found.
+
+  CAN IT FIND FOUR? (same rule, same conscience, ear EMA at reward)
+    two words, k=2   1.000 +/- 0.000   (chance 0.500)
+    FOUR words, k=4  0.895 +/- 0.028   (chance 0.250)
+    shuffled control 0.271 +/- 0.008
+    -> IT FINDS FOUR. The partition is not a two-word trick, so
+       the four-word protocol is worth writing.
+
+  DRIFT ROBUSTNESS, on the creature's own window, ear features
+    learning rate            0.0 SD   0.5 SD   1.0 SD   2.0 SD
+    frozen (1/wins)           0.980    0.979    0.978    0.979
+    n_eff cap (refuted)       0.997    0.997    0.997    0.997
+    signal fraction           0.998    0.998    0.998    0.998
+    (drift in units of the data's own within-dimension SD, ramped
+     across the session in a random direction that favours no rule)
+
+  ISOLATING THE WINDOW
+    ear, HOST window, conscience   1.000 +/- 0.000
+    ear, SELF window, conscience   0.990 +/- 0.006
+    what the window costs          -0.010
+    v53 in the creature (ctxself)  0.643
+    ...and AS THE KERNEL RUNS IT, on the creature's own window:
+      raw features, zero init      0.980 +/- 0.008
+      what those two cost          -0.010 against the column above
+    -> THE WINDOW IS NOT THE GAP: the creature's own gate scores
+       close to the host's. What separates this from v53's 0.643 is
+       the taught setting or the kernel, not the window.
+
+  BUILD THE LATCHED INDEX -- the word is separable in the auditory
+  code WITHOUT the labels and WITHOUT restarts, at 1.000 on a single
+  pass (1.000 supervised), where the best unsupervised partition of the
+  MOTOR state reaches 0.670. That keeps 100% of the conditional effect
+  against v52's 8%, or ~65 Hz.
+
+  The mechanism is most of the way built: `active_ctx_` is written only
+  when the source is active and HOLDS otherwise, so an index formed
+  while the word plays already survives into the reward window. What
+  has to change is `ctx_present_`, which gates the cash-in as well as
+  the index, so a silent ear at reward time currently sends the update
+  to the shared bias instead of the latched context's table.
+
+  Note what this does NOT show: that an unsupervised partition of the
+  ear TRACKS THE WORD rather than something correlated with it in this
+  protocol. Two vowels differing in loudness or onset would split this
+  cleanly too. The build's own control has to be `ctxself`'s
+  matched-marginal arm, on the paired test, on a fresh seed family.
