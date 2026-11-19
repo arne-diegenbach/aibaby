@@ -18342,3 +18342,102 @@ evidence — `partprobe` ran 1972.1 s to completion on v74 and refused at 133.3 
 on v75 — so the times are kept comparable deliberately. **THE LEGS ARE CHAINED
 WITH `;` AND NOT `&&`**: tonight's `&&` short-circuited on exit 1 and silently
 ate the teach tier, and every leg here is EXPECTED to be able to exit 1.
+
+## §80 STAGE 7 RESULT — ONE OF THE THREE WAS A v75 CASUALTY, TWO WERE NEVER ABOUT THE DOSE (2026-11-19)
+
+Run sequentially on the shipped genome as reverted, shortest first, as registered.
+Logs `results/n80-revert-{repdrift,interleave,maskretain}.log`.
+
+    instrument   v75 long tier        reverted shipped        wall vs v75   branch
+    repdrift     FAIL on G0           PASS, all gates          3113 s
+                 TRANSFER             passed                   / 3205.5 = 0.97x   1 fired
+    interleave   FAIL, `passed < 0`   FAIL, SAME verdict       6054 s
+                                                               / 5422.6 = 1.12x   2 fired
+    maskretain   FAIL, cliff branch   FAIL, SAME branch        8099 s
+                                                               / 7377.4 = 1.10x   as written
+
+Every wall is 0.97-1.12x of its v75 leg, so no leg took a refusal shortcut: all
+three did the work. That check exists because §80 already learned a cheap run
+can mean a broken creature (`partprobe`, 1972.1 s completing against 133.3 s
+refusing).
+
+**`repdrift` DID NOT MERELY PASS — IT REPRODUCES §59c NUMBER FOR NUMBER.**
+
+    quantity                 §59c standalone 2026-11-11   reverted shipped 2026-11-19
+    G0 transfer              -0.0947 +- 0.0306 (n36) match  IDENTICAL
+    registered primary       +0.000138 +- 0.000200 per rep  IDENTICAL
+                             n 190 scored of 192, 0.69 SE   IDENTICAL
+    SECONDARY 4 (not a       +0.000379 +- 0.000129, n 226    IDENTICAL
+    result, printed only)    2.94 SE
+
+`results/n59c-repdrift-900k.log` was written FIVE DAYS BEFORE the dose shipped.
+**THIS IS A SECOND BIT-IDENTITY PROOF OF THE REVERT, INDEPENDENT OF
+`determinism`'s HASH, AND A STRONGER ONE**: an entire instrument reproduces
+against a log from before DNA v75 existed, not one 64-bit summary. It also
+dates the breakage exactly — working 2026-11-11, broken by the dose 2026-11-16,
+restored 2026-11-19 — which is the one thing this stage said it could not do for
+the OTHER two, and it can do it here only because a pre-dose standalone log
+exists.
+
+So the v75 casualty list goes from EIGHT to NINE, and `repdrift` joins `restate`
+as the second instrument whose ARCHIVED numbers stopped reproducing under the
+dose. (The registration's phrase "three members, not two" was loose counting;
+the class is `restate` and `repdrift`, and the casualty count is nine.)
+
+**A CORRECTION TO STAGE 5's QUOTED FIGURE.** Stage 5 quoted repdrift at
+`-0.77 SE`. That is SECONDARY 4, which the instrument itself declares CANNOT be
+the result because it contains the discovery sample. The registered primary was
+-0.72 SE on v75 and +0.69 SE here, and its verdict — REFUTED, no slope in
+r 96..287 — is the SAME on both genomes. **THE DOSE BROKE THE TRANSFER GATE, NOT
+THE SCIENCE**: on v75 G0 declared everything below it unreadable, so the verdict
+existed but could not be read; here it can.
+
+**`interleave`: THE REFUSAL IS THE CREATURE'S OWN.** On the reverted genome the
+`credit` arm gains +0.106 +- 0.064 retention (+1.6 SE) and +0.0189 +- 0.0104
+err-after (+1.8 SE) — both SHORT of the registered 2 SE on both measures, so
+`passed < 0` and the same `NO ARM RESCUES IT` prints. Reference quiet retention
+1.17 here against 1.20 on v75. Pre-existing, not a dose casualty.
+
+**`maskretain`: EXACTLY AS REGISTERED, AND NOTHING REFUTED.** Same
+`cliff_before_half` branch, same `CONFINEMENT IS REFUSED` text. Cost spread 6%
+here against 14%; the lesson lost reads 71% / 67% / 67% against 60% / 64% / 69%.
+The structural claim does not involve the auditory->vocal tract and did not move.
+
+**THE REGISTRATION DEFECT NOW HAS THREE INSTANCES, NOT ONE.** `absbar`,
+`interleave` and `maskretain` are all `Expect::kRead` instruments that return
+FALSE on a MEASURED outcome, so `verify` reports a settled result as an
+apparatus failure — and the battery's own summary says the opposite in plain
+text: "it returns false only on a load failure, a missing module, too few usable
+creatures, or its own self-check." **THE LONG TIER THEREFORE CANNOT BE GREEN ON
+ANY CREATURE while these three are registered this way**: at least three of the
+`14 not as expected` rows are not about the creature at all. The fix is to the
+registration. It is NOT made here, because changing an `Expect` flag during a
+revert's verification would mix a suite edit into the evidence.
+
+### A DEFECT IN HOW THE ARCHIVE ITSELF MUST BE READ — IT NEARLY COST A WRONG READING TONIGHT
+
+`parallel_note` writes progress to **stderr**, unbuffered and flushed
+(`host/src/experiments_common.h:78-86`). Every header, table and
+`[name took N s]` line goes to **stdout** via `printf`
+(`host/src/experiments.cpp:1954,1967`), which is BLOCK-buffered when redirected
+to a file. `results/n80-verify-long.log` merged the two with `2>&1`, so the two
+streams are interleaved by FLUSH ORDER, not by authorship:
+
+**A PROGRESS LINE'S POSITION IN THAT FILE DOES NOT SAY WHICH EXPERIMENT PRINTED
+IT.** I read `[180/180] seed 27 w75q before ... taught ...`, sitting between
+`interleave`'s header and its verdict, as interleave's progress. They are
+`compartprobe`'s — `kCPArms` is 5 arms over 36 seeds = 180 jobs
+(`experiments_milestones.cpp:9944`) — and its own header is 270 lines FURTHER
+DOWN. It was caught only because the arm names were not arms `interleave` has,
+and it was settled by running the instrument alone.
+
+**STDOUT-TO-STDOUT ATTRIBUTION IS SOUND**, because headers and tables share one
+ordered stream: a table between two headers belongs to that experiment.
+**SO EVERY §80 TABLE READING STANDS** — the `artic` collapse, the eight-row
+control, all of it. What is unsafe is the `[i/n]` lines, and any future slice of
+a battery log by line number must ignore them or re-run the instrument alone.
+
+**WHAT STAGE 7 DOES NOT CHANGE.** Not the revert, not M6's pricing, not DNA
+v75's cost, which was measured on `quietecho`'s own primary. And the dating
+limit registered in advance held for the two pre-existing failures: this stage
+does not get to say since when they have refused.

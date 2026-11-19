@@ -1,0 +1,3 @@
+repdrift rc=0 wall=3113s
+interleave rc=1 wall=6054s
+maskretain rc=1 wall=8099s

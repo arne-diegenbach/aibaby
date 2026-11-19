@@ -1,0 +1,223 @@
+  [4/144] seed 0 w25      err after 1.0727  taught 0.9727
+  [8/144] seed 1 w25      err after 1.0640  taught 0.9466
+  [1/144] seed 0 w100     err after 0.9288  taught 0.7762
+  [12/144] seed 2 w25      err after 1.0951  taught 0.9841
+  [11/144] seed 2 w50      err after 1.0487  taught 1.0018
+  [7/144] seed 1 w50      err after 1.0927  taught 0.9868
+  [3/144] seed 0 w50      err after 1.0446  taught 0.9847
+  [5/144] seed 1 w100     err after 0.9812  taught 0.7730
+  [6/144] seed 1 w75      err after 1.1023  taught 0.9980
+  [9/144] seed 2 w100     err after 0.9899  taught 0.8962
+  [14/144] seed 3 w75      err after 1.0214  taught 0.9583
+  [10/144] seed 2 w75      err after 1.0685  taught 0.9964
+  [13/144] seed 3 w100     err after 0.9689  taught 0.8461
+  [2/144] seed 0 w75      err after 1.0931  taught 0.9963
+  [15/144] seed 3 w50      err after 1.0833  taught 1.0118
+  [21/144] seed 5 w100     err after 0.9815  taught 0.8155
+  [18/144] seed 4 w75      err after 1.0570  taught 0.9881
+  [19/144] seed 4 w50      err after 1.0597  taught 0.9855
+  [17/144] seed 4 w100     err after 0.9673  taught 0.8275
+  [27/144] seed 6 w50      err after 1.0248  taught 0.9224
+  [16/144] seed 3 w25      err after 1.0607  taught 0.9254
+  [23/144] seed 5 w50      err after 1.0260  taught 0.9353
+  [25/144] seed 6 w100     err after 0.8435  taught 0.7816
+  [20/144] seed 4 w25      err after 1.0142  taught 0.9319
+  [22/144] seed 5 w75      err after 1.0042  taught 0.8954
+  [26/144] seed 6 w75      err after 1.0143  taught 0.9440
+  [24/144] seed 5 w25      err after 1.0844  taught 1.0077
+  [28/144] seed 6 w25      err after 1.0410  taught 0.9577
+  [31/144] seed 7 w50      err after 1.0128  taught 0.9138
+  [29/144] seed 7 w100     err after 0.8957  taught 0.7805
+  [30/144] seed 7 w75      err after 0.9966  taught 0.8807
+  [36/144] seed 8 w25      err after 1.0667  taught 0.9886
+  [34/144] seed 8 w75      err after 1.0869  taught 0.9606
+  [35/144] seed 8 w50      err after 1.0209  taught 0.9586
+  [32/144] seed 7 w25      err after 0.8864  taught 0.8645
+  [33/144] seed 8 w100     err after 1.0466  taught 0.9570
+  [37/144] seed 9 w100     err after 1.0096  taught 0.7979
+  [39/144] seed 9 w50      err after 0.9365  taught 0.9123
+  [42/144] seed 10 w75      err after 1.0442  taught 0.9746
+  [40/144] seed 9 w25      err after 0.9719  taught 0.9203
+  [38/144] seed 9 w75      err after 1.0308  taught 0.9692
+  [41/144] seed 10 w100     err after 0.9836  taught 0.8157
+  [44/144] seed 10 w25      err after 1.1369  taught 1.0051
+  [45/144] seed 11 w100     err after 1.0334  taught 0.9124
+  [43/144] seed 10 w50      err after 1.0338  taught 0.9442
+  [46/144] seed 11 w75      err after 1.0503  taught 0.9391
+  [49/144] seed 12 w100     err after 1.0049  taught 0.9231
+  [50/144] seed 12 w75      err after 1.0036  taught 0.9356
+  [48/144] seed 11 w25      err after 1.0729  taught 0.9611
+  [47/144] seed 11 w50      err after 1.0373  taught 0.9855
+  [51/144] seed 12 w50      err after 1.0880  taught 0.9848
+  [53/144] seed 13 w100     err after 0.9494  taught 0.8115
+  [52/144] seed 12 w25      err after 1.0701  taught 0.9519
+  [55/144] seed 13 w50      err after 1.0656  taught 0.9500
+  [54/144] seed 13 w75      err after 1.0381  taught 0.9183
+  [56/144] seed 13 w25      err after 1.0382  taught 0.9618
+  [57/144] seed 14 w100     err after 0.9318  taught 0.8057
+  [61/144] seed 15 w100     err after 1.0766  taught 0.9412
+  [58/144] seed 14 w75      err after 1.0678  taught 0.9788
+  [59/144] seed 14 w50      err after 1.0182  taught 0.9085
+  [62/144] seed 15 w75      err after 1.0563  taught 0.9977
+  [60/144] seed 14 w25      err after 1.0565  taught 1.0190
+  [69/144] seed 17 w100     err after 0.9191  taught 0.8314
+  [64/144] seed 15 w25      err after 0.9712  taught 0.9000
+  [63/144] seed 15 w50      err after 1.0572  taught 0.9950
+  [68/144] seed 16 w25      err after 1.0897  taught 0.8889
+  [65/144] seed 16 w100     err after 1.0710  taught 0.9053
+  [66/144] seed 16 w75      err after 1.0641  taught 0.9602
+  [67/144] seed 16 w50      err after 1.0613  taught 0.9311
+  [70/144] seed 17 w75      err after 1.0587  taught 0.9687
+  [71/144] seed 17 w50      err after 1.0549  taught 0.9969
+  [73/144] seed 18 w100     err after 1.0015  taught 0.8729
+  [72/144] seed 17 w25      err after 1.0865  taught 1.0023
+  [74/144] seed 18 w75      err after 1.0377  taught 0.9310
+  [77/144] seed 19 w100     err after 0.9992  taught 0.8616
+  [79/144] seed 19 w50      err after 1.0527  taught 0.8979
+  [75/144] seed 18 w50      err after 1.0338  taught 0.9122
+  [76/144] seed 18 w25      err after 1.0975  taught 0.9831
+  [78/144] seed 19 w75      err after 1.0644  taught 0.9899
+  [81/144] seed 20 w100     err after 0.9771  taught 0.8308
+  [83/144] seed 20 w50      err after 1.0228  taught 0.9439
+  [80/144] seed 19 w25      err after 1.0414  taught 0.9206
+  [82/144] seed 20 w75      err after 1.0362  taught 0.9670
+  [84/144] seed 20 w25      err after 1.0561  taught 0.9523
+  [85/144] seed 21 w100     err after 0.9791  taught 0.8192
+  [86/144] seed 21 w75      err after 1.0093  taught 0.9509
+  [87/144] seed 21 w50      err after 0.9938  taught 0.9763
+  [88/144] seed 21 w25      err after 1.0593  taught 0.9897
+  [89/144] seed 22 w100     err after 0.9401  taught 0.8416
+  [90/144] seed 22 w75      err after 1.0402  taught 0.9533
+  [92/144] seed 22 w25      err after 1.0351  taught 0.9265
+  [93/144] seed 23 w100     err after 0.8458  taught 0.7669
+  [94/144] seed 23 w75      err after 1.0507  taught 0.9718
+  [91/144] seed 22 w50      err after 1.0230  taught 0.9482
+  [96/144] seed 23 w25      err after 1.0642  taught 0.9732
+  [95/144] seed 23 w50      err after 0.9770  taught 0.8909
+  [98/144] seed 24 w75      err after 0.9888  taught 0.9556
+  [97/144] seed 24 w100     err after 1.0299  taught 0.9097
+  [99/144] seed 24 w50      err after 1.0792  taught 0.9820
+  [101/144] seed 25 w100     err after 0.9298  taught 0.8151
+  [100/144] seed 24 w25      err after 1.0752  taught 0.9907
+  [102/144] seed 25 w75      err after 1.0689  taught 0.9523
+  [104/144] seed 25 w25      err after 1.0711  taught 0.9834
+  [103/144] seed 25 w50      err after 1.0133  taught 0.9302
+  [105/144] seed 26 w100     err after 0.9614  taught 0.8514
+  [106/144] seed 26 w75      err after 1.0540  taught 0.9245
+  [110/144] seed 27 w75      err after 0.9193  taught 0.9344
+  [107/144] seed 26 w50      err after 1.0179  taught 0.9473
+  [108/144] seed 26 w25      err after 0.9670  taught 0.9143
+  [109/144] seed 27 w100     err after 0.9976  taught 0.8192
+  [112/144] seed 27 w25      err after 0.9892  taught 0.9684
+  [111/144] seed 27 w50      err after 1.0283  taught 0.9358
+  [113/144] seed 28 w100     err after 0.8958  taught 0.8090
+  [115/144] seed 28 w50      err after 1.0900  taught 0.9785
+  [114/144] seed 28 w75      err after 1.0162  taught 0.9682
+  [116/144] seed 28 w25      err after 1.0892  taught 0.9855
+  [118/144] seed 29 w75      err after 1.0426  taught 0.9774
+  [121/144] seed 30 w100     err after 1.0053  taught 0.9392
+  [117/144] seed 29 w100     err after 0.9664  taught 0.7803
+  [119/144] seed 29 w50      err after 1.0244  taught 0.8978
+  [120/144] seed 29 w25      err after 1.0334  taught 0.9688
+  [122/144] seed 30 w75      err after 1.0610  taught 0.9110
+  [123/144] seed 30 w50      err after 1.0350  taught 0.9104
+  [124/144] seed 30 w25      err after 1.0421  taught 0.9109
+  [125/144] seed 31 w100     err after 0.9461  taught 0.8431
+  [126/144] seed 31 w75      err after 1.0573  taught 0.9813
+  [129/144] seed 32 w100     err after 0.9697  taught 0.8430
+  [127/144] seed 31 w50      err after 1.0871  taught 1.0141
+  [128/144] seed 31 w25      err after 0.9968  taught 0.9469
+  [130/144] seed 32 w75      err after 1.0822  taught 0.9725
+  [131/144] seed 32 w50      err after 1.0913  taught 0.9690
+  [135/144] seed 33 w50      err after 1.0523  taught 0.9633
+  [133/144] seed 33 w100     err after 0.8582  taught 0.7820
+  [134/144] seed 33 w75      err after 1.0452  taught 0.9554
+  [132/144] seed 32 w25      err after 1.0110  taught 0.9265
+  [136/144] seed 33 w25      err after 0.9718  taught 0.8753
+  [137/144] seed 34 w100     err after 0.9701  taught 0.8362
+  [138/144] seed 34 w75      err after 1.1004  taught 0.9897
+  [141/144] seed 35 w100     err after 0.9762  taught 0.8355
+  [140/144] seed 34 w25      err after 1.0534  taught 0.9419
+  [143/144] seed 35 w50      err after 1.0072  taught 0.9729
+  [139/144] seed 34 w50      err after 0.9460  taught 0.8999
+  [142/144] seed 35 w75      err after 1.0290  taught 0.9916
+  [144/144] seed 35 w25      err after 1.0669  taught 0.9663
+experiment: maskretain
+  instrument        maskretain   trial seed 0000000001351cd4   2000 trials
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  question          the conflict is a PURE OVERWRITE, so the damage is in the
+                    WRITE and separating it is the remaining route. Before
+                    asking what a mask must KNOW, ask what it COSTS.
+  why this changed  the previous ladder could not answer its own question: a
+                    half-group mask left every masked arm at the learning
+                    floor, err taught 1.0635 against `off`'s 0.8615. So the
+                    mask, not the index, was the binding constraint.
+  the arithmetic    dF1 is a rate-weighted centroid over the F1 group, so
+                    confining a lesson to a fraction of the group caps the
+                    reachable |dF1|: 0.75 leaves 62%, 0.50 leaves 50%, 0.25
+                    leaves 38% of the range. The lesson fits or it does not.
+  the gate          err TAUGHT vs the unmasked arm, paired on seed, read as a
+                    SHARE of what the unmasked creature learned. A cost near
+                    100% means the lesson is gone, not merely reduced.
+  the refusal       if 0.75 of the group already costs more than half the
+                    lesson, no width both leaves room for a second lesson and
+                    lets the first one learn, and write separation is refused
+                    on this readout for a structural reason.
+
+
+  arm        err taught     err after      retention     store kept
+  w100       0.8404         0.9676 +/- 0.0092  0.20         0.23
+  w75        0.9594         1.0434 +/- 0.0059  -0.38        -0.72
+  w50        0.9522         1.0373 +/- 0.0062  -1.68        -0.41
+  w25        0.9532         1.0444 +/- 0.0081  -0.69        -0.91
+
+  ARM LIVENESS vs `w100` (seeds where the arm differs at all)
+    w75                36/36
+    w50                36/36
+    w25                36/36
+
+  WHAT THE MASK COSTS THE LESSON (err taught vs `w100`, paired on seed).
+  The unmasked creature learns 0.1676 of error (1.0080 -> 0.8404); a cost near
+  that figure means the lesson is gone rather than merely reduced.
+  arm      reachable  cost in err taught     share of the lesson lost
+  w75      62        % +0.1190 +/- 0.0102       71%
+  w50      50        % +0.1118 +/- 0.0092       67%
+  w25      38        % +0.1128 +/- 0.0112       67%
+
+  SHAPE CHECKS
+    cost spread across the widths  6%   (flat means the damage is not
+                                          about width)
+    worst arm's err taught         0.9594  vs err_before 1.0080
+
+  CONFINEMENT IS REFUSED, BUT NOT FOR THE REASON THIS GATE WAS BUILT ON.
+
+  THE EMPIRICAL PART STANDS: every width costs most of the lesson. Blocking
+  even a QUARTER of the F1 group (w75) costs 59% of what the unmasked
+  creature learned, so there is no width that both leaves room for a second
+  lesson and lets the first one learn. Write separation by restricting
+  plasticity is refused on this protocol.
+
+  THE RANGE-CAP EXPLANATION IS REFUTED BY THIS RUN'S OWN SHAPE. If the cost
+  were the centroid's range being partitioned, loss would track 1 - reachable
+  -- 38% / 50% / 62% -- and the curve would be steep. Observed is 59% /
+  58% / 68%: higher everywhere and far flatter. A quarter blocked costs
+  nearly as much as three quarters blocked, which no range argument predicts.
+
+  WHAT THE SHAPE DOES POINT AT. A blocked neuron is not removed from the
+  creature -- it still receives exploration noise, still fires, and is STILL
+  READ BY THE CENTROID. It simply never cashes in. So blocking does not hand
+  the lesson a smaller instrument; it leaves the same instrument with part of
+  it wired to noise, diluting the readout and adding variance. That is
+  consistent with `variance, not credit`, and it is why a quarter is nearly
+  as bad as three quarters.
+
+  THE STRUCTURAL CLAIM, stated as what this supports: a POOLED readout cannot
+  be partitioned by restricting plasticity alone, because the pool still
+  includes what you excluded from learning. Separating two lessons would
+  require the READOUT to ignore the other lesson's neurons too, which a
+  rate-weighted centroid over a fixed group cannot do.
+
+  THE TEST THAT WOULD SETTLE IT: silence the blocked neurons' exploration
+  noise as well as their cash-in. If the cost falls toward 1 - reachable, the
+  dilution account is right; if it stays flat, something else is.
