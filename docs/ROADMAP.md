@@ -18748,3 +18748,104 @@ membrane's EXCURSION distribution near threshold — the fraction of ticks withi
 one synaptic-drive SD of it, or an upper quantile of `v_` in the window, against
 the drive fluctuation rather than against `noise_amp`. That is another print on
 the same two accessors and is NOT registered here.
+
+## §81 RE-SPECIFIED PRE-FLIGHT — THE EXCURSION DISTRIBUTION, REGISTERED BEFORE THE RUN (2026-11-19)
+
+**THIS SECTION IS WRITTEN WITH THE RUN IN FLIGHT AND NOTHING OF IT READ.** The
+previous section closed by saying what a re-specified pre-flight would have to
+ask and that it was *not* registered. This registers it. The reading direction
+below is in the binary as well as in this file — `samediff` prints it above its
+own table — so neither can be quietly reinterpreted once numbers exist.
+
+**WHY THERE IS A SECOND PRE-FLIGHT AT ALL.** The first one's refusal clause
+FIRED — the mean vocal membrane sat 13.1 `noise_amp` SD below threshold — and
+the same run refuted it, because every vocal neuron was crossing that threshold
+~3.9 times a second. **A PRE-REGISTERED REFUSAL THAT FIRES ON A CREATURE
+BEHAVING NORMALLY IS NOT A FINDING, IT IS A MIS-SPECIFIED STATISTIC**, and both
+halves were wrong: the MEAN is the wrong location and `noise_amp` is the wrong
+ruler. What has to be measured is the excursion, against itself.
+
+**WHAT IS MEASURED.** Print-only, no arm, no dose, no tick added, in `kSdWBE`
+only — the 400 ms overlap window the primary is actually read on. Per
+(neuron, tick) sample, `membrane()` and `threshold()` are read after `step()`:
+
+- **`sd`** — the per-neuron SD of `v_` WITHIN the window, averaged over the
+  module. **Per neuron and within the window is the only form that answers the
+  question.** Across neurons it would be the spread of their resting offsets, a
+  between-unit quantity — [[aibaby-anchor-carries-its-own-error]] in a new
+  costume. Pooled across trials it would add the session's drift. **IT IS TOTAL
+  WITHIN-WINDOW VARIATION, TREND INCLUDED, AND IS THEREFORE NOT A NOISE SD AND
+  MUST NEVER BE QUOTED AS ONE.** A ramp across the window is travel that carries
+  a signal just as jitter does, and a mechanism that scales delivered drive
+  scales it too.
+- **`gap`, `gap/sd`** — mean threshold-minus-membrane over the same samples, and
+  that distance in units of the variation above. `gap/sd` is the honest
+  replacement for the first table's last column.
+- **`closest`, `min`** — the mean over neurons of the SMALLEST gap that neuron
+  reached, and the smallest anywhere. An extreme quantile without a histogram:
+  one sample in ~400 per neuron per trial.
+- **`<5%` / `<10%` / `<25%` / `<50%`** — the share of samples whose gap is under
+  that fraction of **the neuron's OWN LIVE threshold**. Against the live value
+  because the genome's birth `threshold` is not the operating one and IP retunes
+  it per neuron AND PER PROTOCOL — `thrpatch`'s 2.45643 against this probe's
+  0.9928 is how large that error already was once.
+- **`fired`** — the share of samples DROPPED because the neuron spiked.
+
+**EVERY COLUMN IS A LOWER BOUND, AND THE CENSORING IS THE MECHANISM ITSELF.**
+The kernel's spike condition is `v_[i] >= threshold_[i]` and its reset is
+`v_[i] = v_rest_[i]` in the same tick (`core/src/network.cpp:2637`), so a sample
+taken after `step()` can never hold a value at or above threshold. Reading a
+spiking neuron would record the window's LARGEST gap for the one sample that
+actually reached threshold, so those samples are dropped — and counted, as
+`fired`, so the removed share is visible rather than assumed small.
+
+**TWO DENOMINATORS, ON PURPOSE.** The bands divide by the SCORED samples,
+because a band is a claim about the sub-threshold distribution. `fired` divides
+by scored PLUS dropped, because a share of the drops quoted against a base that
+excludes the drops is not a share of anything
+([[aibaby-read-every-budget-for-every-claim]]). Both are named in the printed
+legend, not only here.
+
+**THE READING DIRECTION, THREE-WAY, WRITTEN NOW.**
+
+1. **KILLS THE LEAD**: `gap/sd` in the tens WITH the band columns at or near
+   zero AND `closest` itself many `sd` wide. A membrane that never visits the
+   threshold's neighbourhood cannot be carried over it by a mechanism that only
+   scales the drive it already receives.
+2. **DOES NOT KILL IT**: the bands populated and `closest` a fraction of `sd`,
+   **HOWEVER LARGE `gap/sd` IS**. A large mean distance and a reachable
+   threshold are not in contradiction — that is the whole lesson of the first
+   pre-flight, and a nonzero `fired` is standing proof of it, because `fired` IS
+   the threshold being reached.
+3. **VOID**: `(no scored session)` on every arm, which is what a tick budget
+   below one scored trial prints. Exercised at 20,000 ticks before the real run,
+   so the branch is not a deferral note ([[aibaby-deferral-note-is-untested-code]]).
+
+**NEITHER READING LICENSES A KERNEL CHANGE.** §81 remains a LEAD and is not
+pre-registered as an experiment. Nothing here moves `stp_facil_ms` off 0, and
+any dose that ever does must still carry `quietecho`'s `artic` column as a
+GUARD, per §80.
+
+**TWO DEFECTS CAUGHT IN WRITING IT, BOTH OF THE PROJECT'S OWN NAMED CLASSES.**
+First, the band headings carry literal per-cent signs and the row was a format
+string: `%5%` is a conversion, and the compiler's warning ("expects a matching
+double argument") was a `printf` passing none — the stack read as a double. Fixed
+by printing the header through the SAME field widths as the rows with the signs
+as string ARGUMENTS, which also removes nine columns of hand-counted padding.
+Second, `gap/sd` was first written `sd > 0.0 ? gb / sd : 0.0`: a membrane that
+never moved would have printed **`0.00`**, the reading that most strongly
+SUPPORTS the lead standing in for the one that most strongly kills it. That is
+[[aibaby-plausible-wrong-number]] at the optimistic end. The guards are gone
+instead of corrected — unguarded, a zero `sd` prints `inf` and a zero count
+prints `nan`, both correct, both unmistakable, and **neither a branch**, so
+there is no path here that real rows cannot exercise.
+
+**INERTNESS, AND HOW IT IS CHECKED RATHER THAN ASSERTED.** Both accessors are
+const reads of state that already exists (`network.h:702-703`); no `step()`, no
+RNG draw, no kernel write. The claim is therefore that every column archived
+since §63 comes back bit-identical, and it is tested by re-running the SAME
+200,000-tick smoke as `results/n81-preflight-smoke-200k.log` and requiring the
+first table and `voc_hash` to match it exactly, with `G-SELF` inside the probe as
+the second check. A sampling block is also added ONCE PER TICK rather than once
+per window, because a tick near B's onset belongs to four windows at that point
+— the same double-counting `voc_ticks` sits above the window loop to avoid.

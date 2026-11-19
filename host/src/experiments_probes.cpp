@@ -18838,6 +18838,17 @@ struct SdGapRow {
   bool scored = false;
 };
 
+// §81's NEAR-THRESHOLD BANDS, as fractions of the neuron's OWN LIVE
+// THRESHOLD rather than of any fixed number. IP retunes `threshold_[i]` per
+// neuron and per protocol -- the mistake §81 already made once was reading
+// the genome's birth `threshold` as the operating one, and `thrpatch`'s
+// +2.45643 against this probe's 0.9928 is how large that error was. A band
+// expressed against the live value cannot make it again, and it needs no
+// second pass over the samples the way a band in units of the measured SD
+// would.
+constexpr uint32_t kSdExcBands = 4;
+constexpr double kSdExcNear[kSdExcBands] = {0.05, 0.10, 0.25, 0.50};
+
 struct SdOut {
   SdGapRow gap[kSdGapCount];
   uint32_t attempted = 0, slept = 0;
@@ -18909,6 +18920,38 @@ struct SdOut {
   double vmem_bar_sum = 0.0;  // over scored trials, of the module mean
   uint64_t vmem_bar_n = 0;    // ...and how many trials are behind it
   double thr_bar_end = 0.0;   // mean threshold over the WHOLE vocal module
+  // §81's RE-SPECIFIED PRE-FLIGHT, AND IT EXISTS BECAUSE THE FIRST ONE ASKED
+  // THE WRONG QUESTION IN THE WRONG UNITS.
+  //
+  // The three fields above answer "how far is the MEAN membrane from
+  // threshold, in units of `noise_amp`". The 200k smoke answered it -- many
+  // SD -- and the answer is useless, because the SAME RUN prints every vocal
+  // neuron crossing that threshold several times a second. A distance from
+  // the mean, measured against the injected noise, cannot decide whether a
+  // graded signal can be pushed across: the crossings are carried by
+  // SYNAPTIC excursions an order of magnitude larger than the noise.
+  //
+  // So these fields measure the EXCURSION instead -- where the membrane
+  // actually goes within `kSdWBE`, against the variation the drive actually
+  // delivers rather than against a genome constant.
+  //
+  // EVERY ONE OF THEM IS A LOWER BOUND, and the reason is in the kernel: the
+  // spike condition is `v_[i] >= threshold_[i]` and the reset is
+  // `v_[i] = v_rest_[i]` in the SAME tick (network.cpp:2637), so a sample
+  // taken after `step()` NEVER holds a value at or above threshold. The top
+  // of the distribution is censored by the mechanism being measured. Samples
+  // where the neuron spiked are therefore DROPPED rather than read as a
+  // membrane near rest, and counted so the censoring is visible.
+  double exc_sd_sum = 0.0;    // per trial: mean over neurons of the within-
+  uint64_t exc_sd_n = 0;      // window SD of v_; then over scored trials
+  double exc_gmin_sum = 0.0;  // per trial: mean over neurons of the CLOSEST
+  uint64_t exc_gmin_n = 0;    // approach to threshold
+  double exc_gmin_all = 0.0;  // the single closest approach anywhere
+  bool exc_gmin_set = false;  // ...and whether anything set it
+  double exc_gap_sum = 0.0;   // sum of gaps over non-spiking samples
+  double exc_samples = 0.0;   // non-spiking (neuron, tick) samples scored
+  double exc_spikes = 0.0;    // samples dropped because the neuron spiked
+  double exc_near[kSdExcBands] = {};  // ...of which inside each band
   bool ok = false;
 };
 
@@ -19157,6 +19200,16 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       std::vector<std::vector<double>> dfac(kSdWinCount, std::vector<double>(wa, 0.0));
       std::vector<std::vector<double>> dcnt(kSdWinCount, std::vector<double>(wa, 0.0));
       std::vector<std::vector<double>> vmem(kSdWinCount, std::vector<double>(wv, 0.0));
+      // §81's re-specified pre-flight, PER TRIAL and `kSdWBE` only. These are
+      // declared here, in the trial scope, so they reset with every trial and
+      // so their fold into `out` can sit BELOW the slept-trial discard --
+      // accumulating straight into `out` from the tick loop would have let a
+      // discarded trial contribute, which is §62's lesson undone.
+      std::vector<double> xsum(wv, 0.0), xsq(wv, 0.0), xn(wv, 0.0);
+      std::vector<double> xmin(wv, 0.0);
+      std::vector<uint8_t> xset(wv, 0u);
+      std::vector<uint8_t> vspf(wv, 0u);  // did neuron j spike on THIS tick
+      double xsmp = 0.0, xspk = 0.0, xgap = 0.0, xnear[kSdExcBands] = {};
       std::vector<double> wexc(wa, 0.0);  // live excitatory weight per source
       // THE FIRST TRANSMISSION OF B, PER SOURCE NEURON, AND IT IS THE ONLY
       // MOMENT §68's MODEL IS DEFINED AT. §68 holds the release factor constant
@@ -19505,6 +19558,47 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
               bins[win][size_t(wa) + wc + (idx - ms_v.begin)] += 1.0;
           }
         }
+        // §81's RE-SPECIFIED PRE-FLIGHT, SAMPLED ONCE PER TICK AND ONLY IN
+        // `kSdWBE`. Once per tick and not once per window: a tick near B's
+        // onset belongs to four windows at this point, and sampling inside
+        // the loop above would have counted it four times -- the same
+        // double-counting `voc_ticks` is placed above the window loop to
+        // avoid. `kSdWBE` only because that is the window the primary is read
+        // on; pooled across windows these would describe no readout the
+        // project has.
+        //
+        // BOTH ACCESSORS ARE CONST READS OF STATE THAT ALREADY EXISTS --
+        // `membrane()` returns `v_[i]`, `threshold()` returns `threshold_[i]`
+        // (network.h:702-703). No `step()`, no RNG draw, no kernel write, so
+        // every column archived since §63 must come back bit-identical and
+        // `determinism`'s pinned hash plus `G-SELF` are what prove it did.
+        {
+          bool in_be = false;
+          for (uint32_t wi = 0; wi < nwin; ++wi)
+            if (wins[wi] == kSdWBE) in_be = true;
+          if (in_be && wv > 0) {
+            for (uint32_t j : vsp) vspf[j] = 1u;
+            for (uint32_t j = 0; j < wv; ++j) {
+              // THE DROP, AND IT IS NOT A CONVENIENCE. The kernel reset this
+              // neuron to `v_rest` on the very tick it crossed, so reading it
+              // now would record the LARGEST gap in the window for the one
+              // sample that actually reached threshold. Counted, not hidden.
+              if (vspf[j]) { xspk += 1.0; continue; }
+              const double v = double(net.membrane(ms_v.begin + j));
+              const double th = double(net.threshold(ms_v.begin + j));
+              const double gap = th - v;
+              xsum[j] += v;
+              xsq[j] += v * v;
+              xn[j] += 1.0;
+              if (!xset[j] || gap < xmin[j]) { xmin[j] = gap; xset[j] = 1u; }
+              xsmp += 1.0;
+              xgap += gap;
+              for (uint32_t f = 0; f < kSdExcBands; ++f)
+                if (gap < kSdExcNear[f] * th) xnear[f] += 1.0;
+            }
+            for (uint32_t j : vsp) vspf[j] = 0u;
+          }
+        }
       }
 
       // §62's lesson applied up front: a slept trial is discarded, and the
@@ -19572,6 +19666,56 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
             for (uint32_t j = 0; j < wv; ++j) sum_vm += vm[j];
             out.vmem_bar_sum += sum_vm / double(wv);
             ++out.vmem_bar_n;
+            // §81's re-specified pre-flight folds in HERE, inside the same
+            // guard, so a trial discarded for sleep above contributes to
+            // neither statistic.
+            //
+            // THE SD IS PER NEURON AND WITHIN THE WINDOW, which is the only
+            // form that answers the question. A SD taken ACROSS neurons would
+            // be the spread of their resting offsets -- a between-unit
+            // quantity, and `anchor-carries-its-own-error`'s mistake in a new
+            // costume. A SD pooled across trials would add the session's
+            // drift to it. What is wanted is how far ONE neuron travels in
+            // the window the readout is taken from.
+            //
+            // IT IS TOTAL VARIATION, TREND INCLUDED, AND THAT IS DELIBERATE.
+            // A systematic ramp across `kSdWBE` is not contamination here: it
+            // is travel that carries a signal just as surely as jitter does,
+            // and a mechanism that scales delivered drive scales it too. This
+            // number is therefore NOT a noise SD and must never be quoted as
+            // one.
+            double sd_sum = 0.0, gmin_sum = 0.0;
+            uint32_t sd_n = 0, gmin_n = 0;
+            for (uint32_t j = 0; j < wv; ++j) {
+              if (xn[j] >= 2.0) {
+                const double m = xsum[j] / xn[j];
+                // Unbiased within-neuron variance. Guarded because the
+                // two-pass-free form can land fractionally below zero on a
+                // neuron that never moved, and `plausible-wrong-number` is
+                // what an unguarded sqrt of -1e-17 produces.
+                const double ss = xsq[j] - xn[j] * m * m;
+                const double var = ss / (xn[j] - 1.0);
+                sd_sum += var > 0.0 ? std::sqrt(var) : 0.0;
+                ++sd_n;
+              }
+              if (xset[j]) {
+                gmin_sum += xmin[j];
+                ++gmin_n;
+                if (!out.exc_gmin_set || xmin[j] < out.exc_gmin_all) {
+                  out.exc_gmin_all = xmin[j];
+                  out.exc_gmin_set = true;
+                }
+              }
+            }
+            if (sd_n) { out.exc_sd_sum += sd_sum / double(sd_n); ++out.exc_sd_n; }
+            if (gmin_n) {
+              out.exc_gmin_sum += gmin_sum / double(gmin_n);
+              ++out.exc_gmin_n;
+            }
+            out.exc_samples += xsmp;
+            out.exc_spikes += xspk;
+            out.exc_gap_sum += xgap;
+            for (uint32_t f = 0; f < kSdExcBands; ++f) out.exc_near[f] += xnear[f];
           }
           // ---- §72's TWO SPACES ----
           //
@@ -20389,7 +20533,136 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     std::printf("\n      READ THE DISTANCE BEFORE ANYTHING ELSE. §81 wrote its own\n"
                 "      refusal in advance: a membrane-to-threshold distance of MANY\n"
                 "      noise SD means neither facilitation nor noise can reach it,\n"
-                "      and the lead dies there with no creature spent.\n");
+                "      and the lead dies there with no creature spent.\n"
+                "      AND THAT REFUSAL FIRED, AND IT WAS WRONG. THE TABLE BELOW IS\n"
+                "      WHY: read it before acting on this one.\n");
+  }
+  // ---- §81 RE-SPECIFIED PRE-FLIGHT — THE EXCURSION DISTRIBUTION ----
+  //
+  // STILL PRINT ONLY, STILL NOT A VERDICT, STILL NOT AN ARM, and placed above
+  // the dose gates for the same reason the table before it is.
+  //
+  // WHY THERE IS A SECOND TABLE AT ALL. The first one's refusal clause fired
+  // on the 200k smoke -- the mean membrane sat 13.1 `noise_amp` SD below
+  // threshold -- and the SAME RUN refuted it: 0.48579 spikes per tick over a
+  // 126-neuron module is 3.9 Hz PER NEURON, so every one of those neurons
+  // crosses that threshold about three times a second while its mean sits 13
+  // SD under it. A pre-registered refusal that fires on a creature behaving
+  // normally is not a finding, it is a mis-specified statistic, and the fault
+  // is in BOTH halves: the MEAN is the wrong location and `noise_amp` is the
+  // wrong ruler. The crossings are carried by synaptic excursions, so the
+  // excursion is what has to be measured, against itself.
+  {
+    std::printf("\n    §81 RE-SPECIFIED PRE-FLIGHT — THE EXCURSION DISTRIBUTION.\n"
+                "    PRINT ONLY, NOT A VERDICT, NOT AN ARM.\n\n"
+                "      `sd` is the per-neuron SD of v_ WITHIN kSdWBE, averaged over\n"
+                "      the module: total within-window variation, trend included.\n"
+                "      IT IS NOT A NOISE SD AND MUST NOT BE QUOTED AS ONE.\n"
+                "      `gap` is the mean threshold-minus-membrane over the same\n"
+                "      samples and `gap/sd` is the honest replacement for the last\n"
+                "      column of the table above.\n"
+                "      `closest` is the mean over neurons of the SMALLEST gap that\n"
+                "      neuron reached in the window; `min` is the smallest anywhere.\n"
+                "      The four band columns are the share of SCORED (neuron, tick)\n"
+                "      samples whose gap is under that fraction of the neuron's OWN\n"
+                "      LIVE threshold -- the genome's birth `threshold` is NOT the\n"
+                "      operating one and IP retunes it per neuron and per protocol.\n"
+                "      `fired` is the share DROPPED because the neuron spiked on that\n"
+                "      tick, and ITS DENOMINATOR IS THE OTHER ONE: scored plus\n"
+                "      dropped, because a share of the drops quoted against a base\n"
+                "      that excludes the drops is not a share of anything.\n\n"
+                "      EVERY COLUMN IS A LOWER BOUND ON THE EXCURSION. The kernel\n"
+                "      resets v_ to v_rest on the tick it crosses, so no sample taken\n"
+                "      after step() can hold a value at or above threshold: the top of\n"
+                "      the distribution is censored by the very mechanism in question.\n"
+                "      `fired` is how much of it was removed.\n\n");
+    // THE HEADER IS PRINTED THROUGH THE SAME FIELD WIDTHS AS THE ROWS, and
+    // the per-cent signs travel as ARGUMENTS rather than inside the format.
+    // Hand-counted padding in a header is how a column comes to sit over the
+    // wrong number, and the first draft of this table had both faults at
+    // once: a literal `%` read as a conversion, which the compiler caught
+    // ("expects a matching double argument" for a printf passing none --
+    // `plausible-wrong-number` reading the stack), and nine columns of
+    // alignment I had counted by hand. Neither can happen in this form.
+    //
+    // The percentages are formatted into buffers so that every band is one
+    // fixed-width field; `static_assert` ties the printed columns to the band
+    // count so that adding a band cannot silently drop one from the table.
+    static_assert(kSdExcBands == 4, "the row below prints exactly four bands");
+    std::printf("      %-23s %7s %7s %6s %7s %7s %6s %6s %6s %6s %6s\n", "arm", "sd",
+                "gap", "gap/sd", "closest", "min", "<5%", "<10%", "<25%", "<50%",
+                "fired");
+    for (uint32_t a = 0; a < kSdArmCount; ++a) {
+      double sds = 0.0, gmin = 0.0, smp = 0.0, spk = 0.0, gsum = 0.0;
+      double near[kSdExcBands] = {};
+      double amin = 0.0;
+      bool amin_set = false;
+      uint32_t nsd = 0, ngm = 0;
+      for (const SdOut& o : res[a]) {
+        if (!o.ok) continue;
+        if (o.exc_sd_n) { sds += o.exc_sd_sum / double(o.exc_sd_n); ++nsd; }
+        if (o.exc_gmin_n) { gmin += o.exc_gmin_sum / double(o.exc_gmin_n); ++ngm; }
+        if (o.exc_gmin_set && (!amin_set || o.exc_gmin_all < amin)) {
+          amin = o.exc_gmin_all;
+          amin_set = true;
+        }
+        smp += o.exc_samples;
+        spk += o.exc_spikes;
+        gsum += o.exc_gap_sum;
+        for (uint32_t f = 0; f < kSdExcBands; ++f) near[f] += o.exc_near[f];
+      }
+      if (nsd == 0 || smp <= 0.0) {
+        std::printf("      %-23s  (no scored session)\n", kSdArms[a].name);
+        continue;
+      }
+      const double sd = sds / double(nsd);
+      const double gb = gsum / smp;
+      // `read-every-budget-for-every-claim`: the denominator of `fired` is
+      // every sample the window offered, DROPPED ONES INCLUDED, or the share
+      // would be quoted against a base that excludes exactly what it counts.
+      // The band shares keep `smp` instead, because a band is a statement
+      // about the sub-threshold distribution and the dropped samples are not
+      // in it -- two different denominators on purpose, named in the legend.
+      const double tot = smp + spk;
+      char bnd[kSdExcBands][16], bfr[16];
+      for (uint32_t f = 0; f < kSdExcBands; ++f)
+        std::snprintf(bnd[f], sizeof bnd[f], "%.2f%%", 100.0 * near[f] / smp);
+      std::snprintf(bfr, sizeof bfr, "%.2f%%", 100.0 * spk / tot);
+      // NO SENTINEL GUARDS ON THESE THREE DIVISIONS, AND THAT IS THE SAFE
+      // CHOICE RATHER THAN THE LAZY ONE. The first draft wrote
+      // `sd > 0.0 ? gb / sd : 0.0`, which prints `0.00` for a membrane that
+      // NEVER MOVED -- the reading that would most strongly SUPPORT the lead
+      // standing in for the one that most strongly kills it. That is
+      // `plausible-wrong-number` exactly: a sentinel indistinguishable from
+      // a real measurement, and at the optimistic end.
+      //
+      // Unguarded, a zero `sd` prints `inf` and a zero count prints `nan`.
+      // Both are correct, both are unmistakable in a log, and NEITHER IS A
+      // BRANCH -- so there is no path here that real rows cannot exercise,
+      // which is the `deferral-note-is-untested-code` trap avoided rather
+      // than documented. The guard above already establishes `smp > 0`, and
+      // `nsd > 0` implies `ngm > 0` and `amin_set` because a neuron with two
+      // samples necessarily has one.
+      std::printf("      %-23s %7.4f %7.4f %6.2f %7.4f %7.4f %6s %6s %6s %6s %6s\n",
+                  kSdArms[a].name, sd, gb, gb / sd, gmin / double(ngm), amin, bnd[0],
+                  bnd[1], bnd[2], bnd[3], bfr);
+    }
+    // THE READING DIRECTION, WRITTEN BEFORE THE RUN. `power-is-not-the-error-
+    // model`: a pre-flight that does not say in advance which readings kill
+    // the lead and which do not is a pre-flight that will be read to agree
+    // with whatever it prints.
+    std::printf("\n      WHAT WOULD KILL THE LEAD: `gap/sd` in the tens WITH the band\n"
+                "      columns at or near zero and `closest` itself many `sd` wide --\n"
+                "      a membrane that never visits the threshold's neighbourhood\n"
+                "      cannot be carried over it by a mechanism that only scales the\n"
+                "      drive it already receives.\n"
+                "      WHAT WOULD NOT KILL IT: any reading where the bands are\n"
+                "      populated and `closest` is a fraction of `sd`, HOWEVER LARGE\n"
+                "      `gap/sd` IS. A large mean distance and a reachable threshold\n"
+                "      are not in contradiction -- that is the whole lesson of the\n"
+                "      table above, and `fired` is standing proof of it, because a\n"
+                "      nonzero `fired` IS the threshold being reached.\n"
+                "      NEITHER READING LICENSES A KERNEL CHANGE. §81 IS A LEAD.\n");
   }
   // §80 AMENDMENT, caught by the v75 smoke and disclosed in the ROADMAP: on a
   // genome that SHIPS the dose, an arm whose patch writes the bytes the blob
