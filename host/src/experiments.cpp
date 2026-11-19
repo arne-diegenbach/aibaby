@@ -572,12 +572,18 @@ const Spec kSpecs[] = {
      "  8x. Local recurrence cannot carry activity forward at all"},
     {"curriculum", 1200000, Expect::kOpen, Tier::kLong,
      "derived: m3's protocol at a length where teaching works"},
-    {"ctxvocab", 6800000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: §80 stage 8, the same kContext-refusal convention as
+    // `absbar` and `rpeprobe`. The third and last of the three rows that were left
+    // behind when the other seven were moved.
+    {"ctxvocab", 6800000, Expect::kGuard, Tier::kTeach,
      "  how many words fit on the 2-D grid? ctxgrid names four at +0.137 and\n"
      "  aimaxes predicts ~6.7 from 2.6 levels per axis. Six and nine words at\n"
      "  the SAME spacing, each scored on its OWN no-index arm -- a capacity\n"
      "  test, not a resolution one"},
-    {"ctxgrid", 6800000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"ctxgrid", 6800000, Expect::kGuard, Tier::kTeach,
      "  ctxfour's four words laid out 2x2 on BOTH formants and inside the\n"
      "  MEASURED reach, instead of vowel corners where /i/ and /u/ sit 30 Hz\n"
      "  apart on the only axis it steered. Was the ceiling the vocabulary or\n"
@@ -587,7 +593,10 @@ const Spec kSpecs[] = {
     // false for a measured reason -- its primary is a bar on the echo and a 3 SE bar
     // on naming -- so it is not an instrument and kRead would be wrong. Promote on a
     // reading of the log, one at a time, which is the gate repair's own rule.
-    {"echoname", 6800000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"echoname", 6800000, Expect::kGuard, Tier::kTeach,
      "  ONE creature, both capabilities. imitate reads M1b off a FRESHLY HATCHED\n"
      "  creature and ctxgrid teaches four-word naming to a DIFFERENT one; no\n"
      "  individual has ever been asked for both. Reads imitate's echo windows off\n"
@@ -608,7 +617,10 @@ const Spec kSpecs[] = {
     // gate must not run it. `--ticks` is the ladder's SCALE: the spec minimum of 6800000
     // produces ctxscale's own points (3.4M/6.8M/13.6M/27.2M) and makes rung 1
     // echoname's published taught arm, which is what carries the free control.
-    {"dirbudget", 6800000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"dirbudget", 6800000, Expect::kGuard, Tier::kTeach,
      "  the magnitude/direction split says REWARD buys the F1 separation and the\n"
      "  LESSON buys the assignment (10.6 and 6.7 SE on 36 creatures). The\n"
      "  magnitude's budget curve is CLOSED -- ctxscale saturates at ~118 Hz, with\n"
@@ -622,7 +634,10 @@ const Spec kSpecs[] = {
      "  is read off the per-doubling ratio of that excess. At the spec minimum,\n"
      "  rung 1 IS echoname's published taught arm and must reproduce it seed for\n"
      "  seed; at any other --ticks the log says it has no such control"},
-    {"dlvry", 27200000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"dlvry", 27200000, Expect::kGuard, Tier::kTeach,
      "  dirbudget reported its rungs in TICKS and read them as experience. Its\n"
      "  delivered fraction -- scored, voiced, labelled trials over the nominal\n"
      "  ticks/kVLTrialTicks -- falls 71.4% -> 35.8% across the ladder, so 8x of\n"
@@ -640,7 +655,10 @@ const Spec kSpecs[] = {
      "  is a prediction rather than a fit. Decay, flat, rising and non-monotone\n"
      "  are all branched on -- dirbudget printed SATURATES over a resolved\n"
      "  reversal because its outcome space stopped one short of what happened"},
-    {"silence", 13600000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"silence", 13600000, Expect::kGuard, Tier::kTeach,
      "  dlvry established that the creature stops answering: delivery inside one\n"
      "  session falls 0.716 -> 0.261 across the tenths, -0.4554 +- 0.0230 (19.8\n"
      "  SE), 12 of 12 creatures down, and EVERY missed trial is silent -- 0\n"
@@ -672,7 +690,10 @@ const Spec kSpecs[] = {
      "  budget reads dF1 103.9 -> 17.7 Hz (-7.42 SE), so the arm that answers\n"
      "  2.7x more trials learns 6x less and delivery is not the bottleneck on\n"
      "  learning"},
-    {"exsweep", 6800000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"exsweep", 6800000, Expect::kGuard, Tier::kTeach,
      "  reward buys the between-word SEPARATION and the lesson buys the\n"
      "  ASSIGNMENT -- a double dissociation at 10.6 and 6.7 SE. So does phasic\n"
      "  variability control help the assignment? `exploration.sensitivity` is\n"
@@ -844,7 +865,11 @@ const Spec kSpecs[] = {
      "  creature can derive it from what it heard AT THE MOMENT REWARD LANDS.\n"
      "  No learning. Bar is 0.75, derived from how a wrong index writes the\n"
      "  other context's table"},
-    {"rpeprobe", 3400000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: §80 stage 8, the same kContext-refusal convention as
+    // `absbar`. Read-only by design, but on the shipped genome it never gets to
+    // read anything -- it returns false at the absent-module check in 0 s -- and
+    // the teach tier counted that refusal as a defect.
+    {"rpeprobe", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: areax's own session, whose reward stream it decomposes. Prices\n"
      "  Gadagkar's per-context performance prediction error BEFORE building it:\n"
      "  node perturbation already subtracts a running baseline, and the only\n"
@@ -856,7 +881,10 @@ const Spec kSpecs[] = {
      "  state before it is built: supervised vs k-means vs v52's fixed cut, on\n"
      "  two feature spaces. Read-only. Bar is p >= 0.65, derived from (2p-1)\n"
      "  against the 65 Hz an oracle index buys"},
-    {"ctxscale", 13600000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ctxscale", 13600000, Expect::kGuard, Tier::kTeach,
      "is the learned bias still GROWING with trials or has it found its\n"
      "  asymptote? Runs off/ema/ema-rnd at three budgets (1x, 2x, 4x) and gates\n"
      "  on whether dF1 above its matched-marginal control grows. Decides between\n"
@@ -870,7 +898,10 @@ const Spec kSpecs[] = {
      "  and not 0.5. Prices what Keemink & van Rossum (2025) predicts a\n"
      "  population-vector readout over few neurons leaves behind. It is a\n"
      "  MAGNITUDE and does not show the residual carries the word"},
-    {"boundprobe", 13600000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"boundprobe", 13600000, Expect::kGuard, Tier::kTeach,
      "derived: ctxscale's session at ONE budget, because it reads the growth\n"
      "  curve INSIDE a session at 16 checkpoints instead of across three runs.\n"
      "  bias_ctx_ has NO leak, so a constant drift would grow the aligned\n"
@@ -878,7 +909,10 @@ const Spec kSpecs[] = {
      "  fingerprints -- drift decaying, pure diffusion, the perturb_max clamp\n"
      "  binding on a heavy tail -- and refuses if none of them fires. Not to be\n"
      "  confused with driftprobe, which asks about interference BETWEEN lessons"},
-    {"baseprobe", 27200000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"baseprobe", 27200000, Expect::kGuard, Tier::kTeach,
      "derived: boundprobe's session and checkpoints, because it asks what\n"
      "  boundprobe's phase 2 means. Aligned and outside growing at the same\n"
      "  exponent with gain frozen is node perturbation on its variance floor.\n"
@@ -886,20 +920,34 @@ const Spec kSpecs[] = {
      "  the magnitude too, divided by the creature's own mean deviation so the\n"
      "  arms match on |reward| and this is not a learning-rate sweep. Refuses if\n"
      "  no graded arm escapes phase 2, which would make 137 Hz the rule's floor"},
-    {"bankprobe", 3400000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"bankprobe", 3400000, Expect::kGuard, Tier::kTeach,
      "Andalman & Fee's daily consolidation of the AFP bias, checked against the\n"
      "  algebra that refuses it: the larynx reads live + bank, and consolidation\n"
      "  leaves that sum exactly unchanged. The arms must be INDISTINGUISHABLE;\n"
      "  a divergence past 1 SE means a premise is wrong, which is the result\n"
      "  worth having. Short on purpose"},
-    {"ctxgain", 13600000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"ctxgain", 13600000, Expect::kGuard, Tier::kTeach,
      "THE EIGHTH ROUTE, and the only one that does not try to make the bias\n"
      "  bigger. DNA v54 mode 1: one gain per articulator group per context, 18\n"
      "  parameters instead of 252, on the ramp the centroid readout responds to.\n"
      "  Same rule, same reward; the update is the group MEAN so drift is unchanged\n"
      "  and diffusion falls by sqrt(14). Predicts dF1 119 -> 186 Hz. Gates on dF1\n"
      "  paired by seed, NOT on aligned -- mode 1 forces alignment by construction"},
-    {"interleave", 5600000, Expect::kRead, Tier::kLong,
+    // kOpen, not kRead: §80 stage 8. It CAN return false for a MEASURED reason --
+    // `passed < 0`, meaning no arm cleared 2 SE on BOTH of its gates -- and a
+    // measured false is exactly what the enum's rule says disqualifies kRead. FAIL
+    // is the measured answer on 36 seeds on BOTH DNA v74 and v75 (§80 stage 7 ran
+    // it on each), and the day an arm rescues the lesson is the news kOpen exists
+    // to print. Its own `why` below says it GATES, which an instrument does not do.
+    // This is the rule's third clause and not the absent-module class: "has a real
+    // bar it does not yet clear -> kOpen". Nothing is absent here; it RAN.
+    {"interleave", 5600000, Expect::kOpen, Tier::kLong,
      "derived: retain's protocol and length, run as eight arms. A conflicting\n"
      "  lesson wipes a taught sound to 0.22; does replaying the OLD lesson during\n"
      "  sleep rescue it? Decomposes the two things that must both hold -- the\n"
@@ -907,14 +955,20 @@ const Spec kSpecs[] = {
      "  it) and replay actually reinforcing something (DNA v55 replay_credit).\n"
      "  Gates on retention AND err-after paired, because retention is a ratio an\n"
      "  arm can inflate by simply learning less"},
-    {"orthoname", 3400000, Expect::kOpen, Tier::kLong,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"orthoname", 3400000, Expect::kGuard, Tier::kLong,
      "orthovocab showed two SEQUENTIAL lessons on different axes coexist (77%\n"
      "  less damage, 10.7 SE). Naming is SIMULTANEOUS and conditional. Does\n"
      "  spreading a vocabulary across articulators make it reachable? collide\n"
      "  moves both words along F1; ortho moves one along F1 and one along F2,\n"
      "  MATCHED on target separation so neither is handed the score. Matched\n"
      "  marginal per encoding, contexts ON in every arm. 36 seeds"},
-    {"travelsweep", 3400000, Expect::kOpen, Tier::kLong,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"travelsweep", 3400000, Expect::kGuard, Tier::kLong,
      "orthoname says this creature NAMES with contexts on -- nearest-target\n"
      "  0.958 vs matched marginals at 0.389 and 0.542 -- but its targets sat\n"
      "  0.29 log units from rest and the shipped vowels are 0.89 apart. Sweeps\n"
@@ -923,7 +977,54 @@ const Spec kSpecs[] = {
      "  separation, not the nearest-target fraction, which straddles rest and is\n"
      "  therefore a sign test invariant to the demand. Matched marginal at every\n"
      "  rung, contexts ON throughout. 36 seeds"},
-    {"absbar", 3400000, Expect::kRead, Tier::kLong,
+    // THE ABSENT-kContext CLASS -- the canonical note, referenced by every other
+    // row in it. §80 stage 8, 2026-11-19.
+    //
+    // TWENTY-NINE specs refuse because the shipped genome has no kContext module:
+    // SIX in kLong and TWENTY-THREE in kTeach. Each was MEASURED, not assumed --
+    // every one returns false in 0-1 s on the shipped genome, before any
+    // simulation, at its own module check (the kTeach rows under a 15 s cap, the
+    // kLong rows at 0.0 s each in results/n80-verify-long.log). They were
+    // registered THREE WAYS before this, which is the defect:
+    //
+    //   was kRead (16)  absbar                                         (kLong)
+    //                   bankprobe baseprobe baseref boundprobe ctxfactor
+    //                   ctxgain ctxgrid ctxvocab dirbudget dlvry exsweep
+    //                   ippool poolbeta rpeprobe silence               (kTeach)
+    //   was kOpen (13)  orthoname travelsweep staircase chase ctxretain (kLong)
+    //                   areax ctxfour ctxlearn ctxscale ctxself echoname
+    //                   ipctx tutorgrid                                (kTeach)
+    //
+    // ALL 29 NOW READ kGuard, which is what this project's OWN WRITTEN RULE says
+    // (ROADMAP open item 11, 2026-10-30): "produces a number -> kPass; refuses
+    // because a mechanism is off or a module is absent -> kGuard; has a real bar
+    // it does not yet clear -> kOpen." `duty` (kLong) and `v1probe`,
+    // `apicalprobe`, `oscprobe` (kFast) are already kGuard for exactly this.
+    //
+    // The kRead sixteen were the ones breaking the gate: a kRead false is counted
+    // as a gate FAILURE while its own message calls it "apparatus, not content",
+    // so they made `verify-long` unable to print PASS on ANY creature, and
+    // `verify-teach` likewise, on a genome that omits contexts ON PURPOSE. The
+    // kOpen thirteen were already green but mislabelled: an absent module is not
+    // an unmet bar. kRead stays right for an instrument that SHOULD be able to
+    // read here and whose false is therefore news -- `hush` and `repdrift` keep
+    // it, and repdrift's self-check is what caught DNA v75.
+    //
+    // absbar also has gates of its own -- "is the distance visible", "can the
+    // rule still learn" -- so kRead was wrong on the enum's rule as well.
+    //
+    // THE PART OF THE RULE THAT IS NOT SOLVED, AND IS THEREFORE DISCLOSED. Open
+    // item 11 names it: kGuard is correct for THIS genome only. These 29 exist to
+    // be run on a context genome (tools/genome_add_context.py), where they DO
+    // measure -- and there a guard that starts passing is reported as "the
+    // mechanism it watches is no longer off", so all 29 would cry wolf at once.
+    // No Expect value encodes "expected FAIL on this genome, expected PASS on
+    // that one", and the project's standing rule for that case is that a label
+    // correct on only SOME genomes MUST BE PRINTED. So run_verify now prints the
+    // guard count with the sentence that their expectation is relative to the
+    // genome in hand. A skip the summary counts separately is the better long-term
+    // shape; it is a harness change and deliberately not in this fix.
+    {"absbar", 3400000, Expect::kGuard, Tier::kLong,
      "travelsweep found the shipped bar BIT-IDENTICALLY blind to target\n"
      "  distance past ~0.6 log units: it is an EMA of the creature's own error,\n"
      "  so a further target only adds a constant, which cancels. Can any bar\n"
@@ -932,7 +1033,10 @@ const Spec kSpecs[] = {
      "  bar makes reward constant past it. Two gates: is the distance visible\n"
      "  (0.89 vs 1.20, same seed), and can the rule still learn (taught vs its\n"
      "  own matched marginal). 36 seeds"},
-    {"staircase", 3400000, Expect::kOpen, Tier::kLong,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"staircase", 3400000, Expect::kGuard, Tier::kLong,
      "if the BAR cannot ask for distance, move the TARGET. Tumer & Brainard\n"
      "  step a songbird's pitch threshold each morning rather than setting it\n"
      "  far and waiting -- and our invariance holds only while the creature\n"
@@ -941,7 +1045,10 @@ const Spec kSpecs[] = {
      "  HOLDS, so the scored late third is at the same final target in both.\n"
      "  A null revives ceiling-is-an-exponent, so it is worth running either\n"
      "  way. Matched marginal per protocol. 36 seeds"},
-    {"chase", 3400000, Expect::kOpen, Tier::kLong,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"chase", 3400000, Expect::kGuard, Tier::kLong,
      "three ways of asking for more distance have failed and all three failed\n"
      "  the SAME way -- the target stopped being straddled. This is the target\n"
      "  that cannot: placed at the 20th and 80th percentiles of the creature's\n"
@@ -1048,7 +1155,10 @@ const Spec kSpecs[] = {
      "  turn. An asymmetric ear means the limit is RESOLUTION and sends this to a\n"
      "  different build; a symmetric ear with an asymmetric partition means the\n"
      "  limit is the RULE, and the transform columns name the component."},
-    {"ctxfactor", 6800000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"ctxfactor", 6800000, Expect::kGuard, Tier::kTeach,
      "derived: ctxgrid's budget, because it trains on ctxgrid's four words and\n"
      "  needs four words' worth of trials. Prices a FACTORED context gain before\n"
      "  one is built. Every context currently owns independent parameters --\n"
@@ -1060,7 +1170,10 @@ const Spec kSpecs[] = {
      "  carry one mean and three orthogonal contrasts, so chance for the\n"
      "  interaction share is 1/3. One trained creature per arm, read afterwards --\n"
      "  no new mechanism, and the cheapest thing that can kill or confirm a build."},
-    {"tutorgrid", 6800000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"tutorgrid", 6800000, Expect::kGuard, Tier::kTeach,
      "derived: ctxgrid's own budget. Four words need four words' worth of\n"
      "  trials and ctxgrid read 2428 of them, which is 6.8M ticks -- half that\n"
      "  would give a four-word run two words' worth of data per word. Composes\n"
@@ -1367,7 +1480,14 @@ const Spec kSpecs[] = {
      "  only the second lesson's AXIS differs -- collide moves F1, ortho moves\n"
      "  F2, same log-distance. Per-axis scoring, since the joint metric pins\n"
      "  both formants and cannot express orthogonality. 36 seeds"},
-    {"maskretain", 5600000, Expect::kRead, Tier::kLong,
+    // kOpen, not kRead: §80 stage 8. Its `cliff_before_half` branch is a MEASURED
+    // verdict -- confinement refused, the cost flat across the widths -- so kRead
+    // is wrong for the same reason as `interleave` above. FAIL is the answer on both
+    // v74 and v75 (§80 stage 7); a PASS would mean a pooled readout CAN be
+    // partitioned by restricting plasticity, which is worth the loud line.
+    // Rule's third clause, like `interleave`: it RAN and did not clear its bar,
+    // so kOpen -- NOT the absent-module class, which is kGuard.
+    {"maskretain", 5600000, Expect::kOpen, Tier::kLong,
      "the conflict is a PURE OVERWRITE -- store 0.25 and behaviour 0.30 decay\n"
      "  together at -1.0 SE -- so there is no hidden memory and the damage is in\n"
      "  the WRITE. Protection is already refused (meta_commit null, bankprobe\n"
@@ -1376,14 +1496,20 @@ const Spec kSpecs[] = {
      "  lesson) / derived (the creature's own ear-EMA index) / random (the mask's\n"
      "  cost, none of its information). Scored on err-after, not retention, whose\n"
      "  denominator collapses. 36 seeds"},
-    {"ctxretain", 5600000, Expect::kOpen, Tier::kLong,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ctxretain", 5600000, Expect::kGuard, Tier::kLong,
      "derived: retain's protocol, which distinguishes its two lessons only by\n"
      "  WHEN they happen -- the caregiver says one word throughout, so nothing in\n"
      "  the creature's input says these are different lessons. A 2x2: give them\n"
      "  different cues, crossed with DNA v51's context table to file them under.\n"
      "  Only `cue+ctx` should work; the interaction is the claim, not the cell.\n"
      "  36 seeds from the start"},
-    {"baseref", 13600000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"baseref", 13600000, Expect::kGuard, Tier::kTeach,
      "the reward's REFERENCE, which is the one axis boundprobe's finding implies\n"
      "  and nobody has run. Nine closed routes attacked the BIAS; baseprobe\n"
      "  attacked the reward's RESOLUTION. Praise is `e < baseline` where the bar\n"
@@ -1392,7 +1518,10 @@ const Spec kSpecs[] = {
      "  10x slower one, and a RATCHET that only tightens. Refuses if any praise\n"
      "  share leaves 0.15-0.85 -- a bar always or never beaten is a constant\n"
      "  reward, which is the same death by a different route"},
-    {"poolbeta", 3400000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"poolbeta", 3400000, Expect::kGuard, Tier::kTeach,
      "the COMPRESSION, which is the last thing standing. read_group is a\n"
      "  centroid and dF1 ~ aligned^0.61; that curve limits delivery AND kills\n"
      "  the drift through its derivative. DNA v56 sharpens the pooling to\n"
@@ -1406,7 +1535,10 @@ const Spec kSpecs[] = {
      "  bias->rate, rate->centroid and centroid->F1 separately. centroid->F1 is\n"
      "  a lerp and MUST measure 1.00, which is the self-check; and the three\n"
      "  must multiply to the end-to-end curve or a stage is missing"},
-    {"ippool", 13600000, Expect::kRead, Tier::kTeach,
+    // kGuard, not kRead: the ABSENT-kContext CLASS (§80 stage 8). It refuses in 0 s
+    // on the shipped genome because there is no context module to read. The class,
+    // the count and the argument are at `absbar` above.
+    {"ippool", 13600000, Expect::kGuard, Tier::kTeach,
      "does relieving the MEASURED bottleneck buy dF1? stageprobe put the\n"
      "  compression in intrinsic plasticity (bias->rate 0.34 on, 0.91 off). The\n"
      "  arms are re-cut each generation and the earlier ones are on file: v57\n"
@@ -1419,20 +1551,29 @@ const Spec kSpecs[] = {
      "  did, or the threshold push returning to v57's 3x, which would mean the\n"
      "  projection is pooling in disguise. The bar on `aligned` is v58's x1.21\n"
      "  and not x1.00, because ^0.61 already closes x1.21 without a run"},
-    {"ctxfour", 3400000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ctxfour", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: ctxself's session at FOUR words. partprobe cleared the index at\n"
      "  four (0.895 vs chance 0.250); this asks whether the BIAS holds four\n"
      "  mappings on one reward channel. Oracle arm only -- if a perfect index\n"
      "  cannot carry four, the creature's own cannot either. Refuses unless\n"
      "  ctx_match reads 1.000, which is the k-way assignment's own check"},
-    {"ctxself", 3400000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ctxself", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: areax's session length, because it runs areax's arms plus two.\n"
      "  DNA v52: the last oracle removed. areax's index is written by the HOST\n"
      "  from the word label; this reads it from the creature's own larynx and\n"
      "  scores it against the oracle arm measured IN THE SAME RUN. Reports the\n"
      "  index's own accuracy p, and refuses if the oracle arm did not reproduce\n"
      "  areax or if the derived index never names a second slice"},
-    {"areax", 3400000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"areax", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: vocallearn's session length, the length its positive control\n"
      "  needs. DNA v51: node perturbation's excitability table split one per\n"
      "  context. Scored against ctxbias's measured ceiling of 236 Hz of dF1 --\n"
@@ -1447,13 +1588,19 @@ const Spec kSpecs[] = {
      "  whether the control survives it and whether the voice becomes\n"
      "  conditional at all. Refuses rather than nulls if the oracle is too small\n"
      "  to reach the voice. Needs no special genome"},
-    {"ipctx", 3400000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ipctx", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: vocallearn's session length, because it reads the larynx after a\n"
      "  full teaching session. ctxlearn's collapse does not scale with out_w, so\n"
      "  the suspect is rate-side, and IP is the only rate regulator that runs on\n"
      "  the larynx (v11: scaling never executes there). Measures whether IP even\n"
      "  responds before an ip_wake_scale arm is spent. Needs a kContext genome"},
-    {"ctxlearn", 3400000, Expect::kOpen, Tier::kTeach,
+    // kGuard, not kOpen: the ABSENT-kContext CLASS (§80 stage 8). A module that is
+    // absent is kGuard's own definition; kOpen would call it an unmet bar. Same
+    // refusal, so the same flag -- the class and the argument are at `absbar`.
+    {"ctxlearn", 3400000, Expect::kGuard, Tier::kTeach,
      "derived: vocallearn's own minimum, which its positive control sets.\n"
      "  Stage 0 of the audio rewrite: can reward write a CONDITIONAL map when\n"
      "  the condition arrives on a zero-baseline code? Needs a genome with a\n"
@@ -1943,7 +2090,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
     std::printf("  hash              %016llx  as recorded\n", (unsigned long long)hash);
   }
 
-  uint32_t passed = 0, failed = 0, open = 0, read_ok = 0;
+  uint32_t passed = 0, failed = 0, open = 0, read_ok = 0, guards = 0;
   double total_secs = 0.0, slowest_secs = 0.0;
   const char* slowest = "";
   std::string bad;
@@ -1981,7 +2128,11 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
                "  instrument did not complete — apparatus, not content:\n"
                "               it returns false only on a load failure, a missing\n"
                "               module, too few usable creatures, or its own\n"
-               "               self-check. Read its output, not this line.\n";
+               "               self-check. Read its output, not this line.\n"
+               "               AND IF ITS OUTPUT SHOWS A MEASURED VERDICT INSTEAD,\n"
+               "               THIS LINE IS THE LIE AND THE REGISTRATION IS THE BUG:\n"
+               "               a measured false is kPass or kOpen, never kRead.\n"
+               "               §80 stage 8 moved three rows for exactly that.\n";
       }
       continue;
     }
@@ -1989,6 +2140,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
     if (got == want) {
       ++passed;
       if (s.expect == Expect::kOpen) ++open;
+      if (s.expect == Expect::kGuard) ++guards;
     } else {
       ++failed;
       bad += std::string("    ") + s.name +
@@ -2010,6 +2162,23 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   if (open) {
     std::printf("  open milestones   %u still failing, which is what \"as expected\"\n"
                 "                    means for them\n", open);
+  }
+  // THE GENOME-DEPENDENT LABEL, PRINTED RATHER THAN CARRIED IN SOMEONE'S HEAD.
+  // Most guards refuse because THIS genome has no kContext module (§80 stage 8
+  // registered 29 of them that way, on the project's own rule). On a context
+  // genome they measure instead, and each will then be reported as a guard that
+  // came on. No Expect value encodes an expectation that depends on the genome,
+  // so the suite says out loud which genome its expectations are relative to.
+  if (guards) {
+    std::printf("  guards            %u refused as expected — AND THAT EXPECTATION IS\n"
+                "                    RELATIVE TO THE GENOME YOU RAN (default\n"
+                "                    dna/default.toml). Most of them refuse only\n"
+                "                    because it has no kContext module; on a context\n"
+                "                    genome (tools/genome_add_context.py) they measure,\n"
+                "                    and every one will then read \"got PASS — the\n"
+                "                    mechanism it watches is no longer off\". That is\n"
+                "                    this line being honest, not a regression.\n",
+                guards);
   }
   if (read_ok) {
     std::printf("  instruments       %u read, and an instrument's bool is NOT a verdict:\n"

@@ -867,6 +867,18 @@ the seven as `kGuard` *and* have the suite state which genome the expectation is
 the label is disclosed rather than silently wrong half the time. Until then, `verify PASS`
 certifying the FAST tier only is load-bearing and should not be read as conservative caution.
 
+**DONE 2026-11-19 (§80 STAGE 8), AND THE ITEM UNDERSTATED ITSELF BY FOUR TIMES.** Both halves of
+the prescription above are now implemented — the class is `kGuard` and `run_verify` prints a
+`guards` line disclosing which genome the expectation belongs to. **But "seven teach-tier
+instruments" was measured at TWENTY-THREE in kTeach plus SIX in kLong, 29 in all**, by running
+every kTeach spec under a 15-second cap and reading the kLong wall times off
+`results/n80-verify-long.log`. The item also said the pattern was "established across ~20 sites",
+which was the closer estimate. Of the 29, **16 were kRead and 13 were already kOpen** — so the
+same refusal had three registrations, not two, and `kOpen` was wrong for the absent module on the
+same rule that made `kRead` wrong. Stage 8 has the tables. The one thing still open here is the
+better shape item 11 gestures at: a SKIP the summary counts separately, instead of a guard whose
+correctness depends on the genome.
+
 ### 12. CLOSED 2026-10-31 — the threshold is not the clock either, and ALL FOUR candidates are out
 
 `silence` at **36 creatures** instead of 12, joining its per-creature larynx-threshold climb
@@ -18441,3 +18453,219 @@ a battery log by line number must ignore them or re-run the instrument alone.
 v75's cost, which was measured on `quietecho`'s own primary. And the dating
 limit registered in advance held for the two pre-existing failures: this stage
 does not get to say since when they have refused.
+
+## §80 STAGE 8 — THE kRead REGISTRATION FIX, AFTER AN AUDIT RATHER THAN THREE ANECDOTES (2026-11-19)
+
+The contract is written in the source, twice. The enum comment: *"An INSTRUMENT:
+it prints a reading and its bool carries no verdict. Its function's only
+top-level return is an unconditional `return true;`"*. And the rule: *"if the
+function cannot return false for a MEASURED reason, it is kRead. If it can, it
+is kPass or kOpen depending on whether the criterion is met today."*
+
+**THE AUDIT FIRST, BECAUSE THE LITERAL CONTRACT IS NOT THE DEFECT.** A script
+over the whole class (`audit_kread_returns.py`, in the scratchpad) found **64
+kRead specs and EVERY SINGLE ONE has at least one `return false`.** So "has a
+`return false`" cannot be the test — the contract's literal form is aspirational,
+and almost all of those sites are infrastructure: *the genome does not load*,
+*no vocal module*, *INCONCLUSIVE -- fewer than six sessions*, *could not
+configure the cochlea*. The defect is the narrow one: **a false returned for a
+MEASURED reason**, which the enum's own rule assigns to kPass or kOpen.
+
+**A CORRECTION TO STAGE 7 AND TO THE MEMORY WRITTEN FROM IT.** I wrote that
+`absbar` returns false on the structural refusal "while `f3name`, `f3grid`,
+`f3comp` and `f3seq` are ALSO `kRead` and return TRUE on the same refusal —
+SAME REFUSAL, TWO REPORTINGS." **THE f3 INSTRUMENTS NEVER FACE THAT REFUSAL**:
+none of the four has a kContext guard at all. The claim was wrong. The real
+comparison set is the instruments that DO refuse on the absent module.
+
+**AND I GOT THAT SET WRONG TOO, BEFORE MEASURING IT.** My first reading of it
+came from grepping one refusal string, which found ten rows and said seven were
+already kOpen — so I wrote that the fix was "finishing a move made for seven
+rows and missed three". **A BOUNDED PROBE OF THE WHOLE TEACH TIER REFUTED THAT
+WITHIN THE HOUR.** Every kTeach spec was run under a 15-second cap (so nothing
+could start a multi-day run) and every kLong member's wall time was read off
+tonight's battery:
+
+    THE ABSENT-kContext CLASS, MEASURED: 29 rows, every one refusing in 0-1 s
+    kOpen (13)  orthoname travelsweep staircase chase ctxretain      (kLong)
+                areax ctxfour ctxlearn ctxscale ctxself echoname
+                ipctx tutorgrid                                      (kTeach)
+    kRead (16)  absbar                                               (kLong)
+                bankprobe baseprobe baseref boundprobe ctxfactor
+                ctxgain ctxgrid ctxvocab dirbudget dlvry exsweep
+                ippool poolbeta rpeprobe silence                     (kTeach)
+
+So the grep's "seven of ten already kOpen" was a biased sample of a 29-row
+class, and **kRead was the MAJORITY convention, not the minority** — 16 against
+13. The fix does not get to lean on "the project already decided this". It has
+to stand on the argument instead, and it does: **a kRead false is counted as a
+gate FAILURE while the message it prints calls it "apparatus, not content"**, so
+the kRead half makes both `verify-long` and `verify-teach` unable to print PASS
+on a genome that omits contexts ON PURPOSE.
+
+**WHICH ALSO CORRECTS ROADMAP OPEN ITEM 11 A SECOND TIME.** Written 2026-10-30
+as "seven kTeach instruments refuse for the absent kContext module", corrected
+in stage 6 to include the long tier, and now measured at **23 in kTeach plus 6
+in kLong**. The item understated its own scope by more than three times.
+
+**AND THEN THE PROJECT'S OWN RULE SAID MY FLAG WAS THE WRONG ONE.** I first
+moved all of them to `kOpen`. Reading open item 11 to the end — before
+committing — found the rule already written down there, on 2026-10-30:
+
+> *produces a number → `kPass`; refuses because a mechanism is off or a module
+> is absent → `kGuard`; has a real bar it does not yet clear → `kOpen`.*
+
+An absent module is **`kGuard`**, not `kOpen`, and the precedent was already in
+the table: `duty` (kLong) and `v1probe`, `apicalprobe`, `oscprobe` (kFast) are
+kGuard for exactly this. Item 11 even says it in as many words — *"the seven are
+mis-registered: they refuse on the shipped genome for an absent module, which is
+`kGuard`'s definition, and they are declared `kRead`."* **SO THE FIX CHANGED
+SHAPE AGAIN, AND THE CLASS IS NOW UNIFORM:**
+
+    THIRTY-ONE ROWS CHANGED
+    29 -> kGuard   the whole absent-kContext class, which had been registered
+                   THREE ways: 16 kRead (the ones breaking the gate) and 13
+                   kOpen (green already, but an absent module is not an unmet
+                   bar). Both halves were wrong; now all 29 agree.
+     2 -> kOpen    `interleave` and `maskretain`, the rule's THIRD clause: they
+                   RAN and did not clear their bars. Nothing is absent.
+
+Counts confirm it independently: `kRead` 64 -> 46, `kGuard` 7 -> 36, `kOpen`
+45 -> 34, `kPass` 56 untouched, 172 rows throughout. **AND THE TEACH TIER NOW
+HAS NO kRead ROWS AT ALL** — all 15 of its kRead specs were this one class, so
+`verify-teach` can no longer fail through the "instrument did not complete"
+branch.
+
+The two content rows are the ones the enum's rule condemns rather than the
+convention:
+
+    row          tier     what its false actually is
+    interleave   kLong    `passed < 0`: no arm cleared 2 SE on BOTH gates, on 36
+                          seeds, MEASURED. Its own `why` says it GATES, which an
+                          instrument does not do
+    maskretain   kLong    `cliff_before_half`: confinement refused, the cost flat
+                          across widths, MEASURED
+    absbar       kLong    the absent module -- and it HAS gates of its own ("is
+                          the distance visible", "can the rule still learn"), so
+                          kRead was wrong on the enum's rule as well, which is
+                          why it is listed here and not only in the class
+
+**THE TWO ROWS I DELIBERATELY DID NOT CHANGE, WHICH MATTERS MORE THAN THE FIVE.**
+`repdrift` and `hush` also return false for something measured, and both stay
+kRead, because in both cases the false is the instrument's **OWN SELF-CHECK**,
+which the contract explicitly allows. `hush`: *"The free control hardcodes
+§59a's ledger and checks 160 integers, so any perturbation breaks the run."*
+`repdrift`'s G0: *"If it does not, this is a different experiment and nothing
+below is readable."* A self-check that fires is an instrument declaring its own
+reading void — not a verdict about the creature. **AND §80 IS ITSELF THE PROOF
+THAT KEEPING THEM IS RIGHT: `repdrift`'s G0 IS WHAT CAUGHT THE DOSE.** Had I
+"fixed" it to return true, the battery would have lost the one signal that dated
+the breakage to DNA v75.
+
+**NO INSTRUMENT'S LOGIC WAS TOUCHED.** Thirty-one flags, one corrected message
+and one new summary line. No genome change, no kernel change, the pinned hash is
+untouched, and every instrument prints exactly what it printed before. That is
+what makes the fix verifiable without re-running anything expensive: `absbar`,
+`bankprobe`, `ippool`, `silence` and `ctxfactor` were re-run on the new binary
+(rc=1 each, same messages, 0 s), and `interleave` rc=1 / `maskretain` rc=1 were
+measured in stage 7 on this genome with logic unchanged since.
+
+**THE ONE THING THE FIX COULD NOT SOLVE IS PRINTED INSTEAD OF HIDDEN.** Item 11
+named the difficulty and it is real: kGuard is correct *for this genome*. These
+29 exist to be run on a context genome, where they measure — and there a guard
+that starts passing is reported as "the mechanism it watches is no longer off",
+so all 29 would cry wolf at once. No `Expect` value encodes an expectation that
+depends on the genome, and this project's standing rule for that case is that a
+label correct on only SOME genomes MUST BE PRINTED. So `run_verify` now prints a
+`guards` line saying how many refused as expected and that the expectation is
+relative to the genome in hand, naming `tools/genome_add_context.py` as the
+other case. **A SKIP THE SUMMARY COUNTS SEPARATELY IS THE BETTER LONG-TERM
+SHAPE, AND IS DELIBERATELY NOT IN THIS FIX** — it is a harness change, not a
+registration one.
+
+**AND THE LINE THAT MISLED MY OWN STAGE 5 NOW CARRIES ITS REFUTATION.** The
+kRead failure message asserted "apparatus, not content ... it returns false only
+on a load failure, a missing module, too few usable creatures, or its own
+self-check" — which was FALSE for three rows, and I believed it when triaging.
+It now adds: if the instrument's output shows a measured verdict instead, this
+line is the lie and the registration is the bug.
+
+**THE PREDICTION, REGISTERED BEFORE ITS EVIDENCE, AS EXACT NUMBERS.** The tier
+counts after the fix are kLong = 53 kPass + 46 kRead + 9 kOpen + 9 kGuard = 117,
+one of which is `determinism` and reported separately. So on the reverted genome
+`verify-long` should print:
+
+    experiments       116 as expected, 0 not
+    open milestones   9 still failing
+    guards            9 refused as expected
+    instruments       46 read
+    verify PASS
+
+**AND THE kOpen FIGURE IS AN ARITHMETIC CROSS-CHECK, NOT A GUESS.** Tonight's
+run printed `open milestones 12`; this fix moves 5 of those 12 (orthoname,
+travelsweep, staircase, chase, ctxretain) out to kGuard and moves 2 in
+(interleave, maskretain): 12 - 5 + 2 = 9, which is exactly the number of kOpen
+rows the table now holds in kLong. If the two numbers had disagreed, a row would
+have been misfiled. What IS verified: the kOpen-false and kGuard-false paths are
+both old code — 12 and (as the fast tier is now checking) 4 exercises of them.
+What is NOT verified: the tier end to end, which costs 43.97 h and is not spent
+here. **`hush` IS THE ONE ROW THAT COULD STILL REFUTE THIS, AND IT IS RUNNING
+AS I WRITE THIS** — it was never controlled on v74, so its branches go here
+first:
+
+- **`hush` PASSES on the reverted genome** -> it was a tenth v75 casualty, its
+  kRead self-check did its job, and the prediction above stands whole.
+- **`hush` FAILS** -> its hardcoded §59a ledger does not describe the SHIPPED
+  creature either, which is a stale-archive problem of its own and **NOT
+  something a flag may paper over**. The prediction above then fails on that one
+  row and `verify-long` still cannot print PASS. I am not changing its flag in
+  that case; a self-check that fires on the shipped genome is a finding.
+
+### §80 STAGE 8 RESULT — `hush` ANSWERED BRANCH 1, AND THE GATE IS GREEN (2026-11-19)
+
+**`hush` PASSES on the reverted genome, so BRANCH 1 fired and the prediction
+stands whole.** Its free control hardcodes §59a's published ledger, and the dose
+had broken all four of its vectors:
+
+    gate                       DNA v75                 reverted shipped
+    T1.RET      r 0..35        *** DIFFERS ***         ok
+    T1.RET.D    r 0..35        *** DIFFERS ***         ok
+    T1.ORACLE.D r 0..35        *** DIFFERS ***         ok
+    T1.ORACLE   r 0..11        *** DIFFERS ***         ok
+    TOTAL                      64 of 160 differ FAIL   0 of 160 differ PASS
+                                                       "All gates passed."
+
+So `hush` is a **TENTH v75 casualty**, not a stale archive — and its kRead
+registration is CORRECT and stays: the self-check fired for exactly the reason
+kRead permits, and it fired because the creature really had changed.
+`results/n80-revert-hush.log`.
+
+**THAT MAKES THREE INDEPENDENT BIT-IDENTITY PROOFS OF THE REVERT**, which is
+worth stating together because each covers something the others do not:
+`determinism`'s 64-bit hash (behaviour over 120k ticks), `repdrift` reproducing
+its WHOLE INSTRUMENT against a log written five days before the dose shipped,
+and `hush`'s 160 hand-pinned integers going 64-differ to 0-differ.
+
+**THE GATE, re-run after the session that launched it was cut off mid-run** (the
+first attempt left a truncated 45 KB log with no summary and was overwritten, not
+read):
+
+    determinism       PASS
+    pinned hash       PASS
+    experiments       24 as expected, 0 not      wall 16.4 min
+    guards            4 refused as expected — AND THAT EXPECTATION IS
+                      RELATIVE TO THE GENOME YOU RAN ...
+    verify PASS
+
+**THE `guards` LINE IS THE PART THIS RUN ACTUALLY VERIFIED.** The fast tier holds
+four kGuard rows and no kRead or kOpen rows at all, so it cannot exercise the
+rows that moved — but it does exercise the counter and the disclosure sentence
+end to end, which is new code and the only new code in this fix.
+`results/n80-stage8-verify.log`.
+
+**WHAT REMAINS UNVERIFIED, UNCHANGED FROM THE REGISTRATION ABOVE:** the long
+tier's own summary. The prediction stays as written — 116 as expected / 0 not,
+open milestones 9, guards 9, 46 read, `verify PASS` — and costs 43.97 h to
+confirm. **A GREEN FAST TIER STILL DOES NOT PRICE A SUITE EDIT ANY MORE THAN IT
+PRICED A GENOME EDIT**, which is §80's own lesson and the reason that prediction
+is written as numbers rather than as a claim.
