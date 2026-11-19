@@ -18029,3 +18029,115 @@ unprompted regeneration from the silent state (arXiv:2607.14000, carried in the
 References as a caution) — which is a mechanism line under §69's rule and not
 this one. **Facilitation bears on (c), not (a), and conflating them would cost a
 run.**
+
+## §80 STAGE 5 — THE LONG TIER LANDED AND IT IS `verify FAIL` WITH FOURTEEN FAILURES, NOT ONE (2026-11-19)
+
+**I PREDICTED ONE FAILURE AND GOT FOURTEEN. That prediction is withdrawn here, not
+reworded.** Stage 4 registered the long tier as "expect `verify FAIL` solely from
+`mechverify`, verified as a forced pin move". The run printed `102 as expected, 14 not`
+over 2638.0 min (43.97 h, slowest `blockwhere` at 371.8 min), with `determinism PASS`
+and `pinned hash PASS`.
+
+THE TEACH TIER NEVER STARTED, exactly as derived: `run_verify` returns false on any
+failure, `main.cpp:237-240` maps that to exit 1, and the chaining `&&` short-circuited.
+The shell printed `battery exit: 1` and `results/n80-verify-teach.log` does not exist.
+So the 2.4-10 day teach tier remains UNSPENT and is still a decision, not a fact.
+
+### THE FOURTEEN, TRIAGED INTO FOUR CLASSES
+
+**CLASS 1 — FORCED PIN AND DOCUMENTED-NUMBER MOVES. Any genome edit does this.**
+- `mechverify` 18 of 18 mechanism pins drifted, `0 vacuous, 0 unpinned, 0 broken`.
+  CONTROLLED in stage 4: the archived v74 genome reads 18 of 18 `ok`, PASS.
+- `hush` fails a PINNED-INTEGER reproduction gate: `TOTAL 160 integers checked, 64
+  differ`, per-session `want`/`got` counts of similar magnitude (not a collapse). Its
+  own content verdict, `POOLED VERDICT VOICING -- the gate never opened`, is the
+  long-standing §60 reading and is UNCHANGED.
+- `restate` prints `RESTATE FAIL — at least one documented number no longer describes
+  this creature`, which is what that instrument is FOR.
+
+**STAGE 4's by-construction list named only `determinism`. It should have named
+`determinism`, `mechverify`, `hush` AND `restate`. That is the SECOND time this
+pre-registration has undercounted the pin class, and the correction is now in the
+same place as the first.**
+
+**CLASS 2 — PRE-EXISTING STRUCTURAL REFUSAL, SETTLED TODAY BY CONTROL.**
+- `absbar` exits at 0.0 s with `this genome has no kContext module`. Run on the v74
+  genome with this same binary TODAY: rc=1, byte-identical message, zero simulation.
+  **It cannot depend on v75 because it refuses before simulating.** This is ROADMAP
+  open item 11 (2026-10-30), which I had recorded as a TEACH-tier problem only; it
+  bites in the LONG tier too, and that is a correction to the open item.
+- A REGISTRATION INCONSISTENCY falls out of it: 14 instruments cost 0.0 s in this run,
+  and the four `f3*` siblings (`f3name`, `f3grid`, `f3comp`, `f3seq`) are `kRead` like
+  `absbar` yet return TRUE on the same structural refusal, so they are not counted.
+  `absbar` alone returns false. Same refusal, two reportings.
+
+**CLASS 3 — A POSITIVE CONTROL UNDER ITS OWN BAR. THIS IS THE CLASS THAT DECIDES
+SHIP-OR-REVERT, AND IT IS ALL ON THE VOICE READOUT.**
+
+    instrument   positive control                       reads   bar
+    quietecho    the `shipped` arm's echo               0.728   0.750
+    g3probe      the calibration echo (voice readout)   0.575   0.700
+    condprobe    the calibration echo                   0.550   0.700
+    condprobe    the word arriving at `vocal`           0.555   0.700
+    pairprobe    the calibration echo                   0.550   0.700
+    eligprobe    the size-matched arcuate trace         0.668   0.700
+    partprobe    supervised readout, articulator grps   0.540   0.740 (`ctxsrc`)
+
+`condprobe` states the consequence in its own words: **"The condition never got into
+the creature; there was nothing at the larynx for the rule to condition on."**
+`quietecho` says to check the genome against `imitate`'s own figure of 0.860 — and
+`imitate` is itself in the failure list.
+
+THE OCTOBER BASELINE (`results/verify-long-default-baseline.log`, 2026-10-26) read the
+SAME controls far higher, and these instruments PASSED then:
+
+    g3probe   calibration echo  0.725  (now 0.575)
+    condprobe calibration echo  0.850  (now 0.550)
+    condprobe vocal per neuron  0.814  (now 0.555)   <- "does it ARRIVE"
+    pairprobe calibration echo  0.850  (now 0.550)
+
+**THE OCTOBER COMPARISON IS NOT A v75 CONTROL AND MUST NOT BE QUOTED AS ONE.** Both
+the binary and the spec table moved since (84 timed specs then, 117 in the long tier
+now; `partprobe` was `kOpen` in October and printed "expected FAIL, got PASS"), and
+`quietecho` was WRITTEN ON 2026-10-27, the day AFTER that run, so it has never been in
+a battery before and its 0.750 bar has no battery history at all.
+
+**CLASS 4 — A CONTENT VERDICT WHOSE `kRead` GATE RETURNED FALSE.**
+- `repdrift`: `VERDICT: REFUTED -- no slope in this range`; the containing range reads
+  -0.77 SE. The instrument did its job.
+- `interleave`: `NO ARM RESCUES IT at 2 SE on both measures`.
+- `maskretain`: prints its structural claim and names the test that would settle it.
+These are findings, not breakage, but a false `kRead` is counted as `failed`.
+
+### THE CONTROL NOW RUNNING, AND ITS BRANCHES — WRITTEN BEFORE IT LANDS
+
+The clean isolate is the SAME BINARY, SAME TICK COUNTS, and a genome differing from the
+shipped one in exactly the two lines v75 moved (`stp_use` 0.0 -> 0.20 and
+`stp_recover_ms` 0.0 -> 3000.0, on BOTH auditory->vocal tracts; `diff` confirms nothing
+else differs). Reconstructed as `e0b11f1^:dna/default.toml`. Eight instruments,
+cheapest first: `restate`, `eligprobe`, `partprobe`, `condprobe`, `g3probe`,
+`pairprobe`, `imitate`, `quietecho`.
+
+**BRANCH A — the control reads the calibration echo back near October (>= 0.700) and
+these instruments PASS on v74.** Then v75 CAUSED the loss of the voice readout, and
+`condprobe`'s 0.814 -> 0.555 on "does the word arrive at `vocal`" is the mechanism
+stated plainly: depression on auditory->vocal is the M6 mechanism and it is ALSO what
+delivers the echo. **v75 REVERTS.** M6's scoped transfer then stands as a MEASUREMENT
+on a dosed arm and DOES NOT SHIP, and §78's scoped claim keeps its three deviations
+plus a fourth: the dose is not shippable.
+
+**BRANCH B — the control reads ~0.55 and FAILS the same way on v74.** Then the loss
+PREDATES v75, §80's "the battery passes" condition was unsatisfiable on ANY genome
+exactly as the teach gate was, and **the battery does not refute v75**. It opens a
+SEPARATE regression hunt for whatever moved between 2026-10-26 and now. Branch B
+EXCLUDES v75 as the cause and IDENTIFIES NOTHING, because the binary and the suite
+moved too.
+
+**BRANCH C — anything in between: the control lands at 0.70-0.85 but marginal, or
+passes on some instruments and fails on others.** Then there is NO single verdict and
+each instrument is read on its own control. Do not average across them and do not let
+one instrument's pass carry another.
+
+**NO BRANCH HERE SHIPS v75 ON THE BATTERY'S STRENGTH.** The best available outcome is
+B, which only declines to refuse it.
+
