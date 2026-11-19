@@ -1,0 +1,139 @@
+experiment: samediff
+  SHORT RUN — 200000 ticks against a minimum of 672000. derived: §63, M6 run one. Word A, a gap, word B, and a held-out readout
+  asked whether B was the SAME word as A -- the smallest operation that
+  cannot be done without holding something. A and B come from a BALANCED
+  four-cell list, so 'same' is 50/50 and B's identity carries nothing about
+  the label by construction. One round is 16800 ticks (four gaps: 200, 800,
+  2000, 5000 ms), and 40 rounds is the floor for a held-out split at every
+  gap. §61's decay gate is demoted to INTERPRETIVE here: the readout is a
+  linear nearest-centroid and same/different is XOR, which a linear readout
+  of a superposition cannot produce -- so a surviving trace of A does not
+  make the milestone trivial. §61's larynx-silenced arm is renamed
+  ACOUSTIC-silenced: quietecho took the voiced fraction 0.773 -> 0.000 with
+  the articulator echo UNMOVED, so the knob cuts the self-heard loop only.
+  §69 ADDS FOUR DOSE ARMS and they are the first that move something other
+  than `voicing_threshold`: `stp_use` 0.20 and `stp_recover_ms` on a
+  100/300/1000/3000 ms ladder, patched into the auditory->vocal projections
+  of the SESSION'S BLOB COPY. `dna/default.toml` is never written and the
+  shipped hash must not move. The dose is the MERGED tract because the
+  kernel keys STP by the (source, target) module pair; §68 priced that
+  substitution at 1.2744 against the excitatory limb's 1.3076. §69's
+  primary MOVES to `vocal`: depression here does not feed `central`.
+  §70 ADDS NO ARM AND NO TICK. It adds four FEATURE SPACES on the same
+  trials, because §68 measured 153.5 SE in the delivered drive and §69
+  measured 0.8 SE in the vocal spikes and nothing said what lies between:
+  the MEASURED delivered drive `w*u*R/U` read from the live kernel at the
+  moment of transmission (excitatory and signed), §68's own arithmetic
+  `1-(1-U)^n` on the same trial's spike counts, and the vocal MEMBRANE.
+  The primary is the PREMISE CHECK -- §68 simulated depletion host-side
+  with no within-word recovery over pairs that never physically occurred,
+  the kernel runs the real Tsodyks-Markram recursion, and nobody had
+  compared them. Here A and B are one trial, so the comparison is PAIRED
+  on identical spikes. §69's own columns must reproduce EXACTLY: nothing
+  added here draws a random number or touches kernel state.
+  §71 ADDS FOUR ARMS ON FRESH CREATURES (seed offset 12), because samediff
+  is deterministic and re-reading §70's own trials to confirm a cell that
+  §70's ladder selected would be circular. The probe is 60 ms of kWords[0]'s
+  formants, 60 ms of silence, 60 ms of kWords[1]'s, placed in the 400 ms
+  scoring window that was SILENCE in §63/§69/§70 — IDENTICAL on every trial,
+  so it carries no label by construction. Its shape is forced by the
+  synthesiser: VowelSource renders a two-formant vowel, not a click, and
+  kWords[0]/[1] are the CORNER pair, so no single probe overlaps both. The
+  derived one-tailed prediction is that |part1 - part2| is LARGER for SAME,
+  because depletion is concave. `n71 ref+probe` is the MECHANISM NULL: with
+  stp_use 0 there is no depletion, so a probe can carry nothing.
+  Everything below is printed for debugging and is NOT a
+  measurement; this run cannot pass whatever it reads.
+
+
+  M6 RUN ONE — DOES THE CREATURE TELL SAME FROM DIFFERENT? (ROADMAP §63)
+
+  trial             word A 900 ms | gap G | word B 900 ms | score 400 ms
+  gaps              200 / 800 / 2000 / 5000 ms, interleaved in one session
+  the control       A and B drawn from a BALANCED four-cell list, so
+                    'same' is 50/50 and B's identity carries nothing
+                    about the label BY CONSTRUCTION
+  the bar           0.650, read against the ASSEMBLED oracle (decode A
+                    from A's window, B from B's, XOR the decodes)
+  primary           central (the non-motor route)
+  co-primary        artic9 (the MOTOR route — reads differently)
+  round             16800 ticks; 11 rounds at this budget
+  creatures         12 per arm, 42 on §74's sweep arm, 196 on §77's
+
+
+    §81 PRE-FLIGHT — PRINT ONLY, NOT A VERDICT, NOT AN ARM.
+
+      noise_amp 0.2200, read off the vocal module -> per-tick SD
+      0.1270 at exploration multiplier 1.
+      `vmem` is the mean membrane over the WHOLE vocal module in
+      kSdWBE, the overlap window the primary is read on.
+      `thr` is the mean threshold over that same module, as
+      `mean_thr` averages it -- NOT the larynx subset.
+
+      arm                       vmem      thr   thr-vmem  noise SD
+      shipped                 -0.6742   0.9928    1.6670      13.1
+      acoustic-silenced       -0.7149   1.0445    1.7594      13.9
+      B-omitted               -0.2477   0.9941    1.2418       9.8
+      stp tau100              -0.5260   0.9924    1.5184      12.0
+      stp tau300              -0.4402   0.9957    1.4359      11.3
+      stp tau1000             -0.3355   1.0037    1.3393      10.5
+      stp tau3000             -0.2423   1.0151    1.2574       9.9
+      n71 ref                 -0.8544   0.9608    1.8152      14.3
+      n71 ref+probe           -0.8442   0.9547    1.7989      14.2
+      n71 tau1000             -0.4015   0.9746    1.3761      10.8
+      n71 tau1000+probe       -0.3936   0.9726    1.3662      10.8
+      n71 tau1000 quiet       -0.4746   1.0242    1.4988      11.8
+      n71 tau1000 quiet+probe -0.4589   1.0155    1.4744      11.6
+      n74 sweep               -0.7431   0.9731    1.7162      13.5
+      burst-def               -0.6742   0.9928    1.6670      13.1
+      n75 tau3000             -0.2518   1.0083    1.2602       9.9
+      n77 tau3000             -0.2664   1.0013    1.2677      10.0
+      n78 quiet tau3000       -0.3371   1.0473    1.3843      10.9
+      n80 shipped             -0.7469   0.9726    1.7196      13.5
+      n80 shipped quiet       -0.7979   1.0272    1.8251      14.4
+
+      READ THE DISTANCE BEFORE ANYTHING ELSE. §81 wrote its own
+      refusal in advance: a membrane-to-threshold distance of MANY
+      noise SD means neither facilitation nor noise can reach it,
+      and the lead dies there with no creature spent.
+  §69 THE DOSE — stp_use 0.20 on the MERGED auditory->vocal tract
+
+    arm                  projections patched   vocal spikes/tick
+    shipped                       0               0.48579   <- the reference
+    acoustic-silenced             0               0.58939
+    B-omitted                     0               0.51961
+    stp tau100                    2               0.48176
+    stp tau300                    2               0.49021
+    stp tau1000                   2               0.50394
+    stp tau3000                   2               0.52472
+    n71 ref                       0               0.44077
+    n71 ref+probe                 0               0.40735
+    n71 tau1000                   2               0.46316
+    n71 tau1000+probe             2               0.44169
+    n71 tau1000 quiet             2               0.54852
+    n71 tau1000 quiet+probe          2               0.47212
+    n74 sweep                     0               0.46279
+    burst-def                     0               0.48579
+    n75 tau3000                   2               0.51662
+    n77 tau3000                   2               0.50704
+    n78 quiet tau3000             2               0.58884
+    n80 shipped                   0               0.46094
+    n80 shipped quiet             0               0.55941
+
+    G-DOSE  every dose arm wrote at least one projection   PASS
+    G-LIVE  every dose arm's vocal drive differs from it   PASS
+
+  THE GATES
+
+    sessions that ran          1006 of 1006                      PASS
+    feature rows == labels     0 misaligned                 PASS
+    slept trials               0 of 32192 = 0.0000  (<= 0.20)  PASS
+    first sleep at tick        never, in this budget
+    all 4 cells in both folds  0 gap-cells short            PASS
+    gap-cells scored           0                            FAIL
+    assembled oracle, best     0.0000  (>= 0.80)             FAIL
+    label-destroyed, primary   0.0000 +- 0.0000  in [0.42,0.58]  FAIL
+
+  RUN VOID — a registered gate failed. No verdict is computed and none
+  is printed. The registered consequence is that this run is archived
+  void and the budget or the instrument is corrected before a re-run.

@@ -18669,3 +18669,82 @@ open milestones 9, guards 9, 46 read, `verify PASS` — and costs 43.97 h to
 confirm. **A GREEN FAST TIER STILL DOES NOT PRICE A SUITE EDIT ANY MORE THAN IT
 PRICED A GENOME EDIT**, which is §80's own lesson and the reason that prediction
 is written as numbers rather than as a claim.
+
+## §81 PRE-FLIGHT RAN, AND IT REFUTES ITS OWN FRAMING RATHER THAN THE LEAD (2026-11-19)
+
+The §81 lead named two numbers as missing and forbade guessing them. Both are
+now printed by `samediff` itself — `host/src/experiments_probes.cpp`, a
+print-only block placed BEFORE the dose gates — and the answer is not the one
+the lead's arithmetic was set up to receive.
+
+**THE NUMBERS, AND WHAT THEY ARE NOT.** From a `--allow-short --ticks 200000`
+run, which the harness itself brands as not-a-measurement, so these are a SMOKE
+and the exact figures must NOT be quoted as the operating point:
+
+    arm                 vmem      thr   thr-vmem   in noise SD
+    shipped           -0.6742   0.9928    1.6670       13.1
+    stp tau3000       -0.2423   1.0151    1.2574        9.9
+    n71 ref           -0.8544   0.9608    1.8152       14.3
+
+`noise_amp` read off the vocal module is 0.2200, giving a per-tick SD of 0.1270
+at exploration multiplier 1 — which reproduces the lead's own arithmetic, from
+the genome rather than from a literal.
+
+**THE REFUTATION, AND IT IS QUALITATIVE SO THE SMOKE CARRIES IT.** The same run
+prints the vocal module at **0.48579 spikes/tick**, and `voc_spikes` counts every
+spike in the module span while `voc_ticks` ticks once — so that is a MODULE
+total, and over 126 neurons it is **0.00386 spikes/tick per neuron, about
+3.9 Hz**, a neuron crossing threshold roughly every 259 ticks. Meanwhile
+`membrane()` returns `v_` (`network.h:702`), the kernel spikes on
+`v_[i] >= threshold_[i]` (`network.cpp:2637`), and the reset is to `v_rest_`
+which the genome sets to **0.0** for `vocal`.
+
+So: **the mean membrane sits 13 noise SD below threshold IN A CREATURE WHOSE
+EVERY VOCAL NEURON CROSSES THAT THRESHOLD SEVERAL TIMES A SECOND.** The
+crossings are therefore produced by excursions an order of magnitude larger than
+`noise_amp`'s SD, driven by synaptic input. **A DISTANCE FROM THE MEAN, IN UNITS
+OF THE NOISE SD, CANNOT DECIDE WHETHER A GRADED SIGNAL CAN BE PUSHED ACROSS** —
+it reads ~13 SD in a creature that is firing perfectly normally. The lead's
+registered pre-flight is answered and its framing does not survive the answer.
+
+**WHAT THIS DOES ESTABLISH, which is more than nothing.**
+
+- **The NOISE route is now dead twice over.** It was already structurally
+  confounded (`vocal` is the only `explore_scale = 1.0` module, so the noise IS
+  the exploration drive). Now it is also arithmetically hopeless: a 0.1270 SD
+  perturbation against a 1.667 gap, with the homeostat still holding clamp
+  headroom to oppose it. Two independent refusals, no creature spent.
+- **FACILITATION IS NOT REFUSED BY THIS, AND MUST NOT BE RECORDED AS IF IT
+  WERE.** Facilitation acts on DELIVERED SYNAPTIC DRIVE — which is precisely the
+  quantity shown above to be what actually carries the membrane across. This
+  pre-flight neither licenses nor refuses it; it shows this particular
+  arithmetic does not bear on it.
+
+**AND A CORRECTION TO §81's OWN ARITHMETIC, of exactly the kind it said must not
+be guessed.** §81 took the runtime threshold from `thrpatch`: **+2.45643**, read
+as 1.46 above birth with 1.54 of clamp headroom left, and concluded the noise
+amplitude is "about 9% of the threshold's present magnitude". But `samediff`
+reads the same module's mean threshold at **0.9928** — essentially the BIRTH
+value of 1.0. **THE RUNTIME THRESHOLD IS PROTOCOL-DEPENDENT**: IP integrates the
+activity a protocol actually drives, and `thrpatch`'s protocol is not
+`samediff`'s. So there is no single "the runtime threshold" for this creature,
+and carrying `thrpatch`'s 2.456 into a statement about `samediff`'s operating
+point would have been wrong. The lead's instinct — never read the genome's
+`threshold = 1.0` as the operating one — was right; the fix is that the
+operating one must be read ON THE PROTOCOL THE CLAIM IS ABOUT.
+
+**WHAT IS STILL NOT MEASURED, AND WHY I DID NOT SPEND IT.** The two numbers at
+`samediff`'s true 1,680,000-tick operating point cost ~3 h (the 200k smoke took
+1332 s and the work is near-linear in ticks). **I did not spend it, because no
+value it could return changes a decision.** The mean is the wrong statistic
+whatever its value, and §81 itself derived that the threshold number cuts both
+ways — saturated at `t_max` means the homeostat cannot cancel a noise change AND
+that the distance is larger still. A run whose every outcome leaves the same
+conclusion is not a measurement, it is 3 h.
+
+**WHAT A RE-SPECIFIED PRE-FLIGHT WOULD HAVE TO ASK**, stated so the next pass
+does not restart from the mean: not the distance from the mean, but the
+membrane's EXCURSION distribution near threshold — the fraction of ticks within
+one synaptic-drive SD of it, or an upper quantile of `v_` in the window, against
+the drive fluctuation rather than against `noise_amp`. That is another print on
+the same two accessors and is NOT registered here.

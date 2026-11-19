@@ -18897,6 +18897,18 @@ struct SdOut {
   // genome property and a per-neuron budget quoted from a literal would be
   // silently wrong on any other genome.
   uint32_t voc_n = 0;
+  // §81's PRE-FLIGHT, PRINT-ONLY AND NOT A VERDICT. The §81 lead names two
+  // numbers as missing and forbids guessing them: the mean vocal MEMBRANE in
+  // the window the primary is actually read on (`kSdWBE`, §64's 400 ms
+  // overlap), and the vocal module's mean THRESHOLD at THIS session's length
+  // rather than `thrpatch`'s 60,000 ticks. Both are reads of state that
+  // already exists -- no arm, no dose, nothing added to the simulation -- and
+  // they exist to express the membrane-to-threshold distance in units of the
+  // fluctuation `noise_amp` delivers, because every route in §81 operates only
+  // while the signal sits within roughly a noise SD of threshold.
+  double vmem_bar_sum = 0.0;  // over scored trials, of the module mean
+  uint64_t vmem_bar_n = 0;    // ...and how many trials are behind it
+  double thr_bar_end = 0.0;   // mean threshold over the WHOLE vocal module
   bool ok = false;
 };
 
@@ -19551,6 +19563,16 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           feat[g][win][kSdDrvNet].push_back(vn);
           feat[g][win][kSdDrvSim].push_back(vs);
           feat[g][win][kSdVmem].push_back(vm);
+          // §81 pre-flight: the same per-neuron window means the primary reads,
+          // reduced to ONE number per trial. `kSdWBE` only, because that is the
+          // window the primary is read on and a mean pooled across windows
+          // would describe no readout this project has.
+          if (win == kSdWBE && wv > 0) {
+            double sum_vm = 0.0;
+            for (uint32_t j = 0; j < wv; ++j) sum_vm += vm[j];
+            out.vmem_bar_sum += sum_vm / double(wv);
+            ++out.vmem_bar_n;
+          }
           // ---- §72's TWO SPACES ----
           //
           // THE SUBTRAHEND IS EXACT, AND THAT IS WHY THIS IS NOT A RATE. Under
@@ -19941,6 +19963,19 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     }
     row.scored = true;
   }
+  // §81 pre-flight, print-only: the vocal module's mean threshold at THIS
+  // session's length. `thrpatch` prints the same quantity at 60,000 ticks, and
+  // §81 needs it at `samediff`'s own operating point because IP moves it --
+  // the genome's `threshold = 1.0` is the BIRTH value and is the plausible
+  // wrong number this lead already caught once. Averaged over `ms_v` exactly
+  // as `mean_thr` does, so this is the WHOLE VOCAL MODULE and not the larynx
+  // subset, which is the label correction §81 carries.
+  if (wv > 0) {
+    double sum_thr = 0.0;
+    for (uint32_t j = 0; j < wv; ++j)
+      sum_thr += double(s.brain.network().threshold(ms_v.begin + j));
+    out.thr_bar_end = sum_thr / double(wv);
+  }
   out.ok = true;
   return out;
 }
@@ -20299,6 +20334,62 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
     }
     voc_rate[a] = tk > 0.0 ? sp / tk : 0.0;
     stp_min[a] = (mn == 0xffffffffu) ? 0u : mn;
+  }
+  // ---- §81 PRE-FLIGHT — PRINT ONLY, NO VERDICT, NO ARM OF ITS OWN ----
+  //
+  // ROADMAP §81 names two numbers as missing and forbids guessing them; this
+  // prints both at THIS run's length. Nothing here is an arm, a dose or a
+  // claim: §81 is a LEAD and explicitly not a pre-registration, and the only
+  // thing this block decides is whether it is worth a creature at all.
+  //
+  // PLACED BEFORE THE DOSE GATES ON PURPOSE. These two numbers are properties
+  // of the CREATURE, not of whether a dose arm came out live, and the §80
+  // smoke proved the difference: at 20,000 ticks G-DOSE returns VOID and
+  // everything below it is skipped. A diagnostic that disappears exactly when
+  // a run goes wrong is the diagnostic you needed.
+  //
+  // The distance is expressed in units of the per-tick fluctuation the genome
+  // actually delivers, because every route in §81 operates only while the
+  // signal sits within roughly one of them. `signed_uniform()` is uniform on
+  // [-1,1] with SD 1/sqrt(3), so that SD is `noise_amp`/sqrt(3) at an
+  // exploration multiplier of 1 -- and `noise_amp` is READ FROM THE GENOME,
+  // never typed. A literal 0.22 would be silently wrong on any other genome,
+  // which is the same error class as reading `threshold = 1.0` as the
+  // operating threshold, the mistake this lead already caught once.
+  {
+    const int32_t vmod = dna.module_with_role(aibaby::ModuleRole::kVocal);
+    const double namp = vmod >= 0 ? double(dna.module(uint32_t(vmod)).noise_amp) : 0.0;
+    const double nsd = namp / std::sqrt(3.0);
+    std::printf("\n    §81 PRE-FLIGHT — PRINT ONLY, NOT A VERDICT, NOT AN ARM.\n\n"
+                "      noise_amp %.4f, read off the vocal module -> per-tick SD\n"
+                "      %.4f at exploration multiplier 1.\n"
+                "      `vmem` is the mean membrane over the WHOLE vocal module in\n"
+                "      kSdWBE, the overlap window the primary is read on.\n"
+                "      `thr` is the mean threshold over that same module, as\n"
+                "      `mean_thr` averages it -- NOT the larynx subset.\n\n"
+                "      arm                       vmem      thr   thr-vmem  noise SD\n",
+                namp, nsd);
+    for (uint32_t a = 0; a < kSdArmCount; ++a) {
+      double vsum = 0.0, tsum = 0.0;
+      uint32_t n = 0;
+      for (const SdOut& o : res[a]) {
+        if (!o.ok || o.vmem_bar_n == 0) continue;
+        vsum += o.vmem_bar_sum / double(o.vmem_bar_n);
+        tsum += o.thr_bar_end;
+        ++n;
+      }
+      if (n == 0) {
+        std::printf("      %-23s  (no scored session)\n", kSdArms[a].name);
+        continue;
+      }
+      const double vb = vsum / double(n), tb = tsum / double(n);
+      std::printf("      %-23s %7.4f  %7.4f  %8.4f  %8.1f\n", kSdArms[a].name, vb, tb,
+                  tb - vb, nsd > 0.0 ? (tb - vb) / nsd : 0.0);
+    }
+    std::printf("\n      READ THE DISTANCE BEFORE ANYTHING ELSE. §81 wrote its own\n"
+                "      refusal in advance: a membrane-to-threshold distance of MANY\n"
+                "      noise SD means neither facilitation nor noise can reach it,\n"
+                "      and the lead dies there with no creature spent.\n");
   }
   // §80 AMENDMENT, caught by the v75 smoke and disclosed in the ROADMAP: on a
   // genome that SHIPS the dose, an arm whose patch writes the bytes the blob
@@ -23389,6 +23480,7 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "    statement is that the ingredients are present and the comparison\n"
               "    is NOT FORMED — which bounds accumulation and names a combiner,\n"
               "    not another store, as the next build.\n");
+
   return true;
 }
 
