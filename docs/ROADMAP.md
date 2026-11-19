@@ -18247,3 +18247,30 @@ registered, MUST CARRY `quietecho`'s `artic` COLUMN AS A GUARD, not as a seconda
 a facilitation dose that lifts the spike oracle while flattening the echo is the same
 bad trade §80 just made, and the fast tier WILL NOT CATCH IT. The §80 blocker on §81
 ("do not register until §80 lands") is now cleared.
+
+### THE REVERT IS CONFIRMED (2026-11-19, same night)
+
+    determinism   PASS   hash ad96f882becbee92 — v74's pinned value, BIT-IDENTICAL
+    pinned hash   PASS   RESTORED, not re-pinned
+    verify (fast) PASS   24 as expected, 0 not, 16.2 min
+    mechverify    PASS   18 mechanisms, 0 drifted — the pins were NEVER STALE
+    restate       PASS   on the reverted SHIPPED genome
+    condprobe     PASS   on the reverted SHIPPED genome
+    quietecho     PASS   on the reverted SHIPPED genome
+
+`kPinnedHash` had to move back with the genome -- e0b11f1 moved it with the dose
+and the post-revert chain caught it as `pinned hash FAIL`, which I had not
+predicted. **IT IS A RESTORE AND NOT A NEW PIN**: the reverted genome reproduces
+v74's hash bit-for-bit, which also proves the comments left beside the two
+reverted fields cannot reach the blob, since the hash is over SIMULATED
+BEHAVIOUR and not over file text.
+
+**THE EVIDENCE CHAIN IS CLOSED WITHOUT RE-RUNNING THE LONG TIER.** The eight
+controls ran on `results/n80-v74-genome.toml`; `determinism`'s bit-identity
+proves that genome and the reverted shipped one build THE SAME CREATURE; and
+three of the eight (`restate`, `condprobe`, `quietecho`) were re-run on the
+reverted SHIPPED genome and pass. **A GREEN FAST TIER STILL PROVES NOTHING
+ABOUT THE LONG TIER — that is this section's whole lesson — so the claim here
+is the narrow one: the creature that was green before DNA v75 is back, verified
+three ways.** A full long-tier re-run (43.97 h) is NOT needed for the revert and
+is NOT claimed.
