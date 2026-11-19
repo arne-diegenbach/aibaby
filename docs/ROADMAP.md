@@ -18849,3 +18849,124 @@ first table and `voc_hash` to match it exactly, with `G-SELF` inside the probe a
 the second check. A sampling block is also added ONCE PER TICK rather than once
 per window, because a tick near B's onset belongs to four windows at that point
 — the same double-counting `voc_ticks` sits above the window loop to avoid.
+
+### §81 RE-SPECIFIED PRE-FLIGHT RESULT — BRANCH 2. THE KILL CLAUSE DOES NOT FIRE ON ANY ARM (2026-11-19)
+
+`results/n81-excursion-smoke-200k.log`, 200,000 ticks, `--allow-short`, 1006
+sessions, 32192 trials, 0 slept. The run is VOID by its own gates (0 gap-cells
+scored at this budget) and that is exactly why the block sits above them.
+
+**INERTNESS: PROVEN, AND MORE STRONGLY THAN REGISTERED.** The registration asked
+for the first table and `voc_hash` to match the archived smoke. The whole-log
+diff against `results/n81-preflight-smoke-200k.log` is a **single pure-addition
+hunk, `98a99,161`, with ZERO lines removed and ZERO changed** — every byte of
+every column archived since §63, not just the two that were promised. The two
+const accessors are inert, as claimed.
+
+```
+  arm                          sd     gap gap/sd closest     min    <5%   <10%   <25%   <50%  fired
+  shipped                  0.6254  1.6822   2.69  0.2472  0.0000  0.12%  0.28%  1.19%  4.70%  0.17%
+  acoustic-silenced        0.6449  1.7623   2.73  0.2481  0.0000  0.12%  0.28%  1.17%  4.57%  0.18%
+  B-omitted                0.5827  1.2557   2.15  0.0651  0.0000  0.33%  0.78%  3.10% 10.76%  0.54%
+  stp tau100               0.5763  1.5332   2.66  0.2165  0.0000  0.11%  0.28%  1.20%  4.87%  0.17%
+  stp tau3000              0.4712  1.2652   2.69  0.1526  0.0000  0.14%  0.35%  1.58%  6.80%  0.19%
+  n71 ref                  0.6586  1.8429   2.80  0.3143  0.0000  0.10%  0.23%  0.98%  3.85%  0.14%
+  n77 tau3000              0.4749  1.2809   2.70  0.1589 -0.0010  0.13%  0.33%  1.49%  6.44%  0.18%
+  n80 shipped quiet        0.6661  1.8337   2.75  0.2640 -0.0010  0.11%  0.26%  1.07%  4.14%  0.16%
+  ... 20 arms in all, every gap/sd in [2.15, 2.81]
+```
+
+**THE READING, AGAINST THE CLAUSE REGISTERED BEFORE THE RUN. ALL THREE KILL
+CONDITIONS FAIL, ON EVERY ARM.** The clause required `gap/sd` in the tens AND
+the bands at or near zero AND `closest` many `sd` wide. On `shipped`:
+
+- `gap/sd` is **2.69**, not in the tens.
+- The bands are populated: **4.70%** of samples sit within half a threshold of
+  crossing, 1.19% within a quarter, 0.28% within a tenth.
+- `closest` is 0.2472, which is **0.395 `sd`** — a fraction of one, not many.
+- `fired` is 0.17% and nonzero, which IS the threshold being reached.
+
+**THE 13.1 BECOMES 2.69, AND THE ENTIRE FACTOR IS THE RULER.** `sd` = 0.6254 is
+**4.92x** the `noise_amp` SD of 0.1270. Same gap, same creature, same window,
+same two accessors — a different and correct denominator. **THE FIRST
+PRE-FLIGHT'S REFUSAL WOULD HAVE KILLED THIS LEAD ON A NUMBER 4.9x TOO LARGE**,
+because it measured the injected noise rather than the variation the membrane
+actually undergoes. `calibrate-the-estimator-in-claim-units`, in the one form
+that memo had not yet taken: the units were wrong, not the power.
+
+**A CORRECTION TO MY OWN EARLIER FIGURE, AND IT IS A FACTOR OF TWO.** The first
+pre-flight derived 3.9 Hz per vocal neuron from `voc_spikes / voc_ticks`, which
+pools EVERY windowed tick. `fired` is `kSdWBE` only, and gives **1.70 Hz per
+neuron in the window the primary is read on** — 0.68 crossings per neuron per
+400 ms, about 86 per module per window. **Quote 1.7 Hz, not 3.9 Hz, for this
+window.** The qualitative point is untouched and if anything sharper: the
+module crosses threshold ~86 times in the very window whose mean membrane sits
+13 noise SD below it.
+
+**THE TWO TABLES' `gap` COLUMNS DISAGREE BY 0.0152 AND THE DISAGREEMENT IS
+ITSELF THE LESSON.** 1.6670 against 1.6822. The first uses the END-OF-SESSION
+threshold and includes spiking samples; this one uses the LIVE per-tick
+threshold and excludes them. Spike exclusion accounts for ~0.0011 of it, so the
+rest is the threshold's own drift across the session — **further evidence that
+reading a threshold at one moment and calling it "the runtime threshold" is
+exactly the error §81 already made with `thrpatch`'s 2.45643.**
+
+**THE NEGATIVE `min` ON FOUR ARMS — EXPLAINED, BOUNDED, AND NOT WAVED AWAY.**
+`n77 tau3000` and `n80 shipped quiet` read −0.0010, `n78` −0.0006, `n80 shipped`
+−0.0004. A negative gap means `v_ >= threshold_` on a sample that did not spike,
+which looks impossible against `network.cpp:2637`. The cause is the sampling
+moment, again: `Brain::step()` runs `network_.step()` — spike test against the
+PRE-update threshold, reset to `v_rest` — and then, every
+`homeostasis.interval_ticks = 500` ticks, `network_.homeostasis()`, which writes
+`threshold_[i] = clampf(threshold_[i] + ip_rate * err, ...)` at
+`network.cpp:3381`. **So one sample in 500 carries a threshold the spike test
+never saw**, and if IP lowered it, the gap goes slightly under zero.
+
+The arithmetic CONFIRMS the mechanism rather than merely permitting it:
+`ip_rate = 0.0003` per Hz of rate error, so one step at an error of ~3.3 Hz is
+0.00099 — the observed −0.0010 to four places, for a neuron firing at a few Hz.
+**SCOPE: 0.2% of samples, by at most ~1e-3.** That is 0.06% of the gap and
+1/50th of the narrowest band (5% of threshold is ~0.05), so it cannot reach any
+column the reading rests on. It is a second instance of this probe's own §70
+rule that THE SAMPLING MOMENT IS THE WHOLE OF A READING'S VALIDITY.
+
+**`min` IS A BOUND, NOT A SATURATED COLUMN.** It reads 0.0000 on sixteen arms,
+i.e. below the print resolution of 1e-4. With millions of samples and
+appreciable density near zero that is the expected reading, and what it states
+is a bound: **on every one of the twenty arms the membrane comes within 1e-4 of
+threshold without spiking.** If the column is ever load-bearing it needs
+scientific notation; it is not load-bearing here, and `closest` is the column
+that carries information.
+
+**A FREE CONSISTENCY CHECK PASSED.** `burst-def` prints bit-identical to
+`shipped` on all nine columns (0.6254 / 1.6822 / 2.69 / 0.2472 / 0.17%),
+confirming the probe's own claim that the `burst_ms` patch is inert on this
+path. Nobody asked for that check; the table gave it away.
+
+**AN OBSERVATION I AM REGISTERING AS A LEAD AND NOT AS A RESULT: `gap/sd` MAY BE
+PINNED.** Across twenty arms `sd` ranges 0.4712–0.6661 and `gap` ranges
+1.2557–1.8429 — both by ~40% — while **`gap/sd` stays inside [2.63, 2.81] on
+nineteen of them**, the sole exception being `B-omitted` at 2.15. Doses,
+silencing, probes and fresh seeds all move the two together.
+
+- **CANDIDATE**: the homeostat holds the operating point at a fixed number of
+  drive-SDs from threshold, which is what a rate regulator with access to the
+  threshold would do.
+- **ALTERNATIVE, NOT EXCLUDED**: a fixed distributional shape, where `sd` and
+  the mean are both set by the same drive rate and the ratio follows for free.
+- **WHY IT IS NOT A RESULT**: twenty arms are not twenty independent tests, this
+  is ONE `--allow-short` smoke, and no between-creature error bar exists for the
+  ratio. `read-every-budget-for-every-claim` forbids the stronger statement.
+- **WHY IT MATTERS TO THE LEAD, TWO-TAILED**: if the ratio really is pinned, a
+  facilitation dose gets COMPENSATED back towards 2.7 and the pre-registration
+  must say so in advance, exactly as §69's did for depression. If it is not, the
+  neighbourhood measured above is a standing target.
+
+**WHAT THE LEAD NOW HAS, AND WHAT IT STILL DOES NOT.** It has a measured target:
+the quantity facilitation acts on has a within-window SD of 0.6254 at the vocal
+membrane, the mean sits 2.69 of those below threshold, the typical neuron's
+closest approach is 0.40 of one, and 4.70% of samples are already within half a
+threshold. That is a reachable neighbourhood, and the noise route's death
+(twice over) is unaffected. **IT STILL DOES NOT LICENSE A KERNEL CHANGE, §81 IS
+STILL A LEAD, AND ANY DOSE ON `auditory->vocal` STILL CARRIES `quietecho`'s
+`artic` COLUMN AS A GUARD PER §80.** `stp_facil_ms` remains 0 everywhere.
