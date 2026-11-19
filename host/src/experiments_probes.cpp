@@ -20663,6 +20663,92 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 "      table above, and `fired` is standing proof of it, because a\n"
                 "      nonzero `fired` IS the threshold being reached.\n"
                 "      NEITHER READING LICENSES A KERNEL CHANGE. §81 IS A LEAD.\n");
+    // ---- THE RATIO ACROSS CREATURES, AND WHY IT NEEDS ITS OWN TABLE ----
+    //
+    // The 200k smoke showed `gap/sd` sitting in [2.63, 2.81] on nineteen of
+    // twenty arms while `sd` and `gap` EACH ranged ~40%. That looks like the
+    // ratio is pinned -- plausibly by the homeostat, holding the operating
+    // point a fixed number of drive-SDs below threshold -- but the smoke
+    // CANNOT SAY SO: twenty arms are not twenty independent tests and there
+    // was no between-creature error bar to compare the arm-to-arm spread
+    // against. `read-every-budget-for-every-claim` forbids the stronger
+    // statement without one, so here is the one.
+    //
+    // THE UNIT IS THE CREATURE, which is what makes this the right estimator
+    // for the question. `pair-inside-the-unit`: "does this ratio depend on the
+    // arm" is a question about variation BETWEEN creatures, so each session
+    // contributes one ratio and the spread of those is the yardstick. A
+    // windowed SE taken over samples would shrink with tick count and measure
+    // nothing about creatures at all
+    // (`calibrate-the-estimator-in-claim-units`).
+    //
+    // AND IT IS A MEAN OF RATIOS, WHICH IS A DIFFERENT ESTIMATOR FROM THE
+    // TABLE ABOVE -- named rather than conflated, because `mean of ratios` is
+    // one of this project's standing defects. The table above prints a
+    // RATIO OF MEANS (gap pooled over samples, `sd` averaged over sessions);
+    // this prints the MEAN OF PER-CREATURE RATIOS with its SE. They answer
+    // different questions and they are both printed so neither can stand in
+    // for the other: the pooled figure stays the point estimate, and THIS
+    // column is the dispersion.
+    std::printf("\n    THE RATIO ACROSS CREATURES — is `gap/sd` pinned, or does it\n"
+                "    move with the arm? One ratio PER CREATURE, so the spread is\n"
+                "    between creatures and not between samples. `mean` here is a\n"
+                "    MEAN OF RATIOS and the table above is a RATIO OF MEANS; the\n"
+                "    pooled column repeats that figure so the two never get\n"
+                "    confused for one another.\n\n");
+    std::printf("      %-23s %4s %9s %9s %9s\n", "arm", "n", "mean", "SE", "pooled");
+    for (uint32_t a = 0; a < kSdArmCount; ++a) {
+      double s1 = 0.0, s2 = 0.0, psd = 0.0, pgap = 0.0, psmp = 0.0;
+      uint32_t n = 0, pn = 0;
+      for (const SdOut& o : res[a]) {
+        if (!o.ok || o.exc_sd_n == 0 || o.exc_samples <= 0.0) continue;
+        const double osd = o.exc_sd_sum / double(o.exc_sd_n);
+        const double ogap = o.exc_gap_sum / o.exc_samples;
+        // A creature whose membrane never moved would divide by zero here and
+        // contribute inf to a mean, silently poisoning the whole arm rather
+        // than one row. THAT is a reason for a guard where the single-row
+        // print above had none, and it is counted out of `n` so the budget
+        // stays honest instead of being quietly absorbed.
+        if (!(osd > 0.0)) continue;
+        const double r = ogap / osd;
+        s1 += r;
+        s2 += r * r;
+        ++n;
+        psd += osd;
+        pgap += o.exc_gap_sum;
+        psmp += o.exc_samples;
+        ++pn;
+      }
+      if (n == 0) {
+        std::printf("      %-23s  (no scored session)\n", kSdArms[a].name);
+        continue;
+      }
+      const double m = s1 / double(n);
+      // n == 1 has no SE and must not print one: `plausible-wrong-number`
+      // records an SE of 0.00 over n>1 as a bug, and an SE of 0.00 over n==1
+      // is the same lie with a better excuse. `nan` is the honest output and
+      // arrives without a branch.
+      const double var = (s2 - double(n) * m * m) / (double(n) - 1.0);
+      const double se = std::sqrt(var > 0.0 ? var : 0.0) / std::sqrt(double(n));
+      const double pooled = (pgap / psmp) / (psd / double(pn));
+      std::printf("      %-23s %4u %9.4f %9.4f %9.4f\n", kSdArms[a].name, n, m,
+                  n > 1 ? se : std::nan(""), pooled);
+    }
+    // THE READING DIRECTION FOR THIS TABLE, ALSO WRITTEN BEFORE THE RUN, AND
+    // THREE-WAY because the sign is not constrained in advance.
+    std::printf("\n      PINNED: the arms' `mean` values lie within ~2 SE of one\n"
+                "      another while `sd` and `gap` each move tens of per cent. Then\n"
+                "      the homeostat is holding a fixed distance in drive-SD units,\n"
+                "      and THE FACILITATION LEAD INHERITS A TWO-TAILED WARNING: a\n"
+                "      dose would be COMPENSATED back towards this ratio, which the\n"
+                "      registration must say in advance exactly as §69's did.\n"
+                "      NOT PINNED: the arms separate by many SE. Then the ratio is a\n"
+                "      per-arm property, the neighbourhood measured above is a\n"
+                "      standing target, and no compensation clause is owed.\n"
+                "      NO VERDICT: `n` small or the SEs wide enough to contain both\n"
+                "      readings. THE HONEST OUTCOME IS THE THIRD ONE AND IT IS\n"
+                "      WRITTEN HERE FIRST so it cannot be read as the second.\n"
+                "      NONE OF THE THREE LICENSES A KERNEL CHANGE.\n");
   }
   // §80 AMENDMENT, caught by the v75 smoke and disclosed in the ROADMAP: on a
   // genome that SHIPS the dose, an arm whose patch writes the bytes the blob

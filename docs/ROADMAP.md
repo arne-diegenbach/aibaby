@@ -18970,3 +18970,60 @@ threshold. That is a reachable neighbourhood, and the noise route's death
 (twice over) is unaffected. **IT STILL DOES NOT LICENSE A KERNEL CHANGE, §81 IS
 STILL A LEAD, AND ANY DOSE ON `auditory->vocal` STILL CARRIES `quietecho`'s
 `artic` COLUMN AS A GUARD PER §80.** `stp_facil_ms` remains 0 everywhere.
+
+### §81 FULL LENGTH — THE RATIO ACROSS CREATURES, REGISTERED BEFORE THE RUN (2026-11-19)
+
+RUN: `--experiment samediff --ticks 1680000`, NO `--allow-short`, 20 arms x 12
+creatures = 1006 sessions, on the REVERTED v74 shipped genome. **~4.6 h**, and
+that figure is anchored on §77's MEASURED 1.9 h for 418 sessions = 16.4
+s/session, not on the smoke. **MY EARLIER ~3 h WAS WRONG AND IS WITHDRAWN**: it
+scaled the 200k smoke linearly, and a smoke under-counts because the per-trial
+scoring that dominates a full run barely happens at 200k — the 20,000-tick
+smoke finishes in **7.7 s**, which is not 1/10th of 1332 s and is the proof that
+ticks are the wrong axis to scale on.
+
+**WHY THE RUN IS WORTH IT NOW, WHEN THE FIRST PRE-FLIGHT'S 3 h WAS NOT.** That
+one was refused because no value it could return changed a decision. This one
+has a question whose answers differ: the smoke showed `gap/sd` in [2.63, 2.81]
+on nineteen of twenty arms while `sd` and `gap` each ranged ~40%, and **the
+smoke could not say whether that is a pinned ratio or arm-to-arm noise, because
+it had no between-creature error bar.** A full run has twelve creatures per arm
+and can.
+
+**THE ESTIMATOR, AND THE UNIT IS THE CREATURE.** One ratio per session, then the
+mean and the SE of those across sessions. `pair-inside-the-unit`: "does this
+ratio depend on the arm" is a question about between-creature variation, so a
+sample-level SE would shrink with tick count and measure nothing about creatures
+(`calibrate-the-estimator-in-claim-units`). **IT IS A MEAN OF RATIOS, WHICH IS A
+DIFFERENT ESTIMATOR FROM THE EXCURSION TABLE'S RATIO OF MEANS, AND BOTH ARE
+PRINTED SIDE BY SIDE SO NEITHER CAN STAND IN FOR THE OTHER** — `mean of ratios`
+is one of this project's standing defects and the fix is disclosure, not a
+silent choice. The pooled figure stays the point estimate; the per-creature
+column is the dispersion. An SE is printed as `nan` at n == 1 rather than 0.00,
+because an SE of 0.00 over one unit is the same lie as over several.
+
+**THE READING DIRECTION, THREE-WAY, IN THE BINARY AS WELL AS HERE.**
+
+1. **PINNED**: the arms' means lie within ~2 SE of one another while `sd` and
+   `gap` each move tens of per cent. Then the homeostat is holding a fixed
+   distance in drive-SD units, and **THE FACILITATION LEAD INHERITS A TWO-TAILED
+   WARNING**: a dose gets COMPENSATED back towards the ratio, and the
+   registration must say so in advance exactly as §69's did for depression.
+2. **NOT PINNED**: the arms separate by many SE. The ratio is a per-arm
+   property, the neighbourhood the excursion table measured is a standing
+   target, and no compensation clause is owed.
+3. **NO VERDICT**: `n` small, or SEs wide enough to contain both readings.
+   **WRITTEN HERE FIRST SO IT CANNOT LATER BE READ AS (2).**
+
+**WHAT ELSE THIS RUN PRINTS, AND WHAT MUST NOT BE READ OUT OF IT.** At full
+length the gates run and the whole 20-arm battery scores, so the §71/§74/§78/§80
+M6 columns will all print — on the reverted v74 genome, which §80 restored. **THE
+M6 TRANSFER COLUMNS ARE NOT REGISTERED HERE AND MUST NOT BE READ AS A NEW
+MILESTONE CLAIM.** §80 withdrew the shipped transfer; re-reading those arms off a
+run registered for the excursion ratio is `verdict fitted to data` with extra
+steps. What they ARE good for is a creature-level check that the revert is
+intact at full length, alongside the three bit-identity proofs already in hand.
+
+**AND THE EXCURSION TABLE STOPS BEING A SMOKE.** Every figure in the §81
+re-specified result above came from `--allow-short`, which the harness brands
+not-a-measurement. At 1,680,000 ticks those same columns are quotable.
