@@ -21613,6 +21613,16 @@ and has never switched on.
   here, on the one tract whose dose machinery is already built, smoked and shipped
   (`auditory -> vocal`). **This is a dose on an existing mechanism, not a kernel change**,
   which is the distinction §78's "identification only, no kernel license" turns on.
+- **AND A GUARD §80 IMPOSED ON THIS LEAD AFTER THE FACT, 2026-11-19.** The depression dose
+  on this same tract was shipped as DNA v75 and **reverted three days later**: it drove
+  `quietecho`'s primary, the articulator echo, to chance (0.790 -> 0.519 against a shuffled
+  0.50) while the fast tier stayed 24/24 green. **So any facilitation registration must
+  carry `quietecho`'s `artic` column as a GUARD, not as a secondary.** A dose that lifts the
+  spike oracle while flattening the echo is the same bad trade §80 just made, and no fast
+  tier will catch it. The instruments that read this tract cost about 52 minutes together
+  (`quietecho`, `condprobe`, `g3probe`, `pairprobe`, `eligprobe`, `restate`, `partprobe`,
+  `imitate`) and must be run on BOTH genomes before anything ships. See the "DNA v75"
+  changelog entry and `docs/ROADMAP.md` §80 STAGE 6.
 - **AND THE TWO-TAILED RISK THAT MUST BE REGISTERED BEFORE IT IS BUILT, derived rather than
   feared.** This creature's M6 mechanism *is* depression — `delivered(B) = weight x
   resources_remaining(A)`, the multiplicative conjunction §67 proposed and §69–§80 built.
@@ -26450,7 +26460,51 @@ whole what we verified of the part. Each one cost a handful of searches to catch
 one would have left a note in our own records telling every future session to distrust every
 threshold in the project.
 
-## DNA v75: the auditory->vocal tract ships its depression (2026-11-16)
+## DNA v75: the auditory->vocal tract ships its depression (2026-11-16) — REVERTED 2026-11-19
+
+### REVERTED 2026-11-19. THE SHIP CONDITION BELOW WAS NOT MET.
+
+**This entry is kept as the record of a dose that was shipped and taken back out, not as
+a description of the genome.** `dna/default.toml` is back to `stp_use = 0.0 /
+stp_recover_ms = 0.0` on both tracts, and `kPinnedHash` is back to `ad96f882becbee92`
+— **not re-pinned, restored**: the reverted genome reproduces that hash bit-identically,
+which is the tightest proof available that the same creature is back.
+
+The condition stated below was explicit — the change ships only if the battery holds on
+v75. **`verify-long` printed `verify FAIL`: 102 as expected, 14 not, over 43.97 h.** The
+control is what decided it. On the archived v74 genome with the same binary and the same
+tick counts, **8 of 8 instruments that failed on v75 pass**: `restate`, `eligprobe`,
+`partprobe`, `condprobe`, `g3probe`, `pairprobe`, `imitate`, `quietecho`.
+
+What the dose cost, on `quietecho`'s own declared primary (`artic`, which drops voicing
+and loudness so a louder creature cannot fake it), 36 paired creatures per arm:
+
+    arm        artic v74        artic v75        shuffled
+    shipped    0.790 +- 0.008   0.519 +- 0.007   ~0.50
+    deaf       0.796            0.525            ~0.50
+    loud       0.714            0.526            ~0.50
+
+**Chance, in every arm.** `eligprobe`'s size-matched arcuate trace fell 0.812 -> 0.668.
+Arrival at the ear was intact (`aud WHILE` 353.2 -> 351.8): what the dose destroyed is
+the readout at the larynx, because the same depression delivers the M6 conjunction and
+the echo, and `delivered(B) = weight x resources_remaining(A)` cannot starve one alone.
+**The price in one line: 0.0009 of M6 transfer margin for 0.271 of the articulator echo.**
+
+So **M6's transfer to a shipped creature is withdrawn** and §78's scoped claim gains a
+fourth deviation: the dose is not shippable. The three §78 deviations are unchanged.
+
+Two things in the paragraphs below are now known to be wrong, and are corrected here
+rather than edited away. **The G-SELF anchors did NOT fail by construction on v75** —
+every one reprinted exactly, because a dose arm patches the session blob to the values
+the genome already shipped, so a dosed arm's blob was bit-identical across the two
+genomes. And the battery's own `mechverify` pins were never stale: they drifted on v75
+because every pin hashes a genome derived from the shipped one, and the revert put them
+back at 18 of 18 `ok` without being moved.
+
+The full triage, the registered branches written before the control ran, and the method
+rule this cost are `docs/ROADMAP.md` §80 STAGE 5 and STAGE 6. Evidence:
+`results/n80-verify-long.log`, `results/n80-v74ctl-*.log`, `results/n80-v74-genome.toml`,
+`results/n80-revert-*.log`.
 
 ### What moved and why
 

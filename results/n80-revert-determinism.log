@@ -1,0 +1,7 @@
+experiment: determinism
+  ticks             120000
+  checkpoints       120
+  final hash A      ad96f882becbee92
+  final hash B      ad96f882becbee92
+
+  G1 PASS — same genome and same inputs give a bit-identical brain.

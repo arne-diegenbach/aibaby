@@ -1557,10 +1557,19 @@ const Spec kSpecs[] = {
 // What it costs: the creature is now nearly silent WHILE it listens (voiced
 // fraction 0.276 -> 0.010), because the mean-subtracted term is negative during
 // input. That is a real behavioural change and not only an added burst.
-// DNA v75 (§80, 2026-11-16): the auditory->vocal tract ships its depression —
-// stp_use 0.20 / tau_rec 3000 on both projections, the §69/§77 dose. The hash
-// moves because the genome moved; README.md "DNA v75" is the changelog entry.
-constexpr uint64_t kPinnedHash = 0xdad1a8dd8ba39330ull;
+// DNA v75 (§80, 2026-11-16): the auditory->vocal tract shipped its depression —
+// stp_use 0.20 / tau_rec 3000 on both projections, the §69/§77 dose — and moved
+// this hash to dad1a8dd8ba39330.
+//
+// REVERTED 2026-11-19 (§80 stage 6), so the hash goes back to the v74 value it
+// held before that edit. It is NOT a new pin: the reverted genome reproduces
+// ad96f882becbee92 BIT-IDENTICALLY, which is the tightest available proof that
+// the revert restored the same creature and that the comments left beside the
+// two reverted genome fields cannot reach the blob. Why it reverted: the dose
+// drove `quietecho`'s primary, the articulator echo, to chance (0.790 -> 0.519,
+// shuffled 0.50), and 8 of 8 long-tier instruments that failed on v75 pass on
+// v74. ROADMAP §80 STAGE 6 is the changelog entry.
+constexpr uint64_t kPinnedHash = 0xad96f882becbee92ull;
 
 const Spec* find_spec(const std::string& name) {
   for (const Spec& s : kSpecs) {
