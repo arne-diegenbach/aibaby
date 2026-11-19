@@ -18274,3 +18274,71 @@ ABOUT THE LONG TIER — that is this section's whole lesson — so the claim her
 is the narrow one: the creature that was green before DNA v75 is back, verified
 three ways.** A full long-tier re-run (43.97 h) is NOT needed for the revert and
 is NOT claimed.
+
+## §80 STAGE 7 — THE THREE UNCONTROLLED FAILURES, WITH THE BRANCHES WRITTEN FIRST (2026-11-19)
+
+Stage 6 named `repdrift`, `interleave` and `maskretain` as the part of the long
+tier's fourteen that was **left unattributed and labelled so**. The revert is
+already settled on eight instruments and nothing here can move it. What this
+stage buys is the opposite of a verdict: it closes the only remaining way the
+§80 record could be read as hand-waving, by running the three on the reverted
+SHIPPED genome instead of asserting what they would have done.
+
+**A CORRECTION TO STAGE 5 BEFORE THE RUN, NOT AFTER IT.** Stage 5 put all three
+in one class, "content verdicts whose `kRead` gate returned false". That is
+wrong, and reading the source says so. The three fail through THREE DIFFERENT
+BRANCHES:
+
+    instrument    what actually returned false                       source
+    repdrift      G0 TRANSFER GATE -- §53's archived T1.RET.D does    printed gate,
+                  not reproduce: +0.0244 +- 0.0315 fresh against      then `ONE OR
+                  archive -0.0947 +- 0.0306, `*** DIFFERS ***`,       MORE GATES
+                  `Nothing below is readable`                         FAILED`
+    interleave    `passed < 0` -- no arm clears 2 SE on BOTH          milestones
+                  measures, so the content verdict itself is the      .cpp:29227
+                  bool
+    maskretain    `cliff_before_half` -- the `CONFINEMENT IS          milestones
+                  REFUSED` branch returns false unconditionally       .cpp:28419
+
+`repdrift` therefore belongs to the **`restate` class** — an archived number
+that stopped reproducing — and NOT to the content class. Its own refusal banner
+says the exit status encodes none of its four verdicts, which is the second
+piece of evidence that the bool came from the gate.
+
+**THE BRANCHES, REGISTERED BEFORE THE RUN.**
+
+- **`repdrift`.** PASSES on the reverted genome -> the dose broke a §53 archived
+  value, and the `restate` class had THREE members, not two. FAILS with the same
+  `*** DIFFERS ***` -> the §53 archive was ALREADY stale before DNA v75, this is
+  the `absbar` class, and a separate question opens about which commit moved it
+  — a question §80 does NOT get to answer, because the binary and the suite both
+  moved since 2026-10-26.
+- **`interleave`.** PASSES -> the dose destroyed the rescuing arm and this is a
+  v75 casualty. FAILS -> the refusal is the creature's own, and the registration
+  is defective in the `absbar` way: a `kRead` instrument that returns false on a
+  MEASURED outcome is reporting a result as an apparatus failure.
+- **`maskretain`.** I expect it to FAIL IDENTICALLY, and I am writing that down
+  so the expectation is on the record and not fitted afterwards. The
+  `cliff_before_half` branch is a statement about a POOLED readout — the pool
+  still contains what plasticity excluded — and the auditory->vocal dose is not
+  in that argument anywhere. If it fails identically it is the THIRD instance of
+  the `absbar` registration defect, and the fix is to the registration, not to
+  the creature. **IF IT PASSES INSTEAD, MY ACCOUNT OF THAT BRANCH IS WRONG** and
+  the structural claim needs re-reading, which would be the one genuinely
+  surprising outcome available in this stage.
+
+**WHAT THIS STAGE CANNOT DO, STATED FIRST.** It cannot change the revert, it
+cannot re-price M6, and a PASS on any of the three is NOT a reason to re-open
+DNA v75 — the dose's own cost was measured on `quietecho`'s primary and is not
+in question. It also cannot date a pre-existing failure, for the reason above.
+
+**HOW IT IS RUN.** Sequentially, shortest first, on the shipped genome as
+reverted: `repdrift` 900000 ticks (3205.5 s on v75), `interleave` 5600000
+(5422.6 s), `maskretain` 5600000 (7377.4 s) — 4.45 h in all. **SEQUENTIALLY AND
+NOT IN PARALLEL ON PURPOSE**: the long tier ran each one alone on the whole
+14-wide pool, and running three at once would oversubscribe it, destroying the
+only timing comparison available. §80 already learned that a run's DURATION is
+evidence — `partprobe` ran 1972.1 s to completion on v74 and refused at 133.3 s
+on v75 — so the times are kept comparable deliberately. **THE LEGS ARE CHAINED
+WITH `;` AND NOT `&&`**: tonight's `&&` short-circuited on exit 1 and silently
+ate the teach tier, and every leg here is EXPECTED to be able to exit 1.
