@@ -19563,3 +19563,76 @@ at `:1657`).
   run exists rather than an arithmetic.
 - The SD comes from 5 creatures x 2 upbringings. **It carries its own error and
   the power calculation must propagate it**, not treat it as known.
+
+### §82 CALIBRATION RESULT — ONE OF THE FOUR REGISTERED NUMBERS ARRIVED, AND MY OWN COST ANCHOR WAS 2.1x HIGH (2026-11-20)
+
+RUN: `results/n82-m3-sleep-calib-1600k.log`, `./build/aibaby --experiment m3
+--ticks 1600000`, genome `dna/default.toml` md5
+`fb419735526b1fe189be8264a63f5d95`, 1600.0 s of simulated life x 5 creatures x 2
+upbringings. Exit status 1, which is m3's registered `kOpen` FAIL and **not a
+result**, as registered in advance.
+
+**THE SCOREBOARD AGAINST THE FOUR REGISTERED NUMBERS, STATED AS A SCOREBOARD
+BECAUSE THREE OF THEM DID NOT ARRIVE:**
+
+    1  d' null's SD across creatures   NOT OBTAINABLE. The d' block prints
+                                       POOLED values only — "shuffled labels
+                                       0.38 raw, 0.08 bias-corrected" is one
+                                       number over all creatures, and there is
+                                       no per-creature d' anywhere in the output.
+                                       The per-creature table at the top is the
+                                       NAMING classifier, which §82's scope
+                                       clause excludes.
+    2  measured wall seconds           DELIVERED: 417.79 s for ten
+                                       creature-units at 1.6M = 41.8 s/unit.
+    3  first-sleep tick in m3          NOT OBTAINABLE. `run_m3_session` marks a
+                                       slept TRIAL but never tracks a first-sleep
+                                       tick; there is no such variable.
+    4  `skipped`                       EXISTS BUT WAS NOT PRINTED: the line is
+                                       inside `if (verbose)`
+                                       (`experiments_milestones.cpp:1655`) and the
+                                       command I registered omitted `--verbose`.
+
+**MY COST ANCHOR WAS 2.1x HIGH, AND THE RULE NEEDS A SECOND CLAUSE.** §82 part 2
+priced this from `sleep`'s measured 86.4 s per creature at the same 1,600,000
+ticks, giving about 864 s. The measurement is **417.79 s**. The standing rule —
+anchor on measured seconds per session, never on a tick ratio — held up in that
+it kept the estimate within a factor of two instead of the 13x a tick ratio would
+have given. **But same-length is not enough: a cost anchor must come from the
+SAME PROTOCOL.** `sleep` and m3 run different per-frame work, and the difference
+was a factor of two. Over-pricing is the safe direction, and it was still wrong.
+
+**NUMBER 4 IS A MISTAKE IN MY OWN INVOCATION, NOT A PROPERTY OF THE HARNESS.** I
+smoked the command at 120000 to check that it RAN, and did not check that it
+PRINTED WHAT THE REGISTRATION ASKED FOR. The 120k smoke would have shown the
+`skipped` line absent just as plainly as the long run did, for 30 s instead of
+7 minutes. **A SMOKE MUST BE GREPPED FOR EVERY COLUMN THE REGISTRATION NAMES, NOT
+JUST FOR A CLEAN EXIT.** Re-run with `--verbose` is in flight.
+
+**WHAT THE RUN DID ESTABLISH, AND IT IS WORTH HAVING.** The acoustic d' block at
+13x the probes of the registered length:
+
+    cube vs ball          0.62 raw   0.43 bias-corrected
+    shuffled labels       0.38 raw   0.08 bias-corrected  (32-permutation null)
+    [i] vs [a]           24.11
+    [a] vs [u]            9.16
+    +/-1sd of its own F1  2.84      (scale check, not a result)
+
+**The corrected null came DOWN to 0.08, from the ~1.7 raw-estimator floor the
+instrument's own comment records at the 120k sample size** — which is what the
+pre-registration expected and the direction it expected. The bias-corrected
+estimator is doing its job at this length: the null sits near zero, so **the
+primary has a clean floor to be read against**, which was the one thing §82's
+instrument question needed settling. The raw column still carries the
+small-sample floor (0.38) and must not be read as a separation.
+
+**STILL BLOCKED, AND NOW FOR A NAMED REASON.** The power calculation needs the
+null's SD across creatures and m3 does not print a per-creature d'. That is a
+**REPORTING** change, in §77's exact sense — print `cepstral_dprime` and its
+permutation null per creature, and track the first-sleep tick — with no mechanism
+touched. **ITS SELF-CHECK IS PRE-REGISTERED HERE AND THE ANCHORS ARE THE LOG
+ALREADY ON DISK:** after the change, the non-verbose block must reproduce
+`0.547 / 0.537 / 0.519 / 0.556 / 0.512 / 0.741`, `taught - random +0.011 +/-
+0.029`, `d' 0.62 raw / 0.43 corrected`, `null 0.38 raw / 0.08 corrected` and all
+ten rows of the per-creature table **EXACTLY**. A reporting change that moves any
+of them is not a reporting change.
