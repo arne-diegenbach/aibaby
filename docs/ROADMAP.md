@@ -18852,6 +18852,26 @@ per window, because a tick near B's onset belongs to four windows at that point
 
 ### §81 RE-SPECIFIED PRE-FLIGHT RESULT — BRANCH 2. THE KILL CLAUSE DOES NOT FIRE ON ANY ARM (2026-11-19)
 
+> **EVERY MEASURED QUANTITY BELOW IS WITHDRAWN AS AN ESTIMATE OF THE OPERATING
+> POINT. SUPERSEDED BY "§81 FULL-LENGTH RESULT" (2026-11-20).** The verdict
+> held — all three kill conditions do fail on every arm — and two findings here
+> are NOT withdrawn, because neither depends on run length: **the inertness
+> proof** (a whole-log diff of one pure-addition hunk, a property of the code)
+> and **the negative-`min` explanation** (homeostasis writing `threshold_`
+> after the spike test, 1 sample in 500, bounded by one `ip_rate` step — it
+> predicted all 20 arms would read negative at full length, and they did).
+> Every *reading* is withdrawn, because **this smoke never slept**: first sleep
+> is at tick 1,075,782 (the same value in n77, n78, n79 and n81), 64.0% of the
+> 1,680,000-tick session, and this run was 200,000 ticks. At full
+> length `gap/sd` is **2.36** (not 2.69), `sd` **0.5583** (not 0.6254), `gap`
+> **1.3187** (not 1.6822), `closest` **0.195 sd** (not 0.395), `fired`
+> **3.00 Hz** (not 1.70), and the window gap in `noise_amp`-SD units **10.4**
+> (not 13.2 — pair it against 13.2, not against the first table's 13.1, which
+> is the END-OF-SESSION column and reads 10.0 at full length). Errors of
+> 10-76%, all six in the direction that FAVOURED the lead, which is luck and
+> not a property of smokes. Do not quote a figure from this section; quote the
+> full-length one. The rule is `aibaby-smoke-below-sleep-is-another-creature`.
+
 `results/n81-excursion-smoke-200k.log`, 200,000 ticks, `--allow-short`, 1006
 sessions, 32192 trials, 0 slept. The run is VOID by its own gates (0 gap-cells
 scored at this budget) and that is exactly why the block sits above them.
