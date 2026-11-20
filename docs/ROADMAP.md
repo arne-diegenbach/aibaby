@@ -19507,3 +19507,59 @@ acoustic d' block only** — "the same probes, scored on what they SOUND like". 
 is NOT a naming claim, it does not read the naming columns, and **it does not
 re-open G3**, which is closed under this architecture. Any §44-§60 figure stays
 under its do-not-quote rule.
+
+### §82 CALIBRATION — REGISTERED BEFORE THE RUN, AND IT NEEDS NO CODE CHANGE (2026-11-20)
+
+**THE COMMAND, EXACTLY**, per the rule that the binary is not the invocation:
+
+    ./build/aibaby --experiment m3 --ticks 1600000
+
+Genome `dna/default.toml`, md5 `fb419735526b1fe189be8264a63f5d95`, SHIPPED and
+untouched. Binary current with HEAD — `cmake --build` reports nothing to rebuild.
+The invocation was smoked at the registered 120000 first and ran.
+
+**WHY A CALIBRATION AND NOT A BUILD.** §82 part 2 established that the arm count
+cannot be fixed without the d' null's SD at a length that sleeps, and no run in
+this project has ever produced one. **No code change is required:** `--ticks`
+already overrides the 120000 default (`host/src/main.cpp:119`), and m3 already
+handles sleep the right way — it marks a slept trial, drops it from the score,
+and reports it as `skipped` (`host/src/experiments_milestones.cpp:1465`, printed
+at `:1657`).
+
+**WHAT IT MUST PRINT, AND WHAT EACH NUMBER IS FOR:**
+
+    1  the d' null and its SD across creatures   the load-bearing NULL for the
+                                                 power calculation, in claim units
+    2  measured wall seconds                     the cost anchor at a SLEEPING
+                                                 length, replacing the ~15-25 min
+                                                 estimate derived from `sleep`
+    3  the first-sleep tick in m3's protocol     how much of the session a dream
+                                                 could act in at all
+    4  `skipped`                                 the POST-SLEEP effective n; the
+                                                 power calculation uses this, not
+                                                 the presentation count
+
+**PRE-REGISTERED EXPECTATIONS, so that a surprise is visible as one:**
+
+- `skipped` near **11.5% of probes** if the asleep fraction replicates a fourth
+  time. A materially different figure means m3's trial schedule interacts with
+  sleep and the vehicle needs re-pricing before anything else.
+- first sleep near **1.04M ticks**, as in `sleep` (1039.7 s) and `samediff`
+  (1,075,782). m3's protocol is taught and probed throughout, so a different
+  value is informative rather than an error.
+- the d' null should sit near the instrument's known floor — about **1.7** on
+  label-destroyed labels at the 120k sample size — and with roughly 13x the
+  probes it should come DOWN. **By how much is the measurement, and it is exactly
+  what may not be guessed.**
+
+**WHAT MAY NOT BE CONCLUDED FROM IT, WRITTEN FIRST:**
+
+- **IT IS NOT A DREAM ARM.** No gate is opened, no genome field moves. It cannot
+  speak to §82's hypothesis in either direction.
+- m3 is `Expect::kOpen` and **FAIL is its current expected answer**, so a FAIL
+  here is not a result. **The naming columns are not read and G3 stays closed.**
+- **THE SE AT 1.6M MAY NOT BE PROJECTED FROM THE 120k RUN BY A SCALING LAW** —
+  the between-creature component does not shrink, which is the whole reason this
+  run exists rather than an arithmetic.
+- The SD comes from 5 creatures x 2 upbringings. **It carries its own error and
+  the power calculation must propagate it**, not treat it as known.
