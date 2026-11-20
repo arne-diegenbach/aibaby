@@ -19027,3 +19027,130 @@ intact at full length, alongside the three bit-identity proofs already in hand.
 **AND THE EXCURSION TABLE STOPS BEING A SMOKE.** Every figure in the §81
 re-specified result above came from `--allow-short`, which the harness brands
 not-a-measurement. At 1,680,000 ticks those same columns are quotable.
+
+### §81 FULL-LENGTH RESULT — BRANCH 2: **NOT PINNED**. AND THE SMOKE WAS WRONG ON EVERY FIGURE (2026-11-20)
+
+RUN: `results/n81-samediff-1680k.log`, `--experiment samediff --ticks 1680000`,
+NO `--allow-short`, exit 0, **4.9 h** against the 4.6 h registered. 1006 of 1006
+sessions, 402,400 trials. **EVERY GATE PASSED**: 0 misaligned, 45,121 slept
+trials = 0.1121 against a 0.20 bar, 4024 gap-cells scored, assembled oracle
+**1.0000** against 0.80, label-destroyed 0.5016 +- 0.0101 inside [0.42, 0.58].
+`G-SE` achieved 0.0060 against the registered 0.0060. **THESE COLUMNS ARE
+MEASUREMENTS, NOT A SMOKE.**
+
+**THE REGISTERED READING IS BRANCH 2: NOT PINNED.** The arms separate by far
+more than 2 SE, and not marginally:
+
+```
+  arm                        n      mean        SE    pooled
+  shipped                   12    2.3617    0.0090    2.3620
+  B-omitted                 12    2.1490    0.0050    2.1487
+  stp tau100                12    2.3729    0.0076    2.3730
+  stp tau300                12    2.3872    0.0059    2.3873
+  stp tau1000               12    2.4374    0.0043    2.4374
+  stp tau3000               12    2.4853    0.0036    2.4853
+  n77 tau3000              196    2.4814    0.0010    2.4815
+  n78 quiet tau3000        196    2.5227    0.0012    2.5229
+  n80 shipped              196    2.3590    0.0024    2.3596
+```
+
+**THE REGISTERED CONSEQUENCE, TAKEN:** the ratio is a per-arm property, the
+neighbourhood the excursion table measures is a STANDING TARGET, and **NO
+COMPENSATION CLAUSE IS OWED** to a future facilitation registration on this
+account. The pinning the smoke appeared to show was its MISSING ERROR BAR.
+
+**BUT THE BINARY READING UNDERSTATES WHAT HAPPENED, SO HERE IS THE QUANTITY.**
+Across the nineteen arms that keep both words, `sd` ranges 22.9% of its mean and
+`gap` 19.6%, while `gap/sd` ranges only **6.8%**. Were the two independent the
+ratio would range ~30%. **SO ABOUT 70% OF THE COMPONENT VARIATION DOES CANCEL —
+THE OPERATING POINT IS STRONGLY BUT NOT COMPLETELY COMPENSATED, AND THE RESIDUAL
+IS OVERWHELMINGLY SIGNIFICANT.** "Not pinned" is the correct verdict against the
+registered clause and would be a misleading one-word summary on its own.
+
+**A DOSE-RESPONSE CURVE ON THE ONLY LIVE QUANTITY, WHICH IS MORE THAN THE RUN
+WAS REGISTERED TO FIND.** The depression ladder moves `gap/sd` MONOTONICALLY:
+
+```
+  stp tau100 -> tau300    +0.0143    1.5 SE
+  stp tau300 -> tau1000   +0.0502    6.9 SE
+  stp tau1000 -> tau3000  +0.0479    8.5 SE
+  SPAN tau100 -> tau3000  +0.1124   13.4 SE
+```
+
+and it REPLICATES in three independent families: `n71 ref -> tau1000` +0.0674
+(3.9 SE), `n71 ref+probe -> tau1000+probe` +0.0690 (4.5 SE), and on the
+196-creature arms `n80 shipped -> n77 tau3000` +0.1224 (**47.1 SE**) and the
+quiet pair +0.1259 (44.0 SE). **MORE DEPRESSION MOVES THE MEMBRANE FURTHER FROM
+THRESHOLD IN DRIVE-SD UNITS, AND THE HOMEOSTAT DOES NOT RESTORE IT.**
+
+**THE EXTRAPOLATION TO FACILITATION IS A DERIVED PREDICTION AND IS REGISTERED AS
+ONE, NOT CLAIMED.** Facilitation is the opposite sign of dose on the same
+mechanism, so the ladder predicts `gap/sd` would FALL — the membrane closer to
+threshold in the units that matter, which is the direction the lead wants. **IT
+IS AN EXTRAPOLATION ACROSS A SIGN CHANGE AND §75 IS THE STANDING WARNING THAT A
+DERIVED SIGN HERE GETS REFUTED** (my own concavity sign was). It must be written
+as a two-tailed prediction in any registration, never as a reason to expect the
+result.
+
+**THREE CHECKS PASSED THAT NOBODY ASKED FOR.**
+
+- **The ratio is reproducible WITHIN an arm while differing BETWEEN arms**, which
+  is what makes branch 2 a reading rather than noise: `n80 shipped` (196
+  creatures) against `shipped` (12) is **-0.3 SE**, and `n74 sweep` (42) against
+  `shipped` is **0.0 SE** — the same genome on three different creature sets.
+- **`burst-def` is bit-identical to `shipped` again**, now on all nine excursion
+  columns AND the ratio table (2.3617 / 0.0090 / 2.3620), at full length.
+- **The mean of ratios and the ratio of means agree to <= 0.003 on every arm.**
+  The disclosure was still the right call — the agreement is a RESULT, not a
+  reason the choice did not matter.
+
+**THE NEGATIVE-`min` EXPLANATION MADE A PREDICTION AND IT HELD.** The smoke had
+a negative `min` on 4 of 20 arms and the stated cause was that homeostasis
+writes `threshold_` AFTER the spike test, once every 500 ticks. At 8.4x the
+samples every arm must catch it. **All 20 arms now read negative**, from -0.0002
+to -0.0010 — the same ceiling, bounded by one `ip_rate` step exactly as derived.
+
+**AND NOW THE PART THAT MATTERS MOST: EVERY SMOKE FIGURE I QUOTED IS WRONG, AND
+THE REASON IS SPECIFIC RATHER THAN A SHRUG AT `--allow-short`.**
+
+```
+  shipped       smoke     full    delta        and the derived figures
+  sd           0.6254   0.5583   -10.7%     sd/noiseSD  4.92 -> 4.40
+  gap          1.6822   1.3187   -21.6%     gap/noiseSD 13.2 -> 10.4
+  gap/sd         2.69     2.36   -12.2%
+  closest      0.2472   0.1086   -56.1%     closest/sd 0.395 -> 0.195
+  <50% band     4.70%    7.22%   +53.6%
+  fired         0.17%    0.30%   +76.5%     per neuron 1.70 -> 3.00 Hz
+```
+
+**THE SMOKE NEVER SLEPT.** First sleep is at tick **1,075,782**, i.e. 64.0% of
+the session, and the smoke ran 200,000 ticks. So the smoke measured a
+PRE-SLEEP creature exclusively, while the full run is 64% pre-sleep by ticks and
+discards 11.21% of its trials for sleep. That is a named, checkable cause and it
+connects straight to §62 ([[aibaby-the-cliff-is-sleep]]): **a `--allow-short`
+samediff run cannot see the creature this instrument is read on, because the
+creature has not yet become it.**
+
+**FIGURES TO STOP QUOTING, EFFECTIVE NOW.** `gap/sd 2.69`, `sd 0.6254`, `4.92x
+the noise SD`, `13.1 noise SD`, `closest 0.395 sd`, `1.70 Hz per neuron`, and
+the `[2.63, 2.81]` ratio range. The operating-point figures replacing them are
+**2.36, 0.5583, 4.40x, 10.4, 0.195 sd, 3.00 Hz and [2.3590, 2.5227]**. Note the
+direction: every single change makes the lead look BETTER — nearer threshold,
+more near-threshold samples, more crossings. **THAT IS LUCK, NOT A PROPERTY OF
+SMOKES, and the next one may run the other way.**
+
+**WHAT THE LEAD HAS NOW.** A measured target at the operating point: within-
+window `sd` 0.5583 at the vocal membrane, the mean 2.36 of those below
+threshold, the typical neuron's closest approach **0.195 `sd`**, 7.22% of
+samples within half a threshold, 3.00 Hz of actual crossings per neuron in the
+window the primary is read on, and a monotone 13.4 SE dose-response showing the
+quantity is MOVABLE by exactly this mechanism and not homeostatically clamped.
+**IT STILL DOES NOT LICENSE A KERNEL CHANGE, §81 IS STILL A LEAD,
+`stp_facil_ms` IS STILL 0 EVERYWHERE, AND ANY DOSE ON `auditory->vocal` STILL
+CARRIES `quietecho`'s `artic` COLUMN AS A GUARD PER §80.**
+
+**THE M6 TRANSFER COLUMNS WERE NOT READ**, as registered before the run. What
+the run does supply on that front is the creature-level check it was allowed to:
+the gates passing at full length on the reverted v74 genome, which is a fourth
+and behavioural confirmation of §80's revert alongside the three bit-identity
+proofs.
