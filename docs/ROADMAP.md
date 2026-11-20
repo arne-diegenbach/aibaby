@@ -16613,6 +16613,51 @@ still move, and nothing in §72-§75 has addressed it.**
 
 ## §76 PRE-FLIGHT AUDIT — DECODE-THEN-COMPARE IS CLOSED IN EVERY SINGLE SPACE, AND MY OWN BOUND WAS REFUTED BY A NUMBER IN THE SAME LOG
 
+> **THE TWO THRESHOLD-ASK FIGURES BELOW — `1.96x` AND `1.03x` — ARE WITHDRAWN AND
+> NEITHER MAY BE QUOTED AGAIN. SUPERSEDED IN PART BY "§77 RESULT", subsection
+> "§76's THRESHOLD PRICING CAME APART, AND IT CAME APART IN BOTH DIRECTIONS".**
+> What the audit CLOSES still stands, because it closes by arithmetic on archived
+> logs: decode-then-compare is closed in every single space; the XOR ceiling
+> bounds a DECODE-THEN-COMPARE readout **and nothing else** (`drive-sim` refutes
+> it in the same log, because same/different is a RELATION); the dose is not to be
+> re-swept; and §77 says in as many words that "the entire remaining question is
+> the oracle repair" SURVIVES. What is withdrawn is the PRICE. §76 priced the ask
+> by importing §71's tau1000 transmission to tau3000's drive; §77 measured
+> tau3000's OWN on 196 creatures, and the two framings then disagreed about
+> whether the ask is already met — the RAW ratio is WORSE (0.1493 against
+> tau1000's 0.2156, an ask of **2.98x**, not 1.96x) while the NORMALISED ratio is
+> BETTER (0.637 against §76's `T` of 0.431) — and no run distinguishes them. Route
+> 2 stays closed for a BETTER reason than this section gives: **the ask is NOT
+> IDENTIFIED**, not too big. The identified replacement is §78's **R1**, which is
+> identification ONLY, rests on an assumption nothing tests, and is NOT a license
+> for the kernel change.
+>
+> **Three consequences for the text below, all later-dated:**
+>
+> 1. **`T = 0.4316` is tau1000's and does not transfer**, so the dose table's
+>    `predicted spikes` column is a projection off ONE dose's transmission, not a
+>    measurement. Its verdict survives — no dose comes near the bar — but the
+>    ORDERING it is quoted for, the peak at tau1000, does not. §77 MEASURED the
+>    spike rung at **0.5504 +- 0.0051** on `n77 tau3000` (against this column's
+>    projected 0.5338 for that dose, 0.5356 for its fresh row) and at **0.5469 +-
+>    0.0144** on `n71 tau1000`: a difference of 0.0035 +- 0.0153, **0.2 SE**, raw
+>    accuracy against raw accuracy as this column is. **"The product PEAKS AT
+>    tau1000" is an artefact of the imported `T`** — the two doses' spike rungs
+>    are indistinguishable, and both sit far under 0.650, which is why
+>    DO-NOT-RE-SWEEP is unaffected.
+> 2. **"IT HAS NEVER BEEN REPLICATED" is no longer true, and this section's own
+>    ranked step 1 has been run.** §77 read the tau3000 membrane on 196 creatures
+>    §70 never saw: **0.6734 +- 0.0060** on its own oracle 0.7623, 2-SE floor
+>    0.6615, and 0.3 SE from §70's selected 0.6686. The cell REPLICATES. It is
+>    still not "the threshold destroys it" — the spike oracle is 0.617, under the
+>    bar, so rung 3 cannot be tested there — and still not a kernel license.
+> 3. **Of the "two relational readouts that clear the bar", only one became a
+>    claim.** `vmem` is M6 in §78's scoped form, carrying §78's three recorded
+>    deviations plus the shipped transfer §80 withdrew, four in all. `drive-sim`
+>    is a HOST SIMULATION, outside the readout class fixed before the numbers, and
+>    **may not be cited as the milestone**: here it is the audit's refutation of
+>    its own bound, and nothing more.
+
 DERIVED FROM ARCHIVED LOGS, NO SESSIONS RUN. Sources: `results/n75-samediff-1680k.log`
 (every-space, overlap-window and scoring-window ingredient tables, `shipped`,
 12 creatures) and `results/n70-samediff-1680k.log` (the dose ladder and its
@@ -16868,6 +16913,13 @@ monotone across the whole measured ladder.
 [[aibaby-synapse-type-specific-stp-lead]]'s prohibition stands: §75 withdrew it
 and the threshold ask is 1.96x as measured against 1.03x with the spike oracle
 repaired, so Route 2 still collapses onto the oracle repair and not onto this cell.
+
+*[Note added 2026-11-20, not part of the registration: the `1.96x` and `1.03x` in
+the paragraph above are §76's figures, written here BEFORE §77 ran and WITHDRAWN
+by its result — see the banner at the head of §76. The registration is left as
+written because that is what a pre-registration is for. Its conclusion is
+unaffected: there is no license for the kernel change, and the ask is now not
+merely unpaid but, until §78's R1, unidentified.]*
 
 ### THE GATES
 
