@@ -19765,3 +19765,69 @@ between them in these columns is not a content claim**. The frozen-versus-
 generated question is §82's primary and it is read on m3's acoustic d', with the
 arm count the power section fixed — 48 per arm, about 100 minutes for three arms.
 **NOTHING HERE IS A DOSE, A VERDICT, OR A LICENSE.**
+
+### §82 LIVENESS RESULT — THE CREATURE HEARS A VOICE THAT IS ITS OWN AND IS NOT A RECORDING (2026-11-20)
+
+RUNS: `results/n82-m3-dream0-1600k.log`, `-dream1-`, `-dream2-`, each
+`./build/aibaby --experiment m3 --ticks 1600000` on the shipped genome and on
+`default.toml + dream = 1` / `= 2`. The dream genomes are scratchpad files, so
+`dna/default.toml` stays byte-identical at md5
+`fb419735526b1fe189be8264a63f5d95`.
+
+**THE GATES WORK END TO END, AND THE COLUMN THAT SAYS SO HAS ITS OWN
+IDENTIFICATION:**
+
+    mode 0   auditory drive asleep, peak over creatures   0.000000
+    mode 1   auditory drive asleep, peak over creatures   0.467363
+    mode 2   auditory drive asleep, peak over creatures   0.574555
+
+**Mode 0's exact zero is what makes the other two readable**, and it is measured
+in a vehicle that DOES feed audio — m3 mixes the caregiver and the creature's own
+voice into one cochlea. The larynx opens while asleep, the host zeroes the room,
+`hear()` passes the frame, the auditory encoder is driven. **This creature now
+has the arm the 2022 PAD paper calls REM and this project has never had: sensory
+experience it GENERATES rather than re-lives.**
+
+**THE FIRST LIVENESS ATTEMPT WAS MIS-SPECIFIED AND IT IS WORTH RECORDING WHY.**
+It ran on `sleep`, which prints `vocalising asleep` and so looked like the right
+vehicle: mode 0 silent, mode 1 at 100.0% of motor frames, mode 2 at 31.5%, the
+`guards` waiver printed, `sleep` still PASS, and every other column identical
+across modes. But `run_sleep` HAS NO EAR — it never synthesises the larynx and
+never calls `hear()` — so its auditory column read 0.000000 in all three modes
+and the registered kill condition fired with the wrong diagnosis. **Mode 0's
+registered `0.000000` was satisfied VACUOUSLY there: it would have read zero if
+`hear()` leaked outright.** That is this project's own rule — a gate with a
+constant regressor cannot fail, so measure its identification rather than
+asserting it — applied one section after using it on the d' instrument.
+
+**THE EFFECT IS UNMEASURED, AND AT THIS n IT IS UNMEASURABLE.** In d'^2, which is
+the only domain the estimator is unbiased in:
+
+    mode 0   cube/ball mean +0.1825  SD 0.1848     null +0.0063  SD 0.0357
+    mode 1   cube/ball mean +0.1409  SD 0.1411     null -0.0163  SD 0.0220
+    mode 2   cube/ball mean +0.1599  SD 0.1783     null -0.0065  SD 0.0181
+
+    mode 1 - mode 0   -0.0416 +/- 0.1040  = 0.4 SE
+    mode 2 - mode 0   -0.0226 +/- 0.1148  = 0.2 SE
+
+**The power section fixed the minimum detectable difference at n = 5 at 0.3164
+d'^2. Both differences are seven to fourteen times smaller than that.** They are
+noise and **NOTHING may be read from them, not even a direction** — which is
+exactly what the liveness registration said in advance, and the reason the number
+was computed before the run rather than after it. The nulls stay near zero on all
+three arms, which is the estimator behaving.
+
+**WHAT BLOCKS THE REAL ARM: `kM3Replicates` IS A COMPILE-TIME 5**
+(`host/src/experiments_common.h:2342`), shared with a probe in
+`experiments_probes.cpp`, and there is no `--replicates` flag. Raising the
+constant would move every m3 reading this project has ever taken. **The next
+build is therefore a dedicated instrument**, in the pattern this project already
+uses for arms: call `run_m3_session` directly, with its own replicate count, and
+select arms by patching `offsetof(DnaDrives, dream)` in the blob —
+**PINNING `dream` EXPLICITLY ON ALL THREE ARMS INCLUDING THE 0 ARM**, because an
+arm selector must pin the whole dose vector rather than inherit a default.
+
+**NOT A VERDICT, NOT A DOSE, NOT A LICENSE.** Nothing here says a dream helps.
+What it says is that the mechanism exists, is off by default, is provably inert
+when off, and is now measurable at the arm count the power section priced: 48 per
+arm, about 100 minutes.

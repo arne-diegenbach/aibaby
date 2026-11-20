@@ -1237,6 +1237,13 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
                      CtxMask ctx = CtxMask::kOff,
                      Curriculum curriculum = Curriculum::kInterleaved) {
   M3Run out;
+  // §82. See the block beside `ear.tick` below. The settle window matches the
+  // one `sleep` uses on the retina: the sound on the cochlea when the creature
+  // dropped off is still fading, and a peak taken across the transition would
+  // measure how recently it fell asleep.
+  constexpr uint64_t kM3SleepSettleTicks = 1000;
+  double peak_audio_asleep = 0.0;
+  uint64_t audio_asleep_run = 0;
   std::string error;
   Session s;
   if (!s.init(blob, error)) {
@@ -1382,6 +1389,27 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
       // they would in a room. Before DNA v6 the probe phase was silent to the
       // creature even while it was vocalising.
       ear.tick(s.brain, pcm.data(), samples_per_tick);
+
+      // §82. DOES THE DREAM REACH THE EAR? Read-only, and placed here rather
+      // than in `sleep` because `sleep` HAS NO EAR — it never synthesises the
+      // larynx and never calls hear(), so the same column reads 0.000000 there
+      // whatever the gates do, which makes it a check with no identification.
+      // This vehicle mixes the caregiver and the creature's own voice into one
+      // cochlea, so a non-zero reading while asleep can only have come from the
+      // larynx: the room is zeroed on the host side while dreaming.
+      if (s.brain.asleep()) {
+        ++audio_asleep_run;
+        if (audio_asleep_run > kM3SleepSettleTicks && !s.brain.replaying()) {
+          double peak = 0.0;
+          const aibaby::Scalar* level = s.brain.auditory_level();
+          for (uint32_t ch = 0; ch < s.brain.auditory_channels(); ++ch) {
+            peak = std::max(peak, double(level[ch]));
+          }
+          peak_audio_asleep = std::max(peak_audio_asleep, peak);
+        }
+      } else {
+        audio_asleep_run = 0;
+      }
 
       // Approval accompanies naming, and it is the same approval for both
       // words. It is what opens the gate on three-factor learning (§3.1);
@@ -1715,6 +1743,7 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     }
     std::printf("\n");
   }
+  out.peak_audio_asleep = peak_audio_asleep;  // §82
   out.ok = true;
   return out;
 }
@@ -1746,6 +1775,7 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   // creature and averaging reinstates the bias the correction removes, and a
   // per-creature SD of the rooted value has the same defect.
   std::vector<double> dsq_named, nullsq_named;
+  double peak_audio_asleep_max = 0.0;  // §82
   uint32_t beat_control = 0;
 
   for (uint32_t r = 0; r < replicates; ++r) {
@@ -1780,6 +1810,10 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
       sum[c][14] += run[c].dprime_null_unb_sq;
       sum[c][12] += run[c].motor_interleaved;
       sum[c][15] += run[c].timbre_shuffled;
+      // §82. The MAX and not the mean: this is a liveness question — did any
+      // sound at all reach the sleeping cochlea — and a mean over creatures
+      // would let one silent arm hide a working gate.
+      peak_audio_asleep_max = std::max(peak_audio_asleep_max, run[c].peak_audio_asleep);
       std::printf("  %-4u %-6s %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %-9.3f %+-9.3f %.4f\n", r,
                   c == 0 ? "named" : "muddle", run[c].vocal, run[c].timbre,
                   run[c].shuffled, run[c].timbre_shuffled, run[c].echo, run[c].b1_shape,
@@ -1969,6 +2003,15 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
                 "  finding structure in the procedure and no other number here is\n"
                 "  worth reading.\n", paired_shuffled);
   }
+  // §82. The dream's only route into the creature, measured in a vehicle that
+  // actually has an ear. Printed unconditionally: on the shipped genome a
+  // reading of exactly 0.000000 is what gives the dream modes their meaning,
+  // and printing it only when non-zero would leave the check without its own
+  // identification.
+  std::printf("\n  auditory drive asleep, peak over creatures  %.6f\n"
+              "    (after each bout's first second, outside §3.6 replay; 0 on the\n"
+              "     shipped genome because hear() drops the frame — DNA v85 §82)\n",
+              peak_audio_asleep_max);
   std::printf("\n  M3/G3 %s — a held-out classifier tells cube from ball off the baby's\n"
               "  vocalisations at %.0f%% (chance 50%%), against %.0f%% for a creature\n"
               "  shown the same objects and told the same words in no fixed order.\n",

@@ -2221,6 +2221,11 @@ inline std::vector<double> m3_timbre_features(const M3Record& r) {
 
 struct M3Run {
   bool ok = false;
+  // §82. The peak auditory drive reached while ASLEEP, after each bout's first
+  // second and outside §3.6 replay. On the shipped genome it is 0 by
+  // construction — `hear()` drops the frame — so a non-zero value means DNA
+  // v85's dream reached the cochlea. Read-only; it changes nothing.
+  double peak_audio_asleep = 0;
   double vocal = 0;       // held-out accuracy on the baby's voice — the milestone
   double timbre = 0;      // the same with loudness dropped
   // THE CONTROLS, AND WHICH READOUT EACH ONE BOUNDS -- because "the same again"

@@ -1,0 +1,63 @@
+experiment: m3
+  session           1600.0 s of simulated life x 5 creatures x 2 upbringings
+  chance            0.500 — probes are balanced cube/ball
+  the caregiver names the object while it is in view, and praises the
+  same way for both, so only the sound carries which one it is.
+
+  seed raised voice     timbre    shuf-voi  shuf-tim  echo      B1 shape  aligned   |R-E[R]|
+  0    named  0.500     0.526     0.518     0.553     0.869     0.518     -0.301    0.0288
+  0    muddle 0.509     0.579     0.500     0.526     0.828     0.553     +0.041    0.0288
+  1    named  0.614     0.535     0.561     0.579     0.646     0.605     +0.364    0.0288
+  1    muddle 0.491     0.518     0.509     0.482     0.781     0.526     +0.409    0.0288
+  2    named  0.570     0.535     0.500     0.412     0.705     0.553     +0.175    0.0289
+  2    muddle 0.605     0.482     0.474     0.474     0.670     0.570     +0.063    0.0288
+  3    named  0.518     0.623     0.439     0.456     0.792     0.570     -0.507    0.0288
+  3    muddle 0.518     0.561     0.456     0.439     0.749     0.518     -0.821    0.0288
+  4    named  0.535     0.561     0.579     0.561     0.691     0.544     +0.488    0.0289
+  4    muddle 0.561     0.588     0.377     0.456     0.798     0.544     -0.590    0.0289
+
+  mean held-out accuracy on the baby's own voice
+    named consistently   0.547   <- the milestone
+    named at random      0.537   (the control: nothing to associate)
+    labels shuffled      0.519   (the VOICE readout's control: must sit at chance)
+    timbre only          0.556   (loudness dropped)
+    timbre, shuffled     0.512   (TIMBRE's own control, new: it had none)
+    while hearing a word 0.741   (the audio route's own ceiling)
+    at or above 0.75     0 of 5 creatures
+    beat its own control 1 of 5 creatures
+    taught - random      +0.011 +/- 0.029 SE over 5 paired creatures
+                         a gap under 2 SE is not a result, and the
+                         control genome swings +/-0.060 across seed
+                         families with the mechanism absent — so a
+                         cross-family claim needs about 0.12.
+  picture drives the voice the way the word does (cosine, 0 = unrelated)
+    named consistently   +0.044
+    named at random      -0.180
+
+  the same probes, scored on what they SOUND like (interleaved split)
+    named consistently   0.537   <- against 0.563 on motor parameters
+    named at random      0.577   (the control)
+    labels shuffled      0.458   (must sit at chance)
+  separation in d-prime, on this creature's own within-word scatter
+    cube vs ball         0.62 raw   0.43 BIAS-CORRECTED  <- read this
+    shuffled labels      0.38 raw   0.08   <- raw is this estimator's
+                                    small-sample floor; corrected is a
+                                    32-permutation null and sits near 0
+    per-creature spread in d'^2, NOT d', over 5 creatures
+      null       mean +0.0063  SD 0.0357  <- the load-bearing SD
+      cube/ball  mean +0.1825  SD 0.1848
+    cube vs ball is NOT audible — corrected d' below 1.0
+    [i] vs [a]           24.11   two vowels nobody would confuse
+    [a] vs [u]           9.16   neighbours, still two vowels
+    +/-1sd of its own F1 2.84   (scale check, not a result)
+    cube vs ball is 2.6% of an [i]/[a] contrast, 6.7% of [a]/[u]
+      (raw distance, so it grows with the vowel space whether or not
+       the two words became any easier to tell apart — read d')
+
+  auditory drive asleep, peak over creatures  0.000000
+    (after each bout's first second, outside §3.6 replay; 0 on the
+     shipped genome because hear() drops the frame — DNA v85 §82)
+
+  M3/G3 FAIL — a held-out classifier tells cube from ball off the baby's
+  vocalisations at 55% (chance 50%), against 54% for a creature
+  shown the same objects and told the same words in no fixed order.
