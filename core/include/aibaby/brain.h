@@ -119,6 +119,14 @@ class Brain {
   const Dna& dna() const { return dna_; }
   const Drives& drives() const { return drives_; }
   bool asleep() const { return sleep_ == SleepState::kAsleep; }
+  // DNA v85 (§82). The dream gate, read in one place so the kernel, the
+  // decoder and the host's mixer cannot disagree about whether this creature
+  // is dreaming. 0 ships, and at 0 `dreaming()` is false always.
+  int dream_mode() const {
+    const float d = dna_.header().drives.dream;
+    return d >= 1.5f ? 2 : (d >= 0.5f ? 1 : 0);
+  }
+  bool dreaming() const { return asleep() && dream_mode() > 0; }
 
   // What the auditory encoder is currently driving B2 with, which is not the
   // same as the last frame that arrived: it fades when the sound stops, and it

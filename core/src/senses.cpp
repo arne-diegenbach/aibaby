@@ -334,7 +334,7 @@ void VocalDecoder::configure(const Dna& dna, uint32_t module_index, Scalar updat
   configured_ = true;
 }
 
-void VocalDecoder::update(const Network& net, bool awake) {
+void VocalDecoder::update(const Network& net, bool awake, int dream) {
   if (!configured_) return;
   const ModuleState& ms = net.module(module_index_);
   if (ms.count < kVocalGroups) return;
@@ -343,9 +343,18 @@ void VocalDecoder::update(const Network& net, bool awake) {
   // brain is not a silent one, and M4 wants that activity for replay — but
   // nothing reaches the air. Amplitude is ramped rather than cut so the
   // synthesiser does not click.
-  if (!awake) {
-    params_.voicing = kZero;
-    params_.amplitude += gate_smooth_ * (kZero - params_.amplitude);
+  //
+  // DNA v85 (§82) is the exception, and it is deliberately two exceptions. At
+  // mode 1 the valve opens but this early return still fires, so the posture
+  // stays frozen and the creature drones what it was last saying: a dream with
+  // no content. At mode 2 the return is skipped entirely and everything below
+  // runs on the sleeping network's own activity: a dream with content. At the
+  // shipped mode 0 this block is byte-for-byte what it always was.
+  if (!awake && dream < 2) {
+    if (dream < 1) {
+      params_.voicing = kZero;
+      params_.amplitude += gate_smooth_ * (kZero - params_.amplitude);
+    }
     ++frame_;
     return;
   }

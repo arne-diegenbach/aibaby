@@ -94,7 +94,12 @@ void Ear::tick(aibaby::Brain& brain, const float* room, size_t count) {
   if (count == 0) return;
 
   mix_.assign(count, 0.0f);
-  if (room) {
+  // DNA v85 (§82). THE THIRD GATE, AND WITHOUT IT THERE IS NO DREAM. The ear
+  // receives room + self, so opening `hear()` during sleep would admit the
+  // ROOM as well and the creature would be awake with its eyes shut. Dreaming,
+  // the room is dropped here and only the larynx reaches the cochlea. At the
+  // shipped mode 0 `dreaming()` is false and this is the original branch.
+  if (room && !brain.dreaming()) {
     for (size_t i = 0; i < count; ++i) mix_[i] = room[i];
   }
 

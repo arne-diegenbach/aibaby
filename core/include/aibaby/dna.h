@@ -876,7 +876,24 @@ struct DnaDrives {
   float fatigue_recovery;       // per ms while asleep
   float sleep_threshold;        // fatigue at which the baby drops off
   float wake_threshold;         // and the lower level at which it wakes again
-  float pad;
+  // DNA v85 (§82). Dreaming: self-generated sensory experience during sleep,
+  // as distinct from the replay this creature has had since §3.6. Replay
+  // re-lives a STORED episode and measuring it found nothing (`interleave`,
+  // 0.3 SE). A dream is a sound the creature makes and hears while the room
+  // stays shut out, which is the arm it has never had.
+  //
+  //   0  OFF, and this is what ships. Sleep shuts the glottis exactly as before.
+  //   1  FROZEN. The voicing valve opens but the decoder stays frozen, so the
+  //      creature drones its last awake posture: self-generated sound with NO
+  //      CONTENT. This is §82's control, and it is a better one than muting the
+  //      ear, because it holds "hears its own voice asleep" fixed.
+  //   2  GENERATED. The decoder runs too, so postures evolve from the sleeping
+  //      network's own activity: self-generated sound WITH content.
+  //
+  // It takes the slot the padding float held, so no offset in this header
+  // moves, `kDnaVersion` does not change, and a genome that never mentions
+  // `dream` compiles to the same bytes it did before.
+  float dream;
 };
 
 // The cochlea (§5.2). Window and hop live here rather than as host constants

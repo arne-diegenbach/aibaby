@@ -440,7 +440,15 @@ bool run_sleep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   }
 
   const bool cycled = first_sleep > 0 && first_wake > first_sleep;
-  const bool silent = voiced_asleep == 0;
+  // DNA v85 (§82). THIS CLAUSE IS GENOME-DEPENDENT AND THE VERDICT LINE SAYS
+  // SO, per §80 stage 8's rule that a CONTENT change becomes an open reading
+  // and discloses the genome it read. A dreaming creature is SUPPOSED to voice
+  // while asleep; asserting silence against it would report a red tier for a
+  // creature working as designed. What stays asserted either way is the thing
+  // the gate is actually about: the ROOM is still shut out, checked by the
+  // eyes below and by the host zeroing the room on the audio side.
+  const int dream = s.brain.dream_mode();
+  const bool silent = dream > 0 ? true : voiced_asleep == 0;
   const bool talks_awake = frames_awake > 0 && voiced_awake > 0;
   // The eyes close too. There is an object in front of the creature the whole
   // time, so if B3 is as busy asleep as awake then the gate is not gating.
@@ -452,8 +460,19 @@ bool run_sleep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
               pass ? "PASS" : "FAIL",
               cycled ? "rises, discharges, and the baby wakes again"
                      : "did not complete a sleep/wake cycle",
-              silent ? "is silent" : "IS STILL TALKING",
+              dream > 0 ? "DREAMS (voicing asleep is EXPECTED, not checked)"
+                        : (silent ? "is silent" : "IS STILL TALKING"),
               eyes_shut ? "sees nothing" : "IS STILL WATCHING");
+  // The disclosure, printed whenever the clause was waived, so a PASS can never
+  // be read as "silence was verified" on a genome where it was not asked.
+  if (dream > 0) {
+    std::printf("    guards   `dream` = %d, so the silence clause is WAIVED on this"
+                " genome.\n           voicing asleep measured at %.1f%% of motor"
+                " frames and NOT asserted.\n",
+                dream,
+                frames_asleep ? 100.0 * double(voiced_asleep) / double(frames_asleep)
+                              : 0.0);
+  }
   return pass;
 }
 

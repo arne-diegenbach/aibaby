@@ -412,6 +412,9 @@ bool compile_dna_toml(const std::string& path, std::vector<uint8_t>& out,
     header.drives.fatigue_recovery = float(r.number("fatigue_recovery"));
     header.drives.sleep_threshold = float(r.number("sleep_threshold"));
     header.drives.wake_threshold = float(r.number("wake_threshold"));
+    // DNA v85 (§82), optional and inert at 0.0 — the shipped genome does not
+    // mention it and compiles to the same bytes as before.
+    header.drives.dream = float(r.number_or("dream", 0.0));
     collect(r);
   }
   {

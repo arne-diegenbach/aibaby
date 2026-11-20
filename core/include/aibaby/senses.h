@@ -158,7 +158,10 @@ class VocalDecoder {
  public:
   void configure(const Dna& dna, uint32_t module_index, Scalar update_ms);
   // `awake` gates the larynx: see §3.6.
-  void update(const Network& net, bool awake);
+  // `dream` is DNA v85's mode (0 off, 1 frozen, 2 generated) and is read only
+  // when `awake` is false. It defaults to 0, which is the pre-v85 behaviour
+  // exactly.
+  void update(const Network& net, bool awake, int dream = 0);
 
   const VocalParams& params() const { return params_; }
   // Raw group readings before mapping, for telemetry: nine numbers in [0,1]

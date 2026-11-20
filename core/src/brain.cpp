@@ -190,11 +190,30 @@ void Brain::step() {
 
   const uint64_t tick = network_.tick();
   if (has_vocal_ && tick % vocal_interval_ == 0) {
-    vocal_.update(network_, still_awake);
+    vocal_.update(network_, still_awake, dream_mode());
     // DNA v49. A posture was just sampled, so the choice is creditable. Written
     // straight into the eligibility the reward pass already reads, which is why
     // the caregiver's delay needs no new machinery.
-    if (vocal_.chose()) {
+    //
+    // DNA v85 (§82) REGISTERED A WAKE GUARD HERE AND IT IS LOAD-BEARING. A
+    // dreaming decoder samples postures, so `chose()` can fire asleep; letting
+    // it write would make the dream arm test self-generated experience AND
+    // sleep-time policy-gradient writes at once, which no control in the
+    // registration separates. The dream's only route into this creature is its
+    // own ear.
+    //
+    // IT IS CONDITIONED ON THE DREAM AND NOT APPLIED UNCONDITIONALLY, WHICH IS
+    // DELIBERATE. Asleep at mode 0 the decoder returns early without clearing
+    // `chose_`, so a sleeping creature can pay this gradient out off a flag
+    // left over from the last awake frame. That looks like a latent defect and
+    // it is NOT this change's business to fix: conditioning the guard makes
+    // mode 0 identical BY CONSTRUCTION rather than by measurement, which is
+    // what §82's inertness proof needs. What is known about the defect is only
+    // this: the conditional and unconditional forms print the same `sleep`
+    // columns on this genome (onset 1040.0 s, awake voicing 44.3%, asleep
+    // amplitude peak 0.3919), so NO effect is demonstrated in either
+    // direction. It needs its own registration to say more.
+    if ((still_awake || dream_mode() == 0) && vocal_.chose()) {
       network_.accumulate_policy_gradient(vocal_.module_index(), vocal_.policy_grad(),
                                           vocal_.units(),
                                           Scalar(dna_.header().vocal.dictionary_policy_rate));
@@ -582,7 +601,13 @@ void Brain::update_drives() {
 void Brain::hear(const Scalar* mel, uint32_t count) {
   // Asleep, the ears are shut: the frame is dropped rather than held, so the
   // encoder is not sitting on a stale sound when the baby wakes.
-  if (sleep_ == SleepState::kAsleep) return;
+  //
+  // DNA v85 (§82). A dreaming creature keeps this one path open, because a
+  // dream the creature cannot hear is not a dream. The ROOM is still shut out,
+  // and that is enforced on the other side: the host zeroes it while dreaming,
+  // so what arrives here is the larynx and nothing else. At the shipped mode 0
+  // `dreaming()` is false and this returns exactly as it always did.
+  if (sleep_ == SleepState::kAsleep && !dreaming()) return;
 
   critic_.observe(network_, mel, count);
   pending_curiosity_ += critic_.progress();
