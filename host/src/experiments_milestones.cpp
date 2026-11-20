@@ -1689,6 +1689,13 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   uint32_t valid[2] = {0, 0};
   uint32_t above = 0;
   std::vector<double> gap;
+  // §82. The per-creature spread of the acoustic d', kept so a power
+  // calculation has a load-bearing null SD to work from — the pooled print
+  // below cannot supply one. Held in d'^2 AND NOT IN d', because the block
+  // below averages the squared form and roots once on purpose: rooting per
+  // creature and averaging reinstates the bias the correction removes, and a
+  // per-creature SD of the rooted value has the same defect.
+  std::vector<double> dsq_named, nullsq_named;
   uint32_t beat_control = 0;
 
   for (uint32_t r = 0; r < replicates; ++r) {
@@ -1734,6 +1741,9 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
     // The paired difference, kept per creature so the gap below can carry its
     // own error bar instead of being read as a number.
     gap.push_back(run[0].vocal - run[1].vocal);
+    // §82. Same pairing discipline, applied to the acoustic estimator.
+    dsq_named.push_back(run[0].dprime_unb_sq);
+    nullsq_named.push_back(run[0].dprime_null_unb_sq);
   }
 
   const uint32_t need = replicates < 3 ? replicates : 3;
@@ -1836,6 +1846,30 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
                 "                                    small-sample floor; corrected is a\n"
                 "                                    32-permutation null and sits near 0\n",
                 null, nullu);
+    // §82. The per-creature spread, which the pooled rows above cannot give and
+    // which a power calculation cannot do without: an arm is sized against the
+    // NULL it has to clear, not against the effect it hopes for. Printed in
+    // d'^2 and not in d' — see the note at `dsq_named`'s declaration. The SD is
+    // the population spread across creatures, NOT an SE: dividing by sqrt(n)
+    // here would answer how well THIS run located the mean, which is not the
+    // question an arm count asks.
+    if (nullsq_named.size() >= 2) {
+      auto spread = [](const std::vector<double>& v, double& mean, double& sd) {
+        mean = 0.0;
+        for (double x : v) mean += x;
+        mean /= double(v.size());
+        double ss = 0.0;
+        for (double x : v) ss += (x - mean) * (x - mean);
+        sd = std::sqrt(ss / double(v.size() - 1));
+      };
+      double nm = 0.0, nsd = 0.0, dm = 0.0, dsd = 0.0;
+      spread(nullsq_named, nm, nsd);
+      spread(dsq_named, dm, dsd);
+      std::printf("    per-creature spread in d'^2, NOT d', over %zu creatures\n"
+                  "      null       mean %+.4f  SD %.4f  <- the load-bearing SD\n"
+                  "      cube/ball  mean %+.4f  SD %.4f\n",
+                  nullsq_named.size(), nm, nsd, dm, dsd);
+    }
     // The bar is 1.0 and it is not arbitrary: d' = 1 is about 76% correct in a
     // two-alternative forced choice, which is the weakest separation worth
     // calling audible. A corrected d' above its null but well under 1.0 means

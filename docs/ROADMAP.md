@@ -19636,3 +19636,79 @@ ALREADY ON DISK:** after the change, the non-verbose block must reproduce
 0.029`, `d' 0.62 raw / 0.43 corrected`, `null 0.38 raw / 0.08 corrected` and all
 ten rows of the per-creature table **EXACTLY**. A reporting change that moves any
 of them is not a reporting change.
+
+### §82 POWER — THE ARM COUNT, FROM A MEASURED SPREAD AT LAST (2026-11-20)
+
+RUNS: `results/n82-m3-sleep-calib-1600k.log` (pre-change),
+`results/n82-m3-sleep-calib-1600k-verbose.log` (the `skipped` count),
+`results/n82-m3-percreature-1600k.log` (the reporting change). Script:
+`tools/`-free, the arithmetic is in the commit message and reproduced below.
+
+**THE `skipped` COUNT ARRIVED AND THE ASLEEP FRACTION REPLICATES A FOURTH TIME.**
+
+    774 presentations, 228 probes (30 skipped), 114 train / 114 test
+
+30 against 228 scored is **30/258 = 11.63%**, against the registered expectation
+of ~11.5% and alongside 11.5% (`sleep`), 11.21% (`n77`), 11.23% (`n81`).
+**AND ALL TEN CREATURE-UNITS PRINT EXACTLY 30**, which says sleep onset here is
+PROTOCOL-DETERMINED rather than creature-specific — consistent with first sleep
+landing on the same tick in n77, n78, n79 and n81. For §82 that is useful: the
+dream's exposure is identical across creatures, so a paired design needs no
+covariate for it. `--verbose` cost 422.34 s against 417.79 s, +1.1%, and every
+shared line reproduced exactly, so the flag is print-only.
+
+**THE REPORTING CHANGE, AND ITS PRE-REGISTERED SELF-CHECK PASSED.** The diff
+against the pre-change log is the three new lines and the wall-time line, nothing
+else — every substantive number identical, which is what makes it a reporting
+change in §77's sense. **The units are d'^2 AND NOT d', because the block
+averages the squared form and roots once on purpose: rooting per creature and
+averaging reinstates the bias the correction removes.** Both new means root back
+to the existing pooled prints (sqrt(0.0063) = 0.079 ~ 0.08; sqrt(0.1825) = 0.427
+~ 0.43), which is a second check on the plumbing.
+
+    per-creature spread in d'^2, NOT d', over 5 creatures
+      null       mean +0.0063  SD 0.0357  <- the load-bearing SD
+      cube/ball  mean +0.1825  SD 0.1848
+
+**WHICH SD IS LOAD-BEARING DEPENDS ON WHICH REFUSAL CLAUSE READS IT**, and §82
+has two. The VACUITY check — can the arm tell its own null from zero — is
+governed by the null's 0.0357 and is cheap: at n=12 the null's SE is 0.0139 d'^2,
+a 2-SE band of +/-0.0279 around a measured null mean of 0.0063. **The HEADLINE —
+dream arm against control arm — is governed by the PRIMARY's between-creature SD
+of 0.1848**, because both arms carry that spread. Quoting the null's SD for the
+headline would understate the requirement fivefold.
+
+**THE ARM COUNT.** Two arms, UNPAIRED, which is conservative: pairing on seed
+would do better, but no two arms have ever been run here so the paired
+difference's SD is unmeasured and may not be assumed. The SD was measured on five
+creatures, so it carries a relative SE of 1/sqrt(2(n-1)) = **35.4%**, and per the
+standing rule that every SD projection in this project has come in LOW, it is
+inflated by one relative SE to **0.2501** before use. Cost is the MEASURED 41.8 s
+per creature-unit at 1,600,000 ticks.
+
+     n/arm   min detectable delta (d'^2)   as x the shipped 0.1825   3-arm cost
+         5                        0.3164                     1.73x      10.4 min
+        12                        0.2042                     1.12x      25.1 min
+        24                        0.1444                     0.79x      50.2 min
+        48                        0.1021                     0.56x     100.3 min
+        96                        0.0722                     0.40x     200.6 min
+
+**SO TWELVE CREATURES CAN ONLY SEE A DREAM THAT MORE THAN DOUBLES THE
+SEPARATION**, which is not a hypothesis anyone should pre-commit to.
+**RECOMMENDED: n = 48 PER ARM, ABOUT 100 MINUTES FOR THREE ARMS**, which detects
+a change of 0.56x the shipped separation; n = 96 and 3.3 hours if the first
+reading is a near-miss. **The whole experiment is a two-hour run, not a
+forty-hour one** — that is the real news from this pass, and it is what the
+calibration was for.
+
+**ONE RULE THAT LOOKS VIOLATED AND IS NOT.** The standing warning that a windowed
+SE does not scale as 1/sqrt(n) is about WINDOW WIDTH: the between-unit component
+does not shrink when you widen a window. Here the quantity being averaged IS the
+between-creature unit, so 1/sqrt(n) over CREATURES is the correct scaling, and
+the between-creature component is exactly what the 0.1848 measures.
+
+**STILL NOT BUILT, AND STILL NOT REGISTERED AS A RUN.** What exists now is an
+instrument with a measured floor, a measured cost, a measured spread and an arm
+count. The three gates (`senses.cpp:346`, the host room mix, `hear()`) are
+unwritten, the policy-gradient write stays wake-gated per part 1, and `sleep`'s
+silence clause still has to become genome-dependent before any of it runs.
