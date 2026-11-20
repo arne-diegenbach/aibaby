@@ -19959,3 +19959,78 @@ looked for the teaching's signature in the sleep that follows it.
 48-creature `dreamprobe` arm is registered on the pooled d' and stays that way;
 splitting the window is a separate registration with its own pre-flight, and
 doing it to the arm now would be a verdict fitted to data.
+
+### §82 THE DETERIORATION READOUT — REGISTERED DESIGN, AND A CORRECTION TO MY OWN POWER CLAIM (2026-11-20)
+
+**DESIGN ONLY. NOTHING BUILT, NOTHING RUN, AND IT DOES NOT TOUCH THE 48-CREATURE
+ARM IN FLIGHT.**
+
+**FIRST, THE CORRECTION.** The birdsong section said this readout's power "beats
+the arm contrast by construction, because before-versus-after is WITHIN
+creature". **That was wrong twice.** Both designs cancel the between-creature
+term — the arm contrast does it by sharing a seed — so there is no structural
+advantage. And splitting the window COSTS estimator noise, because each d' is
+then computed on fewer probes:
+
+    probes in a 1,600,000-tick session   258 attempted, 228 scored, 30 slept through
+    before the bout (0 -> 1040 s)        ~168
+    inside the bout (1040 -> 1224 s)     30, dropped by the instrument already
+    after waking (1224 -> 1600 s)        ~61
+
+    relative SE of a d' on 61 probes against the pooled 228:  1.93x
+
+**So the post-sleep window is the short one and it is nearly twice as noisy as
+the pooled figure.** The readout's real advantage is not power, it is COST: it
+needs ONE arm, not three, because post-sleep deterioration should exist on the
+SHIPPED creature — that is the birdsong baseline. 48 creatures on one arm is
+**34 minutes** at the measured 42.4 s/unit, against 102 for three.
+
+**THE WINDOWS MUST BE MATCHED, AND THAT IS BOTH THE STATISTICS AND THE SOURCE
+PROTOCOL.** Scoring ~168 probes against ~61 would contrast two differently noisy
+estimates and read the difference in their bias corrections as a deterioration.
+**Take the N probes immediately BEFORE the bout against the N immediately AFTER,
+N = min(available).** Derégnaucourt et al. compared the evening's last songs with
+the morning's first, not whole-day averages, so the local matched window is
+faithful to the finding as well as to this project's own rule about matching at
+the operating point.
+
+**NO NEW TRACKING IS NEEDED, WHICH REVERSES AN EARLIER DECISION FOR A REASON.**
+The calibration registered a first-sleep tick and I dropped it, because `skipped`
+answered the exposure question it was for. The boundary split needs the boundary
+itself — but **the slept probes ARE the boundary**: the last scored probe before
+the first skipped one, and the first scored probe after the last skipped one,
+bracket the bout exactly, with no new state and no new field.
+
+**STAGE 1, AND IT IS A YES/NO WORTH HAVING ON ITS OWN.** Shipped genome, `dream`
+pinned at 0, 48 creatures, matched windows.
+
+    PRIMARY   d'^2(after) - d'^2(before), paired per creature, TWO-TAILED
+    FIRES     a deterioration exists on this creature and the birdsong finding
+              transfers to a creature with no birdsong in it
+    REVERSES  it IMPROVES across sleep, which refutes the transfer and is just as
+              publishable inside this project — §62 already says sleep is where
+              this creature's performance falls off, so an improvement would be a
+              genuine surprise
+    NEITHER   no verdict, and the instrument prints what the n could have seen
+
+**ITS POWER IS UNMEASURED AND MAY NOT BE GUESSED.** The paired within-creature
+SD of a before-minus-after d'^2 has never been measured here, and the arm
+contrast's 0.1021 does NOT transfer — it is a different contrast on differently
+sized windows. **Stage 1 measures it. That is most of what stage 1 is for**, and
+it is the same shape as the calibration that unblocked the arm count: measure the
+spread first, size the real arm second.
+
+**STAGE 2 ONLY IF STAGE 1 FIRES.** Does `dream = 2` REDUCE the deterioration?
+Two-tailed, because Derégnaucourt et al.'s own result — more deterioration, better
+final imitation — means a creature that deteriorates LESS could be learning
+WORSE, and because the mechanism those authors propose is a proposal and not a
+measurement. **A directional claim here would be a derived sign, and this project
+does not take those one-tailed.**
+
+**LONGER SESSIONS ARE THE OTHER LEVER AND ARE NOT FREE.** `sleep` reports 2
+transitions in 1,600,000 ticks, so there is exactly ONE bout and ONE pair per
+creature. A longer session would give more bouts and more pairs, at cost
+proportional to length — but it would also change the creature's developmental
+stage at each bout, which is the thing the birdsong finding is ABOUT ("during
+periods of rapid learning"). **Do not lengthen it to buy pairs without saying
+what stage each pair is at.**
