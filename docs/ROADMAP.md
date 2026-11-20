@@ -19350,3 +19350,72 @@ this is a sleep-state gate on the output side, it was asked for explicitly, and
 it aims at a measured deficit — **11.2% of trials spent asleep with both ends
 shut** — rather than at a new goal. **NOTHING HERE IS REGISTERED.** The next step
 is the pre-flight named above, not a build.
+
+### §82 PRE-FLIGHT, PART 1 — THE INSTRUMENT AND THE GATE, BOTH LOCATED. THREE THINGS §82 GOT WRONG (2026-11-20)
+
+**NO SESSIONS RUN. A READ OF THE CODE AND THE INSTRUMENTS, which is what §82's
+own "next step is the pre-flight" asked for.** Three corrections to the design
+above, each of which would have produced an uninterpretable arm.
+
+**1. THE DREAM CANNOT BE THE MEASUREMENT WINDOW, BECAUSE A DREAM HAS NO LABELS.**
+§82's primary is the separation of the produced vowels. The instrument exists and
+is good — `cepstral_dprime` with a **32-permutation** null
+(`host/src/experiments_milestones.cpp:1516-1544`), scored on `probe_labels` that
+come from a PROMPTED probe. **Asleep there is no caregiver and no stimulus, so a
+dreamed production carries no label and no separation score can be formed on it.**
+The dream is therefore the TREATMENT and the probe is AWAKE, after it. Two
+standing rules attach to that instrument and both are registered here: it must be
+read against its own `dprime_null` and **NEVER against zero** — the measurement's
+own comment records that two identical sounds score about **1.7**, not 0, at this
+sample size — and `cepstral_dprime(unbiased=true)` returns **d'², not d'**.
+
+**2. THE GATE IS ONE EARLY RETURN, AND OPENING IT ADMITS THE ROOM UNLESS THE HOST
+IS CHANGED TOO.** Located exactly:
+
+    core/src/senses.cpp:346   if (!awake) { voicing = 0; ramp amplitude; return; }
+                              <- THE gate. Asleep the decoder does not run AT ALL:
+                                 no posture, no dictionary winner, no f1_cmd_, no
+                                 jaw drive. The motor module keeps spiking; nothing
+                                 is read off it.
+    host/src/audio.cpp:97-98  mix_ = room + self. The room is copied in FIRST, so
+                              simply letting hear() through while asleep would
+                              admit THE ROOM — the creature would not be dreaming,
+                              it would be awake with its eyes shut. The room must
+                              be zeroed while asleep.
+    core/src/brain.cpp:585    hear()'s early return becomes the dream gate.
+
+So the design in §82 said "three gates" and named two of them; **the third is the
+host's room mix, and without it the arm is not a dream at all.**
+
+**3. OPENING THE DECODER ADDS A SECOND MECHANISM — THE POLICY GRADIENT WRITES
+DURING SLEEP.** `core/src/brain.cpp:197-198` accumulates the dictionary policy
+gradient whenever `vocal_.chose()` fires, and `cash_in_reward()` runs on its own
+interval regardless of sleep state — and this creature's reward path already
+"multiplies whatever noise is present during sleep" (`brain.cpp:460`) with a
+perturbation that is "uncorrelated with the sleep bout" (`:513`). If the decoder
+runs asleep, the arm tests dreamed sensory experience **AND** sleep-time
+policy-gradient writes at once, and the `self_gain = 0` control separates neither,
+because it leaves the gradient path untouched. **REGISTERED: THE DREAM ARM KEEPS
+THE POLICY-GRADIENT WRITE WAKE-GATED.** The dream's only route into the creature
+is its own ear. An arm that also opens the gradient is a different experiment and
+needs its own registration.
+
+**THE BOUNDARY LEAK, WHICH MUST BE BOUNDED OR FLUSHED.** `self_delay_`
+(`host/src/audio.cpp:83-87`, DNA v69) means the ear receives what the larynx
+emitted `self_delay_ms` ago. At sleep onset that line holds AWAKE audio, which
+then arrives inside the dream; at waking it holds DREAMED audio, which arrives
+awake — **a direct route from the treatment into the measurement**. Flush the line
+at both transitions, or report its length against the bout length and carry it in
+the claim. Do not leave it unstated.
+
+**THE GENERALISATION CO-PRIMARY HAS A PATTERN ALREADY.** This project repeatedly
+uses an **UNTAUGHT axis** as its reference (`host/src/experiments.cpp:1470`,
+`:1626` — one lesson, each axis with its own untaught control). That is where
+Hoel's dissociation would show: taught contrast intact, untaught contrast moved.
+No new machinery is needed for the second reading either.
+
+**STILL OPEN AFTER THIS PASS:** the arm count and the cost, which must be priced
+from a **measured seconds-per-session** figure and not from a tick ratio; and
+whether the dream bout needs its own exploration scale, which it must NOT get in
+the first registration because `vocal`'s `explore_scale` makes the noise the
+exploration drive. **NOTHING IS BUILT. NOTHING IS REGISTERED AS A RUN.**
