@@ -2226,6 +2226,15 @@ struct M3Run {
   // construction — `hear()` drops the frame — so a non-zero value means DNA
   // v85's dream reached the cochlea. Read-only; it changes nothing.
   double peak_audio_asleep = 0;
+  // §82 stage 1, the birdsong readout. The acoustic d'^2 on the N probes
+  // immediately BEFORE the sleep bout and the N immediately AFTER it, N matched
+  // so the two estimates carry the same small-sample bias — scoring 168 against
+  // 61 would read the difference in their corrections as a deterioration.
+  // `decay_ok` is false unless there was exactly ONE bout, both windows hold at
+  // least 12 probes, and both windows contain both classes.
+  double dsq_pre = 0, dsq_post = 0;
+  uint32_t window_n = 0, sleep_bouts = 0;
+  bool decay_ok = false;
   double vocal = 0;       // held-out accuracy on the baby's voice — the milestone
   double timbre = 0;      // the same with loudness dropped
   // THE CONTROLS, AND WHICH READOUT EACH ONE BOUNDS -- because "the same again"
@@ -2452,6 +2461,7 @@ bool run_m3(const std::vector<uint8_t>&, uint64_t, const Caregiver&, uint32_t, b
             const Capture&);
 bool run_dreamprobe(const std::vector<uint8_t>&, uint64_t, bool);  // §82
 bool run_dreamsmoke(const std::vector<uint8_t>&, uint64_t, bool);  // §82
+bool run_sleepdecay(const std::vector<uint8_t>&, uint64_t, bool);  // §82 stage 1
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

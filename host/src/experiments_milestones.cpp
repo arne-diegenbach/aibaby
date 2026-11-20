@@ -1244,6 +1244,10 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
   constexpr uint64_t kM3SleepSettleTicks = 1000;
   double peak_audio_asleep = 0.0;
   uint64_t audio_asleep_run = 0;
+  // §82 stage 1. See the block beside the slept-probe drop below.
+  uint32_t slept_runs = 0;
+  size_t boundary_lo = 0, boundary_hi = 0;
+  bool in_slept_run = false;
   std::string error;
   Session s;
   if (!s.init(blob, error)) {
@@ -1541,8 +1545,20 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
     // would hand the classifier a coin flip labelled as data.
     if (probe.slept || probe.frames == 0) {
       ++out.skipped;
+      // §82 stage 1. The slept probes ARE the sleep boundary, so no new state
+      // is needed to find it: `boundary_lo` is how many probes had been scored
+      // when the first one was dropped, `boundary_hi` when the last one was,
+      // and a run of drops is one bout. Counting the runs is what lets the
+      // readout REFUSE a session with two bouts instead of silently averaging
+      // across them.
+      if (!in_slept_run) {
+        in_slept_run = true;
+        if (++slept_runs == 1) boundary_lo = probe_labels.size();
+      }
+      boundary_hi = probe_labels.size();
       continue;
     }
+    in_slept_run = false;
     probe_vocal.push_back(m3_vocal_features(probe));
     probe_timbre.push_back(m3_timbre_features(probe));
     probe_b1.push_back(rebin(probe.b1, kFeatureBins));
@@ -1620,6 +1636,45 @@ M3Run run_m3_session(const std::vector<uint8_t>& blob, uint64_t ticks, bool pair
       // without this row the creature's 1.2 reads as "a listener could hear it"
       // when it is in fact below the floor of the instrument.
       out.dprime_null = cepstral_dprime(ceps, shuffled_labels, nullptr);
+
+      // §82 STAGE 1 — THE BIRDSONG READOUT. `ceps` is in probe order and so is
+      // `probe_labels`, so the boundary recorded above slices both. Everything
+      // here is read-only: no RNG is drawn and nothing above is touched, which
+      // is what lets m3's own output stay byte-identical.
+      //
+      // THE WINDOWS ARE MATCHED BY CONSTRUCTION — N = min(before, after) — and
+      // the guards are not decoration. One bout only, because two bouts would
+      // average a deterioration and a recovery into one number. At least 12
+      // probes a side, which is the instrument's own usable-probe floor. And
+      // BOTH CLASSES PRESENT IN BOTH WINDOWS, because a d' on a single class is
+      // not a small number, it is undefined.
+      out.sleep_bouts = slept_runs;
+      const size_t n_pre = boundary_lo;
+      const size_t n_post = ceps.size() > boundary_hi ? ceps.size() - boundary_hi : 0;
+      const size_t w = n_pre < n_post ? n_pre : n_post;
+      if (slept_runs == 1 && w >= 12) {
+        std::vector<std::vector<double>> pre_c, post_c;
+        std::vector<int> pre_y, post_y;
+        for (size_t i = boundary_lo - w; i < boundary_lo; ++i) {
+          pre_c.push_back(ceps[i]);
+          pre_y.push_back(probe_labels[i]);
+        }
+        for (size_t i = boundary_hi; i < boundary_hi + w; ++i) {
+          post_c.push_back(ceps[i]);
+          post_y.push_back(probe_labels[i]);
+        }
+        auto both_classes = [](const std::vector<int>& y) {
+          bool a = false, b = false;
+          for (int v : y) (v == 0 ? a : b) = true;
+          return a && b;
+        };
+        if (both_classes(pre_y) && both_classes(post_y)) {
+          out.dsq_pre = cepstral_dprime(pre_c, pre_y, nullptr, true);
+          out.dsq_post = cepstral_dprime(post_c, post_y, nullptr, true);
+          out.window_n = uint32_t(w);
+          out.decay_ok = true;
+        }
+      }
 
       // Scored on an INTERLEAVED split, not first-half/second-half. Per-module
       // homeostasis means the creature is not stationary, and projprobe already
@@ -2195,6 +2250,138 @@ bool run_dreamprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 // every print works before paying for the long one. It cannot read a sign.
 bool run_dreamsmoke(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   return run_dreamprobe_impl(blob, ticks, verbose, 3, "dreamsmoke");
+}
+
+// §82 STAGE 1 — THE BIRDSONG READOUT. Does this creature's vowel separation
+// DETERIORATE across a sleep bout, the way a juvenile zebra finch's song does
+// (Derégnaucourt, Mitra, Fehér, Pytte & Tchernichovski 2005)?
+//
+// ONE ARM, `dream` PINNED AT 0. The deterioration is predicted of the SHIPPED
+// creature — that is the birdsong baseline — so putting a dream in here would
+// answer a different question. Stage 2 asks whether a dream reduces it, and only
+// if this fires.
+//
+// TWO-TAILED. The 2005 paper's own result is that the birds which deteriorated
+// MORE reached the BETTER final imitation, so "less deterioration" is not
+// obviously the good direction, and an improvement across sleep would be a real
+// finding here rather than a failure — §62 says sleep is where this creature's
+// performance falls off.
+bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  const uint64_t base_seed = dna.header().seed;
+  constexpr uint32_t kDecayReplicates = 48;
+
+  std::printf("  session           %.1f s of simulated life x %u creatures x 1 arm\n",
+              double(ticks) * dt / 1000.0, kDecayReplicates);
+  instrument("sleepdecay", base_seed, kDecayReplicates, "creatures, dream pinned 0");
+  std::printf("  the acoustic d'^2 on the N probes immediately BEFORE the sleep bout\n"
+              "  against the N immediately AFTER it, N matched per creature so both\n"
+              "  estimates carry the same small-sample bias. Paired, two-tailed.\n");
+  if (double(ticks) * dt / 1000.0 < 1300.0) {
+    std::printf("\n  *** SHORTER THAN ONE SLEEP BOUT PLUS A POST-SLEEP WINDOW, so every\n"
+                "  *** creature will refuse. Good for plumbing. NOT for a sign.\n");
+  }
+
+  std::vector<double> diff, pre_all, post_all;
+  uint32_t refused_bouts = 0, refused_window = 0, refused_run = 0;
+  uint32_t bout_hist[4] = {0, 0, 0, 0};
+  uint32_t window_min = 0, window_max = 0;
+
+  if (verbose) {
+    std::printf("\n  %-5s %-7s %-11s %-11s %-11s %s\n", "seed", "bouts", "d'^2 pre",
+                "d'^2 post", "post-pre", "window N");
+  }
+  for (uint32_t r = 0; r < kDecayReplicates; ++r) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = base_seed + r * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    // Pinned, not inherited — the same rule the three-arm selector follows.
+    const float off = 0.0f;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, drives) +
+                    offsetof(aibaby::DnaDrives, dream),
+                &off, sizeof(off));
+    const M3Run run = run_m3_session(variant, ticks, true, Caregiver{}, false, Capture{});
+    if (!run.ok) {
+      ++refused_run;
+      continue;
+    }
+    bout_hist[run.sleep_bouts < 4 ? run.sleep_bouts : 3]++;
+    if (!run.decay_ok) {
+      if (run.sleep_bouts != 1) ++refused_bouts;
+      else ++refused_window;
+      continue;
+    }
+    diff.push_back(run.dsq_post - run.dsq_pre);
+    pre_all.push_back(run.dsq_pre);
+    post_all.push_back(run.dsq_post);
+    if (window_min == 0 || run.window_n < window_min) window_min = run.window_n;
+    if (run.window_n > window_max) window_max = run.window_n;
+    if (verbose) {
+      std::printf("  %-5u %-7u %+-11.4f %+-11.4f %+-11.4f %u\n", r, run.sleep_bouts,
+                  run.dsq_pre, run.dsq_post, run.dsq_post - run.dsq_pre, run.window_n);
+    }
+  }
+
+  // G-BOUTS. The design assumes ONE bout per session and the histogram is what
+  // says whether that assumption held. If most creatures sleep twice, the
+  // registered reading does not apply to this run at all.
+  std::printf("\n  G-BOUTS  bouts per creature: 0 -> %u, 1 -> %u, 2 -> %u, 3+ -> %u\n",
+              bout_hist[0], bout_hist[1], bout_hist[2], bout_hist[3]);
+  std::printf("  refused: %u for bout count, %u for window size or class balance,"
+              " %u failed to run\n",
+              refused_bouts, refused_window, refused_run);
+  if (!diff.empty()) {
+    std::printf("  window N per creature: %u to %u probes a side\n", window_min,
+                window_max);
+  }
+  if (diff.size() < 2) {
+    std::printf("\n  REFUSED — %zu usable creatures. Nothing is read from this.\n",
+                diff.size());
+    return false;
+  }
+
+  auto spread = [](const std::vector<double>& v, double& mean, double& sd) {
+    mean = 0.0;
+    sd = 0.0;
+    for (double x : v) mean += x;
+    mean /= double(v.size());
+    if (v.size() < 2) return;
+    double ss = 0.0;
+    for (double x : v) ss += (x - mean) * (x - mean);
+    sd = std::sqrt(ss / double(v.size() - 1));
+  };
+  double pm = 0, psd = 0, qm = 0, qsd = 0, dm = 0, dsd = 0;
+  spread(pre_all, pm, psd);
+  spread(post_all, qm, qsd);
+  spread(diff, dm, dsd);
+  const double se = dsd / std::sqrt(double(diff.size()));
+
+  std::printf("\n  in d'^2, NOT d', over %zu usable creatures\n", diff.size());
+  std::printf("    before the bout   %+.4f   SD %.4f\n", pm, psd);
+  std::printf("    after the bout    %+.4f   SD %.4f\n", qm, qsd);
+  std::printf("    post - pre        %+.4f +/- %.4f SE  = %.1f SE   (paired)\n", dm, se,
+              se > 0.0 ? dm / se : 0.0);
+  std::printf("    paired SD         %.4f   <- the number stage 2 must be sized on\n",
+              dsd);
+  std::printf("    smallest difference this n could have read: +/-%.4f d'^2\n", 2.0 * se);
+
+  const char* verdict = dm < -2.0 * se   ? "DETERIORATES across sleep"
+                        : dm > 2.0 * se  ? "IMPROVES across sleep"
+                                         : "NO VERDICT";
+  std::printf("\n  %s\n", verdict);
+  if (dm >= -2.0 * se && dm <= 2.0 * se) {
+    std::printf("  A difference smaller than the figure above is NOT evidence of"
+                " absence.\n  The paired SD is the result worth keeping either way: it is"
+                " what sizes\n  stage 2, exactly as the calibration sized the arm.\n");
+  }
+  std::printf("\n  Birdsong comparison, stated as a comparison and not a claim:"
+              " Derégnaucourt\n  et al. (2005) found deterioration across sleep in"
+              " juvenile zebra finches\n  and that the birds which deteriorated MORE"
+              " imitated BETTER. Nothing here\n  measures eventual imitation, so this run"
+              " cannot speak to that half.\n");
+  return true;
 }
 
 

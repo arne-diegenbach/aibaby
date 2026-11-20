@@ -538,6 +538,13 @@ const Spec kSpecs[] = {
     {"dreamprobe", 1600000, Expect::kPass, Tier::kLong,
      "G-LIVE only. The separation contrast is OPEN and is read from the paired"
      " table with its own SE, never from this verdict"},
+    // §82 stage 1. PASS means it produced a readable paired contrast, NOT that
+    // the creature deteriorated: the direction is two-tailed and lives in the
+    // table. kOpen would be wrong here because a run with no usable creature is
+    // a genuine failure of the instrument, not an open question.
+    {"sleepdecay", 1600000, Expect::kPass, Tier::kLong,
+     "PASS means a readable paired before/after contrast on at least two"
+     " creatures. The DIRECTION is two-tailed and is never read from the verdict"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"thrpatch", kDefaultMinimum, Expect::kRead, Tier::kLong,
@@ -1979,6 +1986,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);
   else if (name == "dreamprobe") ok = run_dreamprobe(dna_blob, ticks, verbose);
   else if (name == "dreamsmoke") ok = run_dreamsmoke(dna_blob, ticks, verbose);
+  else if (name == "sleepdecay") ok = run_sleepdecay(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
