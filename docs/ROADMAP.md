@@ -19419,3 +19419,91 @@ from a **measured seconds-per-session** figure and not from a tick ratio; and
 whether the dream bout needs its own exploration scale, which it must NOT get in
 the first registration because `vocal`'s `explore_scale` makes the noise the
 exploration drive. **NOTHING IS BUILT. NOTHING IS REGISTERED AS A RUN.**
+
+### §82 PRE-FLIGHT, PART 2 — THE PRICE IS BLOCKED ON ONE CALIBRATION RUN, AND THE TEST SUITE ALREADY ASSERTS THE OPPOSITE (2026-11-20)
+
+**NO SESSIONS RUN. Read off `results/n80-verify-long.log` and the experiment
+registrations.** Four findings, and one of them is why the arm count cannot be
+fixed yet.
+
+**1. THE MEASUREMENT VEHICLE AS REGISTERED NEVER SLEEPS.** The instrument lives
+in `run_m3_session`, and `m3` is registered at `kDefaultMinimum = 120000` ticks —
+**120.0 s of simulated life, 1 tick = 1 ms**, confirmed by the log's own header.
+First sleep is at **1039.7 s** in the `sleep` protocol and at tick 1,075,782 in
+`samediff`. **So m3's entire registered run is about a NINTH of the way to the
+creature's first sleep, and a dream gate inside it would never once fire.** The
+cheap vehicle is not cheap, it is empty. Any dream arm has to run m3's probe
+protocol at a length that sleeps, which is `sleep`'s 1,600,000 ticks or more.
+
+**2. THE ONLY MEASURED COST ANCHOR AT A SLEEPING LENGTH IS `sleep` ITSELF:
+86.4 s PER CREATURE AT 1,600,000 TICKS** (`m3` is 30.1 s for 5 creatures x 2
+upbringings at 120k, `m2` 13.3 s, `g4` 194.3 s at 1.5M with two arms). Per the
+standing rule, **the price is taken from that measured per-creature second and
+NEVER from a tick ratio against m3's 30.1 s** — the 13.3x tick gap would give a
+badly wrong number, in the direction that makes the run look affordable.
+
+**3. THE ASLEEP FRACTION NOW AGREES ACROSS THREE INDEPENDENT PROTOCOLS: 11.5% of
+the session in `sleep`, 11.21% of trials in `n77`, 11.23% in `n81`.** That is the
+size of the opportunity and it is no longer an estimate from one run.
+
+**4. THE `sleep` EXPERIMENT IS A GUARD AGAINST EXACTLY WHAT THE DREAM DOES.** Its
+verdict string is *"fatigue rises, discharges, and the baby wakes again, **and the
+baby is silent and sees nothing while asleep**"*, and it is registered
+`Expect::kPass`. Its columns:
+
+    fell asleep at        1039.7 s
+    asleep                11.5% of the session
+    vocalising awake      45.0% of motor frames
+    vocalising asleep     0.0% of motor frames (peak amplitude 0.6280)
+    retinal drive asleep  peak 0.000019
+
+**A dream gate turns the fourth row positive and fails this experiment.** Per §80
+stage 8's rule that a CONTENT change becomes `kOpen` and the `guards` line
+discloses the genome, **`sleep`'s silence clause must become genome-dependent and
+say which genome it read, or the suite reports a false failure on a creature that
+is working as designed.** Registered here so it is not discovered by a red tier.
+
+**AND THAT 0.6280 SPLITS THE ARM IN TWO.** Asleep, voicing is 0 but the amplitude
+ramp still carries a peak of 0.628 — the valve is what guarantees silence, not the
+absence of a motor command (`core/src/senses.cpp:346`). So there are two different
+dreams available and they are not the same experiment:
+
+    FROZEN DREAM     open the voicing valve only. The decoder is still frozen, so
+                     the creature drones its LAST AWAKE POSTURE: self-generated
+                     sound with NO CONTENT.
+    GENERATED DREAM  run the decoder too. Postures evolve from the sleeping
+                     network's own activity: self-generated sound WITH content,
+                     which is the REM arm the literature describes.
+
+**The frozen dream is the better control than `self_gain = 0`**, because it holds
+"the creature hears its own voice in sleep" fixed and varies only whether the
+dream has content. Keep `self_gain = 0` as the third arm — it holds the motor side
+fixed and removes the ear — and the three together separate content, audibility
+and motor activity.
+
+**WHY THE ARM COUNT IS STILL OPEN, AND THE ONE RUN THAT CLOSES IT.** Power must
+come from the load-bearing NULL's SD, measured in the claim's units, at a window
+of the width the claim is read on — and **no run in this project has ever scored
+m3's acoustic d' on a creature that slept**, so that SD does not exist. The
+standing rule forbids projecting it from a scaling law. **THE PRE-FLIGHT'S NEXT
+STEP IS THEREFORE ONE CALIBRATION RUN AND NOT A BUILD: m3's probe protocol at
+1,600,000 ticks on the SHIPPED genome, no dream gate, printing (a) the d' null's
+SD across creatures, (b) the measured seconds per creature at that length, and
+(c) the first-sleep tick in that protocol.** All three are needed before an arm
+count means anything, and (c) also says how much of the session the dream could
+act in at all.
+
+**A SECOND MECHANISM FAMILY, FROM THE 2024 REVIEW.** Deperrois, Petrovici, Senn &
+Jordan (2024) add **contrastive dreaming** — similar virtual experiences pulled
+together, dissimilar pushed apart, producing invariance to irrelevant factors —
+alongside the adversarial principle. **§82 therefore has two candidate mechanisms
+that do NOT predict the same thing**: adversarial predicts better separation of
+the taught contrast, contrastive predicts better INVARIANCE across f0 and
+amplitude at fixed vowel. Both are measurable with instruments that already
+exist, and a registration that conflates them cannot be read either way.
+
+**ONE SCOPE CLAUSE, BECAUSE THE VEHICLE IS m3.** The dream arm reads **m3's
+acoustic d' block only** — "the same probes, scored on what they SOUND like". It
+is NOT a naming claim, it does not read the naming columns, and **it does not
+re-open G3**, which is closed under this architecture. Any §44-§60 figure stays
+under its do-not-quote rule.

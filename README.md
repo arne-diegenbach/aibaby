@@ -20583,6 +20583,18 @@ predicts a gain in **representation and generalisation** instead. Nothing below 
   (`core/src/brain.cpp`), and switching it off costs 0.3 SE (`interleave`, 5.6M x 9 seeds
   x 8 arms). The arm it has never had is the REM one: sensory experience the creature
   **generates** rather than re-lives.
+- Deperrois, N., Petrovici, M. A., Senn, W. & Jordan, J. (2024). *Learning beyond
+  sensations: how dreams organize neuronal representations.* Neuroscience & Biobehavioral
+  Reviews 157, 105508 (online December 2023; preprint arXiv:2308.01830).
+  <https://doi.org/10.1016/j.neubiorev.2023.105508> — the same group's review, and it adds
+  a **second** principle to the adversarial one: **"contrastive dreaming", where similar
+  virtual experiences are pulled together and dissimilar ones pushed apart**, which is how
+  a representation becomes invariant to factors that do not matter. That is a different
+  prediction from the 2022 paper's and it is separately testable here, because this
+  creature's irrelevant factors are already named and already instrumented — a produced
+  vowel that stays put across f0 and amplitude variation is exactly the invariance the
+  principle predicts. Listed because it means §82 has **two** candidate mechanisms, not
+  one, and they do not predict the same thing.
 - Hoel, E. (2021). *The overfitted brain: dreams evolved to assist generalization.*
   Patterns 2(5), 100244. <https://doi.org/10.1016/j.patter.2021.100244> — dreams as a
   biological regulariser, sampling corrupted and out-of-distribution input because fitting
