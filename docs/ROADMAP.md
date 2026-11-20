@@ -19898,3 +19898,64 @@ so the bar decides nothing it is near.
 It is not a naming claim, it does not re-open G3, and whatever it says it does
 **NOT** license shipping `dream` — the shipped genome is the 0 arm and stays that
 way until something argues otherwise on its own registration.
+
+### §82 THE BIRDSONG LEAD — THE PREDICTION THE DREAM GATE ACTUALLY LICENSES, AND IT IS A READOUT (2026-11-20)
+
+**RESEARCH, NO RUN.** Three papers added to README.md's References; this project
+had cited **none** of this literature, which is the closest existing work to what
+this creature is — a juvenile learning to vocalise with sleep in the loop.
+
+**THE FINDING.** Derégnaucourt, Mitra, Fehér, Pytte & Tchernichovski (2005),
+Nature 433, 710-716: in juvenile zebra finches during rapid learning, **song
+structure DETERIORATES across a night's sleep and is regained by intense morning
+singing**, and **the birds with the stronger post-sleep deterioration reached the
+BETTER final imitation**. The authors' proposed mechanism is the load-bearing
+part: the birds appear to **rehearse internally during sleep WITHOUT HEARING
+THEMSELVES, because they make no sound**, and auditory feedback is needed for
+learning.
+
+**THAT IS THE STATE THIS CREATURE WAS IN UNTIL DNA v85, AND THE CODE SAYS SO IN
+ITS OWN WORDS.** `core/src/senses.cpp`: *"Asleep the glottis is shut. The motor
+module keeps running — a sleeping brain is not a silent one — but nothing reaches
+the air."* Motor rehearsal during sleep, no sound, no feedback. **So §82's dream
+is not a mechanism the literature merely suggests; it is the intervention this
+explanation implies.**
+
+**AND IT LICENSES A PREDICTION THE OTHER TWO ACCOUNTS DO NOT.** PAD predicts
+better separation, contrastive dreaming predicts better invariance, and both are
+about the END of a session. This one is about a TRANSITION: **a post-sleep
+deterioration, which mode 2 should REDUCE because it supplies the missing
+feedback.** It is a DERIVED sign and therefore TWO-TAILED per this project's own
+rule — the authors' mechanism is a proposal, not a measurement, and the same
+paper's "more deterioration, better imitation" result means a creature that
+deteriorates LESS could be learning WORSE.
+
+**WHAT IT IMPLIES IS A READOUT, NOT ANOTHER MECHANISM**, which is exactly what
+§69's standing rule asks for. The current instrument pools every probe in a
+session and reads one d'. The birdsong reading needs the d' **split at the sleep
+boundary** — before the bout, and after it — which is a scoring change on runs
+this creature already does. **ITS POWER IS BETTER THAN THE ARM CONTRAST'S BY
+CONSTRUCTION**: before-versus-after is WITHIN creature, so each creature is its
+own control, where `dreamprobe` must spend its pairing on across-arm differences.
+`sleep` reports 2 transitions in a 1,600,000-tick session, so it is one bout and
+one before/after pair per creature — 48 pairs at the registered n.
+
+**AND IT RELATES TO A REFUSAL, PRECISELY.** Dave & Margoliash (2000), Science
+290, 812-816, model offline learning as a comparison of rehearsed motor output
+against **PREDICTED** sensory feedback. **The predicted-feedback half is the route
+§66 already REFUSED here** — the efference-copy combiner,
+[[aibaby-decodable-is-not-cancellable]]. **§82 sidesteps it rather than reopening
+it:** the dream supplies ACTUAL feedback through the creature's own ear, so the
+comparison needs no forward model. That distinction is why this lead is not
+§66 again under a new name.
+
+**ALSO NEW, AND AIMED AT AN EXISTING LINE.** Shank & Margoliash (2009), Nature
+458, 73-77: daytime playback of a tutor song induces **tutor-song-SPECIFIC**
+changes in motor-cortex bursting during the following night's sleep. This
+project's tutor line already has one creature teaching another; nobody has
+looked for the teaching's signature in the sleep that follows it.
+
+**NOT REGISTERED, NOT BUILT, AND IT DOES NOT TOUCH THE RUN IN FLIGHT.** The
+48-creature `dreamprobe` arm is registered on the pooled d' and stays that way;
+splitting the window is a separate registration with its own pre-flight, and
+doing it to the arm now would be a verdict fitted to data.

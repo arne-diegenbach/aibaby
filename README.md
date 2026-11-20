@@ -20619,6 +20619,43 @@ predicts a gain in **representation and generalisation** instead. Nothing below 
   2025, but the journal title could not be verified to the standard this section uses, so
   it is not asserted here.
 
+**The bird that rehearses in its sleep and cannot hear itself — the sharpest prediction §82 has.**
+Added 2026-11-20. This project had cited **none** of this literature, and it is the closest
+existing work to what this creature is: a juvenile learning to vocalise, with sleep in the loop.
+
+- Derégnaucourt, S., Mitra, P. P., Fehér, O., Pytte, C. & Tchernichovski, O. (2005). *How
+  sleep affects the developmental learning of bird song.* Nature 433, 710–716.
+  <https://doi.org/10.1038/nature03275> — every song of every juvenile zebra finch
+  recorded, over a million syllables per bird. **During rapid learning, song structure
+  DETERIORATES across a night's sleep and is regained by intense morning singing** — and
+  **birds with the stronger post-sleep deterioration reached the BETTER final imitation.**
+  (The correlation coefficient and n for that last relation are behind the paywall and are
+  NOT reproduced here.) The authors' proposed mechanism is the part that matters: the birds
+  appear to **rehearse internally during sleep without hearing themselves, because they make
+  no sound**, and auditory feedback is needed for learning. **That is precisely the state
+  this creature was in until DNA v85** — `core/src/brain.cpp` has always said "a sleeping
+  brain is not a silent one" while the glottis and the ear were both shut. So §82's dream is
+  not a mechanism the literature merely suggests; it is the intervention this explanation
+  implies, and it predicts something the PAD and overfitted-brain accounts do not: **a
+  post-sleep deterioration that opening the ear should REDUCE.**
+- Dave, A. S. & Margoliash, D. (2000). *Song replay during sleep and computational rules for
+  sensorimotor vocal learning.* Science 290(5492), 812–816.
+  <https://doi.org/10.1126/science.290.5492.812> — motor-cortex-analogue neurons replay
+  singing activity during sleep. Their model: sensorimotor correspondences are stored while
+  singing but do not change behaviour then, and an **off-line comparison of rehearsed motor
+  output against PREDICTED sensory feedback** shapes the motor output. **The predicted-
+  feedback half is the route this project already REFUSED** — §66, the efference-copy
+  combiner, `aibaby-decodable-is-not-cancellable`. §82 sidesteps it rather than reopening
+  it: the dream supplies **actual** feedback through the creature's own ear, so no forward
+  model is required for the comparison to happen.
+- Shank, S. S. & Margoliash, D. (2009). *Sleep and sensorimotor integration during early
+  vocal learning in a songbird.* Nature 458(7234), 73–77 (online December 2008).
+  <https://doi.org/10.1038/nature07615> — daytime playback of an adult tutor song induces
+  **profound, tutor-song-specific changes in motor-cortex bursting during the FOLLOWING
+  night's sleep**. The bridge to this project's tutor line, where one creature already
+  teaches another: it says the teaching's effect on sleep is specific to what was taught,
+  which is a readout nobody here has looked for.
+
 **Complementary learning systems, and what a memory for intelligent speech would need.**
 
 - McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are
