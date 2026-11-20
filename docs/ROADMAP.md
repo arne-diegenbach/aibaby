@@ -19712,3 +19712,56 @@ instrument with a measured floor, a measured cost, a measured spread and an arm
 count. The three gates (`senses.cpp:346`, the host room mix, `hear()`) are
 unwritten, the policy-gradient write stays wake-gated per part 1, and `sleep`'s
 silence clause still has to become genome-dependent before any of it runs.
+
+### §82 LIVENESS — REGISTERED BEFORE THE RUN. DOES THE DREAM REACH THE EAR? (2026-11-20)
+
+**THE GATE IS BUILT AND PROVEN INERT** (`493f5c2`: m3 at 1.6M, ten
+creature-units, identical line for line with DNA v85's field present and off).
+This registers the one thing a run can establish next, which is **liveness and
+not a dose**: do the gates flip, and does the sound the larynx makes while
+asleep actually arrive at the cochlea?
+
+**THE COMMANDS.** The shipped genome stays byte-identical, so the two dream
+genomes live in the scratchpad and are `dna/default.toml` plus one line,
+`dream = 1` or `dream = 2`, under `[drives]`:
+
+    ./build/aibaby --experiment sleep --ticks 1600000
+    ./build/aibaby --experiment sleep --ticks 1600000 --dna <scratch>/dream1.toml
+    ./build/aibaby --experiment sleep --ticks 1600000 --dna <scratch>/dream2.toml
+
+1,600,000 ticks and not less: first sleep is at ~1040 s, so **a shorter run
+exercises none of this** — it is not a noisy version of the test, it is a
+creature that never slept.
+
+**A NEW COLUMN, AND ITS MODE-0 VALUE IS ITSELF A REGISTERED READING.**
+`run_sleep` now prints `auditory drive asleep peak`, the exact analogue of the
+retinal column it has always printed, with the same settle-skip and the same
+replay-skip. It is read-only. **On the shipped genome it must read EXACTLY
+0.000000**, because `hear()` returns before the encoder sees anything — and if
+it does not, `hear()` leaks and the premise of this whole design is wrong.
+
+**REGISTERED READINGS:**
+
+    mode 0  vocalising asleep 0.0%, auditory peak 0.000000, PASS, NO guards line,
+            and every other column reproducing 1040.0 s / 11.5% / 44.3% /
+            0.3919 / 4.18->2.06 / 0.000019 EXACTLY, since the new print only reads.
+    mode 1  vocalising asleep > 0, auditory peak > 0, the guards line printed,
+            the verdict saying DREAMS, and PASS.
+    mode 2  the same shape as mode 1.
+
+**KILL CONDITIONS, WRITTEN FIRST:**
+
+- **`vocalising asleep` > 0 with `auditory peak` = 0** -> the larynx opened and
+  the ear did not receive it. Gate 2 (`hear()`) or gate 3 (the host's room zero)
+  is wrong, and the dream is inaudible to the dreamer.
+- **mode 0's auditory peak is not exactly 0** -> `hear()` leaks while asleep and
+  nothing else in §82 can be interpreted.
+- **mode 1 or 2 fails `sleep`** -> the waiver is wrong, not the creature.
+
+**WHAT MAY NOT BE CONCLUDED, AND THIS IS THE IMPORTANT ONE.** `sleep` has **no
+instrument for whether a dream has CONTENT**. Modes 1 and 2 cannot be
+distinguished here beyond "a sound happened", and **any apparent difference
+between them in these columns is not a content claim**. The frozen-versus-
+generated question is §82's primary and it is read on m3's acoustic d', with the
+arm count the power section fixed — 48 per arm, about 100 minutes for three arms.
+**NOTHING HERE IS A DOSE, A VERDICT, OR A LICENSE.**

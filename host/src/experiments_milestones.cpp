@@ -345,6 +345,13 @@ bool run_sleep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   double vision_rate_awake = 0.0, vision_rate_asleep = 0.0;
   uint64_t vision_ticks_awake = 0, vision_ticks_asleep = 0;
   double peak_retina_asleep = 0.0;
+  // §82. The same question asked of the EARS. Until DNA v85 it had only one
+  // possible answer — `hear()` dropped every frame while asleep, so the
+  // auditory level could only fade — which is why nothing measured it. A
+  // dreaming creature is supposed to be driving its own ears from its own
+  // larynx, and this is the column that says whether the ear received it.
+  double peak_audio_asleep = 0.0;
+  uint64_t audio_asleep_run = 0;
   uint64_t asleep_run = 0;
   constexpr uint64_t kSleepSettleTicks = 1000;
 
@@ -357,6 +364,24 @@ bool run_sleep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
     }
 
     s.brain.step();
+
+    // §82. Settle and replay are skipped for exactly the reasons the retinal
+    // block below gives: the frame on the cochlea at sleep onset is still
+    // fading, and §3.6 replay drives this same encoder from the inside, so
+    // counting those ticks would read working memory as a leaking gate.
+    if (s.brain.asleep()) {
+      ++audio_asleep_run;
+      if (audio_asleep_run > kSleepSettleTicks && !s.brain.replaying()) {
+        double peak = 0.0;
+        const aibaby::Scalar* level = s.brain.auditory_level();
+        for (uint32_t c = 0; c < s.brain.auditory_channels(); ++c) {
+          peak = std::max(peak, double(level[c]));
+        }
+        peak_audio_asleep = std::max(peak_audio_asleep, peak);
+      }
+    } else {
+      audio_asleep_run = 0;
+    }
 
     if (vis >= 0) {
       const double r = double(s.brain.network().module(uint32_t(vis)).mean_rate);
@@ -429,6 +454,12 @@ bool run_sleep(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   std::printf("  vocalising asleep %.1f%% of motor frames (peak amplitude %.4f)\n",
               frames_asleep ? 100.0 * double(voiced_asleep) / double(frames_asleep) : 0.0,
               peak_amp_asleep);
+  // §82. Printed unconditionally, because a reading of 0.000000 on the shipped
+  // genome is itself the fact that makes the dream modes legible: the ear is
+  // shut, and anything above zero here came from the creature's own larynx.
+  std::printf("  auditory drive asleep peak %.6f (after the first second of each"
+              " bout; THE DREAM'S ONLY ROUTE IN)\n",
+              peak_audio_asleep);
   std::printf("  vision rate       %.2f Hz awake -> %.2f Hz asleep"
               " (object in view throughout)\n",
               vision_rate_awake, vision_rate_asleep);
