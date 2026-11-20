@@ -2019,6 +2019,172 @@ bool run_m3(const std::vector<uint8_t>& blob, uint64_t ticks, const Caregiver& c
   return pass;
 }
 
+// §82. THE DREAM ARM. Three arms on the SAME seed families, differing only in
+// `DnaDrives::dream`, scored on the acoustic d' m3 already computes.
+//
+// Why this exists rather than `m3 --dna <variant>` three times: `kM3Replicates`
+// is a compile-time 5 shared with a probe, so raising it would move every m3
+// reading this project has ever taken, and m3 runs BOTH upbringings per
+// creature while this contrast needs only the named one. Dropping the muddle
+// upbringing is what makes 48 creatures a 100-minute run instead of a
+// 200-minute one.
+//
+// Everything is in d'^2 AND NOT d'. The estimator averages the squared form and
+// roots once on purpose: rooting per creature and averaging reinstates exactly
+// the bias the correction removes.
+bool run_dreamprobe_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                         uint32_t replicates, const char* probe) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  const uint64_t base_seed = dna.header().seed;
+
+  std::printf("  session           %.1f s of simulated life x %u creatures x 3 arms\n",
+              double(ticks) * dt / 1000.0, replicates);
+  instrument(probe, base_seed, replicates, "creatures x 3 arms");
+  std::printf("  arms are DNA v85's `dream`: 0 the shipped creature, 1 FROZEN (the\n"
+              "  voicing valve opens, the posture does not, so the dream has NO\n"
+              "  content), 2 GENERATED (the decoder runs on the sleeping network's\n"
+              "  own activity). Arm 1 is the control that matters: it holds \"hears\n"
+              "  its own voice while asleep\" fixed and varies only the content.\n");
+  if (double(ticks) * dt / 1000.0 < 1100.0) {
+    std::printf("\n  *** THIS RUN IS SHORTER THAN FIRST SLEEP (~1040 s), SO NO ARM EVER\n"
+                "  *** DREAMS. Good for plumbing, a branch and a print. NOT for a sign.\n");
+  }
+
+  std::vector<double> dsq[3], nullsq[3], diff[3];
+  double audio_peak[3] = {0.0, 0.0, 0.0};
+  uint32_t valid[3] = {0, 0, 0};
+
+  std::printf("\n  %-5s %-6s %-11s %-11s %-9s %s\n", "seed", "dream", "d'^2", "null d'^2",
+              "d'", "audio asleep");
+  for (uint32_t r = 0; r < replicates; ++r) {
+    double per_arm[3] = {0.0, 0.0, 0.0};
+    bool ok[3] = {false, false, false};
+    for (int a = 0; a < 3; ++a) {
+      std::vector<uint8_t> variant = blob;
+      const uint64_t seed = base_seed + r * 7919ull;
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+      // THE ARM SELECTOR PINS THE WHOLE DOSE VECTOR, INCLUDING ON THE 0 ARM.
+      // The shipped arm is a WRITTEN 0 and not an inherited default, so a
+      // genome that happened to carry a dream cannot masquerade as the control.
+      const float d = float(a);
+      std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, drives) +
+                      offsetof(aibaby::DnaDrives, dream),
+                  &d, sizeof(d));
+      const M3Run run =
+          run_m3_session(variant, ticks, true, Caregiver{}, false, Capture{});
+      if (!run.ok) continue;
+      ++valid[a];
+      dsq[a].push_back(run.dprime_unb_sq);
+      nullsq[a].push_back(run.dprime_null_unb_sq);
+      audio_peak[a] = std::max(audio_peak[a], run.peak_audio_asleep);
+      per_arm[a] = run.dprime_unb_sq;
+      ok[a] = true;
+      if (verbose) {
+        std::printf("  %-5u %-6d %+-11.4f %+-11.4f %-9.2f %.6f\n", r, a,
+                    run.dprime_unb_sq, run.dprime_null_unb_sq,
+                    run.dprime_unb_sq > 0.0 ? std::sqrt(run.dprime_unb_sq) : 0.0,
+                    run.peak_audio_asleep);
+      }
+    }
+    // PAIRED, per creature, which is the whole reason the three arms share a
+    // seed: the creature-level variance that dominates this estimator cancels.
+    for (int a = 1; a < 3; ++a) {
+      if (ok[0] && ok[a]) diff[a].push_back(per_arm[a] - per_arm[0]);
+    }
+  }
+
+  auto spread = [](const std::vector<double>& v, double& mean, double& sd) {
+    mean = 0.0;
+    sd = 0.0;
+    if (v.empty()) return;
+    for (double x : v) mean += x;
+    mean /= double(v.size());
+    if (v.size() < 2) return;
+    double ss = 0.0;
+    for (double x : v) ss += (x - mean) * (x - mean);
+    sd = std::sqrt(ss / double(v.size() - 1));
+  };
+
+  std::printf("\n  per arm, in d'^2 (NOT d')\n");
+  std::printf("  %-6s %-4s %-11s %-9s %-11s %s\n", "dream", "n", "d'^2 mean", "SD",
+              "null mean", "audio asleep peak");
+  for (int a = 0; a < 3; ++a) {
+    double m = 0, sd = 0, nm = 0, nsd = 0;
+    spread(dsq[a], m, sd);
+    spread(nullsq[a], nm, nsd);
+    std::printf("  %-6d %-4u %+-11.4f %-9.4f %+-11.4f %.6f\n", a, valid[a], m, sd, nm,
+                audio_peak[a]);
+  }
+
+  // G-LIVE. The gate either fired or it did not, and this is not a judgement
+  // call: arm 0 cannot hear itself because `hear()` drops the frame, and arms 1
+  // and 2 can only be heard through the larynx because the host zeroes the
+  // room while dreaming. A zero on arm 1 or 2 means the dream never reached the
+  // ear and NOTHING BELOW IS ABOUT DREAMING.
+  const bool live = audio_peak[0] == 0.0 && audio_peak[1] > 0.0 && audio_peak[2] > 0.0;
+  std::printf("\n  G-LIVE  %s — arm 0 %.6f (must be 0), arm 1 %.6f, arm 2 %.6f (must be"
+              " > 0)\n",
+              live ? "PASS" : "FAIL", audio_peak[0], audio_peak[1], audio_peak[2]);
+
+  // The paired contrast. TWO-TAILED, because nothing in this project constrains
+  // the sign of a dream: the literature's adversarial account predicts better
+  // separation and its contrastive account predicts better INVARIANCE, which
+  // can read as worse separation on this instrument.
+  bool any_verdict = false;
+  for (int a = 1; a < 3; ++a) {
+    double m = 0, sd = 0;
+    spread(diff[a], m, sd);
+    if (diff[a].size() < 2) {
+      std::printf("  dream %d - dream 0   too few paired creatures to read\n", a);
+      continue;
+    }
+    const double se = sd / std::sqrt(double(diff[a].size()));
+    const double floor2 = 2.0 * se;
+    const char* verdict = m > floor2 ? "RAISES separation"
+                                     : (m < -floor2 ? "LOWERS separation" : "NO VERDICT");
+    if (m > floor2 || m < -floor2) any_verdict = true;
+    std::printf("  dream %d - dream 0   %+.4f +/- %.4f over %zu paired creatures"
+                " = %.1f SE   %s\n",
+                a, m, se, diff[a].size(), se > 0.0 ? m / se : 0.0, verdict);
+    std::printf("                      smallest difference this n could have read:"
+                " %+.4f d'^2\n",
+                floor2);
+  }
+  if (!any_verdict) {
+    std::printf("\n  NO VERDICT ON EITHER ARM, which is a result about POWER and not\n"
+                "  about dreaming. The number above says what this n could have seen;\n"
+                "  a difference smaller than it is not evidence of absence.\n");
+  }
+  // The instrument's own floor, asked of the controls as well as the arms: a
+  // bias-corrected null that drifts far from zero means the correction is the
+  // wrong size and no row above is worth reading.
+  for (int a = 0; a < 3; ++a) {
+    double nm = 0, nsd = 0;
+    spread(nullsq[a], nm, nsd);
+    if (std::fabs(nm) > 0.25) {
+      std::printf("  INSTRUMENT SUSPECT — arm %d's corrected null is %+.4f d'^2, which is"
+                  " not ~0.\n",
+                  a, nm);
+    }
+  }
+  std::printf("\n  %s — this instrument measures a separation, not a milestone. It is"
+              " not\n  a naming claim and it does not re-open G3.\n",
+              live ? "DREAM GATE LIVE" : "DREAM GATE DID NOT FIRE");
+  return live;
+}
+
+bool run_dreamprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_dreamprobe_impl(blob, ticks, verbose, 48, "dreamprobe");
+}
+
+// The same instrument at three creatures, for checking that every branch and
+// every print works before paying for the long one. It cannot read a sign.
+bool run_dreamsmoke(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_dreamprobe_impl(blob, ticks, verbose, 3, "dreamsmoke");
+}
+
 
 struct G2Run {
   uint64_t baseline_hits = 0, baseline_events = 0;

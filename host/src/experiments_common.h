@@ -2450,6 +2450,8 @@ bool run_seqprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_topoprobe(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_m3(const std::vector<uint8_t>&, uint64_t, const Caregiver&, uint32_t, bool,
             const Capture&);
+bool run_dreamprobe(const std::vector<uint8_t>&, uint64_t, bool);  // §82
+bool run_dreamsmoke(const std::vector<uint8_t>&, uint64_t, bool);  // §82
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

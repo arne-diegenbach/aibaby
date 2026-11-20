@@ -526,6 +526,18 @@ const Spec kSpecs[] = {
 
     {"m3", kDefaultMinimum, Expect::kOpen, Tier::kLong,
      "no requirement; G3 is the open milestone, so FAIL is the current answer"},
+    // §82. Both return G-LIVE, which is a property of the DREAM GATE and not of
+    // the creature's separation: PASS means the sleeping larynx reached the
+    // sleeping ear on arms 1 and 2 and did not on arm 0. The separation contrast
+    // they print is kOpen by nature and is read from the table, not the verdict.
+    // Registered at 1,600,000 because first sleep is at ~1040 s and a shorter run
+    // dreams not at all.
+    {"dreamsmoke", 1600000, Expect::kPass, Tier::kLong,
+     "G-LIVE only: the gate fires on arms 1 and 2 and not on arm 0. Three"
+     " creatures cannot read a sign"},
+    {"dreamprobe", 1600000, Expect::kPass, Tier::kLong,
+     "G-LIVE only. The separation contrast is OPEN and is read from the paired"
+     " table with its own SE, never from this verdict"},
     {"g2", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"snapshot", kDefaultMinimum, Expect::kPass, Tier::kLong, "no requirement"},
     {"thrpatch", kDefaultMinimum, Expect::kRead, Tier::kLong,
@@ -1965,6 +1977,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "babble") ok = run_babble(dna_blob, ticks, verbose, cap);
   else if (name == "calibrate") ok = run_calibrate(dna_blob, ticks, verbose);
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);
+  else if (name == "dreamprobe") ok = run_dreamprobe(dna_blob, ticks, verbose);
+  else if (name == "dreamsmoke") ok = run_dreamsmoke(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
