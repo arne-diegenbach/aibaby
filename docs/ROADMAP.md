@@ -20034,3 +20034,65 @@ proportional to length — but it would also change the creature's developmental
 stage at each bout, which is the thing the birdsong finding is ABOUT ("during
 periods of rapid learning"). **Do not lengthen it to buy pairs without saying
 what stage each pair is at.**
+
+## §82 RESULT — THE DREAM IS LIVE AND THE SEPARATION CLOSES BY A BOUND, NOT A VERDICT (2026-11-21)
+
+RUN: `results/n82-dreamprobe-48x3-1600k.log`, `./build/aibaby --experiment
+dreamprobe --ticks 1600000 --verbose`, shipped genome md5
+`fb419735526b1fe189be8264a63f5d95`, 48 creatures x 3 arms, one upbringing each,
+**6172.69 s** of wall clock against the 102 min registered. Every reading below
+was registered before the run.
+
+    dream  n    d'^2 mean   SD       null mean   audio asleep peak
+    0      48   +0.1699     0.2614   +0.0047     0.000000  (1.462e-18)
+    1      48   +0.1760     0.2363   -0.0005     0.496656
+    2      48   +0.1777     0.2898   +0.0033     0.599500
+
+    G-LIVE PASS
+    dream 1 - dream 0   +0.0061 +/- 0.0190 over 48 paired creatures = 0.3 SE
+    dream 2 - dream 0   +0.0078 +/- 0.0162 over 48 paired creatures = 0.5 SE
+    smallest difference this n could have read: 0.0381 and 0.0324 d'^2
+
+**G-LIVE PASSES AT SCALE.** Arm 0 reads 1.462e-18 against arms 1 and 2 at 0.497
+and 0.600 — the sleeping larynx reaches the sleeping ear on 48 creatures, and
+does not on the shipped genome. **The mechanism works.**
+
+**AND THE SEPARATION QUESTION CLOSES BY A BOUND.** 0.3 SE and 0.5 SE are noise.
+What the run establishes is the BOUND, which is a result and not a shrug: **the
+dream does not change this creature's vowel separation by more than 0.038 d'^2
+(frozen) or 0.032 d'^2 (generated), 22% and 19% of the shipped 0.1699.** Within
+that band nothing is known, and the instrument says so in its own output rather
+than letting the reading pass as absence. This project has closed axes by a bound
+before — §73/§74's window, §75's bursts — and the rule stands: **A BOUND IS NOT A
+REFUTATION. "The dream does nothing" IS NOT WHAT THIS SAYS.**
+
+**THE SMOKE'S SIGN WAS NOISE AND IT REVERSED.** Three creatures gave **-0.0341**
+and **-0.0200**; forty-eight give **+0.0061** and **+0.0078**. Same instrument,
+same seeds for the first three, sign flipped and magnitude down fivefold. The
+registration refused to read that direction at the time — "both smoke estimates
+are under 1 SE, i.e. noise" — and this is what that refusal was worth. **A SMOKE
+IS NEVER GOOD FOR A SIGN**, now demonstrated inside this section rather than
+quoted from the method rules.
+
+**THE SD PROJECTION CAME IN LOW AGAIN, FOR THE NTH TIME.** The registration
+inflated the measured paired SD by its own 50% relative SE to a governing 0.1021.
+Achieved: **0.1316 (+29%) and 0.1122 (+10%).** The standing rule is that every SD
+projection in this project has come in low, so buy headroom AGAINST the
+projection and never TO it — **and a 50% inflation was still not enough.** The
+minimum detectable came out 0.0381 against the registered 0.0295, so the run was
+**29% less sensitive than registered**, which is exactly the size of the miss.
+
+**WHAT MAY NOT BE SAID.** Not that dreaming fails: the bound is 19-22% of the
+shipped separation and a real effect could sit under it. Not that the frozen and
+generated dreams differ: +0.0061 against +0.0078 is 0.1 SE apart. Not that the
+separation is the wrong readout — that is what §82's own birdsong section argues
+on other grounds, and it is a separate registration. **The nulls behaved** on all
+three arms (+0.0047, -0.0005, +0.0033), so the estimator is sound at this n and
+the bound is trustworthy as a bound.
+
+**WHERE THE LINE GOES.** Not to more creatures on this contrast: at the achieved
+SD, halving the bound needs 192 creatures per arm and seven hours, to chase an
+effect two smokes and one full run have given no reason to expect. **The line
+goes to §82's stage 1** — the post-sleep deterioration readout, which asks a
+different question on a window this instrument pooled over, and which the
+birdsong literature says is where a sleep effect should show at all.
