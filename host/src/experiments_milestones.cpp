@@ -2123,10 +2123,22 @@ bool run_dreamprobe_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool 
   // and 2 can only be heard through the larynx because the host zeroes the
   // room while dreaming. A zero on arm 1 or 2 means the dream never reached the
   // ear and NOTHING BELOW IS ABOUT DREAMING.
-  const bool live = audio_peak[0] == 0.0 && audio_peak[1] > 0.0 && audio_peak[2] > 0.0;
-  std::printf("\n  G-LIVE  %s — arm 0 %.6f (must be 0), arm 1 %.6f, arm 2 %.6f (must be"
-              " > 0)\n",
-              live ? "PASS" : "FAIL", audio_peak[0], audio_peak[1], audio_peak[2]);
+  //
+  // THE BAR IS A THRESHOLD AND NOT EQUALITY, which is not a convenience. The
+  // auditory level FADES rather than switching off, so arm 0's peak is a small
+  // positive residual that only looks like zero at six decimal places — an
+  // `== 0.0` test fails a working gate and prints the numbers that contradict
+  // it. `sleep` has always done this correctly for the retina (`< 0.02`, with a
+  // visible 0.000019), and this is the same quantity one sense over. The two
+  // populations are six orders of magnitude apart, so the bar is nowhere near
+  // anything it has to decide.
+  constexpr double kHeardBar = 0.02;
+  const bool live = audio_peak[0] < kHeardBar && audio_peak[1] > kHeardBar &&
+                    audio_peak[2] > kHeardBar;
+  std::printf("\n  G-LIVE  %s — arm 0 %.3e (must be < %.2f), arm 1 %.6f, arm 2 %.6f"
+              " (must be > %.2f)\n",
+              live ? "PASS" : "FAIL", audio_peak[0], kHeardBar, audio_peak[1],
+              audio_peak[2], kHeardBar);
 
   // The paired contrast. TWO-TAILED, because nothing in this project constrains
   // the sign of a dream: the literature's adversarial account predicts better

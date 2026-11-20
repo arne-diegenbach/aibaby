@@ -19831,3 +19831,70 @@ arm selector must pin the whole dose vector rather than inherit a default.
 What it says is that the mechanism exists, is off by default, is provably inert
 when off, and is now measurable at the arm count the power section priced: 48 per
 arm, about 100 minutes.
+
+### §82 THE ARM, REGISTERED BEFORE THE RUN — AND PAIRING BUYS A FACTOR OF SIX (2026-11-20)
+
+**THE COMMAND:** `./build/aibaby --experiment dreamprobe --ticks 1600000 --verbose`,
+shipped genome, 48 creatures x 3 arms, one upbringing each. The instrument is
+`ee89f40` plus the G-LIVE fix below; the three-creature smoke is
+`results/n82-dreamsmoke-1600k.log`.
+
+**THE SMOKE MEASURED THE ONE THING THE POWER SECTION HAD TO BOUND.** Pass 1 used
+an UNPAIRED difference SD because no two arms had ever been run here, and said so.
+Paired on seed, measured:
+
+    dream 1 - dream 0   -0.0341 +/- 0.0393 SE over 3 pairs   -> SD 0.0681
+    dream 2 - dream 0   -0.0200 +/- 0.0289 SE over 3 pairs   -> SD 0.0501
+    pass 1's unpaired bound                                      SD 0.3537
+
+**PAIRING BUYS 5.2x TO 7.1x**, because the creature-level variance that dominates
+this estimator cancels when the arms share a seed. The SD is measured on 2 df, so
+its own relative SE is 50% and it is inflated by that before use: **governing SD
+0.1021 d'^2**.
+
+     n pairs   min detectable (d'^2)   % of the shipped 0.1825   measured cost
+         12                  0.0590                       32%          25 min
+         24                  0.0417                       23%          51 min
+         48                  0.0295                       16%         102 min
+         96                  0.0208                       11%         204 min
+
+Cost is the MEASURED 42.4 s per creature-unit (381.92 s / 9 units), which
+confirms the 41.8 s the calibration gave. **REGISTERED AT n = 48**: 16% of the
+shipped separation, 102 minutes, and it subsumes the n = 24 run rather than
+needing it first, because the seed families are `base_seed + r * 7919` and the
+first 24 recur inside the 48.
+
+**THE THIRD PRE-FLIGHT, WRITTEN AS A NUMBER: HOW OFTEN DOES THE REFUSAL CLAUSE
+FIRE?** Power and the noise model are not the same question as this one.
+
+    P(NO VERDICT)     n=12   n=24   n=48   n=96
+    if truth -0.0341   80%    64%    38%    10%
+    if truth -0.0200   90%    85%    74%    53%
+
+**NEITHER CANDIDATE IS "THE" TRUTH — the smoke's own estimates are 0.9 SE and
+0.7 SE, which is noise** — but the table says the honest thing: **NO VERDICT is
+the LIKELIER outcome at n = 48, and it is a legitimate result, not a failure.**
+The run is sized by what difference is worth detecting, not by the chance of a
+verdict. The instrument prints the minimum detectable difference beside every
+NO VERDICT precisely so that an unreadable result is never written up as absence.
+
+**TWO-TAILED, AND THE SIGN IS NOT PREDICTED.** The adversarial account predicts
+better separation; the contrastive account predicts better INVARIANCE, which can
+read as worse separation on this instrument. A one-tailed reading would make one
+of the two literatures unfalsifiable here.
+
+**THE G-LIVE FIX, WHICH THE SMOKE CAUGHT.** The gate tested
+`audio_peak[0] == 0.0` and so read FAIL while printing arm 0 at 0.000000, arm 1
+at 0.467363 and arm 2 at 0.574555 — every condition satisfied. **The auditory
+level FADES rather than switching off**, so arm 0's peak is a small positive
+residual that only looks like zero at six decimal places, and exact float
+equality fails a working gate. `sleep` has always done this correctly for the
+retina — a `< 0.02` threshold with a visible `0.000019` — and this is the same
+quantity one sense over. **The bar is now 0.02 with the residual printed in
+scientific notation**, and the two populations are six orders of magnitude apart,
+so the bar decides nothing it is near.
+
+**WHAT MAY NOT BE CONCLUDED.** This is a separation contrast on m3's acoustic d'.
+It is not a naming claim, it does not re-open G3, and whatever it says it does
+**NOT** license shipping `dream` — the shipped genome is the 0 arm and stays that
+way until something argues otherwise on its own registration.
