@@ -19226,3 +19226,127 @@ the run does supply on that front is the creature-level check it was allowed to:
 the gates passing at full length on the reverted v74 genome, which is a fourth
 and behavioural confirmation of §80's revert alongside the three bit-identity
 proofs.
+
+## §82 THE DREAM LEAD — THE CREATURE ALREADY HAS THE NREM ARM, AND IT IS THE ONE THAT MEASURED NOTHING (2026-11-20)
+
+**A LEAD AND A DESIGN. NO SESSIONS RUN, NOTHING REGISTERED AS A RUN, NO GENOME
+CHANGE.** Asked for by the owner on 2026-11-20 ("figure out a way to let the
+creature dream"). The literature is in README.md's References under *Dreaming as
+something other than replay*.
+
+### WHAT THIS CREATURE DOES IN SLEEP TODAY, FROM THE CODE
+
+    core/src/brain.cpp:163   replay drives the encoders from STORED episodes
+    core/src/brain.cpp:193   vocal_.update(network_, still_awake) — THE LARYNX SHUTS
+    core/src/brain.cpp:585   hear() DROPS the frame while asleep
+    core/src/brain.cpp:617   see() drops the frame while asleep
+    core/src/brain.cpp:210   homeostasis runs at its OWN asleep strength
+    host/src/audio.cpp:103   self_gain mixes the larynx back into the ear (DNA v6,
+                             delayed since v69) — but only on the host's awake path
+
+**Both ends are closed and one internal path is open.** Touch stays connected on
+purpose. Fatigue discharges only in sleep, which is what makes sleep mandatory
+rather than optional, and **11.2% of all trials are slept through — 45121 of
+402400 in `n77`, 18783 of 167200 in `n81`, the same fraction twice.**
+
+### THE DIVISION THAT MAKES THIS A LEAD RATHER THAN A RESTATEMENT
+
+Deperrois, Petrovici, Senn & Jordan (2022) split dreaming in two. **NREM
+"perturbed dreaming" REPLAYS episodic memories and buys robustness. REM
+"adversarial dreaming" GENERATES new virtual sensory input and is what extracts
+concepts.** Read against the code above: **§3.6 replay IS the NREM arm, and this
+project measured it at 0.3 SE** (`interleave`, 5.6M x 9 seeds x 8 arms). The REM
+arm — sensory experience the creature **generates** instead of re-living — has
+never existed here, because sleep shuts the larynx on the same tick it arrives.
+
+### THE DESIGN: OPEN THE LOOP, KEEP THE ROOM SHUT
+
+A dream is the creature hearing a voice that is its own and is not a recording.
+Three gates, all on machinery that already ships:
+
+1. **The larynx runs while asleep** — `still_awake` at `brain.cpp:193` becomes a
+   dream gate rather than the wake flag.
+2. **The own-voice mix reaches the ear while asleep** — `self_gain`'s path at
+   `audio.cpp:103`, which already exists and is already delayed.
+3. **External frames keep being dropped** — `brain.cpp:585` and `:617` unchanged.
+   The room stays shut. That is what separates a dream from being awake.
+
+**This is a GATE CHANGE, NOT NEW MACHINERY.** The plant, the own-voice path and
+its delay, the exploration drive, node perturbation and the asleep-specific
+homeostasis are all already built and already measured.
+
+### WHAT THIS MAY NOT BE, WRITTEN BEFORE ANY INSTRUMENT IS CHOSEN
+
+**THE DEPENDENT VARIABLE IS NOT RETENTION. IF THE PRIMARY IS RETENTION, THIS IS
+A REFUTED EXPERIMENT WITH A NEW NAME.** Four closed routes it must not re-enter:
+
+- **Replaying the old lesson to rescue it from a new one** — `interleave`,
+  REFUTED, switching replay off costs 0.3 SE. Do not re-run it.
+- **A slow store** — REFUTED analytically.
+- **Complementary learning systems / interleaving** — REFUSED with a PERFECT
+  oracle, so no implementation of it can be the problem.
+- **Salience and novelty-weighted reward** — adjacent and refuted.
+
+Per Hoel (2021) the prediction is a **dissociation**: dream loss should leave
+memorisation intact and damage generalisation. **A sleep arm scored on retention
+is blind to that in both directions**, which is precisely why every arm this
+project has already run cannot speak to this one.
+
+### THE PRIMARY, THE CONTROL, AND THE CONFOUND THAT IS ALREADY KNOWN
+
+**PRIMARY (representation, not memory):** the separation of the produced vowels
+on HELD-OUT trials, scored by an existing cepstral instrument — **the pre-flight
+picks the instrument and prints its identification before any arm runs**, per the
+standing rule that a gate with a constant regressor cannot fail. **Generalisation
+is the second reading and it is co-primary, not a secondary**: performance on a
+contrast the creature was taught LESS, where Hoel's dissociation lives.
+
+**THE CONTROL THAT MAKES IT A DREAM:** the same arm with **`self_gain = 0` during
+sleep only** — the larynx moves, the ear hears nothing. That isolates
+self-generated SENSORY experience from motor activity alone, and it runs on an
+**already-exercised code path**: `self_gain = 0` is this project's existing
+structural null (`host/src/experiments.cpp`), which is the right direction for
+[[aibaby-control-on-a-different-code-path]] — the control is the old path, the
+arm is the new one.
+
+**THE CONFOUND, ALREADY MEASURED ELSEWHERE:** `vocal`'s `explore_scale` **makes
+the noise the exploration drive**. An arm that raises noise during sleep is
+therefore structurally confounded with exploration, which is how the §81 noise
+route died twice. **HOLD NOISE FIXED. CHANGE ONLY THE GATES.**
+
+### THE READINGS, THREE-WAY, AND THE COST RULE
+
+    dream clears and the self_gain=0 control does not   -> self-generated
+                                                           EXPERIENCE is the
+                                                           mechanism; the REM arm
+                                                           exists on this creature
+    dream and control BOTH clear                        -> it is MOTOR practice in
+                                                           sleep, not a dream; the
+                                                           sensory loop is not what
+                                                           pays, and the claim is
+                                                           about fatigue-free
+                                                           rehearsal
+    neither clears                                      -> the REM arm is dead here
+                                                           too, and sleep's whole
+                                                           budget is closed on this
+                                                           architecture
+
+**COST MUST BE PRICED IN MEASURED SECONDS PER SESSION, NEVER ON A TICK RATIO**
+(§77's measured 16.4 s/session). **AND THE SMOKE RULE BITES HARDER HERE THAN
+ANYWHERE:** first sleep is at tick **1,075,782**, 64.0% of a 1,680,000-tick
+session, so **a smoke shorter than first sleep does not exercise this mechanism
+AT ALL** — it is not a noisy version of the test, it is a creature that has never
+dreamt. The only thing a short smoke can establish here is that the gates flip
+and the audio path carries, which is liveness and not a dose.
+
+### WHAT THIS LEAD IS NOT
+
+**NOT A KERNEL LICENSE FOR ANYTHING ELSE.** §81's facilitation remains the one
+live quantity on the output-side chain; the dream gate touches neither
+`stp_facil_ms` nor the depression dose, and it leaves `ip_rate` and `sensitivity`
+exactly where the standing prohibitions put them. It also does not re-open §69's
+rule that the next INPUT-SIDE build is a readout and never another mechanism:
+this is a sleep-state gate on the output side, it was asked for explicitly, and
+it aims at a measured deficit — **11.2% of trials spent asleep with both ends
+shut** — rather than at a new goal. **NOTHING HERE IS REGISTERED.** The next step
+is the pre-flight named above, not a build.

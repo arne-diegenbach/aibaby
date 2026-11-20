@@ -20566,6 +20566,47 @@ papers about the half it does not touch.
   mismatch the brake's own write-up had flagged in general terms and which this dates
   precisely.
 
+**Dreaming as something other than replay — the §82 lead.** Added 2026-11-20. Listed
+separately from the consolidation block below because the dependent variable is different:
+every arm this project ran against sleep asked about **retention**, and the work here
+predicts a gain in **representation and generalisation** instead. Nothing below is built.
+
+- Deperrois, N., Petrovici, M. A., Senn, W. & Jordan, J. (2022). *Learning cortical
+  representations through perturbed and adversarial dreaming.* eLife 11, e76384.
+  <https://doi.org/10.7554/eLife.76384> (preprint arXiv:2109.04261) — three brain states
+  optimising three complementary objectives. **NREM does "perturbed dreaming", replaying
+  episodic memories, and buys ROBUSTNESS of the latent code; REM does "adversarial
+  dreaming", GENERATING new virtual sensory input, and is what extracts semantic
+  concepts.** That division is the reason this paper is load-bearing here rather than
+  interesting: **this creature already has the NREM arm and it measured nothing** — §3.6
+  replay drives the encoders from stored episodes while the room stays shut
+  (`core/src/brain.cpp`), and switching it off costs 0.3 SE (`interleave`, 5.6M x 9 seeds
+  x 8 arms). The arm it has never had is the REM one: sensory experience the creature
+  **generates** rather than re-lives.
+- Hoel, E. (2021). *The overfitted brain: dreams evolved to assist generalization.*
+  Patterns 2(5), 100244. <https://doi.org/10.1016/j.patter.2021.100244> — dreams as a
+  biological regulariser, sampling corrupted and out-of-distribution input because fitting
+  the day's statistics too closely costs generalisation. The useful part for a
+  registration is that its central prediction is a **dissociation**: dream loss should
+  leave memorisation intact and damage generalisation. A sleep arm scored on retention
+  cannot see that effect either way, which is exactly the arm this project already ran.
+- Capone, C. & Paolucci, P. S. (2024). *Towards biologically plausible model-based
+  reinforcement learning in recurrent spiking networks by dreaming new experiences.*
+  Scientific Reports 14, 14656. <https://doi.org/10.1038/s41598-024-65631-y> — two spiking
+  modules, an agent and a learned world model; "dreaming" is learning inside the model
+  instead of in the environment, and it speeds learning **without storing detailed past
+  experience**, which is the property this project's refuted slow store lacked. Precursor
+  preprint: *Towards biologically plausible Dreaming and Planning in recurrent spiking
+  networks*, arXiv:2205.10044, same two authors.
+- Blakowski, I., Zendrikov, D., Capone, C. & Indiveri, G. (2024). *Neuromorphic dreaming:
+  a pathway to efficient learning in artificial agents.* arXiv:2405.15616
+  <https://arxiv.org/abs/2405.15616> — the same wake/dream alternation on mixed-signal
+  neuromorphic hardware, learning Pong from far fewer real episodes, with the network
+  dynamics running in analog real time and only the readouts on a computer in the loop.
+  **Cited as a preprint on purpose:** a journal version is listed as 5(4), 44005, December
+  2025, but the journal title could not be verified to the standard this section uses, so
+  it is not asserted here.
+
 **Complementary learning systems, and what a memory for intelligent speech would need.**
 
 - McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are
