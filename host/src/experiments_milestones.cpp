@@ -2475,7 +2475,7 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   const double dt = double(dna.header().sim.dt_ms);
   const uint64_t base_seed = dna.header().seed;
-  constexpr uint32_t kCreatures = 6;
+  constexpr uint32_t kCreatures = 24;  // §83: 6 could not separate a 0.05 decode margin from noise
   constexpr uint64_t kSampleEvery = 500;
   const int32_t central_role = dna.module_with_role(aibaby::ModuleRole::kAssociation);
 
@@ -2489,7 +2489,7 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
               "r(ent,time)", "r(cen,hun)", "r(hun,time)");
 
   std::vector<double> prim, ent_time, cen_h, gate, null_shift, ent_mean, mixr;
-  std::vector<double> prim_dt, null_dt, cen_dt, cen_null_dt;
+  std::vector<double> prim_dt, null_dt, cen_dt, cen_null_dt, dec, dec_null;
   bool any_enteric = false;
   for (uint32_t c = 0; c < kCreatures; ++c) {
     std::vector<uint8_t> variant = blob;
@@ -2509,6 +2509,14 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     std::vector<double> hunger, ent_rate, cen_rate, clock, ent_mod_mean;
     uint64_t hunger_slice_spikes = 0;
     uint32_t hunger_slice_n = 0;
+    // §83. Central's PER-NEURON rates per sample window. The mean-rate
+    // correlation cannot survive a common-mode compensation — ffi subtracts the
+    // source's population mean from every target, which holds the mean flat BY
+    // CONSTRUCTION while a subpopulation still carries the signal. A held-out
+    // decoder asks the question that survives it: can the first brain's
+    // POPULATION PATTERN be read for the interior?
+    std::vector<std::vector<double>> cen_pattern;
+    std::vector<uint64_t> cen_spikes;
     for (uint64_t t = 0; t < ticks; ++t) {
       // ~ one feed every 12 s of simulated life, at a random size. Irregular on
       // purpose: a fixed cadence would put a period into hunger and the probe
@@ -2525,6 +2533,15 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
       // all three slices, so the comfort slice moves opposite the hunger one at
       // every feed and the mean follows comfort. The primary has to be read on
       // the slice the drive is injected into.
+      if (central_role >= 0) {
+        const aibaby::ModuleState& cms = s.brain.network().module(uint32_t(central_role));
+        if (cen_spikes.size() != cms.count) cen_spikes.assign(cms.count, 0);
+        const aibaby::Network& net = s.brain.network();
+        for (uint32_t k = 0; k < net.spike_count(); ++k) {
+          const uint32_t i = net.spikes()[k];
+          if (i >= cms.begin && i < cms.begin + cms.count) ++cen_spikes[i - cms.begin];
+        }
+      }
       if (has_ent) {
         const aibaby::ModuleState& ems = s.brain.network().module(ent_m);
         if (ems.count >= 3) {
@@ -2548,6 +2565,14 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
                                      (window_ms * double(hunger_slice_n))
                                : 0.0);
         hunger_slice_spikes = 0;
+        if (!cen_spikes.empty()) {
+          std::vector<double> row(cen_spikes.size());
+          for (size_t i = 0; i < cen_spikes.size(); ++i) {
+            row[i] = double(cen_spikes[i]) * 1000.0 / window_ms;
+            cen_spikes[i] = 0;
+          }
+          cen_pattern.push_back(row);
+        }
         ent_mod_mean.push_back(has_ent ? double(s.brain.network().module(ent_m).mean_rate)
                                        : 0.0);
         cen_rate.push_back(central_role >= 0
@@ -2580,6 +2605,26 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     // the same drift problem, and this is the column that says whether the
     // afferent delivers SIGNAL rather than merely rate.
     const double r_ch_dt = rank_corr(detrend(cen_rate, clock), hun_dt);
+    // Hunger split at ITS OWN MEDIAN so the two classes are balanced by
+    // construction and chance is exactly 0.5. The decoder is the project's own
+    // held-out two-class centroid classifier, trained on the first half of the
+    // session and tested on the second, so it never scores a sample it saw.
+    double decode = 0.0, decode_null = 0.0;
+    if (cen_pattern.size() >= 20) {
+      std::vector<double> sorted = hunger;
+      std::sort(sorted.begin(), sorted.end());
+      const double med = sorted[sorted.size() / 2];
+      std::vector<int> hi(hunger.size());
+      for (size_t i = 0; i < hunger.size(); ++i) hi[i] = hunger[i] > med ? 1 : 0;
+      const size_t train = cen_pattern.size() / 2;
+      decode = holdout_accuracy(cen_pattern, hi, train);
+      // The label-destroyed control, on the same features and the same split.
+      std::vector<int> shuf = hi;
+      aibaby::Rng sr;
+      sr.seed(seed ^ 0xD0DEu);
+      for (size_t i = shuf.size(); i > 1; --i) std::swap(shuf[i - 1], shuf[sr.next() % i]);
+      decode_null = holdout_accuracy(cen_pattern, shuf, train);
+    }
     const double r_cs_dt = rank_corr(detrend(cen_rate, clock), hun_dt_shift);
     const double r_es_dt = rank_corr(ent_dt, hun_dt_shift);
     double m = 0.0;
@@ -2600,6 +2645,8 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     mixr.push_back(r_mix);
     prim_dt.push_back(r_eh_dt);
     cen_dt.push_back(r_ch_dt);
+    dec.push_back(decode);
+    dec_null.push_back(decode_null);
     cen_null_dt.push_back(r_cs_dt);
     null_dt.push_back(r_es_dt);
     if (verbose || kCreatures <= 8) {
@@ -2632,6 +2679,9 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
   double cdm, cds, cnm2, cns2;
   stat(cen_dt, cdm, cds);
   stat(cen_null_dt, cnm2, cns2);
+  double dcm, dcs, dnm3, dns3;
+  stat(dec, dcm, dcs);
+  stat(dec_null, dnm3, dns3);
 
   std::printf("\n  over %u creatures, Spearman, mean +/- SE\n", kCreatures);
   std::printf("    r(hunger, time)       %+.3f +/- %.3f   <- THE GATE\n", gm, gs);
@@ -2658,6 +2708,16 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     const double mg = cdm - cnm2, mse = std::sqrt(cds * cds + cns2 * cns2);
     std::printf("      r(central, hunger)  %+.3f +/- %.3f   null %+.3f, so %+.3f +/- %.3f"
                 " = %.1f SE\n", cdm, cds, cnm2, mg, mse, mse > 0.0 ? mg / mse : 0.0);
+  }
+  {
+    const double mg = dcm - dnm3, mse = std::sqrt(dcs * dcs + dns3 * dns3);
+    std::printf("\n  HELD-OUT DECODE of hunger from CENTRAL's population pattern\n");
+    std::printf("    accuracy %.3f +/- %.3f   label-destroyed %.3f +/- %.3f\n", dcm, dcs,
+                dnm3, dns3);
+    std::printf("    decode - null %+.3f +/- %.3f = %.1f SE   %s\n", mg, mse,
+                mse > 0.0 ? mg / mse : 0.0,
+                mg > 2.0 * mse ? "THE FIRST BRAIN CAN READ THE INTERIOR"
+                               : "NO VERDICT on the decode");
   }
   if (!any_enteric) {
     std::printf("\n  NO ENTERIC MODULE in this genome, so every enteric row above is a\n"

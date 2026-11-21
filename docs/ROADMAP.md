@@ -20843,3 +20843,61 @@ efficient and **momentarily ambiguous about absolute level**, which for an organ
 reporting hunger is a cost rather than a free improvement. **That warning now
 applies to nothing in the build, which is the correct outcome for a citation that
 argued against the change it motivated.**
+
+### §83 THE SIGNED AFFERENT IS MIS-AIMED, AND THE FIRST BRAIN COULD ALREADY READ ITS HUNGER (2026-11-21)
+
+**THE OPTION I HAD NAMED FOR TWO SECTIONS WOULD HAVE DELETED THE SIGNAL.** §83
+kept pointing at a signed afferent through the `kInterneuron` relay as the arm
+with a measured reason to work. Reading what the two mechanisms actually do
+settles it without building anything:
+
+- **`ffi_source`/`ffi_gain`** subtracts `ffi_gain x the population mean rate of
+  the source` from every target neuron — **it removes the COMMON MODE.**
+- **A relay** gives each target its own independent inhibitory draw, which is
+  what preserves a **BALANCED** pattern that an all-positive projection would
+  average toward zero. That is the `central -> vocal` problem, measured by
+  `projprobe` at 0.560 -> 0.680.
+
+**An interoceptive afferent carries a SCALAR — the hunger level — so the signal
+IS the common mode.** Subtracting it deletes the message, and preserving a
+balanced pattern is beside the point because there is no balanced pattern to
+preserve. **The relay fits the opposite problem.** That is why this is written
+down instead of built.
+
+**SO THE READOUT HAD TO CHANGE, AND IT ANSWERS §83'S REAL QUESTION.** Everything
+until now read `central`'s MEAN rate, which a common-mode compensation would hold
+flat by construction. `interoprobe` now also runs a **held-out decode**: central's
+per-neuron rates per sample window, hunger split at **its own median** so chance
+is exactly 0.5, the project's own two-class centroid classifier trained on the
+first half of the session and tested on the second, with a label-destroyed
+control on the same features and the same split.
+
+**AND THE CONTROL IS THE RESULT. THE SHIPPED CREATURE — NO ENTERIC MODULE AT ALL
+— ALREADY DECODES ITS OWN HUNGER:**
+
+    shipped, no second brain    decode 0.556 +/- 0.012   null 0.501   +0.055 = 3.7 SE
+
+**The access §83 was built to provide already existed.** The route is almost
+certainly the one measured two sections ago: `Brain::feed` triggers `kFeed`, which
+drives `somato -> central` on exactly the ticks hunger falls, and cutting that
+tract moved `r(central, hunger)` from -0.361 to -0.188.
+
+**AND A LOUDER SECOND BRAIN DOES NOT IMPROVE IT.** Within the enteric genome, at
+n = 6:
+
+    afferent 0.00   +0.046 +/- 0.022 = 2.1 SE
+    afferent 0.01   +0.043 +/- 0.024 = 1.8 SE
+    afferent 0.10   -0.002 +/- 0.029 = -0.1 SE
+    afferent 0.30   +0.050 +/- 0.036 = 1.4 SE
+
+**Flat, and the SEVERED arm scores highest.** This is the distinction that
+matters and it is the project's own `projprobe` lesson: **the afferent moves
+`central`'s RATE — the earlier correlation sweep went -7.5 SE to +4.0 SE — and
+adds no decodable INFORMATION.** A common mode delivered harder is still a common
+mode.
+
+**UNDERPOWERED AS IT STANDS, AND BEING FIXED RATHER THAN ASSERTED.** At n = 6 the
+smallest detectable margin is about the size of the margin itself, so "flat"
+cannot yet be distinguished from "small". The probe is now at **n = 24** and that
+run is in flight; the comparison it will settle is whether the afferent adds
+anything at all against the pre-existing route.
