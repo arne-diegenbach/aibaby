@@ -20679,6 +20679,29 @@ them** — the brain never perceives its own interior.
   reflexes that pass from the gut through the CNS and back. **So the testable property of a
   second brain is AUTONOMY UNDER DISCONNECTION, not mere separateness**, and the
   architecture needs traffic in both directions or it has modelled a detached organ instead.
+**What a spike costs, which is what §83 measured without knowing it had a literature.**
+Added 2026-11-21, after the enteric module turned out to cost the creature 23 percentage
+points of its waking life.
+
+- Attwell, D. & Laughlin, S. B. (2001). *An energy budget for signaling in the grey matter
+  of the brain.* Journal of Cerebral Blood Flow and Metabolism 21(10), 1133–1145.
+  <https://doi.org/10.1097/00004647-200110000-00001> — the budget itself: where the brain's
+  energy goes, and how much of it signalling takes. **This creature's `fatigue` is a crude
+  version of the same accounting** — `Brain::update_drives` integrates
+  `spike_count / live_neurons` while awake and recovers at a flat rate while asleep — and
+  §83 hit the consequence as a measurement before recognising it as a principle.
+- Lennie, P. (2003). *The cost of cortical computation.* Current Biology 13(6), 493–497.
+  <https://doi.org/10.1016/S0960-9822(03)00135-0> — and the consequence for architecture:
+  **the energy cost of a single spike limits the number of neurons that can be
+  substantially active at once, possibly to fewer than 1%.** §83's enteric module runs
+  **120 of this creature's roughly 1100 neurons at 48.94 Hz**, which is extravagant by that
+  standard, and the fatigue tax priced it at **34.5% of life asleep against 11.5%.** The
+  lesson this project should take is Lennie's rather than §83's: **a new population is
+  charged for being active, so the design question is not only what it represents but what
+  fraction of the creature it keeps busy.** Note that Laughlin appears in this citation and
+  in the efficient-coding one below — the same author on how to code cheaply and on why
+  cheapness is compulsory.
+
 - Laughlin, S. B. (1981). *A simple coding procedure enhances a neuron's information
   capacity.* Zeitschrift für Naturforschung C 36(9–10), 910–912.
   <https://doi.org/10.1515/znc-1981-9-1040> — **the reason an interoceptive afferent cannot
