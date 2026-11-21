@@ -20367,3 +20367,81 @@ Hz against a declared 4.56, with `calibrate` saying STALE — and the afferent i
 bring the afferent weight down until `central` sits on target, and only then ask
 what the second brain is good for. **Nothing here is a functional claim, and
 §44-§60 still forbids the obvious one.**
+
+### §83 STAGE A, CALIBRATED — THE AFFERENT WHISPERS, THE HOMEOSTAT IS THE DRIVER, AND APPENDING A MODULE MOVED ONE I NEVER TOUCHED (2026-11-21)
+
+**NO LONG RUN. `calibrate` at 120000 ticks, nine seeds, on scratchpad genomes.**
+
+**THE AFFERENT IS MONOTONE AND LINEAR IN ITS WEIGHT**, which is what a tract
+should be and is worth having measured:
+
+    weight   enteric      central (target 6.81 Hz)
+    0.00     50.54 Hz      6.69
+    0.01     50.68 Hz      7.00
+    0.02     50.82 Hz      7.35
+    0.05     51.39 Hz      8.70
+    0.10     52.55 Hz     11.04
+    0.35     58.27 Hz     21.74
+
+`central ~= 6.69 + 43 * weight`. **The calibrated operating point is
+`weight = 0.01`** — central at 7.00 Hz, 2.8% over target. The 0.35 I first wrote
+was **+220%**, and the reason to care is not tidiness: an arm that shifts
+`central`'s rate threefold is not "with a second brain versus without", it is
+"saturated versus not", and every downstream instrument would have been reading
+the saturation.
+
+**MY IP HYPOTHESIS WAS WRONG, AND THE TRUTH IS SHARPER.** Stage A guessed that
+intrinsic plasticity was COMPENSATING the threshold, which was why raising it
+12 -> 30 moved the rate by 0.5 Hz. Tested by switching IP off on that module
+alone (`ip_wake_scale = ip_sleep_scale = 0`):
+
+    ip off, threshold 12    enteric 0.00 Hz
+    ip off, threshold 30    enteric 0.00 Hz
+
+**IP is not compensating the threshold — IP IS THE ONLY REASON THE MODULE FIRES
+AT ALL.** Without it the tonic drive never crosses threshold, which the
+arithmetic agrees with: an injection near 0.5 with `leak_tau_ms` 20 settles
+around 10, under a threshold of 12. With IP on, the homeostat raises excitability
+until the module spikes — and then **overshoots its declared target by 11x**,
+which is why the threshold looked irrelevant: **the homeostat erases it.** The
+module's rate is set by the homeostat's operating point, not by any knob I was
+turning. That is the same homeostat §60 found saturated, met here in a module
+where it is the ONLY driver.
+
+**THE CALIBRATION INVARIANT, APPLIED.** With `target_rate_hz` set to the measured
+free-running rate and the afferent at 0.01, **`calibrate` PASSES**: central 7.00
+(ok), enteric 50.68 (ok).
+
+**AND I HAD BUILT HALF A SECOND BRAIN.** §83's own design said *"traffic both ways
+or it has modelled a detached organ"*, and the genome I wrote had only
+`enteric -> central`. Adding the descending limb at the same 0.01 **improved**
+central, 7.00 -> 6.85 Hz against its 6.81 target. The arms are now
+`enteric-intact.toml` (both limbs 0.01) and `enteric-severed.toml` (both limbs
+0.0) — **severing is both directions, which is Furness's experiment rather than
+half of it.**
+
+**THE ONE FAILURE LEFT IS NOT THE SECOND BRAIN, AND IT IS THIS PROJECT'S OWN RULE
+HAPPENING IN FRONT OF ME.** `calibrate` FAILs the intact genome on exactly one
+module: **`somato`, at 4.01 Hz against its 4.56 target — a module I never
+touched.** Appending 120 neurons shifts every subsequent per-tick noise draw, so
+`APPENDING RE-ROLLS NOISE` is not a caution here, it is a measurement: **-0.55 Hz,
+-12%, on an untouched module.** Two consequences, both registered:
+
+- **THE ENTERIC GENOME MAY NEVER BE COMPARED TO THE SHIPPED CREATURE ON AN
+  ABSOLUTE NUMBER.** No cross-genome absolutes, and this is why.
+- **THE INTACT AND SEVERED ARMS ARE COMPARABLE TO EACH OTHER**, because changing
+  a projection's WEIGHT changes no draw count: the two genomes consume identical
+  random streams and differ in two floats. The somato deviation is common to both
+  and cancels in the contrast.
+
+**NOT FIXED ON PURPOSE:** `somato`'s target is left at the shipped 4.56 rather
+than re-declared at 4.01. Re-declaring it would move the homeostat's set point in
+an existing module to flatter a variant genome, which buys a green verdict by
+making the variant diverge further from the creature it is meant to resemble.
+
+**WHAT IS STILL MISSING IS NAMED AND CITED.** The 0.00 Hz result says this second
+brain has no intrinsic pacemaker. Sanders, Ward & Koh (2014) is the
+specification: interstitial cells of Cajal in a syncytium with smooth muscle,
+generating slow waves and transducing motor input. **It is not built, and stage A
+does not need it** — autonomy under disconnection already holds, on local sensors.
+It is what the module would need to be a pacemaking organ rather than a driven one.

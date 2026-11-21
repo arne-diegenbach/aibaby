@@ -20679,6 +20679,15 @@ them** — the brain never perceives its own interior.
   reflexes that pass from the gut through the CNS and back. **So the testable property of a
   second brain is AUTONOMY UNDER DISCONNECTION, not mere separateness**, and the
   architecture needs traffic in both directions or it has modelled a detached organ instead.
+- Sanders, K. M., Ward, S. M. & Koh, S. D. (2014). *Interstitial cells: regulators of smooth
+  muscle function.* Physiological Reviews 94(3), 859–907.
+  <https://doi.org/10.1152/physrev.00037.2013> — **the pacemaker.** Interstitial cells of
+  Cajal, in a syncytium with smooth muscle, generate the slow waves and transduce motor-neuron
+  input, and losing them causes gut motility disorders. **Added because §83 stage A measured
+  its absence rather than predicting it**: with the interoceptive injection zeroed, this
+  creature's enteric module reads 0.00 Hz, so its autonomy rests entirely on local sensors
+  with nothing intrinsic underneath. The biological second brain has both. **This citation is
+  the specification for the mechanism stage A showed is missing**, and it is not built.
 - Mayer, E. A. (2011). *Gut feelings: the emerging biology of gut–brain communication.*
   Nature Reviews Neuroscience 12(8), 453–466. <https://doi.org/10.1038/nrn3071> — the
   bidirectional view, and the reason an interoceptive pathway is interesting to a creature
