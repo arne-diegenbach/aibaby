@@ -20901,3 +20901,50 @@ smallest detectable margin is about the size of the margin itself, so "flat"
 cannot yet be distinguished from "small". The probe is now at **n = 24** and that
 run is in flight; the comparison it will settle is whether the afferent adds
 anything at all against the pre-existing route.
+
+### §83 AT n = 24 — NOTHING CLEARS 2 SE, INCLUDING THE CLAIM I MADE LAST SECTION (2026-11-21)
+
+    arm                      decode            null             margin
+    shipped, no 2nd brain    0.530 +/- 0.012   0.507 +/- 0.005   +0.023 +/- 0.013 = 1.8 SE
+    afferent 0.00 (severed)  0.515 +/- 0.011   0.498 +/- 0.006   +0.018 +/- 0.013 = 1.4 SE
+    afferent 0.01            0.517 +/- 0.012   0.494 +/- 0.007   +0.024 +/- 0.014 = 1.8 SE
+    afferent 0.30            0.527 +/- 0.017   0.502 +/- 0.004   +0.025 +/- 0.017 = 1.5 SE
+
+**THE CORRECTION FIRST, BECAUSE IT IS MINE.** Last section's headline was "the
+shipped creature already decodes its own hunger, +0.055 = 3.7 SE". **At four
+times the creatures that margin is +0.023 = 1.8 SE — less than half, and no
+longer a verdict.** The n = 6 reading was an inflated small-sample estimate, which
+is the same failure the dream pilot produced on the same day (-0.1365 at n = 48
+became -0.0569 at n = 352). **Twice in one session, from the same cause, and the
+second time I had already written the rule down.** The honest statement is that
+**hunger's decodability from `central` is NOT established above 2 SE on any arm.**
+
+**AND THE AFFERENT ADDS NOTHING, WHICH IS NOW PROPERLY POWERED.** 0.018 severed,
+0.024 at a whisper, 0.025 at thirty times that — **all within each other's error
+bars**, with the loudest arm no better than the severed one. The earlier
+mean-rate correlation sweep that ran -7.5 SE to +4.0 SE across the same weights
+was measuring a **rate shift**, not information: a scalar delivered harder moves
+the population mean and tells the population nothing new. **That distinction is
+the whole content of `projprobe`'s common-mode finding, arrived at here from the
+opposite direction.**
+
+**WHERE §83 STANDS, STATED WITHOUT DECORATION.** The second brain **exists** —
+`ModuleRole::kEnteric`, off unless a genome declares it, the shipped creature
+provably untouched. It **senses its interior**: the hunger slice tracks hunger at
++0.530 detrended in the reference configuration and +0.913 in the
+highest-fidelity one. It is **autonomous under disconnection**, which is
+Furness's property, though **driven rather than pacemaking** — 0.00 Hz without
+the drives, and Sanders, Ward & Koh (2014) is the specification for what is
+missing. Its loop **moves the first brain's rate**, monotonically, in a measured
+dose-response. **And it delivers no decodable information the first brain did not
+already have, at any weight tested, at n = 24.**
+
+**THE OPTIONS ARE NOW EITHER NAMED-AND-REFUSED OR EXPENSIVE.** Sparse-strong:
+built, 44% cheaper per unit rate, no information gain. Per-slice normalisation:
+built, neutral at matched rate, reverted. The signed relay: mis-aimed, because
+the signal is the common mode. A pacemaker: unbuilt, and it would make the organ
+more autonomous without making it more informative. **What §83 has NOT tried is
+giving the first brain a reason to care** — every readout here asks whether the
+interior is legible, and none asks whether anything downstream uses it. That is a
+functional claim, it needs its own registration, and §44-§60 forbids the obvious
+form of it.
