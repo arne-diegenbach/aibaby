@@ -536,6 +536,31 @@ enum class ModuleRole : uint32_t {
   // admits kAssociation and nothing else, and a context module that gained
   // neurons would change which slice means what.
   kContext = 10,
+  // §83. THE SECOND BRAIN: the enteric plexus, after Gershon (1998) and
+  // Furness (2012). It is a role rather than another association module for
+  // the reason kVisualCortex and kInterneuron are — an experiment has to be
+  // able to FIND it, and what makes it a second brain is a property that must
+  // be checked rather than asserted.
+  //
+  // THAT PROPERTY IS AUTONOMY UNDER DISCONNECTION. Furness is explicit that the
+  // enteric nervous system keeps controlling the intestine when it is
+  // completely severed from the CNS, and that is the only thing separating a
+  // second brain from a module sitting in its own corner of the network. So the
+  // experiment cuts `enteric -> central` and asks whether this module still has
+  // dynamics; `growable()` admits kAssociation alone, so it cannot grow its way
+  // out of the answer either.
+  //
+  // What drives it is the creature's own interior. `DnaDrives` has carried
+  // hunger, comfort and fatigue since §3, and until now they only MULTIPLIED
+  // REWARD and gated sleep: nothing in the brain could perceive them. A module
+  // with this role is injected from those three drives in `Brain::step`, which
+  // is the first afferent this creature has ever had from inside itself.
+  //
+  // A genome that declares no module with this role gets NOTHING — no injection,
+  // no tract, no state — because `module_with_role` returns -1 and
+  // `has_enteric_` stays false. That is what makes the shipped creature
+  // bit-identical rather than merely unaffected.
+  kEnteric = 11,
   kRoleCount,
 };
 

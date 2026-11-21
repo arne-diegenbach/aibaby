@@ -20294,3 +20294,76 @@ here because the owner asked for it explicitly and because the gap it fills is
 real and grep-verifiable. **But a second brain that passes stage A and then has no
 registered function is an ornament**, and the right time to say so is now, not
 after it ships.
+
+### §83 STAGE A RESULT — THE SECOND BRAIN EXISTS, IT IS DRIVEN RATHER THAN SELF-SUSTAINING, AND IT SHOUTS (2026-11-21)
+
+**BUILT AND MEASURED, NO LONG RUN.** `ModuleRole::kEnteric = 11`, an
+interoceptive afferent in `Brain::step`, and two test genomes in the scratchpad
+(`dna/default.toml` plus an enteric module and one `enteric -> central`
+projection, the arms differing in that projection's WEIGHT alone). Instrument:
+`calibrate`, which this project already built to ask whether a module's declared
+rate matches what it does.
+
+    arm                      enteric      central (target 6.81 Hz)
+    noise 0.28, connected    58.27 Hz     21.74 Hz
+    noise 0.28, CUT          50.54 Hz      6.69 Hz
+    noise 0.00, connected    58.97 Hz     21.76 Hz
+    noise 0.00, CUT          48.94 Hz      6.70 Hz
+    injection ZEROED          0.00 Hz      6.73 Hz
+
+**G-INERT PASS.** The shipped genome passes `calibrate` with 0 modules off target
+and 0 seeds wiring badly, because `module_with_role(kEnteric)` returns -1 and
+`has_enteric_` stays false. **No genome-layout change was made at all** — the
+role is a value in a field that already exists, so nothing re-rolled.
+
+**G-TRAFFIC PASS, AND TOO WELL.** Cut, `central` runs at 6.69 Hz against its
+6.81 target. Connected, it runs at **21.74 Hz — 3.2x its target.** The second
+brain reaches the first, which is what the guard asked; it also **shouts**, and a
+`weight = 0.35` afferent is plainly too strong. Note what this rules out: the
+module's mere EXISTENCE leaves `central` on target, so the elevation is the
+tract, not a re-rolled network.
+
+**G-AUTONOMY PASSES AS REGISTERED AND MY MOTIVATION FOR IT WAS WRONG.** With the
+afferent cut, the module still runs at ~49-51 Hz: severed from the first brain it
+keeps working, which is exactly Furness's property and exactly what the guard
+required. **But I motivated that guard as "self-sustaining dynamics", and it is
+not: with the interoceptive injection zeroed the module reads 0.00 Hz.** It is
+DRIVEN, not self-sustaining. The biological ENS has both — its autonomy rests on
+pacemakers, the interstitial cells of Cajal, as well as on local sensors — and
+**this creature's second brain has only the sensors.** Two different claims, one
+guard, and the guard tested the weaker one.
+
+**G-INTERO'S PREMISE IS CONFIRMED, THE GUARD ITSELF IS NOT YET RUN.** 0.00 Hz
+without the drives means the rate is **entirely interoceptive in origin** — this
+is not a free-running oscillator with a gut-themed name, which was the failure
+mode the guard was written against. Whether the rate TRACKS hunger over a session
+needs a time series and is still open.
+
+**THE FIRST ATTEMPT WAS A SEIZURE AND `calibrate` CAUGHT IT BEFORE ANY EXPERIMENT
+EXISTED.** The injection first used a gain of 0.6, chosen to match `[touch] gain
+= 0.50`. The module hit **208.63 Hz** and dragged `central` to **38.14 Hz**.
+**Touch is TRANSIENT — 250 ms per trigger — and an interoceptive afferent is
+TONIC**, so a sensory-strength current delivered every tick is not a signal. The
+gain constant is now gone entirely: the drives are injected raw, in [0,1], and
+the module's own `threshold`, `leak_tau_ms`, `conn_density` and `target_rate_hz`
+decide what that means, which is how every other module here is tuned.
+
+**ONE THING I CANNOT YET EXPLAIN, STATED AS UNEXPLAINED.** Raising the module's
+`threshold` from 12 to 30 moved the rate by 0.5 Hz (58.27 -> 57.75), while
+removing the injection moved it to zero. A static threshold that does not matter
+and a drive that entirely does **points at intrinsic plasticity compensating the
+threshold** — `ip_*` adjusts excitability toward `target_rate_hz`, so a genome
+that raises the threshold gets it undone. That is consistent with this project's
+standing note that `ip_rate` IS the homeostat, **and it is a hypothesis, not a
+measurement.** It matters because it means the module's rate is set by the
+homeostat's operating point and not by the knob I was turning.
+
+**WHERE STAGE A LEAVES IT.** The architecture does what the design asked: a
+module driven by the creature's own interior, autonomous under disconnection,
+with measurable traffic into the first brain. **It is also uncalibrated** — 48.94
+Hz against a declared 4.56, with `calibrate` saying STALE — and the afferent is
+3.2x too loud. **The next step is calibration, not another mechanism**: set
+`target_rate_hz` to the measured free-running rate per the calibration invariant,
+bring the afferent weight down until `central` sits on target, and only then ask
+what the second brain is good for. **Nothing here is a functional claim, and
+§44-§60 still forbids the obvious one.**

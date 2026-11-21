@@ -127,6 +127,10 @@ class Brain {
     return d >= 1.5f ? 2 : (d >= 0.5f ? 1 : 0);
   }
   bool dreaming() const { return asleep() && dream_mode() > 0; }
+  // §83. Whether this creature has a second brain at all, and where it is, so
+  // an experiment can read its rate without guessing a module index.
+  bool has_enteric() const { return has_enteric_; }
+  uint32_t enteric_module() const { return enteric_module_; }
 
   // What the auditory encoder is currently driving B2 with, which is not the
   // same as the last frame that arrived: it fades when the sound stops, and it
@@ -230,6 +234,10 @@ class Brain {
   bool has_auditory_ = false;
   bool has_vision_ = false;
   bool has_touch_ = false;
+  // §83, the second brain. False on every genome that does not declare a module
+  // with ModuleRole::kEnteric, which is all of them including the shipped one.
+  bool has_enteric_ = false;
+  uint32_t enteric_module_ = 0;
   bool has_vocal_ = false;
   bool has_expression_ = false;
 

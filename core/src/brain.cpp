@@ -68,6 +68,12 @@ BrainStatus Brain::init(const void* dna_blob, size_t dna_size, void* memory,
   has_auditory_ = auditory >= 0;
   has_vision_ = vision >= 0;
   has_touch_ = somato >= 0;
+  // §83. -1 when the genome declares no enteric module, which is every genome
+  // that has ever existed including the shipped one, so `has_enteric_` is false
+  // and nothing below runs.
+  const int32_t enteric = dna_.module_with_role(ModuleRole::kEnteric);
+  has_enteric_ = enteric >= 0;
+  enteric_module_ = has_enteric_ ? uint32_t(enteric) : 0u;
   has_vocal_ = vocal >= 0;
   has_expression_ = expression >= 0;
 
@@ -176,6 +182,41 @@ void Brain::step() {
   if (has_auditory_) auditory_.drive(network_, gate);
   if (has_vision_) vision_.drive(network_, gate);
   if (has_touch_) touch_.drive(network_);
+  // §83. THE INTEROCEPTIVE AFFERENT — the first signal this creature has ever
+  // had from inside itself. Hunger, comfort and fatigue have driven reward and
+  // sleep since §3 while being invisible to the brain; here they become spike
+  // drive into the three slices of the enteric module, exactly as touch drives
+  // the three slices of the somatosensory one.
+  //
+  // IT IS NOT GATED ON WAKEFULNESS, and that is deliberate rather than an
+  // oversight: a gut does not stop reporting when its owner falls asleep, and
+  // fatigue is precisely the drive that matters while the creature is asleep.
+  // The ROOM is what sleep shuts out, and the interior is not the room.
+  //
+  // THERE IS NO GAIN CONSTANT, AND THAT IS THE DESIGN. The drives are already
+  // in [0,1], so what gets injected is the drive itself and the module's OWN
+  // genome decides what that means — `threshold`, `leak_tau_ms`, `conn_density`,
+  // `inhib_fraction`, `target_rate_hz`. Those are the knobs `calibrate` already
+  // measures every module against, so a second brain is tuned the way every
+  // other module here is tuned, with no new field and no magic number.
+  //
+  // The first attempt did have a constant, 0.6, chosen to match `[touch] gain`.
+  // It drove this module to 208.63 Hz against its 4.56 Hz target and dragged
+  // `central` from 6.81 to 38.14 Hz. Touch is TRANSIENT — 250 ms per trigger —
+  // and an interoceptive afferent is TONIC, so a sensory-strength current
+  // applied every tick is a seizure rather than a signal. `calibrate` found
+  // that in one run, before any experiment existed to be fooled by it.
+  if (has_enteric_) {
+    const ModuleState& ms = network_.module(enteric_module_);
+    if (ms.count >= 3) {
+      const Scalar level[3] = {drives_.hunger, drives_.comfort, drives_.fatigue};
+      for (uint32_t g = 0; g < 3; ++g) {
+        const uint32_t begin = ms.begin + slice_begin(ms.count, 3, g);
+        const uint32_t end = ms.begin + slice_begin(ms.count, 3, g + 1);
+        for (uint32_t i = begin; i < end; ++i) network_.inject(i, level[g]);
+      }
+    }
+  }
 
   network_.step();
   update_drives();
