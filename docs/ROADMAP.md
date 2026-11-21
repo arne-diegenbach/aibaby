@@ -21213,3 +21213,59 @@ threshold. That is a derived sign across a change of sign, and §75 refuted the 
 shipped one (§80), and any dose on `auditory->vocal` carries `quietecho`'s `artic`
 column as a guard before shipping, which this run cannot see. The tau_f 300 rung is
 shape only — a maximum over two rungs is selected on the data.
+
+### §84 RESULT — BRANCH 5 ON THE SPIKES, AND THE MEMBRANE GAINS 4.0 SE (2026-11-21)
+
+RUN: `results/n84-facilprobe-1680k.log`, 1,680,000 ticks, no `--allow-short`, exit 0,
+4661 s. **Every gate PASSED**: all 288 sessions patched; slept 0.112 on every arm
+(all 96 creatures slept, first sleep ~1,099,000, so this is the post-sleep creature);
+96 of 96 scored per arm; label-destroyed nulls 0.492-0.501; G-LIVE 0 of 96 identical.
+
+**THE REFERENCE REPLICATES §77 ON FRESH CREATURES**: `vmem` 0.6779 +- 0.0087 against
+0.6734 +- 0.0060, the spike oracle 0.610 +- 0.005 against 0.6169 +- 0.0044.
+
+    paired, carrier tau_f 1000 minus reference, n 96
+      spike oracle   +0.0025 +- 0.0063   (+0.4 SE)   PRIMARY
+      spike cell     +0.0044 +- 0.0103   (+0.4 SE)
+      vmem cell      +0.0310 +- 0.0077   (+4.0 SE)   CO-PRIMARY
+      vmem oracle    -0.0067 +- 0.0067   (-1.0 SE)
+      vocal rate     0.5524 -> 0.5528 spikes/tick   (no rate shift)
+    shape rung tau_f 300: spike oracle +0.8 SE, vmem cell +0.0246 (+2.9 SE)
+
+**THE REGISTERED BRANCH IS 5: NO VERDICT ON THE PRIMARY**, bound 0.0152. **What the
+bound says, which the branch label alone does not:** the move needed to make the spike
+rung testable is +0.040 on this sample (0.610 -> 0.650), and the bound is 0.0152. The
+carrier's own spike oracle is 0.6127 +- 0.0057, whose upper 2-SE limit 0.624 is under
+the bar. **So at U 0.20 / tau_rec 3000, tau_f up to 1000 cannot make the spike rung
+testable. DEVIATION (c) STANDS, now bounded rather than just observed.** That is a
+reading of the bound against a fixed requirement, not a refutation of the lead's sign:
+the sign is unresolved at +0.4 SE.
+
+**THE CO-PRIMARY MOVED, IN THE GOOD DIRECTION, AND IT WAS REGISTERED AS A READING:
+facilitation raises the MEMBRANE same/different cell by +0.031 (4.0 SE, paired)**, to
+0.7089 +- 0.0097 against the 0.650 bar. The ordering of the two rungs matches what a
+real effect would show (tau_f 300 at +2.9 SE, 1000 at +4.0 SE). Two things say it is
+not a trivial artefact. The vocal rate does not move (0.5524 vs 0.5528), so it is not
+a rate shift. And the membrane's own oracle does not rise (-1.0 SE), so it is not
+"more of each word visible". **The comparison itself got better while the words did
+not.** A candidate mechanism, NOT TESTED HERE: facilitation left by the first word
+changes how the second word's drive arrives, which would sharpen §67's conjunction.
+Nothing in this run isolates that, and it may not be quoted as the cause.
+
+**WHAT IT DOES AND DOES NOT CHANGE.**
+  - It widens M6's MEMBRANE margin on the M6 creature: deviation (b)'s creature gets
+    better, and deviation (c)'s gap does not close. **The loss is still AT THE
+    THRESHOLD** ([[aibaby-threshold-is-where-it-dies]]): a better membrane did not
+    reach the spikes, which is §77's finding again on a new dose.
+  - **NOT A SHIP CLAIM AND NOT AN M6 RE-STATEMENT.** The creature is the unshipped
+    `stp tau3000` one. Nothing here tests (a), and §79 refuses (a) for any synaptic state.
+  - **ANY DOSE ON auditory->vocal STILL CARRIES `quietecho`'s `artic` AS A GUARD (§80).**
+    The v75 depression dose looked like a gain too, and it killed the echo.
+
+**THE SUCCESSOR, IF ONE IS WANTED, IS NAMED BY THE RESULT AND NOT BY A FRESH IDEA.**
+Facilitation is the first dose since §77 that moves the membrane cell without moving
+the rate. What it cannot do is cross the threshold. So the spike route remains closed
+under every dose tried, and **the only open move on (c) is still a readout at the
+threshold, not another synaptic dose.** A tau_f ladder past 1000 is NOT licensed by
+this result: the spike primary sits at +0.4 SE, and the bound already excludes
+the required move.
