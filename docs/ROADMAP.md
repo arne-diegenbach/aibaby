@@ -21143,3 +21143,73 @@ and `seqprobe`'s measurement above. **The second brain is blocked behind a close
 line, not behind a missing tuning pass.** The affordable 12-neuron interoceptive
 organ is real, cheap and available; **calling it a brain would be the one claim
 §83 has no measurement for.**
+
+## §84 — PRE-REGISTERED: FACILITATION ON THE M6 CREATURE, AIMED AT DEVIATION (c) (2026-11-21)
+
+**REGISTERED BEFORE THE FULL RUN. THE TWO SMOKES BELOW WERE RUN FIRST, TO TEST THE
+INSTRUMENT AND PRICE ITS NOISE, AND NO SMOKE FIGURE IS A RESULT.** Both are under
+first sleep (~1.07M ticks), so they measured the pre-sleep creature (§81's rule).
+
+**THE QUESTION.** §81's lead, which survived both pre-flights: `stp_facil_ms` is 0 on
+every tract and the regime has never been visited. M6 is met at the MEMBRANE on the
+`stp tau3000` creature, and deviation (c) says the SPIKE rung is VOID there: its own
+oracle is **0.6169 +- 0.0044** (§78, 196 creatures), under the 0.650 bar, so the spike
+cell cannot even be tested. **Does adding facilitation to that exact dose move the
+spike rung's own oracle, and what does the membrane pay?** Facilitation bears on (c),
+not (a) — §79 refuses (a) for any synaptic state.
+
+**THE INSTRUMENT.** `facilprobe`, new, at 1,680,000 ticks (samediff's operating point).
+It calls samediff's own per-creature session unchanged, with one added argument that
+writes `stp_facil_ms` on `auditory->vocal`. **The whole dose vector is pinned on every
+arm** (U 0.20, tau_rec 3000, tau_f as listed); the pre-§84 samediff arms now write
+`stp_facil_ms = 0` over a 0, so they are unchanged by construction.
+
+    arm              tau_f    role
+    tau3000 alone        0    the M6 creature, paired reference
+    + tau_f 300        300    shape rung, CARRIES NO VERDICT
+    + tau_f 1000      1000    THE CARRIER, pinned now
+
+**96 creatures per arm, the SAME 96 on every arm, `rep_off` 862** (past §80's 666-861,
+so never scored). Every contrast is paired by rep index. Window: samediff's overlap
+window, gap 200 ms. All three arms run on the reverted v74 genome.
+
+**WHY 96.** The 400k smoke gave a paired SE of 0.0155 on the primary at 48 creatures,
+which is hardly better than unpaired. Full length gives each creature ~4x the trials,
+and the projection from §78's per-creature oracle SD (0.0616) is a paired SE near
+0.007-0.010 at 96. **Every SD projection here has come in low, so 96 buys headroom
+against it, not up to it.** The move that would make the spike rung testable is
++0.033 (0.617 -> 0.650).
+
+**GATES, ALL MUST PASS OR THE RUN IS VOID:** every session patched the tract; slept
+fraction under 0.20 on each arm; gap 200 scored on >= 80 of 96 per arm; the
+label-destroyed null for `vmem` and `vocal` inside [0.42, 0.58]; and **G-LIVE**, no
+carrier creature whose vocal spike count equals its reference twin's exactly.
+
+**PRIMARY: the paired change in the spike rung's own oracle, carrier minus reference.
+CO-PRIMARY: the paired change in the membrane (`vmem`) same/different cell.
+TWO-TAILED.** §81's ladder extrapolation predicts the operating point moving toward
+threshold. That is a derived sign across a change of sign, and §75 refuted the last one.
+
+**THE BRANCHES, WRITTEN BEFORE THE RUN, IN THE ORDER THE CODE TAKES THEM:**
+
+  1. **VOID** — any gate fails. Nothing is read.
+  2. **Primary up by > 2 SE and the carrier's own spike oracle >= 0.650** — the spike
+     rung becomes TESTABLE. Then the carrier's spike cell is read against the bar:
+     clears by 2 SE -> **(c) RESOLVES FOR THE SPIKES at this dose**; under by 2 SE ->
+     (c) resolves AGAINST; otherwise testable, no verdict on (c).
+  3. **Primary up by > 2 SE, oracle still under 0.650** — movable in the predicted
+     direction, not enough at this dose. (c) STANDS. A tau_f ladder becomes the
+     registered successor, not a kernel change.
+  4. **Primary down by > 2 SE** — the derived sign is REFUTED; facilitation worsens
+     the spike rung on the M6 creature. (c) stands and this route is closed at
+     this U and tau_rec.
+  5. **|primary| < 2 SE** — NO VERDICT, with the printed bound. Not a refutation.
+
+**THE MEMBRANE CLAUSE, read on every non-void branch:** if the `vmem` cell falls by
+> 2 SE, any spike gain is a TRADE against M6's membrane claim and is written as one
+— never as an improvement. A rise by > 2 SE is reported as such.
+
+**WHAT THIS CAN NEVER BE.** Not a ship claim: the `stp tau3000` creature is not the
+shipped one (§80), and any dose on `auditory->vocal` carries `quietecho`'s `artic`
+column as a guard before shipping, which this run cannot see. The tau_f 300 rung is
+shape only — a maximum over two rungs is selected on the data.

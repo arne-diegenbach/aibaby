@@ -19004,7 +19004,8 @@ inline std::vector<uint32_t> sd_fold_split(const std::vector<int>& ya,
 SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            uint32_t rep, float voicing_override, bool omit_b,
                            float stp_use, float stp_rec, bool probe,
-                           uint32_t rep_off, float burst_ms) {
+                           uint32_t rep_off, float burst_ms,
+                           float stp_facil = 0.0f) {
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
@@ -19037,6 +19038,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                       &stp_use, sizeof(stp_use));
           std::memcpy(local.data() + base + offsetof(aibaby::DnaProjection, stp_recover_ms),
                       &stp_rec, sizeof(stp_rec));
+          // §84. Written on EVERY dose arm, so the whole dose vector is pinned
+          // and not inherited. The shipped value is 0, so every pre-§84 arm
+          // writes the byte it already had.
+          std::memcpy(local.data() + base + offsetof(aibaby::DnaProjection, stp_facil_ms),
+                      &stp_facil, sizeof(stp_facil));
           ++out.stp_patched;
         }
       }
@@ -23841,6 +23847,245 @@ bool run_samediff(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               "    not another store, as the next build.\n");
 
   return true;
+}
+
+// --- facilprobe (§84): does FACILITATION lift the spike rung? ---------------
+//
+// ROADMAP §84, registered before the run. §81's lead: `stp_facil_ms` is 0 on
+// every tract and has never been visited. M6 is met at the MEMBRANE on the
+// `stp tau3000` creature and the spike rung is VOID there (deviation (c)): its
+// own oracle is 0.6169 +- 0.0044 on 196 creatures, under the 0.650 bar, so the
+// spike cell cannot be tested at all. This asks one thing: does facilitation,
+// added to that exact dose, move the spike rung's own oracle — and what does
+// the membrane pay for it.
+//
+// THREE ARMS ON THE SAME 96 FRESH CREATURES, the whole dose vector pinned on
+// each (U 0.20, tau_rec 3000, tau_f as listed). Paired by rep index, so the
+// between-creature variance cancels out of every contrast. `rep_off` 862 is
+// past every scored samediff block (§80's 666-861 was the last).
+//
+// TWO-TAILED. Facilitation raises u during a train, which both raises delivered
+// drive (delivered = w u R / U) and spends resources faster. Which wins at the
+// scoring window is not derivable here, and §75 is the standing warning that a
+// derived sign gets refuted.
+// 96 and not 48: the 400k smoke's paired SE on the primary was 0.0155 at 48,
+// barely better than unpaired, and every SD projection here has come in low.
+constexpr uint32_t kFpReps = 96;
+constexpr uint32_t kFpRepOff = 862;
+constexpr float kFpUse = 0.20f;
+constexpr float kFpRec = 3000.0f;
+struct FpArmDef {
+  const char* name;
+  float facil;
+};
+constexpr FpArmDef kFpArms[3] = {
+    {"tau3000 alone", 0.0f},     // the M6 creature, the paired reference
+    {"+ tau_f 300", 300.0f},     // shape rung, carries no verdict
+    {"+ tau_f 1000", 1000.0f}};  // THE CARRIER, pinned before the run
+constexpr uint32_t kFpArmCount = 3;
+constexpr uint32_t kFpRef = 0;
+constexpr uint32_t kFpCarrier = 2;
+constexpr uint32_t kFpSpike = 2;   // `vocal` — the spike rung
+constexpr uint32_t kFpVmem = 8;    // the membrane, M6's co-primary
+constexpr uint32_t kFpDrive = 5;   // `drive-exc` — liveness of the dose
+constexpr double kFpOStar = 0.6601;  // §78's crossing, context only
+
+bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  std::printf("\n  §84 FACILITATION ON THE M6 CREATURE — does it lift the spike rung?\n\n"
+              "  dose              auditory->vocal, U %.2f, tau_rec %.0f ms on every arm\n"
+              "  arms              tau_f 0 (reference) / 300 (shape) / 1000 (CARRIER)\n"
+              "  creatures         %u per arm, the SAME creatures, rep_off %u, paired\n"
+              "  window            samediff's overlap window, gap 200 ms\n"
+              "  primary           paired change in the SPIKE rung's own oracle\n"
+              "  co-primary        paired change in the MEMBRANE same/different cell\n"
+              "  testable bar      a rung is testable when its own oracle >= %.3f\n\n",
+              kFpUse, kFpRec, kFpReps, kFpRepOff, kSdBar);
+
+  std::vector<SdOut> res[kFpArmCount];
+  for (uint32_t a = 0; a < kFpArmCount; ++a) {
+    const float fac = kFpArms[a].facil;
+    res[a] = parallel_reps<SdOut>(kFpReps, [&](uint32_t r) {
+      return run_samediff_session(blob, ticks, r, 0.0f, false, kFpUse, kFpRec, false,
+                                  kFpRepOff, 0.0f, fac);
+    });
+  }
+
+  // Gates. Each one measures its identification rather than asserting it.
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true;
+  uint32_t ident_rate = 0, paired_n = 0;
+  std::printf("  GATES\n");
+  for (uint32_t a = 0; a < kFpArmCount; ++a) {
+    uint32_t unpatched = 0, scored = 0;
+    double att = 0, slp = 0, fs = 0;
+    uint32_t fs_n = 0;
+    std::vector<double> nul_v, nul_s;
+    for (const SdOut& o : res[a]) {
+      if (o.stp_patched == 0) ++unpatched;
+      att += o.attempted;
+      slp += o.slept;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      if (o.ok && o.gap[0].scored) {
+        ++scored;
+        nul_v.push_back(o.gap[0].null_be[kFpVmem]);
+        nul_s.push_back(o.gap[0].null_be[kFpSpike]);
+      }
+    }
+    double nv = 0, nvs = 0, ns = 0, nss = 0;
+    sd_stat(nul_v, nv, nvs);
+    sd_stat(nul_s, ns, nss);
+    const double sf = att > 0 ? slp / att : 1.0;
+    if (unpatched) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    if (nv < 0.42 || nv > 0.58 || ns < 0.42 || ns > 0.58) g_null = false;
+    std::printf("    %-14s unpatched %u  slept %.4f  first sleep %.0f (%u of %u slept)\n"
+                "    %-14s scored %u of %u  label-destroyed vmem %.4f +- %.4f, vocal %.4f +- %.4f\n",
+                kFpArms[a].name, unpatched, sf, fs_n ? fs / fs_n : 0.0, fs_n, kFpReps,
+                "", scored, kFpReps, nv, nvs, ns, nss);
+  }
+  // G-LIVE: facilitation must change what the vocal module does on the same
+  // creature. A carrier creature whose vocal spike count equals its reference
+  // twin's to the spike means the patch never reached the kernel's arithmetic.
+  for (size_t i = 0; i < res[kFpRef].size() && i < res[kFpCarrier].size(); ++i) {
+    ++paired_n;
+    if (res[kFpRef][i].voc_spikes == res[kFpCarrier][i].voc_spikes) ++ident_rate;
+  }
+  const bool g_live = paired_n > 0 && ident_rate == 0;
+  std::printf("    G-PATCH  every session wrote the tract     %s\n"
+              "    G-SLEPT  slept fraction under 0.20         %s\n"
+              "    G-SCORED gap 200 scored on >= 80 per arm   %s\n"
+              "    G-NULL   label-destroyed in [0.42, 0.58]   %s\n"
+              "    G-LIVE   carrier vocal spikes differ from\n"
+              "             the reference twin on every pair  %s (%u of %u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident_rate, paired_n);
+
+  // Per-arm table: cell and own oracle on the three rungs that matter.
+  const uint32_t rungs[3] = {kFpDrive, kFpVmem, kFpSpike};
+  std::printf("  PER ARM, gap 200, overlap window: cell (own oracle)\n\n"
+              "    arm             drive-exc                   vmem                        vocal (spikes)              vocal Hz/tick\n");
+  for (uint32_t a = 0; a < kFpArmCount; ++a) {
+    std::printf("    %-14s", kFpArms[a].name);
+    for (uint32_t k = 0; k < 3; ++k) {
+      std::vector<double> c, o;
+      for (const SdOut& s : res[a])
+        if (s.ok && s.gap[0].scored) {
+          c.push_back(s.gap[0].mile_be[rungs[k]]);
+          o.push_back(s.gap[0].assembled[rungs[k]]);
+        }
+      double cm, cs, om, os;
+      sd_stat(c, cm, cs);
+      sd_stat(o, om, os);
+      std::printf("  %.4f+-%.4f (%.3f+-%.3f)%s", cm, cs, om, os,
+                  rungs[k] != kFpDrive && om < kSdBar ? "*" : " ");
+    }
+    std::vector<double> rate;
+    for (const SdOut& s : res[a])
+      if (s.voc_ticks > 0) rate.push_back(s.voc_spikes / s.voc_ticks);
+    double rm, rs;
+    sd_stat(rate, rm, rs);
+    std::printf("  %.4f+-%.4f\n", rm, rs);
+  }
+  std::printf("\n    * own oracle under %.3f: that cell CANNOT be tested against the bar.\n"
+              "    The reference arm replicates §77's `n77 tau3000` on fresh creatures:\n"
+              "    there, vmem 0.6734 +- 0.0060 (oracle 0.762) and vocal 0.5504 +- 0.0051\n"
+              "    (oracle 0.6169 +- 0.0044). Different seeds, so a replication, not identity.\n\n",
+              kSdBar);
+
+  // Paired contrasts, by rep index, both arms scored.
+  auto paired = [&](uint32_t a, uint32_t b, bool oracle, uint32_t sp, double& m, double& se,
+                    uint32_t& n) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[a].size() && i < res[b].size(); ++i) {
+      const SdOut& x = res[a][i];
+      const SdOut& y = res[b][i];
+      if (!(x.ok && y.ok && x.gap[0].scored && y.gap[0].scored)) continue;
+      d.push_back(oracle ? x.gap[0].assembled[sp] - y.gap[0].assembled[sp]
+                         : x.gap[0].mile_be[sp] - y.gap[0].mile_be[sp]);
+    }
+    n = uint32_t(d.size());
+    sd_stat(d, m, se);
+  };
+  std::printf("  PAIRED CONTRASTS against the reference, same creatures\n\n"
+              "    arm             spike oracle          spike cell            vmem cell             vmem oracle\n");
+  double p1 = 0, p1s = 0, p2 = 0, p2s = 0;
+  for (uint32_t a = 1; a < kFpArmCount; ++a) {
+    double m[4], s[4];
+    uint32_t n = 0;
+    paired(a, kFpRef, true, kFpSpike, m[0], s[0], n);
+    paired(a, kFpRef, false, kFpSpike, m[1], s[1], n);
+    paired(a, kFpRef, false, kFpVmem, m[2], s[2], n);
+    paired(a, kFpRef, true, kFpVmem, m[3], s[3], n);
+    std::printf("    %-14s", kFpArms[a].name);
+    for (int k = 0; k < 4; ++k)
+      std::printf("  %+.4f+-%.4f (%+.1f SE)", m[k], s[k], s[k] > 0 ? m[k] / s[k] : 0.0);
+    std::printf("  n %u\n", n);
+    if (a == kFpCarrier) { p1 = m[0]; p1s = s[0]; p2 = m[2]; p2s = s[2]; }
+  }
+
+  // The carrier's absolute spike oracle and cell, for the testability branch.
+  std::vector<double> co, cc;
+  for (const SdOut& s : res[kFpCarrier])
+    if (s.ok && s.gap[0].scored) {
+      co.push_back(s.gap[0].assembled[kFpSpike]);
+      cc.push_back(s.gap[0].mile_be[kFpSpike]);
+    }
+  double com, cos_, ccm, ccs;
+  sd_stat(co, com, cos_);
+  sd_stat(cc, ccm, ccs);
+
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_live;
+  std::printf("\n  THE REGISTERED READING — the carrier, tau_f 1000\n\n"
+              "    primary     spike oracle change   %+.4f +- %.4f  (%+.1f SE)\n"
+              "    co-primary  vmem cell change      %+.4f +- %.4f  (%+.1f SE)\n"
+              "    carrier     spike oracle %.4f +- %.4f, cell %.4f +- %.4f\n"
+              "                (§78's crossing O* = %.4f, context only)\n\n",
+              p1, p1s, p1s > 0 ? p1 / p1s : 0.0, p2, p2s, p2s > 0 ? p2 / p2s : 0.0,
+              com, cos_, ccm, ccs, kFpOStar);
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above; no reading of either primary is made.\n");
+  } else if (p1 > 2.0 * p1s) {
+    if (com >= kSdBar) {
+      std::printf("    -> THE SPIKE RUNG BECOMES TESTABLE under facilitation. ");
+      if (ccm - 2.0 * ccs > kSdBar)
+        std::printf("Its cell CLEARS\n       the bar by 2 SE: deviation (c) RESOLVES FOR THE SPIKES at this dose.\n");
+      else if (ccm + 2.0 * ccs < kSdBar)
+        std::printf("Its cell is UNDER\n       the bar by 2 SE: (c) resolves AGAINST the spikes at this dose.\n");
+      else
+        std::printf("Its cell is within\n       2 SE of the bar: testable, NO VERDICT on (c).\n");
+    } else {
+      std::printf("    -> MOVABLE IN THE PREDICTED DIRECTION, NOT ENOUGH: the spike oracle\n"
+                  "       rises by 2 SE and stays under %.3f. (c) STANDS at this dose.\n",
+                  kSdBar);
+    }
+  } else if (p1 < -2.0 * p1s) {
+    std::printf("    -> THE DERIVED SIGN IS REFUTED: facilitation LOWERS the spike rung's\n"
+                "       oracle on the M6 creature. (c) STANDS and this route worsens it.\n");
+  } else {
+    std::printf("    -> NO VERDICT on the primary: |change| under 2 SE, bounded by %.4f.\n",
+                std::fabs(p1) + 2.0 * p1s);
+  }
+  if (gates) {
+    if (p2 < -2.0 * p2s)
+      std::printf("    AND THE MEMBRANE PAYS: the vmem cell falls by 2 SE. Any spike gain\n"
+                  "    above is a TRADE against M6's membrane claim, not an improvement.\n");
+    else if (p2 > 2.0 * p2s)
+      std::printf("    AND THE MEMBRANE GAINS: the vmem cell rises by 2 SE.\n");
+    else
+      std::printf("    The membrane cell does not move by 2 SE.\n");
+  }
+  std::printf("\n    NOT A SHIP CLAIM. This dose is on the `stp tau3000` creature, which the\n"
+              "    project does not ship (§80). Any dose on auditory->vocal carries\n"
+              "    `quietecho`'s `artic` column as a guard before it ships; this run cannot\n"
+              "    see that column.\n");
+  return gates;
 }
 
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------

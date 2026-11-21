@@ -550,6 +550,13 @@ const Spec kSpecs[] = {
     {"sleepdecay", 1600000, Expect::kPass, Tier::kLong,
      "PASS means a readable paired before/after contrast on at least two"
      " creatures. The DIRECTION is two-tailed and is never read from the verdict"},
+    // §84. PASS means every gate held and a reading was formed; the DIRECTION
+    // is two-tailed and lives in the printed branch, never in the verdict.
+    // 1680000 is samediff's own operating point: a shorter run never sleeps
+    // and measures another creature (§81).
+    {"facilprobe", 1680000, Expect::kPass, Tier::kLong,
+     "PASS means the gates held on all three arms; the direction is two-tailed"
+     " and read from the printed branch"},
     // §82 stage 1 at 352 creatures, seeds 48-399 so the sample that chose the n
     // is not re-tested. Same verdict semantics as `sleepdecay`.
     {"sleepdecaylong", 1600000, Expect::kPass, Tier::kLong,
@@ -1998,6 +2005,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "interoprobe") ok = run_interoprobe(dna_blob, ticks, verbose);
   else if (name == "sleepdecay") ok = run_sleepdecay(dna_blob, ticks, verbose);
   else if (name == "sleepdecaylong") ok = run_sleepdecaylong(dna_blob, ticks, verbose);
+  else if (name == "facilprobe") ok = run_facilprobe(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
