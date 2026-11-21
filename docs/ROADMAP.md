@@ -20573,3 +20573,54 @@ functional benefit of any kind; and §44-§60 still forbids the obvious follow-u
 of conditioning behaviour on an interoceptive cue. **The second brain is real,
 sensing, autonomous and audible to the first brain at a dose that disturbs it.
 That is the whole claim.**
+
+### §83 CORRECTION AND THE SPARSE AFFERENT — THE TRANSMISSION IS A LOOP PROPERTY, AND MY TABLE SAID "WEIGHT" WHEN IT MEANT "BOTH LIMBS" (2026-11-21)
+
+**THE CORRECTION FIRST.** Stage A's transmission table is headed `weight` and
+reads as though the ASCENDING afferent were being swept. It was not: the patch
+that built those genomes replaced **every** `weight` line in the enteric block,
+so both limbs moved together. **The numbers are reproducible and correct for what
+was actually run — both limbs at the stated weight — and the LABEL was wrong.**
+Decomposed, with the descending limb held at the calibrated 0.01 unless stated:
+
+    ascending 0.30, descending 0.01    +0.280 +/- 0.186 = +1.5 SE
+    BOTH limbs 0.30                    +0.601 +/- 0.148 = +4.0 SE   <- the published row
+    ascending 0.01, descending 0.30    -0.359 +/- 0.070 = -5.1 SE
+    both at 0.01 (the baseline)        -0.389 +/- 0.073 = -5.3 SE
+
+**THE ASCENDING LIMB ALONE CARRIES +1.5 SE. THE DESCENDING LIMB ALONE CARRIES
+NOTHING** — its -5.1 SE is the baseline -5.3 SE within noise, which is what it
+should be, since it moves signal the other way. **TOGETHER THEY GIVE +4.0 SE,
+MORE THAN THE SUM OF THE PARTS.**
+
+**So the transmission is a property of the LOOP and not of the afferent**, which
+is what Furness (2012) says about the biology and what §83's own design section
+quoted before anything was built: control is local enteric reflexes PLUS reflexes
+that pass from the gut through the CNS and back. **The mislabel hid a better
+result than the one I claimed.** What stage A's conclusion should have said is
+that the second brain reaches the first through a closed loop, and that half a
+loop does most of nothing.
+
+**THE SPARSE AFFERENT WORKS, PARTLY.** Holding `density x weight` at 0.03 and
+concentrating the same delivered current on fewer target cells (ascending limb
+only, descending at 0.01):
+
+    density   weight   central Hz   signal margin
+    0.10      0.30     19.95        +1.5 SE
+    0.05      0.60     19.48        +1.7 SE
+    0.02      1.50     14.05        +1.8 SE
+    0.01      3.00     11.24        +1.7 SE
+
+**The rate cost falls 44% — 19.95 to 11.24 Hz — while the signal is flat within
+noise.** That is the design option stage A named, and it pays: a concentrated
+afferent disturbs `central`'s population rate far less for the same transmitted
+signal, because the driven cells saturate instead of the whole population
+lifting. **It is an improvement and not a solution: 11.24 Hz is still 65% over
+`central`'s 6.81 target.**
+
+**WHAT IS NOW WORTH TRYING, IN ORDER.** Sparse-strong on BOTH limbs rather than
+the ascending one alone, since the loop is what transmits and the sparse rows
+above only concentrated half of it. Then the signed afferent through the existing
+`kInterneuron` relay, which this project built for precisely this problem on
+`central -> vocal`: a balanced projection moves signal without moving the mean.
+**Neither is built.**
