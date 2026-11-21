@@ -20506,3 +20506,70 @@ its operating point: at `weight = 0.01` the second brain is audible to
 `calibrate`'s rate column and not to this correlation. **Making it louder would
 buy signal and saturate the first brain, which is the trade §83 now has on
 record in both directions.**
+
+## §83 STAGE A COMPLETE — ALL FOUR GUARDS PASS, AND THE AFFERENT CANNOT BOTH WHISPER AND BE HEARD (2026-11-21)
+
+**THE TREND WAS MASKING THE EFFECT, NOT MANUFACTURING IT**, which is the opposite
+of what I built the detrending to catch:
+
+    read on the hunger slice        raw                detrended
+    r(enteric, hunger)              +0.233 +/- 0.091   +0.596 +/- 0.094
+    circular-shift null             -0.039 +/- 0.084   -0.293 +/- 0.084
+    primary - null                  +0.272 = 2.2 SE    +0.889 +/- 0.126 = 7.0 SE
+
+The enteric rate drifts UP with time (+0.578, the homeostat ramping excitability)
+while hunger drifts DOWN (-0.226), so the shared trend contributes a NEGATIVE
+component that was hiding the within-session tracking. **G-INTERO therefore
+passes at 7.0 SE, not the 2.2 SE the raw correlation showed**, and the detrended
+null sits at -0.293 rather than 0 — which is why the instrument reads
+primary-minus-null and never primary-against-zero.
+
+**STAGE A'S SCOREBOARD, ALL FOUR:**
+
+    G-INERT     PASS   shipped genome unchanged, `calibrate` PASS, no layout change
+    G-AUTONOMY  PASS   ~50 Hz with both limbs severed — Furness's property —
+                       but DRIVEN, not pacemaking: 0.00 Hz without the drives
+    G-TRAFFIC   PASS   central 6.69 -> 21.74 Hz at weight 0.35
+    G-INTERO    PASS   +0.889 +/- 0.126 = 7.0 SE detrended, on the hunger slice
+
+**AND THE AFFERENT'S TRANSMISSION IS MONOTONE ACROSS FIVE WEIGHTS.** Detrended
+`r(central, hunger)` against its own shifted null:
+
+    weight   margin               central's rate
+    0.00     -0.492 +/- 0.066  = -7.5 SE    6.69 Hz  (on its 6.81 target)
+    0.01     -0.389 +/- 0.073  = -5.3 SE    7.00 Hz
+    0.03     -0.138 +/- 0.135  = -1.0 SE   ~7.9 Hz
+    0.10     +0.227 +/- 0.182  = +1.3 SE   11.04 Hz
+    0.30     +0.601 +/- 0.148  = +4.0 SE   ~19.6 Hz
+
+**The sign CROSSES ZERO near weight 0.04.** At zero afferent, `central`'s
+correlation with hunger is strongly NEGATIVE, because of the pre-existing route
+below; as the afferent strengthens it injects the enteric slice's POSITIVE
+hunger signal, cancelling that and then reversing it. **This is the second brain
+demonstrably telling the first brain something**, and it is why the earlier
+intact-versus-severed comparison at weight 0.01 read 1.1 SE: the dose was too
+small to see, not the mechanism absent.
+
+**THE TRADE, STATED QUANTITATIVELY BECAUSE IT IS THE RESULT.** Signal arrives
+only at weights where `central`'s rate is already 60% or more over its target:
+at 0.10 the margin is +1.3 SE and the rate is 11.04 Hz against 6.81. **THE
+AFFERENT CANNOT BOTH WHISPER AND BE HEARD, as built.** That is a fact about this
+design, not a tuning failure, and the design options it names are: a SPARSER but
+STRONGER afferent (fewer target cells, same total signal, less total current), a
+SIGNED one (the `kInterneuron` relay already exists for exactly this problem on
+`central -> vocal`), or a smaller target population. **None is built.**
+
+**AND THE PRE-EXISTING ROUTE IS HALF TOUCH, MEASURED.** The shipped creature,
+with no second brain, shows `r(central, hunger) = -0.361 +/- 0.016`. Zeroing
+`central`'s `nm_hunger` left it at **-0.361, unchanged** — the reward channel is
+NOT the route. Zeroing the `somato -> central` weight moved it to **-0.188 +/-
+0.043**, a drop of 0.173 at **3.8 SE**: `Brain::feed` triggers `kFeed`, which
+drives somato on exactly the ticks hunger falls. **So touch carries about half,
+and the remaining -0.188 is unexplained** — comfort's own channel and the shared
+trend are the candidates, and neither is tested.
+
+**WHAT STAGE A DOES NOT SHOW.** Nothing about speech, naming or separation; no
+functional benefit of any kind; and §44-§60 still forbids the obvious follow-up
+of conditioning behaviour on an interoceptive cue. **The second brain is real,
+sensing, autonomous and audible to the first brain at a dose that disturbs it.
+That is the whole claim.**

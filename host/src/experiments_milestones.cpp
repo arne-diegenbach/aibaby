@@ -2395,6 +2395,27 @@ bool run_sleepdecay_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool 
 // far below: that one lives in an anonymous namespace, so declaring it here put
 // two candidates in scope at ITS call site and made that call ambiguous. A
 // self-contained helper couples nothing.
+// Least-squares linear detrend against the sample clock. §83's G-INTERO needs it
+// because the second brain's rate DRIFTS upward across a session — the homeostat
+// ramping excitability — and hunger carries its own trend, so part of any raw
+// correlation between them is two trends meeting rather than one tracking the
+// other. A circular-shift null keeps autocorrelation and kills the pairing, but
+// it does not remove a shared trend; this does.
+inline std::vector<double> detrend(const std::vector<double>& y,
+                                   const std::vector<double>& x) {
+  const size_t n = y.size();
+  if (n < 3 || x.size() != n) return y;
+  double mx = 0.0, my = 0.0;
+  for (size_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+  mx /= double(n); my /= double(n);
+  double sxy = 0.0, sxx = 0.0;
+  for (size_t i = 0; i < n; ++i) { sxy += (x[i]-mx)*(y[i]-my); sxx += (x[i]-mx)*(x[i]-mx); }
+  const double b = sxx > 0.0 ? sxy / sxx : 0.0;
+  std::vector<double> r(n);
+  for (size_t i = 0; i < n; ++i) r[i] = y[i] - (my + b * (x[i] - mx));
+  return r;
+}
+
 inline double rank_corr(std::vector<double> x, std::vector<double> y) {
   const size_t n = x.size();
   if (n < 3 || y.size() != n) return 0.0;
@@ -2468,6 +2489,7 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
               "r(ent,time)", "r(cen,hun)", "r(hun,time)");
 
   std::vector<double> prim, ent_time, cen_h, gate, null_shift, ent_mean, mixr;
+  std::vector<double> prim_dt, null_dt, cen_dt, cen_null_dt;
   bool any_enteric = false;
   for (uint32_t c = 0; c < kCreatures; ++c) {
     std::vector<uint8_t> variant = blob;
@@ -2546,6 +2568,20 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     const double r_ch = rank_corr(cen_rate, hunger);
     const double r_ht = rank_corr(hunger, clock);
     const double r_es = rank_corr(ent_rate, shifted);
+    // The same primary and the same null, on residuals after a linear trend in
+    // time is removed from BOTH series.
+    const std::vector<double> ent_dt = detrend(ent_rate, clock);
+    const std::vector<double> hun_dt = detrend(hunger, clock);
+    std::vector<double> hun_dt_shift(hun_dt.size());
+    for (size_t i = 0; i < hun_dt.size(); ++i)
+      hun_dt_shift[i] = hun_dt[(i + hun_dt.size() / 2) % hun_dt.size()];
+    const double r_eh_dt = rank_corr(ent_dt, hun_dt);
+    // The same control for the first brain's own correlation with hunger: it has
+    // the same drift problem, and this is the column that says whether the
+    // afferent delivers SIGNAL rather than merely rate.
+    const double r_ch_dt = rank_corr(detrend(cen_rate, clock), hun_dt);
+    const double r_cs_dt = rank_corr(detrend(cen_rate, clock), hun_dt_shift);
+    const double r_es_dt = rank_corr(ent_dt, hun_dt_shift);
     double m = 0.0;
     for (double v : ent_rate) m += v;
     m /= double(ent_rate.size());
@@ -2562,6 +2598,10 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
     null_shift.push_back(r_es);
     ent_mean.push_back(m);
     mixr.push_back(r_mix);
+    prim_dt.push_back(r_eh_dt);
+    cen_dt.push_back(r_ch_dt);
+    cen_null_dt.push_back(r_cs_dt);
+    null_dt.push_back(r_es_dt);
     if (verbose || kCreatures <= 8) {
       std::printf("  %-5u %-10.2f %+-11.3f %+-11.3f %+-11.3f %+.3f\n", c, m, r_eh, r_et,
                   r_ch, r_ht);
@@ -2586,6 +2626,12 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
   stat(null_shift, nm, ns);
   stat(ent_mean, em, es);
   stat(mixr, xm, xs);
+  double dm, ds, dnm, dns;
+  stat(prim_dt, dm, ds);
+  stat(null_dt, dnm, dns);
+  double cdm, cds, cnm2, cns2;
+  stat(cen_dt, cdm, cds);
+  stat(cen_null_dt, cnm2, cns2);
 
   std::printf("\n  over %u creatures, Spearman, mean +/- SE\n", kCreatures);
   std::printf("    r(hunger, time)       %+.3f +/- %.3f   <- THE GATE\n", gm, gs);
@@ -2597,6 +2643,22 @@ bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
               cs);
   std::printf("    enteric rate          %.2f +/- %.2f Hz\n", em, es);
 
+  std::printf("    DETRENDED, both series, residuals after a linear fit in time:\n");
+  std::printf("      r(enteric, hunger)  %+.3f +/- %.3f   <- the primary that controls\n"
+              "                                       for the homeostat's upward drift\n", dm, ds);
+  std::printf("      circular-shift null %+.3f +/- %.3f\n", dnm, dns);
+  {
+    const double mg = dm - dnm, mse = std::sqrt(ds * ds + dns * dns);
+    std::printf("      primary - null      %+.3f +/- %.3f = %.1f SE   %s\n", mg, mse,
+                mse > 0.0 ? mg / mse : 0.0,
+                mg > 2.0 * mse ? "TRACKS the interior"
+                               : (mg < -2.0 * mse ? "TRACKS IT INVERSELY" : "NO VERDICT"));
+  }
+  {
+    const double mg = cdm - cnm2, mse = std::sqrt(cds * cds + cns2 * cns2);
+    std::printf("      r(central, hunger)  %+.3f +/- %.3f   null %+.3f, so %+.3f +/- %.3f"
+                " = %.1f SE\n", cdm, cds, cnm2, mg, mse, mse > 0.0 ? mg / mse : 0.0);
+  }
   if (!any_enteric) {
     std::printf("\n  NO ENTERIC MODULE in this genome, so every enteric row above is a\n"
                 "  structural zero. That is the control, not a failure.\n");
