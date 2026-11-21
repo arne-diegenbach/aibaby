@@ -206,6 +206,22 @@ void Brain::step() {
   // and an interoceptive afferent is TONIC, so a sensory-strength current
   // applied every tick is a seizure rather than a signal. `calibrate` found
   // that in one run, before any experiment existed to be fooled by it.
+  //
+  // PER-SLICE NORMALISATION WAS BUILT HERE AND REVERTED, AND THE REASON IS
+  // WORTH MORE THAN THE CODE WAS. Laughlin (1981) says a transfer function
+  // should be fitted to its stimulus's own range, and §83 had measured the cost
+  // of not doing that: at threshold 6 and above the hunger slice read exactly
+  // 0.000 correlation while the module still fired, because hunger is fed DOWN
+  // and hovers low while comfort sits near 0.5 and fatigue climbs toward 0.9.
+  // So each slice was given its own running mean and deviation and centred on
+  // 0.5. Fidelity rose from +0.530 to +0.694 — and the whole gain was RATE:
+  // centring every slice raised the module from 48.89 to 117.42 Hz, and at a
+  // matched rate the normalised version is no better at all (thr 8 normalised:
+  // 54.77 Hz, r = +0.532; thr 4 raw: 48.89 Hz, r = +0.530). Lowering the
+  // threshold buys the same fidelity with less machinery, so the normalisation
+  // duplicated an effect the genome already had, which is the one thing this
+  // project refuses to ship. The hunger-silencing diagnosis was correct; the
+  // remedy was not the one it needed.
   if (has_enteric_) {
     const ModuleState& ms = network_.module(enteric_module_);
     if (ms.count >= 3) {

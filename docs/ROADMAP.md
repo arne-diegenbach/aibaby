@@ -20789,3 +20789,57 @@ That is sensory adaptation, and it is a kernel change to the injection in
 `Brain::step` rather than a genome edit. **It is also the first §83 change that
 would need its own inertness proof**, since it alters what every enteric module
 receives.
+
+### §83 PER-SLICE NORMALISATION — BUILT, MEASURED NEUTRAL AT MATCHED RATE, AND REVERTED (2026-11-21)
+
+**The diagnosis was right and the remedy was not.** §83 had measured that a
+shared threshold silences the hunger slice — exactly 0.000 correlation at
+threshold 6 and above while the module still fires — because hunger is fed DOWN
+and hovers low while comfort sits near 0.5 and fatigue climbs toward 0.9.
+Laughlin (1981) says what to do about that: fit the transfer function to the
+stimulus's own range. So each slice was given its own running mean and absolute
+deviation, centred on 0.5 at +-2 deviations, with a 100 s EMA against a feeding
+interval of twelve.
+
+    reference genome, threshold 4     enteric Hz   central Hz   r(ent,hunger) dt
+    raw drives                         48.89        6.74         +0.530
+    per-slice normalised              117.42        7.50         +0.694
+
+**+31% fidelity, and every point of it was RATE.** Centring the slices lifted the
+module from 48.89 to 117.42 Hz, and the threshold sweep with normalisation ON
+gives the comparison that matters:
+
+    normalised, thr 6     78.36 Hz   +0.721
+    normalised, thr 8     54.77 Hz   +0.532     <- matched to the raw arm's rate
+    normalised, thr 10    36.27 Hz   +0.085
+    normalised, thr 12    23.44 Hz   -0.003
+
+**At a matched firing rate the normalised module is no better at all: +0.532 at
+54.77 Hz against +0.530 at 48.89 Hz** — equal fidelity at 12% more rate, so
+marginally worse per unit of activity. **Lowering the threshold buys the same
+fidelity with less machinery**, which makes the normalisation a duplicate of an
+effect the genome already had. **REVERTED.** This project does not ship a
+mechanism that reproduces a knob — the same reasoning that keeps the
+multiplicative homeostat out, where the note reads "DO NOT BUILD, it is v57
+exactly."
+
+**AND IT EXPLAINS WHY RAISING THE THRESHOLD STILL KILLS FIDELITY AFTER
+NORMALISATION** — 0.721 at threshold 6 down to 0.000 at 16. The limit was never
+the drives' differing ranges. **It is the LIF cell's f-I curve under tonic
+input**, measured two sections ago: silent at tau 1, saturated by tau 4, almost
+no graded band. Normalisation moves where the cliff sits; it does not make the
+cliff a slope.
+
+**THE SELF-CHECK ON THE REVERT PASSED EXACTLY:** the reference genome is back to
+**48.89 Hz, central 6.74, r = +0.530**, the three numbers recorded before the
+change. The reasoning is kept in `core/src/brain.cpp` beside the injection,
+because the next person to notice the hunger-silencing result will reach for
+exactly this remedy.
+
+**CREDITS ADDED, NEITHER PREVIOUSLY CITED HERE.** Laughlin (1981) for the
+principle, and Fairhall, Lewen, Bialek & de Ruyter van Steveninck (2001) for the
+warning that rides with it: rescaling to the stimulus's variance makes a code
+efficient and **momentarily ambiguous about absolute level**, which for an organ
+reporting hunger is a cost rather than a free improvement. **That warning now
+applies to nothing in the build, which is the correct outcome for a citation that
+argued against the change it motivated.**

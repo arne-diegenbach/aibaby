@@ -20679,6 +20679,26 @@ them** — the brain never perceives its own interior.
   reflexes that pass from the gut through the CNS and back. **So the testable property of a
   second brain is AUTONOMY UNDER DISCONNECTION, not mere separateness**, and the
   architecture needs traffic in both directions or it has modelled a detached organ instead.
+- Laughlin, S. B. (1981). *A simple coding procedure enhances a neuron's information
+  capacity.* Zeitschrift für Naturforschung C 36(9–10), 910–912.
+  <https://doi.org/10.1515/znc-1981-9-1040> — **the reason an interoceptive afferent cannot
+  share one threshold across three drives.** The fly's large monopolar cell has a
+  contrast-response function matching the cumulative distribution of the contrasts it
+  actually sees, which is the arrangement that maximises transmitted information: the
+  transfer function is fitted to the stimulus's own range. §83 measured the consequence of
+  NOT doing that — at threshold 6 and above, `r(enteric, hunger)` reads exactly 0.000 while
+  the module still fires, because hunger is fed down and hovers low while comfort and
+  fatigue sit higher, so one threshold gives three channels three sensitivities and
+  **silences the lowest.**
+- Fairhall, A. L., Lewen, G. D., Bialek, W. & de Ruyter van Steveninck, R. R. (2001).
+  *Efficiency and ambiguity in an adaptive neural code.* Nature 412(6849), 787–792.
+  <https://doi.org/10.1038/35090500> — and the dynamic half: the fly's H1 rescales its
+  input–output relation to the **variance** of the stimulus distribution, with the rescaling
+  itself taking time, so the code is efficient and momentarily ambiguous about absolute
+  level. **That is the design §83 needs and the warning that comes with it**: normalising
+  each drive by its own running scale buys every slice the same dynamic range and
+  **throws away absolute level**, which for an organ reporting hunger is a real cost and
+  not a free improvement.
 - Sanders, K. M., Ward, S. M. & Koh, S. D. (2014). *Interstitial cells: regulators of smooth
   muscle function.* Physiological Reviews 94(3), 859–907.
   <https://doi.org/10.1152/physrev.00037.2013> — **the pacemaker.** Interstitial cells of
