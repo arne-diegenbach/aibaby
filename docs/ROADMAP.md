@@ -21097,3 +21097,49 @@ was about 11% of this creature firing eight times faster than `central`; the
 12-neuron version is about 1%. **The affordable configuration is the one the
 energy literature would have predicted, and this project found it by measuring
 sleep.**
+
+## §83 CLOSED — WHAT WAS BUILT IS AN ORGAN, NOT A BRAIN, AND THE MEASUREMENT SAYS SO (2026-11-21)
+
+**THE PURE-TRANSDUCER READING WAS A PREDICTION AND IT HELD.** The previous
+section inferred it from three identical numbers; this tests it by removing the
+thing in question. 12 neurons, severed, threshold 4:
+
+    conn_density   enteric Hz   r(ent,hunger)      asleep %
+    0.60            49.21        +0.450 +/- 0.063   13.0
+    0.08            48.91        +0.450 +/- 0.063   13.2
+    0.00            48.79        +0.450 +/- 0.063   13.2
+
+**WITH NO RECURRENT CONNECTIONS AT ALL, NOTHING MEASURABLE CHANGES** — not the
+rate, not the fidelity, not the cost — and a 7.5x denser web changes nothing
+either. **The module's internal connectivity is decorative.** It is a bag of
+independent cells, each the same deterministic function of the drive injected
+into it.
+
+**SO §83's ANSWER TO "ADD A SECOND BRAIN AS HUMANS HAVE" IS AN HONEST NO, WITH AN
+ORGAN TO SHOW FOR IT.** What exists, measured rather than asserted:
+
+    exists, off by default, shipped creature provably inert     YES
+    senses its own interior (+0.450 at n=24, 7.0 SE detrended)  YES
+    autonomous under disconnection (Furness's criterion)        YES, on local sensors alone
+    affordable (12 neurons: 1.7 points of waking life)          YES
+    pacemaking (0.00 Hz without the drives)                     NO
+    tells the first brain anything it did not know              NO, 1.4-1.8 SE at n=24
+    computes anything                                           NO, recurrence is flat
+
+**AND THE LAST ROW IS NOT A §83 FAILURE. IT IS A LIMIT THIS PROJECT HAD ALREADY
+MEASURED.** `DnaModule`'s own note records `seqprobe`: the intra-module wiring
+**cannot carry a kick forward for even 10 ms** — r = 0.92 at the bin, 0.03 one bin
+later, **at every weight up to eight times the shipped one.** A module whose
+output depends on its own recent history is a thing this architecture has been
+shown not to support, long before an enteric module existed. **§83 did not fail to
+give the second brain internal dynamics; it inherited an architecture in which no
+module has them.**
+
+**WHAT WOULD HAVE TO CHANGE, STATED SO NOBODY RE-RUNS §83 EXPECTING MORE.** A
+second brain in the sense the word promises needs a module whose state persists —
+and that is the synfire/chain/persistence line, which this project closed: "a
+chain as a CREDIT CLOCK is DEAD — DO NOT BUILD IT", the rhythm line's terminus,
+and `seqprobe`'s measurement above. **The second brain is blocked behind a closed
+line, not behind a missing tuning pass.** The affordable 12-neuron interoceptive
+organ is real, cheap and available; **calling it a brain would be the one claim
+§83 has no measurement for.**
