@@ -21050,3 +21050,50 @@ sleep would be free by this creature's own accounting — and that is a strange
 organ for hunger, which matters most while awake. **The cheap place and the
 useful place are different places, which is the §83 result stated at its
 sharpest.**
+
+## §83 SIZE IS FREE TO CUT — A TENTH OF THE MODULE, THE SAME SIGNAL, ALMOST NONE OF THE TAX (2026-11-21)
+
+**PREDICTED FROM THE COST FORMULA BEFORE THE RUN.** `activity = spike_count /
+live_neurons`, so the fatigue tax scales with the module's SIZE times its RATE.
+But the interoceptive signal is a **shared drive injected into every neuron of a
+slice**, so more neurons only average the same thing. **The tax should scale with
+size and the signal should not.** Rate had been swept four times; size never.
+
+    neurons   enteric Hz   fell asleep   asleep %   r(ent,hunger) detrended
+    120        48.94        432.7 s       34.5       +0.450 +/- 0.063
+     40        47.65        671.4 s       23.0       +0.450 +/- 0.063
+     12        48.91        881.6 s       13.2       +0.450 +/- 0.063
+    (shipped, no module)   1040.0 s       11.5       —
+
+**A TENTH OF THE MODULE KEEPS ALL OF THE SIGNAL AND SHEDS NINE TENTHS OF THE
+COST.** Fidelity is identical to three decimals at every size while the tax falls
+from **23 percentage points of waking life to 1.7** — 13.2% asleep against the
+shipped creature's 11.5%. **This is the three-way trade resolved, and it was
+resolved on the one axis nobody had touched.** The reference configuration should
+be 12 neurons, not 120.
+
+**AND THE IDENTICAL NUMBERS ARE A FINDING, NOT A COINCIDENCE.** The same mean AND
+the same SE to three decimals, across three different module sizes with three
+different wiring draws, says the readout does not depend on the module's wiring
+at all: **every neuron of the hunger slice receives the same injected drive, and
+with `noise_amp` 0 and no homeostasis each is the same deterministic function of
+it, so the slice's rate is the single-neuron response however many neurons
+average it.** The second brain is a **pure feedforward transducer** — it has no
+internal computation, and its recurrent connections contribute nothing to what it
+reports. A run with the recurrence removed entirely is in flight to confirm that
+by prediction rather than by inference.
+
+**WHICH IS DEFLATING IN THE RIGHT WAY.** §83 set out to build something that
+would deserve the word "brain", and the honest reading of this table is that what
+exists is an **organ**: it senses, it reports, it costs almost nothing at the
+right size, and it computes nothing. Furness's autonomy criterion is satisfied by
+local sensors alone, and the measurement that would have distinguished a second
+brain from a transducer — recurrence contributing to the readout — comes back
+flat.
+
+**THE CONNECTION TO WHAT A SPIKE COSTS.** Lennie (2003) puts the ceiling on
+concurrently active cortical neurons at possibly under 1%. The 120-neuron module
+was about 11% of this creature firing eight times faster than `central`; the
+12-neuron version is about 1%. **The affordable configuration is the one the
+energy literature would have predicted, and this project found it by measuring
+sleep.**
