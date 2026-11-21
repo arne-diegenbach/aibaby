@@ -20671,3 +20671,63 @@ balanced pattern toward zero, a signed one preserves it, and `projprobe` measure
 `source = "either"`, all-positive, and routing it through an interneuron relay is
 the untried arm with a reason to work.** It is also a bigger build than anything
 in §83 so far, and it is not started.
+
+## §82 STAGE 1 RE-POWERED, RESULT — NO VERDICT ON 352 CREATURES, AND THE BOUND IS NOW TIGHT (2026-11-21)
+
+RUN: `results/n83-sleepdecaylong-352-1600k.log`, `sleepdecaylong --ticks
+1600000 --verbose`, shipped genome, `dream` pinned 0, **352 creatures, seeds
+48-399, DISJOINT from the pilot's 0-47**, 15551.53 s = **4.32 h against the 4.2 h
+registered, +3%.**
+
+    G-BOUTS  bouts per creature: 0 -> 0, 1 -> 352, 2 -> 0, 3+ -> 0
+    refused: 0 for bout count, 0 for window or class balance, 0 failed to run
+    window N per creature: 61 to 69 probes a side
+
+    before the bout   +0.2380   SD 0.7149
+    after the bout    +0.1811   SD 0.6099
+    post - pre        -0.0569 +/- 0.0516 SE = -1.1 SE   (paired)
+    paired SD          0.9690
+    smallest difference this n could have read: +/-0.1033 d'^2
+
+    NO VERDICT
+
+**EVERY GUARD HELD AT 7.3x THE PILOT'S n. All 352 creatures slept exactly once,
+not one refusal of any kind**, and the matched windows came out 61-69 probes a
+side. The boundary-from-slept-probes design needed no adjustment at this scale.
+
+**THE PILOT'S ESTIMATE WAS 2.4x TOO BIG, WHICH IS WHAT A 1.0 SE ESTIMATE DOES.**
+Pilot: -0.1365 +/- 0.1321. This run: **-0.0569 +/- 0.0516.** The registration
+said in advance that "if the truth is half that size this n will return NO
+VERDICT again" — the truth came in at 42% of it, and that is exactly what
+happened. **This is the clearest case this project has of why a marginal pilot
+estimate may not be quoted as an effect size.**
+
+**THE SD PROJECTION CAME IN LOW AGAIN: 0.9690 against the pilot's 0.9152, +5.9%.**
+Small this time, and in the same direction as every other SD projection here.
+
+**THE BOUND.** |post - pre| **< 0.103 d'^2** at n = 352, with a best estimate of
+-0.057, which is 24% of the pre-sleep separation of 0.238. **So if this creature's
+vowel separation deteriorates across sleep at all, the deterioration is under a
+tenth of a d'^2** — and the birdsong transfer, which predicted a pronounced
+overnight drop, does not appear at this resolution.
+
+**DESCRIPTIVE ONLY, AS THE REGISTRATION ALLOWS: the two disjoint samples agree in
+sign and in marginality** — -1.0 SE on 48 creatures and -1.1 SE on 352 — and an
+inverse-variance pooled estimate is **-0.0674 +/- 0.0481 = -1.4 SE.** **That is
+reported and NOT tested**, per the registration: the seeds were made disjoint so
+that pooling would be legitimate to describe, and the 2-SE bar belongs to each
+run on its own. Two samples pointing the same way at 1.1 SE each is suggestive
+and is not a result.
+
+**WHAT CHASING IT WOULD COST, FROM THE MEASURED SD.** To put the observed -0.0569
+at 2 SE needs **1160 creatures, 13.7 h**; at 80% power, **2274 creatures,
+26.8 h.** That is the price of converting a suggestion into a verdict, and it is
+the owner's call rather than mine.
+
+**AND IT STILL SAYS NOTHING ABOUT DREAMING.** `dream` was pinned at 0 on all 352
+creatures. Stage 2 — does a dream reduce the deterioration — was registered "only
+if stage 1 fires", and **stage 1 has now failed to fire twice, on disjoint
+samples, with a bound of 0.103.** On the registration's own terms the dream arm
+remains unlicensed, and the honest reading is that **the deterioration this line
+was built to explain may be too small in this creature to be the thing worth
+explaining.**
