@@ -20624,3 +20624,50 @@ above only concentrated half of it. Then the signed afferent through the existin
 `kInterneuron` relay, which this project built for precisely this problem on
 `central -> vocal`: a balanced projection moves signal without moving the mean.
 **Neither is built.**
+
+### §83 SPARSE ON BOTH LIMBS — THE RATIO IMPROVES 1.9x AND NO SETTING DELIVERS SIGNAL CHEAPLY (2026-11-21)
+
+Both limbs sparsified together, `density x weight` held at 0.03:
+
+    density   weight   central Hz   enteric Hz   signal margin
+    0.10      0.30     22.41        75.66        +0.601 +/- 0.148 = 4.0 SE
+    0.05      0.60     21.30        75.22        +0.582 +/- 0.169 = 3.4 SE
+    0.02      1.50     13.76        50.83        +0.411 +/- 0.190 = 2.2 SE
+    0.01      3.00     10.96        49.26        +0.356 +/- 0.175 = 2.0 SE
+
+**UNLIKE THE ASCENDING-ONLY CASE, SIGNAL AND RATE FALL TOGETHER HERE** — 4.0 SE
+to 2.0 SE as central drops 22.41 to 10.96 Hz. So sparsifying the whole loop does
+not simply make it cheaper; it makes it quieter in both senses. **The honest
+comparison is signal per unit of disturbance**, against `central`'s 6.81 target:
+
+    arm              central Hz   excess   signal   SE per Hz of excess
+    both 0.10/0.30   22.41        15.60    4.0 SE   0.256
+    both 0.05/0.60   21.30        14.49    3.4 SE   0.235
+    both 0.02/1.50   13.76         6.95    2.2 SE   0.317
+    both 0.01/3.00   10.96         4.15    2.0 SE   0.482   <- the best ratio
+    asc  0.10/0.30   19.95        13.14    1.5 SE   0.114
+    asc  0.01/3.00   11.24         4.43    1.7 SE   0.384
+
+**The ratio improves 1.9x across the sparse-both sweep (0.256 -> 0.482) and 3.4x
+against the worst arm**, so concentration does pay — just not by holding the
+signal fixed. **And no setting tested delivers more than ~2 SE while keeping
+`central` inside 61% of its target.** The trade is real and it is quantitative in
+both directions now.
+
+**THE DENSE LOOP HAS GAIN, AND IT INFLATES THE SECOND BRAIN TOO.** The enteric
+module runs at **75.66 Hz** with dense limbs against **49.26 Hz** with sparse
+ones — the same module, the same interoceptive drive, differing only in how
+strongly it is coupled to `central`. A recurrent two-module loop amplifies both
+ends, which is worth having on record before anyone reads an enteric rate as a
+property of the second brain alone: **it is a property of the loop it sits in.**
+
+**WHAT THIS LEAVES, AND IT IS THE OPTION THE PROJECT ALREADY BUILT.** Every arm
+so far moves signal by moving CURRENT, and `central`'s rate is a population mean,
+so current moves the mean. **A SIGNED projection moves signal WITHOUT moving the
+mean** — which is exactly the argument `kInterneuron` exists for in this genome,
+written up for `central -> vocal`: an all-positive random projection averages a
+balanced pattern toward zero, a signed one preserves it, and `projprobe` measured
+0.560 -> 0.680 on three of three seeds. **The enteric afferent is currently
+`source = "either"`, all-positive, and routing it through an interneuron relay is
+the untried arm with a reason to work.** It is also a bigger build than anything
+in §83 so far, and it is not started.
