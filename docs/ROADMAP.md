@@ -20168,3 +20168,50 @@ bound. The deterioration it was predicted to reduce is **unmeasured**, with a
 1-SE hint in the predicted direction and a four-hour price on reading it
 properly. **Nothing here is a license to ship `dream`, and nothing here refutes
 it either.**
+
+### §82 STAGE 1 RE-POWERED — REGISTERED, AND IT IS STAGE 1 AND NOT STAGE 2 (2026-11-21)
+
+**STAGE 2 IS NOT LICENSED AND THIS IS NOT IT.** The design registered stage 2 —
+does `dream = 2` reduce the deterioration — **"only if stage 1 fires"**. Stage 1
+returned **NO VERDICT at 1.0 SE**. So the dream arm is not licensed, and the
+question still open is the pilot's own: **does this creature's vowel separation
+deteriorate across a sleep bout at all?**
+
+**THE COMMAND:** `./build/aibaby --experiment sleepdecaylong --ticks 1600000
+--verbose`, shipped genome, `dream` pinned 0, **352 creatures**, ~4.2 h at the
+measured 42.4 s per creature-unit. Run from a COPY of the binary so `build/` stays
+free for other work; the copy is the same bytes.
+
+**THE SEEDS ARE DISJOINT FROM THE PILOT'S AND THAT IS THE POINT.** Seeds are
+`base_seed + r * 7919`, so re-running from r = 0 would re-test the very 48
+creatures whose spread chose n = 352. **This run uses r = 48 to 399, and the
+instrument prints the range.** Sizing on a pilot is legitimate; sizing on a pilot
+and then including it in the test is the discovery-sample trap this project
+already has a rule about.
+
+**THE SIZING, STATED WITH ITS ASSUMPTION.** 352 gives 80% power against the
+pilot's point estimate of **-0.1365 d'^2** at the pilot's measured paired SD of
+**0.9152**. Both numbers come from `results/n82-sleepdecay-48-1600k.log`. **The
+-0.1365 is NOT an established effect** — it was 1.0 SE — so this is a run sized on
+a plausible effect, not a confirmation of one, and if the truth is half that size
+this n will return NO VERDICT again. **Given today's record, assume the SD comes
+in high: it has every time** (the arm's came in 29% over a 50%-inflated
+projection), so the achieved power will likely be under 80%.
+
+**THE READING, UNCHANGED FROM THE PILOT AND TWO-TAILED.**
+
+    post - pre clears -2 SE   -> the separation DETERIORATES across sleep, and the
+                                 birdsong finding transfers to a creature with no
+                                 birdsong in it
+    clears +2 SE              -> it IMPROVES across sleep, refuting the transfer
+    neither                   -> NO VERDICT, and the instrument prints what this n
+                                 could have seen
+
+**WHAT MAY NOT BE DONE WITH THE RESULT.** The pilot and this run may **NOT** be
+pooled to find significance — that is a verdict fitted to data, and it is why the
+seeds are disjoint rather than overlapping. The two runs may be COMPARED, and a
+pooled estimate may be REPORTED as descriptive, labelled as such.
+
+**AND IT STILL SAYS NOTHING ABOUT DREAMING.** `dream` is pinned at 0 on every
+creature. This measures the SHIPPED creature's behaviour across its own sleep.
+Whether a dream changes it is stage 2, and stage 2 needs this to fire first.

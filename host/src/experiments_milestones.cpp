@@ -2266,16 +2266,23 @@ bool run_dreamsmoke(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 // obviously the good direction, and an improvement across sleep would be a real
 // finding here rather than a failure — §62 says sleep is where this creature's
 // performance falls off.
-bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+bool run_sleepdecay_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                         uint32_t first, uint32_t count, const char* probe) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
   const double dt = double(dna.header().sim.dt_ms);
   const uint64_t base_seed = dna.header().seed;
-  constexpr uint32_t kDecayReplicates = 48;
+  const uint32_t kDecayReplicates = count;
 
   std::printf("  session           %.1f s of simulated life x %u creatures x 1 arm\n",
               double(ticks) * dt / 1000.0, kDecayReplicates);
-  instrument("sleepdecay", base_seed, kDecayReplicates, "creatures, dream pinned 0");
+  // `first` is why this takes an offset at all. The 48-creature pilot measured
+  // the SD this run is sized on, and seeds are `base_seed + r * 7919`, so
+  // starting at r = 0 again would re-test the discovery sample with an n chosen
+  // from it. DISJOINT SEEDS OR THE SIZING IS CIRCULAR.
+  std::printf("  replicate indices %u to %u%s\n", first, first + count - 1,
+              first > 0 ? "  (DISJOINT from the pilot's 0-47)" : "");
+  instrument(probe, base_seed, kDecayReplicates, "creatures, dream pinned 0");
   std::printf("  the acoustic d'^2 on the N probes immediately BEFORE the sleep bout\n"
               "  against the N immediately AFTER it, N matched per creature so both\n"
               "  estimates carry the same small-sample bias. Paired, two-tailed.\n");
@@ -2293,7 +2300,7 @@ bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     std::printf("\n  %-5s %-7s %-11s %-11s %-11s %s\n", "seed", "bouts", "d'^2 pre",
                 "d'^2 post", "post-pre", "window N");
   }
-  for (uint32_t r = 0; r < kDecayReplicates; ++r) {
+  for (uint32_t r = first; r < first + kDecayReplicates; ++r) {
     std::vector<uint8_t> variant = blob;
     const uint64_t seed = base_seed + r * 7919ull;
     std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
@@ -2382,6 +2389,21 @@ bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               " imitated BETTER. Nothing here\n  measures eventual imitation, so this run"
               " cannot speak to that half.\n");
   return true;
+}
+
+// The 48-creature pilot. It measured the paired SD and returned NO VERDICT.
+bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_sleepdecay_impl(blob, ticks, verbose, 0, 48, "sleepdecay");
+}
+
+// STAGE 1 RE-POWERED, and it is stage 1 and NOT stage 2: stage 2 was registered
+// "only if stage 1 fires", stage 1 returned NO VERDICT at 1.0 SE, so the dream
+// arm is not licensed and this asks the pilot's own question with enough n to
+// answer it. 352 creatures gives 80% power against the pilot's -0.1365 at the
+// pilot's measured SD of 0.9152, and the indices start at 48 so not one creature
+// is shared with the sample that chose the number.
+bool run_sleepdecaylong(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return run_sleepdecay_impl(blob, ticks, verbose, 48, 352, "sleepdecaylong");
 }
 
 
