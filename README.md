@@ -21889,6 +21889,30 @@ independently**: §80's shipped spike oracle (0.6115) and §78's (0.6169) being 
 the same across a genome change that moved delivered drive, which would say the spike code's
 ceiling is not set by how much drive arrives at all.
 
+### Checked 2026-11-21: where the facilitation equation comes from (§84)
+
+§84 switches on the facilitation field §81 found unused, so the papers that field rests on
+are credited here. Torres, Elices & Marro (the lead), Tsodyks & Markram (1997) and Mongillo,
+Barak & Tsodyks (2008) are already in this list.
+
+- Markram, H., Wang, Y. & Tsodyks, M. (1998). *Differential signaling via the same axon of
+  neocortical pyramidal neurons.* PNAS 95(9):5323–5328. doi:10.1073/pnas.95.9.5323 — the
+  paper that added the **utilisation** variable to the depressing synapse, which is the
+  `u <- U + u_prev (1 - U) exp(-gap / tau_f)` line in `DnaProjection`'s comment. It also
+  shows one axon **depressing onto one target and facilitating onto another**. That is why
+  the kernel keys the three numbers per module pair and not per neuron.
+- Zucker, R. S. & Regehr, W. G. (2002). *Short-term synaptic plasticity.* Annual Review of
+  Physiology 64:355–405. doi:10.1146/annurev.physiol.64.092501.114547 — the review behind
+  §84's two-tailed registration. Enhancement (facilitation, augmentation, post-tetanic
+  potentiation) comes from residual presynaptic calcium, and **depression dominates
+  enhancement at many synapses**, so adding facilitation to a depressing tract is not
+  guaranteed to raise transmission at all.
+- Abbott, L. F. & Regehr, W. G. (2004). *Synaptic computation.* Nature 431:796–803.
+  doi:10.1038/nature03010 — the computational framing: short-term dynamics make a synapse
+  a **filter** whose pass band depends on the presynaptic rate history. §84's question is
+  whether shifting that filter moves the vocal spike code across the 0.650 bar's
+  testability line.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
