@@ -2391,6 +2391,236 @@ bool run_sleepdecay_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool 
   return true;
 }
 
+// Its own rank correlation rather than a declaration of the `spearman` defined
+// far below: that one lives in an anonymous namespace, so declaring it here put
+// two candidates in scope at ITS call site and made that call ambiguous. A
+// self-contained helper couples nothing.
+inline double rank_corr(std::vector<double> x, std::vector<double> y) {
+  const size_t n = x.size();
+  if (n < 3 || y.size() != n) return 0.0;
+  auto to_ranks = [n](std::vector<double>& v) {
+    std::vector<size_t> idx(n);
+    for (size_t i = 0; i < n; ++i) idx[i] = i;
+    std::sort(idx.begin(), idx.end(), [&v](size_t a, size_t b) { return v[a] < v[b]; });
+    std::vector<double> r(n);
+    size_t i = 0;
+    while (i < n) {  // average ranks within a tie group, or ties bias the result
+      size_t j = i;
+      while (j + 1 < n && v[idx[j + 1]] == v[idx[i]]) ++j;
+      const double mean_rank = 0.5 * (double(i) + double(j)) + 1.0;
+      for (size_t k = i; k <= j; ++k) r[idx[k]] = mean_rank;
+      i = j + 1;
+    }
+    v = r;
+  };
+  to_ranks(x);
+  to_ranks(y);
+  double mx = 0.0, my = 0.0;
+  for (size_t i = 0; i < n; ++i) { mx += x[i]; my += y[i]; }
+  mx /= double(n);
+  my /= double(n);
+  double sxy = 0.0, sxx = 0.0, syy = 0.0;
+  for (size_t i = 0; i < n; ++i) {
+    const double a = x[i] - mx, b = y[i] - my;
+    sxy += a * b;
+    sxx += a * a;
+    syy += b * b;
+  }
+  if (sxx <= 0.0 || syy <= 0.0) return 0.0;
+  return sxy / std::sqrt(sxx * syy);
+}
+
+// §83 G-INTERO. Does the second brain's rate track the creature's INTERIOR, or
+// merely the clock? Stage A showed the module reads 0.00 Hz without the drives,
+// so its activity is interoceptive in ORIGIN; that is a different claim from its
+// rate carrying the interior's moment-to-moment state, which is what a sense
+// organ has to do.
+//
+// THE IDENTIFICATION PROBLEM, AND WHY THIS PROBE FEEDS THE CREATURE. Hunger
+// only rises on its own, so in any ordinary session hunger IS the clock and
+// "tracks hunger" cannot be told from "tracks time". `Brain::feed` lowers it,
+// so this probe feeds at random intervals and makes hunger a sawtooth. The gate
+// on that is MEASURED and printed, not assumed: if hunger still correlates with
+// time at 0.9 or above, the primary is unidentifiable and the run says so.
+//
+// THE NULL IS A CIRCULAR SHIFT AND NOT A SHUFFLE. Both series are heavily
+// autocorrelated — a firing rate is a one-second EMA and hunger is a slow drift
+// — so shuffling one of them destroys that structure and produces a floor far
+// below the honest one. A half-length circular shift keeps each series' own
+// autocorrelation and destroys only the PAIRING, which is the thing being
+// tested.
+bool run_interoprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const double dt = double(dna.header().sim.dt_ms);
+  const uint64_t base_seed = dna.header().seed;
+  constexpr uint32_t kCreatures = 6;
+  constexpr uint64_t kSampleEvery = 500;
+  const int32_t central_role = dna.module_with_role(aibaby::ModuleRole::kAssociation);
+
+  std::printf("  session           %.1f s of simulated life x %u creatures\n",
+              double(ticks) * dt / 1000.0, kCreatures);
+  instrument("interoprobe", base_seed, kCreatures, "creatures, one arm");
+  std::printf("  the creature is FED at random intervals, which is the only way hunger\n"
+              "  stops being the clock. r(hunger, time) is printed as the gate: near 1\n"
+              "  and nothing below is identifiable.\n");
+  std::printf("\n  %-5s %-10s %-11s %-11s %-11s %s\n", "seed", "ent Hz", "r(ent,hun)",
+              "r(ent,time)", "r(cen,hun)", "r(hun,time)");
+
+  std::vector<double> prim, ent_time, cen_h, gate, null_shift, ent_mean, mixr;
+  bool any_enteric = false;
+  for (uint32_t c = 0; c < kCreatures; ++c) {
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = base_seed + c * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    std::string error;
+    Session s;
+    if (!s.init(variant, error)) {
+      std::printf("  seed %u failed to hatch: %s\n", c, error.c_str());
+      return false;
+    }
+    const bool has_ent = s.brain.has_enteric();
+    any_enteric = any_enteric || has_ent;
+    const uint32_t ent_m = has_ent ? s.brain.enteric_module() : 0u;
+    aibaby::Rng rng;
+    rng.seed(seed ^ 0x5EC0u);
+    std::vector<double> hunger, ent_rate, cen_rate, clock, ent_mod_mean;
+    uint64_t hunger_slice_spikes = 0;
+    uint32_t hunger_slice_n = 0;
+    for (uint64_t t = 0; t < ticks; ++t) {
+      // ~ one feed every 12 s of simulated life, at a random size. Irregular on
+      // purpose: a fixed cadence would put a period into hunger and the probe
+      // would be measuring that instead.
+      if ((rng.next() % 12000u) == 0u) {
+        s.brain.feed(aibaby::Scalar(0.1) +
+                     aibaby::Scalar(double(rng.next() % 1000u) / 1000.0) * aibaby::Scalar(0.4));
+      }
+      s.brain.step();
+      // THE HUNGER SLICE, NOT THE MODULE MEAN. The first version of this probe
+      // read `module(ent_m).mean_rate` and found the rate tracking hunger
+      // INVERSELY at 4.0 SE. That was a mixture artefact of my own making:
+      // `Brain::feed` lowers hunger AND raises comfort, the module mean averages
+      // all three slices, so the comfort slice moves opposite the hunger one at
+      // every feed and the mean follows comfort. The primary has to be read on
+      // the slice the drive is injected into.
+      if (has_ent) {
+        const aibaby::ModuleState& ems = s.brain.network().module(ent_m);
+        if (ems.count >= 3) {
+          const uint32_t hb = ems.begin + aibaby::slice_begin(ems.count, 3, 0);
+          const uint32_t he = ems.begin + aibaby::slice_begin(ems.count, 3, 1);
+          const aibaby::Network& net = s.brain.network();
+          for (uint32_t k = 0; k < net.spike_count(); ++k) {
+            const uint32_t i = net.spikes()[k];
+            if (i >= hb && i < he) ++hunger_slice_spikes;
+          }
+          hunger_slice_n = he - hb;
+        }
+      }
+      if (t % kSampleEvery == 0) {
+        hunger.push_back(double(s.brain.drives().hunger));
+        clock.push_back(double(t));
+        // Hz per neuron over the window just closed.
+        const double window_ms = double(kSampleEvery) * dt;
+        ent_rate.push_back(hunger_slice_n > 0
+                               ? double(hunger_slice_spikes) * 1000.0 /
+                                     (window_ms * double(hunger_slice_n))
+                               : 0.0);
+        hunger_slice_spikes = 0;
+        ent_mod_mean.push_back(has_ent ? double(s.brain.network().module(ent_m).mean_rate)
+                                       : 0.0);
+        cen_rate.push_back(central_role >= 0
+                               ? double(s.brain.network().module(uint32_t(central_role)).mean_rate)
+                               : 0.0);
+      }
+    }
+    if (hunger.size() < 20) {
+      std::printf("  only %zu samples; --ticks %llu is too short\n", hunger.size(),
+                  (unsigned long long)ticks);
+      return false;
+    }
+    std::vector<double> shifted(hunger.size());
+    const size_t half = hunger.size() / 2;
+    for (size_t i = 0; i < hunger.size(); ++i) shifted[i] = hunger[(i + half) % hunger.size()];
+    const double r_eh = rank_corr(ent_rate, hunger);
+    const double r_et = rank_corr(ent_rate, clock);
+    const double r_ch = rank_corr(cen_rate, hunger);
+    const double r_ht = rank_corr(hunger, clock);
+    const double r_es = rank_corr(ent_rate, shifted);
+    double m = 0.0;
+    for (double v : ent_rate) m += v;
+    m /= double(ent_rate.size());
+    double mm = 0.0;
+    for (double v : ent_mod_mean) mm += v;
+    mm /= double(ent_mod_mean.empty() ? 1 : ent_mod_mean.size());
+    // Kept and printed because it is what the first version read as the primary,
+    // and the two disagreeing is the finding rather than a nuisance.
+    const double r_mix = rank_corr(ent_mod_mean, hunger);
+    prim.push_back(r_eh);
+    ent_time.push_back(r_et);
+    cen_h.push_back(r_ch);
+    gate.push_back(r_ht);
+    null_shift.push_back(r_es);
+    ent_mean.push_back(m);
+    mixr.push_back(r_mix);
+    if (verbose || kCreatures <= 8) {
+      std::printf("  %-5u %-10.2f %+-11.3f %+-11.3f %+-11.3f %+.3f\n", c, m, r_eh, r_et,
+                  r_ch, r_ht);
+    }
+  }
+
+  auto stat = [](const std::vector<double>& v, double& mean, double& se) {
+    mean = 0.0;
+    se = 0.0;
+    for (double x : v) mean += x;
+    mean /= double(v.size());
+    if (v.size() < 2) return;
+    double ss = 0.0;
+    for (double x : v) ss += (x - mean) * (x - mean);
+    se = std::sqrt(ss / double(v.size() - 1) / double(v.size()));
+  };
+  double pm, ps, tm, ts, cm, cs, gm, gs, nm, ns, em, es, xm, xs;
+  stat(prim, pm, ps);
+  stat(ent_time, tm, ts);
+  stat(cen_h, cm, cs);
+  stat(gate, gm, gs);
+  stat(null_shift, nm, ns);
+  stat(ent_mean, em, es);
+  stat(mixr, xm, xs);
+
+  std::printf("\n  over %u creatures, Spearman, mean +/- SE\n", kCreatures);
+  std::printf("    r(hunger, time)       %+.3f +/- %.3f   <- THE GATE\n", gm, gs);
+  std::printf("    r(enteric, hunger)    %+.3f +/- %.3f   <- the primary\n", pm, ps);
+  std::printf("    r(enteric, time)      %+.3f +/- %.3f\n", tm, ts);
+  std::printf("    r(enteric, hunger/2)  %+.3f +/- %.3f   <- the circular-shift null\n", nm,
+              ns);
+  std::printf("    r(central, hunger)    %+.3f +/- %.3f   <- does it reach brain one?\n", cm,
+              cs);
+  std::printf("    enteric rate          %.2f +/- %.2f Hz\n", em, es);
+
+  if (!any_enteric) {
+    std::printf("\n  NO ENTERIC MODULE in this genome, so every enteric row above is a\n"
+                "  structural zero. That is the control, not a failure.\n");
+    return true;
+  }
+  const bool identified = std::fabs(gm) < 0.9;
+  std::printf("\n  G-SAWTOOTH %s — |r(hunger, time)| = %.3f against a 0.9 bar.%s\n",
+              identified ? "PASS" : "FAIL", std::fabs(gm),
+              identified ? "" : " NOTHING BELOW IS IDENTIFIABLE.");
+  if (!identified) return false;
+  // Two-tailed, and read against the SHIFT null rather than against zero: a
+  // Spearman between two autocorrelated series is not centred on zero at this
+  // sample size, which is the same lesson the d' instrument teaches one floor up.
+  const double margin = pm - nm;
+  const double margin_se = std::sqrt(ps * ps + ns * ns);
+  const char* verdict = margin > 2.0 * margin_se   ? "TRACKS the interior"
+                        : margin < -2.0 * margin_se ? "TRACKS IT INVERSELY"
+                                                    : "NO VERDICT";
+  std::printf("  G-INTERO: primary minus null %+.3f +/- %.3f = %.1f SE   %s\n", margin,
+              margin_se, margin_se > 0.0 ? margin / margin_se : 0.0, verdict);
+  std::printf("  smallest difference this n could have read: +/-%.3f\n", 2.0 * margin_se);
+  return true;
+}
+
 // The 48-creature pilot. It measured the paired SD and returned NO VERDICT.
 bool run_sleepdecay(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   return run_sleepdecay_impl(blob, ticks, verbose, 0, 48, "sleepdecay");

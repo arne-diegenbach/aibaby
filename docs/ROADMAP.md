@@ -20445,3 +20445,64 @@ specification: interstitial cells of Cajal in a syncytium with smooth muscle,
 generating slow waves and transducing motor input. **It is not built, and stage A
 does not need it** — autonomy under disconnection already holds, on local sensors.
 It is what the module would need to be a pacemaking organ rather than a driven one.
+
+### §83 G-INTERO — IT TRACKS THE INTERIOR, MARGINALLY, AND MY FIRST PRIMARY HAD THE SIGN BACKWARDS (2026-11-21)
+
+**NEW INSTRUMENT `interoprobe`, 6 creatures, 300000 ticks, Tier::kFast.** It
+feeds the creature at random intervals, samples every 500 ticks, and correlates
+the second brain's rate against hunger with a rank correlation.
+
+**WHY IT FEEDS: WITHOUT FEEDING, HUNGER IS THE CLOCK.** Hunger only rises on its
+own, so "tracks hunger" and "tracks time" are the same hypothesis in any ordinary
+session. `Brain::feed` lowers it, so the probe feeds at random intervals and
+**prints the gate rather than assuming it**: `r(hunger, time) = -0.226`, against a
+0.9 bar. **G-SAWTOOTH PASS**, and the primary is identifiable.
+
+**MY FIRST PRIMARY WAS A MIXTURE AND IT REPORTED THE OPPOSITE SIGN AT 4.0 SE.**
+Version one read `module(enteric).mean_rate` and found the rate tracking hunger
+**inversely**, 4.0 SE, in both arms. That was my own artefact: **`Brain::feed`
+lowers hunger AND raises comfort**, the module mean averages all three slices, so
+the comfort slice moves against the hunger one at every feed and the mean follows
+comfort. **The primary has to be read on the slice the drive is injected into.**
+
+    read on                      severed            intact
+    HUNGER SLICE (the primary)   +0.233 +/- 0.091   +0.228 +/- 0.094
+    circular-shift null          -0.039 +/- 0.084   -0.044 +/- 0.083
+    G-INTERO, primary - null     +0.272 +/- 0.124   +0.272 +/- 0.125  = 2.2 SE
+    module MEAN (version one)    -0.26              -0.26
+    smallest readable here       +/-0.247           +/-0.250
+
+**G-INTERO PASSES AND IT PASSES THINLY.** 2.2 SE at n = 6, with the effect
+(+0.272) barely over what this n could read (+/-0.247). **It should not be leaned
+on before a larger n**, and the sign is the part worth keeping: read correctly,
+the second brain's hunger slice tracks hunger, and this is not a free-running
+oscillator with a gut-themed name.
+
+**A CONFOUND I AM NAMING RATHER THAN CLEARING.** `r(enteric, time) = +0.578` is
+LARGER than `r(enteric, hunger) = +0.233`: the slice's rate drifts upward across
+the session, almost certainly the homeostat ramping excitability, and hunger
+carries its own time trend of -0.226. **A circular shift destroys the pairing and
+keeps each series' autocorrelation, which is why the null sits at -0.04 rather
+than inflated — but it only partly controls a SHARED TREND.** The clean fix is to
+detrend both series against time and correlate the residuals. **Not done, and the
+2.2 SE should be read as provisional until it is.**
+
+**THE REWARD CHANNEL IS NOT HOW HUNGER REACHES THE FIRST BRAIN.** The shipped
+creature — no enteric module at all — already shows `r(central, hunger) = -0.361
++/- 0.016`. I guessed the route was the hunger reward channel and tested it by
+zeroing `central`'s `nm_hunger`: **-0.361, unchanged to three decimals.** So that
+guess is refuted. The likely route is TOUCH — `Brain::feed` calls
+`touch_.trigger(TouchAction::kFeed)`, which drives `somato -> central` on exactly
+the ticks hunger drops — and **that is untested.** It matters because §83's design
+said the brain "never perceives" its drives: **it does, through a path nobody had
+measured, and the second brain adds a SPIKING route beside an existing one rather
+than a first one.**
+
+**AND THE AFFERENT CARRIES NOTHING MEASURABLE AT ITS CALIBRATED WEIGHT.**
+`r(central, hunger)` is -0.269 +/- 0.050 intact against -0.328 +/- 0.019 severed:
+a difference of +0.059 +/- 0.054, **about 1.1 SE, no verdict.** That is the
+expected cost of calibrating the afferent down to a whisper so `central` stays on
+its operating point: at `weight = 0.01` the second brain is audible to
+`calibrate`'s rate column and not to this correlation. **Making it louder would
+buy signal and saturate the first brain, which is the trade §83 now has on
+record in both directions.**

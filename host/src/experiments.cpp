@@ -542,6 +542,11 @@ const Spec kSpecs[] = {
     // the creature deteriorated: the direction is two-tailed and lives in the
     // table. kOpen would be wrong here because a run with no usable creature is
     // a genuine failure of the instrument, not an open question.
+    // §83 G-INTERO. PASS means the sawtooth gate held and a reading was formed;
+    // the DIRECTION is two-tailed and lives in the table. On a genome with no
+    // enteric module it reports structural zeros, which is the control.
+    {"interoprobe", 300000, Expect::kPass, Tier::kFast,
+     "PASS means r(hunger,time) stayed under 0.9 so the primary is identifiable"},
     {"sleepdecay", 1600000, Expect::kPass, Tier::kLong,
      "PASS means a readable paired before/after contrast on at least two"
      " creatures. The DIRECTION is two-tailed and is never read from the verdict"},
@@ -1990,6 +1995,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sleep") ok = run_sleep(dna_blob, ticks, verbose);
   else if (name == "dreamprobe") ok = run_dreamprobe(dna_blob, ticks, verbose);
   else if (name == "dreamsmoke") ok = run_dreamsmoke(dna_blob, ticks, verbose);
+  else if (name == "interoprobe") ok = run_interoprobe(dna_blob, ticks, verbose);
   else if (name == "sleepdecay") ok = run_sleepdecay(dna_blob, ticks, verbose);
   else if (name == "sleepdecaylong") ok = run_sleepdecaylong(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
