@@ -21015,3 +21015,38 @@ would make this worse, not better**, because a constantly firing organ is exactl
 what the fatigue tax punishes. The missing mechanism, if it is ever built, has to
 be *cheap*, and nothing in §83 so far suggests this architecture has a cheap
 place to put one.
+
+### §83 WHY THE DREAM WAS FREE AND THE SECOND BRAIN IS NOT — FOUR LINES OF THE KERNEL (2026-11-21)
+
+`Brain::update_drives` settles it:
+
+    if (asleep)  fatigue -= fatigue_recovery * dt;                    // RATE-based
+    else         activity  = spike_count / live_neurons;              // the network MEAN
+                 fatigue += fatigue_rate * dt * activity;             // activity-scaled
+
+**RECOVERY IS RATE-BASED AND ACCUMULATION IS ACTIVITY-SCALED, SO WHERE A
+MECHANISM'S SPIKES SIT IN THE SLEEP/WAKE CYCLE DECIDES WHETHER IT IS FREE.**
+
+- **DNA v85's dream fires only while ASLEEP.** Sleep recovery does not look at
+  activity, so the dream costs nothing: §82's liveness runs read **1040.0 s,
+  11.5% asleep, 2 transitions on all three dream modes**, identical.
+- **The enteric module fires AWAKE TOO**, and `activity` is the network's MEAN
+  per-neuron rate, so 120 neurons at 48.94 Hz raise it from about 0.0060 to
+  0.0102 — **x1.70** — predicting sleep at roughly 1040/1.70 = **613 s** against
+  **432.7 s measured.** Same order and stronger than the arithmetic, which uses a
+  crude baseline rate, so the mechanism accounts for the effect.
+
+**THE GENERAL RULE, AND IT PRICES EVERY FUTURE MECHANISM IN THIS CREATURE: a
+population that spikes while the creature is awake pays a GLOBAL fatigue tax
+proportional to how much it raises the network's mean rate, and a population that
+spikes only while it sleeps pays nothing.** Nothing in this project had priced a
+new module that way before, and it is why §83's organ is expensive while §82's
+dream — which adds the larynx, the ear and a running decoder during sleep — is
+free.
+
+**IT ALSO SAYS WHERE A SECOND BRAIN COULD BE AFFORDABLE.** Not quieter, which
+costs its signal: **asleep.** An interoceptive organ that reports only during
+sleep would be free by this creature's own accounting — and that is a strange
+organ for hunger, which matters most while awake. **The cheap place and the
+useful place are different places, which is the §83 result stated at its
+sharpest.**
