@@ -2121,6 +2121,19 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
                 (unsigned long long)hash, (unsigned long long)kPinnedHash);
   } else {
     std::printf("  hash              %016llx  as recorded\n", (unsigned long long)hash);
+    // §83. What this hash CANNOT see, said here because a PASS reads as
+    // reassurance and on some genomes it is vacuous. It is taken at 120000
+    // ticks and this creature's first sleep is near 1040000, so the hashed run
+    // never sleeps: ANY MECHANISM GATED ON SLEEP IS INVISIBLE TO IT. DNA v85's
+    // dream is exactly that, and a dream genome matches this constant
+    // bit-for-bit while demonstrably changing the creature — voicing asleep
+    // goes from 0.0% to 31.5% of motor frames. A moved hash means waking
+    // behaviour changed; an unmoved one does not mean nothing did.
+    std::printf("                    BLIND TO SLEEP-GATED MECHANISMS: taken at"
+                " 120000 ticks,\n"
+                "                    and first sleep is near 1040000, so the hashed run\n"
+                "                    never sleeps. An unmoved hash does not mean nothing"
+                " changed.\n");
   }
 
   uint32_t passed = 0, failed = 0, open = 0, read_ok = 0, guards = 0;
@@ -2203,9 +2216,14 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   // came on. No Expect value encodes an expectation that depends on the genome,
   // so the suite says out loud which genome its expectations are relative to.
   if (guards) {
+    // §83. This line used to name `dna/default.toml` even when `--dna` had
+    // pointed somewhere else, which is the one misreading the line exists to
+    // prevent. The path is not available here — `run_verify` takes a blob — so
+    // it names no file rather than naming the wrong one.
     std::printf("  guards            %u refused as expected — AND THAT EXPECTATION IS\n"
-                "                    RELATIVE TO THE GENOME YOU RAN (default\n"
-                "                    dna/default.toml). Most of them refuse only\n"
+                "                    RELATIVE TO THE GENOME YOU RAN, WHICH THIS LINE\n"
+                "                    CANNOT NAME. On the shipped genome most of them\n"
+                "                    refuse only\n"
                 "                    because it has no kContext module; on a context\n"
                 "                    genome (tools/genome_add_context.py) they measure,\n"
                 "                    and every one will then read \"got PASS — the\n"
