@@ -20948,3 +20948,70 @@ giving the first brain a reason to care** — every readout here asks whether th
 interior is legible, and none asks whether anything downstream uses it. That is a
 functional claim, it needs its own registration, and §44-§60 forbids the obvious
 form of it.
+
+## §83 THE SECOND BRAIN COSTS THE CREATURE A THIRD OF ITS WAKING LIFE, AND THE CAUSE IS ITS RESTING RATE (2026-11-21)
+
+**REGISTERED BEFORE THE RUN:** a louder afferent raises `central`'s rate,
+`fatigue_rate` is activity-scaled — the genome says so in its own comment,
+*"scaled by activity, so a busy brain tires first"* — so sleep should come
+EARLIER. **Two-tailed, because it is a derived sign.** The prediction was right
+about the direction and wrong about the size, and wrong about where the effect
+comes from.
+
+    arm                      fell asleep   asleep %   transitions   vocalising awake
+    shipped, no 2nd brain     1040.0 s      11.5        2             44.3%
+    severed (both limbs 0)     432.7 s      34.5        6             48.8%
+    whisper (0.01)             430.7 s      34.5        6             48.7%
+    loud (0.30)                346.7 s      39.7        7             50.7%
+
+**THE SEVERED ARM SHOWS ALMOST THE WHOLE EFFECT, AND IT IS DISCONNECTED.** Both
+limbs at zero weight, and the creature still sleeps **2.4x earlier** and spends
+**34.5% of its life asleep against 11.5%.** The afferent adds a little on top —
+loud reaches 346.7 s — but the connection is not the cause.
+
+**THE CAUSE IS THE MODULE'S RESTING RATE, ISOLATED BY HOLDING EVERYTHING ELSE
+FIXED.** Same module count, same wiring draws, severed throughout, only the
+enteric threshold differing:
+
+    enteric thr   enteric Hz   fell asleep   asleep %   transitions
+    4             48.94         432.7 s       34.5        6
+    8             12.70         659.7 s       23.0        4
+    16             0.00        1010.4 s       11.5        2
+    40             0.00        1161.4 s       11.5        2
+    (shipped, no module at all) 1040.0 s      11.5        2
+
+**A monotone dose-response in the module's own firing rate, and a SILENT enteric
+module leaves sleep exactly where the shipped creature has it** — 1010.4 and
+1161.4 s bracketing 1040.0, 11.5% asleep in all three. So appending the module
+does not move sleep; **its SPIKING does.** That also rules out the
+appending-re-rolls-noise deviation as the explanation, which moved `somato` by
+12% and could never account for 2.4x.
+
+**SO THE SECOND BRAIN IS A TAX ON THE WHOLE CREATURE.** Fatigue is global and
+activity-scaled, so 120 neurons at 49 Hz cost **23 percentage points of waking
+life** — and §62 established that sleep is where this creature's performance
+falls off. **The organ does not merely fail to help; it takes the creature's
+waking time to run.**
+
+**AND THAT MAKES THE TRADE THREE-WAY, WITH THE NEW AXIS THE DEAREST.** Fidelity
+against `central`'s rate was already measured; now both run against the
+creature's waking life:
+
+    config                 enteric Hz   r(ent,hunger)   asleep %
+    thr 1  (best fidelity)   209.92      +0.913          not measured, worse than 34.5
+    thr 4  (reference)         48.94      +0.530          34.5
+    thr 8                      12.70      +0.532 at 54 Hz / 0.000 here   23.0
+    thr 16 (quiet)              0.00      +0.000          11.5
+
+**Quiet and informative is the combination that does not exist**, and it is the
+same wall as before: a tonically driven LIF neuron is silent or saturated, with
+almost no graded band, so there is no rate at which this module both reports
+hunger and leaves the creature awake. **That is a structural result about the
+design and not a knob left unturned.**
+
+**WHAT IT DOES TO THE PACEMAKER LEAD.** Sanders, Ward & Koh (2014) describes
+interstitial cells of Cajal generating slow waves continuously — **a pacemaker
+would make this worse, not better**, because a constantly firing organ is exactly
+what the fatigue tax punishes. The missing mechanism, if it is ever built, has to
+be *cheap*, and nothing in §83 so far suggests this architecture has a cheap
+place to put one.
