@@ -20656,6 +20656,37 @@ existing work to what this creature is: a juvenile learning to vocalise, with sl
   teaches another: it says the teaching's effect on sleep is specific to what was taught,
   which is a readout nobody here has looked for.
 
+**The second brain — the enteric nervous system, and what "a brain that keeps working when you cut it off" means for an architecture.**
+Added 2026-11-21 at the owner's request for "a first and second brain as humans have".
+**Nothing here is built.** This creature has hunger, comfort and fatigue as scalar drives
+that multiply reward, and **no neural tissue that senses them and no pathway that reports
+them** — the brain never perceives its own interior.
+
+- Gershon, M. D. (1998). *The Second Brain.* HarperCollins, New York — the book the phrase
+  comes from, by the Columbia anatomist whose work established the gut's serotonergic
+  signalling. Gershon also has a review titled *The enteric nervous system: a second brain*
+  (PMID 10418549), **cited by title and PMID because its journal and volume were not
+  verified to the standard this section uses.** The claim that matters here is not that the
+  gut is clever; it is that a second plexus with its own sensors, interneurons and effectors
+  runs its own reflexes.
+- Furness, J. B. (2012). *The enteric nervous system and neurogastroenterology.* Nature
+  Reviews Gastroenterology & Hepatology 9, 286–294.
+  <https://doi.org/10.1038/nrgastro.2012.32> — **the ENS "can control functions of the
+  intestine even when it is completely separated from the CNS"**, with 400–600 million
+  neurons in humans, more than the sympathetic and parasympathetic systems combined. And
+  the second half, which a toy model would be tempted to skip: it is **not** self-contained
+  — digestive control is local enteric reflexes, reflexes through sympathetic ganglia, **and**
+  reflexes that pass from the gut through the CNS and back. **So the testable property of a
+  second brain is AUTONOMY UNDER DISCONNECTION, not mere separateness**, and the
+  architecture needs traffic in both directions or it has modelled a detached organ instead.
+- Mayer, E. A. (2011). *Gut feelings: the emerging biology of gut–brain communication.*
+  Nature Reviews Neuroscience 12(8), 453–466. <https://doi.org/10.1038/nrn3071> — the
+  bidirectional view, and the reason an interoceptive pathway is interesting to a creature
+  that learns: visceral signals reach the brain and bias affect, arousal and decision rather
+  than only reporting digestion. **This is the half that could matter to a creature whose
+  learning is gated on reward and arousal, and it is also where a readout would have to be
+  earned rather than assumed.**
+
 **Complementary learning systems, and what a memory for intelligent speech would need.**
 
 - McClelland, J. L., McNaughton, B. L. & O'Reilly, R. C. (1995). *Why there are

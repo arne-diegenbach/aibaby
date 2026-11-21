@@ -20215,3 +20215,82 @@ pooled estimate may be REPORTED as descriptive, labelled as such.
 **AND IT STILL SAYS NOTHING ABOUT DREAMING.** `dream` is pinned at 0 on every
 creature. This measures the SHIPPED creature's behaviour across its own sleep.
 Whether a dream changes it is stage 2, and stage 2 needs this to fire first.
+
+## §83 THE SECOND BRAIN — WHAT IT WOULD HAVE TO BE TO DESERVE THE NAME (2026-11-21)
+
+**DESIGN ONLY, NOTHING BUILT.** Asked for by the owner: "add a first and second
+brain as humans have if possible". Read as the **enteric nervous system**
+(Gershon 1998), not as dual-process reasoning or two hemispheres — "as humans
+have" points at the gut, and the reading is stated here so it can be corrected
+cheaply. Literature in README.md's References under *The second brain*.
+
+**WHAT THIS CREATURE HAS, AND WHAT IT CONSPICUOUSLY LACKS.** `DnaDrives` carries
+`hunger`, `comfort` and `fatigue`. They are SCALARS computed outside the network:
+they multiply reward through `w_hunger` and `w_comfort`, they gate sleep, and
+**the brain never perceives any of them.** Nothing in `core/` or `host/` mentions
+interoception, viscera, enteric tissue or a vagal route — grep returns nothing.
+So the creature has an interior that acts on it and that it cannot sense. **That
+gap is the honest place for a second brain, and it is why this is not decoration.**
+
+**THE PROPERTY THAT MAKES IT A SECOND BRAIN IS AUTONOMY UNDER DISCONNECTION, NOT
+SEPARATENESS.** Furness (2012) is explicit: the ENS keeps controlling the
+intestine when completely severed from the CNS. **A module that merely sits in
+its own corner of the network is not a second brain, it is a module** — this
+project has eight of those. The claim has to be testable in exactly the way the
+dream's G-LIVE was: **cut the tract and the second brain keeps its own dynamics.**
+And Furness's other half is the part a toy model skips at its peril: the ENS is
+NOT self-contained, and control is local reflexes PLUS reflexes through the CNS
+and back. **Traffic both ways or it is a detached organ.**
+
+**THE DESIGN, IN THIS CREATURE'S OWN PARTS.**
+
+    1  AN ENTERIC MODULE in the Network, wired recurrently to ITSELF and to no
+       sense. Not reached by `auditory`, `vision` or `touch`.
+    2  AN INTEROCEPTIVE ENCODER, the exact analogue of the auditory one: the
+       drives (hunger first) become spike drive into that module, so the
+       interior finally has afferents.
+    3  A GATED AFFERENT to the first brain, one tract, `enteric -> central`,
+       whose gain is a genome field — because cutting it is the experiment.
+    4  SELF-SUSTAINING DYNAMICS, which is the only part that is not already a
+       solved pattern here: the module must hold activity when its afferent is
+       silent, or "autonomy under disconnection" is untestable.
+
+**OFF BY DEFAULT, AND THE INERTNESS PROOF IS NOT OPTIONAL.** DNA v85's dream took
+a spare `pad` float and `dna/default.toml` never mentioned it, so the shipped
+genome compiled to the same bytes and m3 reproduced line for line. **A second
+brain cannot do that**: a new module changes the module count, and
+`n_max RE-ROLLS THE WIRING` while `APPENDING RE-ROLLS NOISE` — both standing
+rules. **So the shipped creature must carry ZERO enteric neurons and the module
+must come into existence only when the genome asks for it**, which is how
+`has_vision_` and `has_touch_` already work. That is the first thing to verify
+and the cheapest thing to get wrong.
+
+**STAGE A — DOES IT DESERVE THE NAME? (the only stage worth registering yet)**
+
+    G-INERT      with no enteric module the creature is BYTE-IDENTICAL: m3 at
+                 1.6M reproduces its whole table.
+    G-AUTONOMY   with the `enteric -> central` gain at ZERO, the enteric module
+                 still holds a non-trivial firing rate. This is the Furness
+                 property and it is the one that earns the word "brain".
+    G-TRAFFIC    with the gain non-zero, `central`'s rate responds to the
+                 enteric module — measured as the project already measures a
+                 tract, spikes per spike.
+    G-INTERO     the enteric module's rate tracks `hunger` across the session,
+                 which is what makes it interoceptive rather than a free-running
+                 oscillator with a gut-themed name.
+
+**WHAT STAGE A MAY NOT CLAIM.** Not that the second brain helps anything — no
+readout here touches speech, naming or separation. **And conditioning behaviour
+on an interoceptive cue is NOT an available follow-up**: §44-§60 closed
+conditional naming under this architecture, and swapping an external cue for an
+internal one is the same computation with a new cue. **If a functional claim is
+wanted it needs its own registration and its own mechanism**, and the arousal
+route in Mayer (2011) is the candidate — bearing in mind that `ip_rate` is the
+homeostat and is not to be turned down, and `sensitivity` stays at 0.0.
+
+**THE HONEST RISK, STATED BEFORE ANY CODE.** This is a NEW MECHANISM on a project
+whose standing rule is that the next build should be a readout. It is licensed
+here because the owner asked for it explicitly and because the gap it fills is
+real and grep-verifiable. **But a second brain that passes stage A and then has no
+registered function is an ornament**, and the right time to say so is now, not
+after it ships.
