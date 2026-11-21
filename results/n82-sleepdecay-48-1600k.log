@@ -1,0 +1,80 @@
+experiment: sleepdecay
+  session           1600.0 s of simulated life x 48 creatures x 1 arm
+  instrument        sleepdecay   trial seed 00000000013527c9   48 creatures, dream pinned 0
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the acoustic d'^2 on the N probes immediately BEFORE the sleep bout
+  against the N immediately AFTER it, N matched per creature so both
+  estimates carry the same small-sample bias. Paired, two-tailed.
+
+  seed  bouts   d'^2 pre    d'^2 post   post-pre    window N
+  0     1       +0.6478     -0.0304     -0.6782     66
+  1     1       -0.2424     +1.4934     +1.7357     65
+  2     1       -0.1323     +0.2094     +0.3417     65
+  3     1       +1.6446     -0.0455     -1.6901     65
+  4     1       -0.1466     -0.4806     -0.3340     67
+  5     1       +0.1602     -0.0796     -0.2397     67
+  6     1       +0.0303     +1.1941     +1.1638     65
+  7     1       -0.3587     -0.1901     +0.1686     64
+  8     1       +0.8590     -0.2981     -1.1571     67
+  9     1       +0.5836     -0.1727     -0.7563     64
+  10    1       +0.3437     -0.2775     -0.6212     68
+  11    1       +0.6810     -0.5319     -1.2129     63
+  12    1       -0.5390     -0.4594     +0.0796     63
+  13    1       +0.7713     +0.1760     -0.5953     64
+  14    1       +1.2387     -0.6206     -1.8594     65
+  15    1       -0.3855     -0.2028     +0.1826     66
+  16    1       +0.0014     +2.8382     +2.8368     63
+  17    1       +1.1608     -0.3702     -1.5311     65
+  18    1       -0.5931     -0.4339     +0.1592     62
+  19    1       -0.3953     -0.4801     -0.0848     65
+  20    1       +0.4202     +0.2035     -0.2167     64
+  21    1       -0.2600     +0.8350     +1.0950     66
+  22    1       -0.3147     +0.4393     +0.7540     64
+  23    1       -0.3675     -0.1172     +0.2502     63
+  24    1       +0.7855     -0.3765     -1.1619     64
+  25    1       -0.2147     -0.5679     -0.3533     65
+  26    1       +0.3386     -0.3671     -0.7056     68
+  27    1       +0.1794     -0.3408     -0.5202     63
+  28    1       -0.5102     -0.1501     +0.3600     66
+  29    1       +0.8737     -0.2806     -1.1543     62
+  30    1       +0.2359     +0.8009     +0.5650     64
+  31    1       +0.6523     -0.5274     -1.1796     65
+  32    1       -0.1386     +1.0720     +1.2106     64
+  33    1       -0.0475     +0.7371     +0.7846     65
+  34    1       +0.7576     -0.3509     -1.1085     66
+  35    1       +0.1319     +0.6316     +0.4997     66
+  36    1       +0.7608     +0.1133     -0.6474     67
+  37    1       +0.1718     +0.1504     -0.0214     63
+  38    1       -0.4403     -0.2134     +0.2269     64
+  39    1       -0.4088     -0.2217     +0.1870     63
+  40    1       -0.0906     -0.0906     -0.0001     66
+  41    1       -0.5434     -0.4710     +0.0724     65
+  42    1       -0.4106     -0.2566     +0.1540     65
+  43    1       +0.8412     -0.4295     -1.2708     66
+  44    1       +0.2433     -0.3575     -0.6009     65
+  45    1       +0.5830     -0.0224     -0.6055     65
+  46    1       +0.0820     +0.7195     +0.6375     65
+  47    1       -0.0288     +0.2592     +0.2880     66
+
+  G-BOUTS  bouts per creature: 0 -> 0, 1 -> 48, 2 -> 0, 3+ -> 0
+  refused: 0 for bout count, 0 for window size or class balance, 0 failed to run
+  window N per creature: 62 to 68 probes a side
+
+  in d'^2, NOT d', over 48 usable creatures
+    before the bout   +0.1794   SD 0.5434
+    after the bout    +0.0429   SD 0.6501
+    post - pre        -0.1365 +/- 0.1321 SE  = -1.0 SE   (paired)
+    paired SD         0.9152   <- the number stage 2 must be sized on
+    smallest difference this n could have read: +/-0.2642 d'^2
+
+  NO VERDICT
+  A difference smaller than the figure above is NOT evidence of absence.
+  The paired SD is the result worth keeping either way: it is what sizes
+  stage 2, exactly as the calibration sized the arm.
+
+  Birdsong comparison, stated as a comparison and not a claim: Derégnaucourt
+  et al. (2005) found deterioration across sleep in juvenile zebra finches
+  and that the birds which deteriorated MORE imitated BETTER. Nothing here
+  measures eventual imitation, so this run cannot speak to that half.
+wall=2053.16 s

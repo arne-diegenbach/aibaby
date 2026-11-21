@@ -20096,3 +20096,75 @@ effect two smokes and one full run have given no reason to expect. **The line
 goes to §82's stage 1** — the post-sleep deterioration readout, which asks a
 different question on a window this instrument pooled over, and which the
 birdsong literature says is where a sleep effect should show at all.
+
+## §82 STAGE 1 RESULT — THE DESIGN HELD PERFECTLY AND IT IS SEVEN TIMES NOISIER THAN I PRICED IT (2026-11-21)
+
+RUN: `results/n82-sleepdecay-48-1600k.log`, `./build/aibaby --experiment
+sleepdecay --ticks 1600000 --verbose`, shipped genome, `dream` pinned 0, 48
+creatures, **2053.16 s**. Registered before the run.
+
+**EVERY GUARD PASSED AND NOT ONE CREATURE WAS REFUSED.**
+
+    G-BOUTS  bouts per creature: 0 -> 0, 1 -> 48, 2 -> 0, 3+ -> 0
+    refused: 0 for bout count, 0 for window size or class balance, 0 failed to run
+    window N per creature: 62 to 68 probes a side
+
+**All 48 creatures slept exactly once**, so the single-bout assumption was not a
+risk at all at this length, and **using the slept probes as the boundary works** —
+no new state, no tracking, and the windows came out 62-68 probes a side against
+the ~61 predicted. **The window machinery also agrees with the instrument it was
+cut from:** the pre-sleep window reads **+0.1794 d'^2** against the pooled
+shipped **+0.1699**, which is the check that the slice is the same creature.
+
+    in d'^2, NOT d', over 48 usable creatures
+      before the bout   +0.1794   SD 0.5434
+      after the bout    +0.0429   SD 0.6501
+      post - pre        -0.1365 +/- 0.1321 SE  = -1.0 SE   (paired)
+      paired SD         0.9152
+      smallest difference this n could have read: +/-0.2642 d'^2
+
+    NO VERDICT
+
+**THE POINT ESTIMATE IS A DETERIORATION AND IT MAY NOT BE READ.** The separation
+after the bout is a quarter of what it was before — and that is **1.0 SE**, inside
+a band of +/-0.2642. It is the direction the birdsong finding predicts, which is
+exactly why it must not be quoted: a 1-SE estimate that agrees with a hypothesis
+is the single easiest number in this project to turn into a mistake.
+
+**AND THE COST FRAMING I WROTE WAS WRONG BY A FACTOR OF SEVEN.** The design
+section argued this readout's advantage was cost, "one arm not three". The
+measured paired SD is **0.9152 against the arm contrast's 0.1316 — 7.0x noisier
+per creature, so 48x the creatures for equal sensitivity.** Needing a third of
+the arms and forty-eight times the creatures is not cheaper. The cause is
+visible in the same table: each window's d' sits on ~65 probes instead of 228, so
+the per-window SDs are 2.1x and 2.5x the pooled one against 1.87x expected from
+probe count alone, and **the pre and post windows are DIFFERENT TRIALS, so almost
+nothing cancels in the pairing** — where the arm contrast scores the SAME trials
+under two genomes and cancels most of the creature.
+
+**WHAT STAGE 2 WOULD ACTUALLY COST, FROM THE MEASURED SD:**
+
+    to detect the observed -0.1365 at a bare 2 SE     180 creatures   2.1 h
+    at 80% power                                      352 creatures   4.2 h
+    at 90% power                                      472 creatures   5.6 h
+    averaging 2 bouts per creature, 80%               176 at 3.6M     4.6 h
+    averaging 4 bouts per creature, 80%                88 at 7.5M     4.8 h
+
+**More bouts per creature does NOT help**, because the extra session length costs
+exactly what the extra creatures would. And sizing on the observed estimate is
+legitimate only for a FRESH sample with the registration written first — the
+observed -0.1365 is not an established effect and combining the two runs to find
+significance would be a verdict fitted to data.
+
+**WHAT STAGE 1 WAS FOR, IT DELIVERED.** The paired SD did not exist before this
+run and could not be projected — the arm contrast's 0.1021 transferred nowhere
+near it. That is the same shape as the calibration that sized the arm, and it is
+the whole reason stage 1 ran before stage 2 rather than after it.
+
+**THE HONEST POSITION ON §82 AS A WHOLE.** The dream exists, is off by default, is
+provably inert when off, and demonstrably reaches the sleeping ear. The
+separation it was built to move is **bounded** at 19-22% and unmoved within that
+bound. The deterioration it was predicted to reduce is **unmeasured**, with a
+1-SE hint in the predicted direction and a four-hour price on reading it
+properly. **Nothing here is a license to ship `dream`, and nothing here refutes
+it either.**
