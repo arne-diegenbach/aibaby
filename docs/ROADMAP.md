@@ -20731,3 +20731,61 @@ samples, with a bound of 0.103.** On the registration's own terms the dream arm
 remains unlicensed, and the honest reading is that **the deterioration this line
 was built to explain may be too small in this creature to be the thing worth
 explaining.**
+
+### §83 THE HOMEOSTAT IS NOT NEEDED, AND A TONIC LIF NEURON HAS ALMOST NO GRADED RANGE (2026-11-21)
+
+Driven by this project's own `kContext` note, which states the problem §83 walked
+into: *"§3.1 makes rate homeostasis mandatory and drives every neuron to a DNA
+target rate, so no population in this creature has ever had a baseline of
+zero"* — seven common-mode walls. **Stage A's enteric module was homeostat-driven
+to ~50 Hz, so the hunger signal rode on exactly that baseline.** The recipe
+`kContext` uses — `noise_amp`, `target_rate_hz` and both ip/syn scales at zero,
+silent unless written to — was applied here and swept.
+
+    configuration                              enteric Hz  central Hz  r(ent,hunger)
+    stage A: homeostat, thr 12, noise 0.28       50.88       6.85        +0.465
+    silent, thr 1, tau 20                       209.92       8.07        +0.913
+    silent, thr 4, tau 20                        48.89       6.74        +0.530
+    silent, thr >= 6                            13-28        6.6         +0.000
+    silent, thr 1, tau 2                         28.25       6.67        +0.052
+    noise 0.28/0.60, NO homeostat, thr 8-20      0-15        6.6         +0.000
+
+**THE REFERENCE GENOME IS NOW `silent, thr 4`, AND IT DOMINATES STAGE A ON EVERY
+AXIS:** 48.89 Hz against 50.88, `central` at **6.74 against its 6.81 target**
+(stage A: 6.85), fidelity **+0.530 against +0.465**, and the afferent's signal
+margin -3.9 SE against -5.3 SE at the same whisper weight. **So the homeostat is
+not needed for this module** — a fixed threshold with no homeostasis, no noise and
+no synaptic scaling is a better interoceptive organ than the homeostat-driven
+version, and it removes §60's saturated-homeostat hazard from §83 entirely.
+`calibrate` reads enteric 48.89 against a declared 48.89, exactly on target; the
+only FAIL left is `somato`, which is the appending-re-rolls-noise deviation
+already on record and common to every arm.
+
+**AND THE REASON THERE IS NO BETTER CONFIGURATION IS A PROPERTY, NOT A TUNING
+FAILURE.** The `leak_tau` sweep at threshold 1 goes **0.00 Hz at tau 1, 28 Hz at
+tau 2, 173 Hz at tau 4, 210 Hz at tau 20** — silent to saturated with almost
+nothing in between. **A leaky integrate-and-fire neuron under CONSTANT input is a
+threshold device**: either the steady-state voltage clears threshold, and the
+firing rate is then set by how fast it recharges and saturates toward the
+refractory limit, or it does not and the cell is silent. The graded band is
+narrow. **Noise is what linearises an f-I curve, and the `kContext` recipe
+removes it** — which is correct for `kContext`, because a context module is
+written with DISCRETE events and never needs a graded response. **An
+interoceptive organ reports a slowly varying scalar and does need one.** That is
+the mismatch, stated as the reason the recipe only half transfers.
+
+**THE SHARED THRESHOLD MIS-CENTRES THE THREE DRIVES, AND HUNGER IS THE ONE IT
+CUTS OFF.** At threshold 6 and above, `r(enteric, hunger)` reads **exactly
+0.000** while the module still fires at 13-28 Hz: the hunger slice is silent and
+the comfort and fatigue slices are not. **Hunger is fed DOWN and hovers low,
+comfort sits near 0.5, fatigue climbs toward 0.9** — so one threshold across
+three slices gives them three different sensitivities and silences the lowest.
+**The canonical gut drive is the one that disappears.**
+
+**WHAT THAT NAMES AS THE NEXT STEP, AND IT IS PRINCIPLED RATHER THAN A KNOB.**
+Each slice should be injected on its OWN scale — a sense organ adapts to the
+range of its stimulus rather than sharing one threshold with unrelated channels.
+That is sensory adaptation, and it is a kernel change to the injection in
+`Brain::step` rather than a genome edit. **It is also the first §83 change that
+would need its own inertness proof**, since it alters what every enteric module
+receives.
