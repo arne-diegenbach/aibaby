@@ -18863,6 +18863,8 @@ struct SdOut {
   // were written. A refusal is the likely outcome here, so the gates that
   // guard it have to measure the mechanism and not merely assert it.
   uint32_t stp_patched = 0;
+  // §87 stage 3: 1 when the read module's `noise_amp` was overwritten.
+  uint32_t noise_patched = 0;
   double voc_spikes = 0.0;
   double voc_ticks = 0.0;
   // §70. The three things that decide whether rung 1 was READ AT ALL.
@@ -19006,7 +19008,8 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            float stp_use, float stp_rec, bool probe,
                            uint32_t rep_off, float burst_ms,
                            float stp_facil = 0.0f,
-                           aibaby::ModuleRole read_role = aibaby::ModuleRole::kVocal) {
+                           aibaby::ModuleRole read_role = aibaby::ModuleRole::kVocal,
+                           float read_noise = -1.0f) {
   // §87. `read_role` is the module the whole ladder is READ on and the dose is
   // WRITTEN to (auditory -> that module). Every pre-§87 caller takes the
   // default, so the vocal module is read and dosed exactly as before.
@@ -19069,6 +19072,22 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           const size_t base = size_t(reinterpret_cast<const uint8_t*>(&bm) - local.data());
           std::memcpy(local.data() + base + offsetof(aibaby::DnaModule, burst_ms),
                       &burst_ms, sizeof(burst_ms));
+        }
+      }
+    }
+    // §87 stage 3. A negative value leaves the genome's `noise_amp` alone, so
+    // every earlier caller is unchanged. Refused on `vocal`, where the noise IS
+    // the exploration drive (§81's structural confound).
+    if (read_noise >= 0.0f && read_role != aibaby::ModuleRole::kVocal) {
+      aibaby::Dna nprobe;
+      if (nprobe.load(local.data(), local.size()) == aibaby::DnaStatus::kOk) {
+        const int32_t nv = nprobe.module_with_role(read_role);
+        if (nv >= 0) {
+          const aibaby::DnaModule& nm = nprobe.module(uint32_t(nv));
+          const size_t base = size_t(reinterpret_cast<const uint8_t*>(&nm) - local.data());
+          std::memcpy(local.data() + base + offsetof(aibaby::DnaModule, noise_amp),
+                      &read_noise, sizeof(read_noise));
+          out.noise_patched = 1;
         }
       }
     }
@@ -24312,6 +24331,222 @@ bool run_comprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n    The spike rung at the comparator is REPORTED and carries no verdict.\n"
               "    Its own oracle decides whether stage 3 (noise) has a testable target.\n");
+  return gates;
+}
+
+// --- comnoise (§87 stage 3): can noise carry the comparator's conjunction
+// across its threshold? Registered in ROADMAP §87 before the run.
+//
+// The comparator ships `explore_scale` 0, so its `noise_amp` is plain noise
+// and NOT the exploration drive it is in `vocal` (§81's structural confound).
+// It has no outgoing projections and no plasticity, so the noise reaches
+// behaviour only through the global fatigue term. Eight arms on the same 96
+// fresh creatures: a noise ladder with the dose, and the same ladder without.
+constexpr uint32_t kCnReps = 96;
+constexpr uint32_t kCnRepOff = 1150;  // past §87 stage 2's 1054-1149
+constexpr uint32_t kCnRungs = 4;
+constexpr float kCnNoise[kCnRungs] = {0.0f, 0.22f, 0.44f, 0.88f};
+constexpr uint32_t kCnRef = 1;        // 0.22, the genome's own value
+constexpr double kCnClear = 2.5;      // SE, for four rungs read at once
+
+bool run_comnoise(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t cm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  if (cm < 0) {
+    std::printf("  REFUSED: this genome has no `comparator` module. Run it on\n"
+                "  dna/comparator.toml. Nothing was measured.\n");
+    return false;
+  }
+  std::printf("\n  §87 STAGE 3 — CAN NOISE CARRY THE CONJUNCTION ACROSS THE COMPARATOR'S\n"
+              "  THRESHOLD?\n\n"
+              "  read, dosed, noised  the `comparator` module (%u neurons, genome noise_amp %.2f)\n"
+              "  ladder               noise_amp 0.00 / 0.22 (REFERENCE) / 0.44 / 0.88,\n"
+              "                       each WITH the dose (U 0.20, tau_rec 3000) and WITHOUT\n"
+              "  creatures            %u per arm, the SAME creatures, rep_off %u, paired\n"
+              "  clear                %.1f SE, because four rungs are read at once\n\n",
+              dna.module(uint32_t(cm)).neurons, double(dna.module(uint32_t(cm)).noise_amp),
+              kCnReps, kCnRepOff, kCnClear);
+
+  // [dosed][rung]
+  std::vector<SdOut> res[2][kCnRungs];
+  for (uint32_t ds = 0; ds < 2; ++ds)
+    for (uint32_t k = 0; k < kCnRungs; ++k) {
+      const float use = ds ? 0.20f : 0.0f, rec = ds ? 3000.0f : 0.0f, nz = kCnNoise[k];
+      res[ds][k] = parallel_reps<SdOut>(kCnReps, [&](uint32_t r) {
+        return run_samediff_session(blob, ticks, r, 0.0f, false, use, rec, false, kCnRepOff,
+                                    0.0f, 0.0f, aibaby::ModuleRole::kComparator, nz);
+      });
+    }
+
+  auto arm_name = [](uint32_t ds, uint32_t k) {
+    static char buf[32];
+    std::snprintf(buf, sizeof(buf), "%s n%.2f", ds ? "dosed  " : "undosed", double(kCnNoise[k]));
+    return std::string(buf);
+  };
+
+  bool g_patch = true, g_scored = true, g_null = true, ref_slept = true;
+  bool usable[2][kCnRungs];
+  std::printf("  GATES AND COST\n");
+  for (uint32_t ds = 0; ds < 2; ++ds)
+    for (uint32_t k = 0; k < kCnRungs; ++k) {
+      uint32_t bad = 0, scored = 0, fs_n = 0;
+      double att = 0, slp = 0, fs = 0;
+      std::vector<double> nv_, ns_;
+      for (const SdOut& o : res[ds][k]) {
+        if ((ds ? o.stp_patched == 0 : o.stp_patched != 0) || o.noise_patched != 1) ++bad;
+        att += o.attempted;
+        slp += o.slept;
+        if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+        if (o.ok && o.gap[0].scored) {
+          ++scored;
+          nv_.push_back(o.gap[0].null_be[kFpVmem]);
+          ns_.push_back(o.gap[0].null_be[kFpSpike]);
+        }
+      }
+      double nv, nvs, ns, nss;
+      sd_stat(nv_, nv, nvs);
+      sd_stat(ns_, ns, nss);
+      const double sf = att > 0 ? slp / att : 1.0;
+      if (bad) g_patch = false;
+      if (scored < 80) g_scored = false;
+      if (nv < 0.42 || nv > 0.58 || ns < 0.42 || ns > 0.58) g_null = false;
+      usable[ds][k] = sf < 0.20;
+      if (k == kCnRef && sf >= 0.20) ref_slept = false;
+      std::printf("    %-15s patch wrong %u  slept %.4f%s  first sleep %.0f (%u of %u)\n"
+                  "    %-15s scored %u of %u  label-destroyed vmem %.4f +- %.4f, spikes %.4f +- %.4f\n",
+                  arm_name(ds, k).c_str(), bad, sf, usable[ds][k] ? "" : " EXCLUDED",
+                  fs_n ? fs / fs_n : 0.0, fs_n, kCnReps, "", scored, kCnReps, nv, nvs, ns, nss);
+    }
+  // G-LIVE: the dose and every noise rung must change the comparator's spikes.
+  auto identical = [&](const std::vector<SdOut>& a, const std::vector<SdOut>& b) {
+    uint32_t n = 0;
+    for (size_t i = 0; i < a.size() && i < b.size(); ++i)
+      if (a[i].voc_spikes == b[i].voc_spikes) ++n;
+    return n;
+  };
+  uint32_t live_bad = identical(res[1][kCnRef], res[0][kCnRef]);
+  for (uint32_t k = 0; k < kCnRungs; ++k)
+    if (k != kCnRef) live_bad += identical(res[1][k], res[1][kCnRef]);
+  const bool g_live = live_bad == 0;
+  const bool gates = g_patch && g_scored && g_null && g_live && ref_slept;
+  std::printf("    G-PATCH  dose where registered, noise on every arm      %s\n"
+              "    G-SLEPT  reference pair under 0.20 (others EXCLUDED)    %s\n"
+              "    G-SCORED gap 200 scored on >= 80 per arm                %s\n"
+              "    G-NULL   label-destroyed in [0.42, 0.58]                %s\n"
+              "    G-LIVE   dose and every rung change the spikes          %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", ref_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", live_bad);
+
+  // Per-arm cells and own oracles: [ds][k][0 vmem, 1 spikes]
+  const uint32_t rg[2] = {kFpVmem, kFpSpike};
+  double cell[2][kCnRungs][2], cse[2][kCnRungs][2], orc[2][kCnRungs][2], ose[2][kCnRungs][2];
+  std::printf("  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (own oracle)\n\n"
+              "    arm              vmem                          spikes                        spikes/tick\n");
+  for (uint32_t ds = 0; ds < 2; ++ds)
+    for (uint32_t k = 0; k < kCnRungs; ++k) {
+      std::printf("    %-15s", arm_name(ds, k).c_str());
+      for (uint32_t j = 0; j < 2; ++j) {
+        std::vector<double> c, o;
+        for (const SdOut& s : res[ds][k])
+          if (s.ok && s.gap[0].scored) {
+            c.push_back(s.gap[0].mile_be[rg[j]]);
+            o.push_back(s.gap[0].assembled[rg[j]]);
+          }
+        sd_stat(c, cell[ds][k][j], cse[ds][k][j]);
+        sd_stat(o, orc[ds][k][j], ose[ds][k][j]);
+        std::printf("   %.4f+-%.4f (%.3f+-%.3f)%s", cell[ds][k][j], cse[ds][k][j],
+                    orc[ds][k][j], ose[ds][k][j], orc[ds][k][j] < kSdBar ? "*" : " ");
+      }
+      std::vector<double> rate;
+      for (const SdOut& s : res[ds][k])
+        if (s.voc_ticks > 0) rate.push_back(s.voc_spikes / s.voc_ticks);
+      double rm, rs;
+      sd_stat(rate, rm, rs);
+      std::printf("   %.4f+-%.4f\n", rm, rs);
+    }
+  std::printf("\n    * own oracle under %.3f: that cell CANNOT be tested against the bar.\n\n",
+              kSdBar);
+
+  // Paired differences on the SPIKE cell.
+  auto paired = [&](const std::vector<SdOut>& a, const std::vector<SdOut>& b, uint32_t rung,
+                    double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < a.size() && i < b.size(); ++i)
+      if (a[i].ok && b[i].ok && a[i].gap[0].scored && b[i].gap[0].scored)
+        d.push_back(a[i].gap[0].mile_be[rung] - b[i].gap[0].mile_be[rung]);
+    sd_stat(d, m, se);
+  };
+  double mech[kCnRungs], mechs[kCnRungs], eff[kCnRungs], effs[kCnRungs];
+  std::printf("  THE REGISTERED READING — the dosed SPIKE cell, rung by rung\n\n"
+              "    rung    spike cell         oracle   minus %.1f SE   dose effect (paired)     noise effect vs 0.22 (paired)\n",
+              kCnClear);
+  for (uint32_t k = 0; k < kCnRungs; ++k) {
+    paired(res[1][k], res[0][k], kFpSpike, mech[k], mechs[k]);
+    if (k != kCnRef) paired(res[1][k], res[1][kCnRef], kFpSpike, eff[k], effs[k]);
+    else eff[k] = effs[k] = 0.0;
+    std::printf("    n%.2f   %.4f +- %.4f   %.3f    %.4f          %+.4f +- %.4f (%+5.1f)",
+                double(kCnNoise[k]), cell[1][k][1], cse[1][k][1], orc[1][k][1],
+                cell[1][k][1] - kCnClear * cse[1][k][1], mech[k], mechs[k],
+                mechs[k] > 0 ? mech[k] / mechs[k] : 0.0);
+    if (k == kCnRef) std::printf("   reference\n");
+    else std::printf("   %+.4f +- %.4f (%+5.1f)%s\n", eff[k], effs[k],
+                     effs[k] > 0 ? eff[k] / effs[k] : 0.0, usable[1][k] ? "" : " EXCLUDED");
+  }
+  std::printf("\n");
+
+  int clears = -1, clears_nodose = -1;
+  bool moved_up = false, moved_down = false;
+  double best_upper = 0.0;
+  for (uint32_t k = 0; k < kCnRungs; ++k) {
+    if (!usable[1][k] || !usable[0][k]) continue;
+    const bool testable = orc[1][k][1] >= kSdBar;
+    const bool cl = testable && cell[1][k][1] - kCnClear * cse[1][k][1] >= kSdBar;
+    if (cl && mech[k] > kCnClear * mechs[k]) {
+      if (clears < 0 || cell[1][k][1] > cell[1][uint32_t(clears)][1]) clears = int(k);
+    } else if (cl && clears_nodose < 0) {
+      clears_nodose = int(k);
+    }
+    if (k != kCnRef) {
+      if (eff[k] > kCnClear * effs[k]) moved_up = true;
+      if (eff[k] < -kCnClear * effs[k]) moved_down = true;
+    }
+    const double up = cell[1][k][1] + kCnClear * cse[1][k][1];
+    if (up > best_upper) best_upper = up;
+  }
+
+  if (!gates || orc[1][kCnRef][1] < kSdBar) {
+    std::printf("    -> VOID. %s\n", !gates ? "A gate failed above."
+                                            : "The reference rung's own spike oracle is under the bar.");
+  } else if (clears >= 0) {
+    const uint32_t k = uint32_t(clears);
+    std::printf("    -> THE SPIKES CARRY IT. At noise_amp %.2f the comparator's spike cell\n"
+                "       clears %.3f by %.1f SE on a testable oracle, and the dose is what does\n"
+                "       it. Deviation (c) is removed AT THE COMPARATOR, scoped to this noise.\n",
+                double(kCnNoise[k]), kSdBar, kCnClear);
+    if (cell[1][k][0] + 2.0 * cse[1][k][0] < kSdBar)
+      std::printf("       SPIKE UP, MEMBRANE DOWN: at this rung the vmem cell is under the bar\n"
+                  "       by 2 SE. The claim there is a SPIKE claim only and must say so.\n");
+  } else if (clears_nodose >= 0) {
+    std::printf("    -> IT CLEARS WITHOUT THE DOSE at noise_amp %.2f: the paired dose effect is\n"
+                "       under %.1f SE. Not depression; no claim.\n",
+                double(kCnNoise[uint32_t(clears_nodose)]), kCnClear);
+  } else if (moved_up || moved_down) {
+    std::printf("    -> NOISE MOVES THE SPIKE CELL (%s) BUT NO RUNG CLEARS. Best upper bound\n"
+                "       %.4f. The noise route is located and does not reach the bar on this\n"
+                "       ladder.\n",
+                moved_up && moved_down ? "BOTH WAYS" : moved_up ? "UP" : "DOWN", best_upper);
+  } else {
+    std::printf("    -> NOISE DOES NOT MOVE THE SPIKE CELL: every rung is within %.1f SE of the\n"
+                "       reference. Best upper bound %.4f. The noise route is closed at the\n"
+                "       comparator on this ladder.\n", kCnClear, best_upper);
+  }
+  std::printf("\n    Undosed rungs exist ONLY as the per-rung mechanism null. Nothing ships.\n");
   return gates;
 }
 

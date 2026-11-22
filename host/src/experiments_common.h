@@ -2467,6 +2467,7 @@ bool run_sleepdecaylong(const std::vector<uint8_t>&, uint64_t, bool);  // §82 s
 bool run_facilprobe(const std::vector<uint8_t>&, uint64_t, bool);      // §84 facilitation
 bool run_facilquiet(const std::vector<uint8_t>&, uint64_t, bool);      // §85 silenced control
 bool run_comprobe(const std::vector<uint8_t>&, uint64_t, bool);       // §87 stage 2
+bool run_comnoise(const std::vector<uint8_t>&, uint64_t, bool);       // §87 stage 3
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

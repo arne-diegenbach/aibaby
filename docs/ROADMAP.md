@@ -21593,3 +21593,77 @@ where vocal's were 0.610 / 0.598. **So at the comparator the spike rung is TESTA
 and stage 3 has a target.** Its cell, 0.591 +- 0.008, sits 7 SE under the bar. The
 loss at the threshold (§70/§77) reproduces in a module with no motor role. That is
 reported here, not concluded: stage 2 registered no spike verdict.
+
+### §87 STAGE 3 — NOISE ON THE COMPARATOR, AIMED AT ITS SPIKES (registered before the run, 2026-11-22)
+
+Approved in outline by the owner: "only if 2 clears at the membrane". It did (branch 2).
+**This is the noise route §81 called dead twice, now on a module where neither death
+holds as stated.**
+
+  - **The structural confound is absent.** The comparator ships `explore_scale` 0, so
+    in the drive term (`core/src/network.cpp:2588`) its `noise_amp * xi` is plain
+    noise, not the exploration drive. It has no outgoing projections and no synaptic
+    plasticity. Moving its noise moves only its own spikes, plus the global fatigue
+    term, which is read as cost.
+  - **The amplitude objection was framed in per-tick units.** The membrane integrates
+    `v += alpha (rest - v) + drive` with `alpha = dt/tau = 0.05`. So per-tick noise of SD
+    `0.577 * noise_amp` becomes a free membrane SD of about
+    `0.577 / sqrt(1 - 0.95^2) = 1.85 x noise_amp`, which is 0.41 at the shipped 0.22.
+    This is DERIVED for a membrane that never resets, and it is the reason for the
+    ladder's span, not a claim. It is NOT an argument that §81's verdict at vocal was
+    wrong: that verdict rests on the confound as well, and it is not re-opened here.
+  - **The target is testable.** Stage 2 put the comparator's spike oracle at 0.708, above
+    the bar. Its cell, 0.591, was 7 SE under it. A rung that does not move the cell
+    leaves (c) standing AT THE COMPARATOR too.
+
+**The literature (README References, checked 2026-11-22).** Collins, Chow & Imhoff
+(1995) showed that a summing network of noisy threshold units gains from noise without
+tuning. Stocks (2000) showed that in a POPULATION of threshold units, noise raises the
+transmitted information even for suprathreshold signals ("suprathreshold stochastic
+resonance"). The comparator's spike readout is exactly a population of threshold units.
+McDonnell & Abbott (2009) is the caution: the benefit exists only where the system's
+other parameters are suboptimal, and it is an inverted U. **So the registration is
+two-tailed, and noise LOWERING the cell is a registered outcome, not a surprise.**
+
+**RUN:** `comnoise`, 1,680,000 ticks, `dna/comparator.toml`, 96 fresh creatures,
+`rep_off` 1150 (past stage 2's 1054-1149), the same creatures on all eight arms, paired.
+The voice is heard on every arm.
+
+    rung   comparator noise_amp   dosed (U 0.20, tau_rec 3000)   undosed
+    n0.00  0.00                   arm                            arm (per-rung null)
+    n0.22  0.22 = the genome's    REFERENCE                      arm
+    n0.44  0.44                   arm                            arm
+    n0.88  0.88                   arm                            arm
+
+**GATES.**
+  - **G-PATCH**: the dose is written exactly on the dosed arms, and the noise on every arm.
+  - **G-SCORED**: >= 80 of 96 per arm.
+  - **G-NULL**: label-destroyed `vmem` and spikes in [0.42, 0.58].
+  - **G-LIVE**: dosed-reference spikes differ from undosed-reference on every pair, and
+    every dosed rung differs from the dosed reference.
+  - **G-SLEPT**: slept fraction < 0.20 on the REFERENCE pair. Any other arm at or over 0.20
+    is EXCLUDED and reported as cost. That exclusion is itself a finding (§83's tax),
+    never a VOID.
+
+**THE READING, on the dosed SPIKE cell (overlap window, gap 200) rung by rung, at 2.5 SE
+because four rungs are read at once:**
+
+  1. **VOID** — a gate fails, or the reference rung's own spike oracle is under 0.650.
+  2. **THE SPIKES CARRY IT** — some usable rung has its own spike oracle >= 0.650, its
+     cell minus 2.5 SE >= 0.650, AND the paired dose effect (dosed minus undosed, same
+     rung) > 2.5 SE. Deviation (c) is removed AT THE COMPARATOR, scoped to that noise
+     level. If several rungs qualify, the highest cell is named and every one is
+     printed. **SPIKE UP, MEMBRANE DOWN**: if that rung's `vmem` cell is under the bar
+     by 2 SE, the claim is a spike claim only and says so.
+  3. **IT CLEARS WITHOUT THE DOSE** — a rung clears, but its paired dose effect is under
+     2.5 SE. Not depression. No claim.
+  4. **NOISE MOVES IT, NOTHING CLEARS** — no rung clears, but some rung's paired change
+     against the reference exceeds 2.5 SE in EITHER direction. The sign is printed, and
+     the best upper bound is the line's measured ceiling on this ladder.
+  5. **NOISE DOES NOT MOVE IT** — every rung is within 2.5 SE of the reference. The
+     noise route is closed at the comparator on this ladder, with the bound printed.
+
+Branches 4 and 5 are reached only through 1-3 failing, so together they are exhaustive.
+**Nothing ships on any branch.** A branch 2 removes (c) at a module that does not ship.
+Making it ship needs the comparator in `dna/default.toml` and §80's battery, which is a
+separate decision for the owner.

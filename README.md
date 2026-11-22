@@ -21913,6 +21913,31 @@ Barak & Tsodyks (2008) are already in this list.
   whether shifting that filter moves the vocal spike code across the 0.650 bar's
   testability line.
 
+### Checked 2026-11-22: noise across a population threshold (§87 stage 3)
+
+§87 put the M6 conjunction on a read-only **comparator** module. There it forms at the
+membrane (0.718) and is lost at the spikes (0.591). Stage 3 asks whether noise can carry
+it across, and these three papers are why the question is asked and why it is asked
+two-tailed. Mill, Coath, Wennekers & Denham (2011), the source of the comparator's
+mechanism, are already in this list.
+
+- Collins, J. J., Chow, C. C. & Imhoff, T. T. (1995). *Stochastic resonance without
+  tuning.* Nature 376(6537):236–238. doi:10.1038/376236a0 — a **summing network** of
+  excitable units detects weak signals with a fixed noise level that need not be tuned
+  per signal, and the noise barely hurts strong ones. The comparator's population readout
+  is such a sum.
+- Stocks, N. G. (2000). *Suprathreshold stochastic resonance in multilevel threshold
+  systems.* Physical Review Letters 84(11):2310–2313. doi:10.1103/PhysRevLett.84.2310 —
+  in an **array** of threshold units, noise raises the transmitted information even when
+  the signal is already above threshold. The comparator's membrane conjunction is not
+  subthreshold, so this, not classical stochastic resonance, is the relevant result.
+- McDonnell, M. D. & Abbott, D. (2009). *What is stochastic resonance? Definitions,
+  misconceptions, debates, and its relevance to biology.* PLoS Computational Biology
+  5(5):e1000348. doi:10.1371/journal.pcbi.1000348 — the caution. The benefit needs the
+  system to be otherwise suboptimal and follows an inverted U, so stage 3 registers noise
+  **lowering** the spike cell as an outcome and spans its ladder on both sides of the
+  shipped value.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
