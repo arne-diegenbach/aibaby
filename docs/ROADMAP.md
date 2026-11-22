@@ -21538,3 +21538,16 @@ silenced arm. **MECHANISM:** paired carrier minus undosed on that cell.
 **The spike rung at the comparator is REPORTED and carries no verdict** in stage 2.
 Whether its oracle reaches 0.650 decides whether stage 3 (noise) has a testable target.
 **Cost** — slept fraction and first-sleep tick per arm, against §84's 0.112 and ~1,099,000.
+
+### §87 STAGE 1 RESULT — PASS: THE READ-ONLY COMPARATOR LEAVES THE ECHO INTACT (2026-11-22)
+
+`results/n87-stage1-quietecho.log`, `quietecho` at 560,000 ticks on `dna/comparator.toml`
+(no dose in the file), exit 0, 1717 s, quietecho's own CONTROLS PASS.
+
+    shipped arm artic   0.802 +- 0.007   (minus 2 SE: 0.788 >= 0.75)
+    paired vs shipped genome (results/n80-revert-quietecho.log, same seeds, n 36)
+                        +0.0126 +- 0.0112   (+1.1 SE, not below -2 SE)
+
+**Both registered clauses hold, so stage 2 runs.** As registered, this guard is weak by
+construction: it shows the build did not break the creature, and nothing about the
+mechanism. The dose-live cost is read in stage 2.
