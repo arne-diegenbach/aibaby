@@ -21938,6 +21938,48 @@ mechanism, are already in this list.
   **lowering** the spike cell as an outcome and spans its ladder on both sides of the
   shipped value.
 
+### Checked 2026-11-23: leads for after §87 stage 3 (NOT BUILT, NOT REGISTERED)
+
+Found while stage 3 ran. Credited here because each shaped what comes next; none is
+built and none is a claim.
+
+- Kern, F. B. & Chao, Z. C. (2023). *Short-term neuronal and synaptic plasticity act in
+  synergy for deviance detection in spiking networks.* PLoS Computational Biology
+  19(10):e1011554. doi:10.1371/journal.pcbi.1011554 — **the strongest lead.** In a spiking
+  network of 800 excitatory and 200 inhibitory LIF neurons, spike-triggered **threshold
+  adaptation** (+1 mV per spike, tau 1 s) and synaptic **depression** (U 0.4, tau_rec
+  150 ms) together detect deviants better than the sum of either alone. Depression alone
+  sufficed at intervals of 200 ms and below. Adaptation is a state that lives AT the
+  spike threshold, which is exactly where the comparator loses the conjunction (§87
+  stage 2: membrane 0.718, spikes 0.591). This creature already owns a spike-triggered
+  adaptation current (DNA v56, `adapt_jump`/`adapt_tau_ms`), but it is a header field
+  the kernel applies to the vocal role only. Using it on the comparator is a KERNEL
+  change and needs its own argument.
+- Masse, N. Y., Yang, G. R., Song, H. F., Wang, X.-J. & Freedman, D. J. (2019). *Circuit
+  mechanisms for the maintenance and manipulation of information in working memory.*
+  Nature Neuroscience 22:1159–1167. doi:10.1038/s41593-019-0414-3 — RNNs trained with
+  short-term plasticity hold information "silently" in synapses, but only if the delay is
+  short enough. That is the same limit as M6's deviation (a), the overlap window, found
+  independently. Code: github.com/nmasse/Short-term-plasticity-RNN.
+- van Vreeswijk, C. & Sompolinsky, H. (1996). *Chaos in neuronal networks with balanced
+  excitatory and inhibitory activity.* Science 274(5293):1724–1726.
+  doi:10.1126/science.274.5293.1724 — the fluctuation-driven regime. Neurons sit near
+  threshold because excitation and inhibition nearly cancel, and the network itself
+  supplies the fluctuations. If stage 3 shows that noise helps but costs waking life
+  (§83's fatigue tax), balanced recurrent inhibition is the alternative source.
+- Hertäg, L. & Clopath, C. (2022). *Prediction-error neurons in circuits with multiple
+  neuron types: Formation, refinement, and functional implications.* PNAS
+  119(13):e2115699119. doi:10.1073/pnas.2115699119 — and its precursor, Hertäg, L. &
+  Sprekeler, H. (2020), *Learning prediction error neurons in a canonical interneuron
+  circuit*, eLife 9:e57541. doi:10.7554/eLife.57541 — a comparator built from
+  interneurons that cancel a prediction. These are rate models, and a further-out
+  alternative to the depression mechanism.
+- Westkott, M. & Pawelzik, K. R. (2016). *A comprehensive account of sound sequence
+  imitation in the songbird.* Frontiers in Computational Neuroscience 10:71.
+  doi:10.3389/fncom.2016.00071 — a spiking inverse model that turns a stored sound
+  memory into the motor pattern that reproduces it. It bears on THE GOAL (imitation),
+  not on M6.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:
