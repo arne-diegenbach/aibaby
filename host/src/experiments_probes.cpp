@@ -19005,7 +19005,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            uint32_t rep, float voicing_override, bool omit_b,
                            float stp_use, float stp_rec, bool probe,
                            uint32_t rep_off, float burst_ms,
-                           float stp_facil = 0.0f) {
+                           float stp_facil = 0.0f,
+                           aibaby::ModuleRole read_role = aibaby::ModuleRole::kVocal) {
+  // §87. `read_role` is the module the whole ladder is READ on and the dose is
+  // WRITTEN to (auditory -> that module). Every pre-§87 caller takes the
+  // default, so the vocal module is read and dosed exactly as before.
   SdOut out;
   std::vector<uint8_t> local = blob;
   {
@@ -19028,7 +19032,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       aibaby::Dna probe;
       if (probe.load(local.data(), local.size()) == aibaby::DnaStatus::kOk) {
         const int32_t pa = probe.module_with_role(aibaby::ModuleRole::kAuditory);
-        const int32_t pv = probe.module_with_role(aibaby::ModuleRole::kVocal);
+        const int32_t pv = probe.module_with_role(read_role);
         for (uint32_t pi = 0; pa >= 0 && pv >= 0 && pi < probe.projection_count(); ++pi) {
           const aibaby::DnaProjection& pr = probe.projection(pi);
           if (int32_t(pr.src) != pa || int32_t(pr.dst) != pv) continue;
@@ -19077,7 +19081,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   if (!ear.configure(acfg, error)) return out;
   const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
   const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
-  const int32_t voc = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+  const int32_t voc = s.dna.module_with_role(read_role);
   if (aud < 0 || cen < 0 || voc < 0) return out;
   const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
   const aibaby::ModuleState& ms_c = s.brain.network().module(uint32_t(cen));
@@ -24136,6 +24140,179 @@ bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
 bool run_facilquiet(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_facil_impl(blob, ticks, 1.15f, kFpRepOff + kFpReps);
+}
+
+// --- comprobe (§87 stage 2): does the M6 conjunction form at a COMPARATOR? ---
+//
+// The same session, reading and dosing the `kComparator` module instead of
+// `vocal`, so `auditory -> vocal` ships untouched on every arm. Three arms on
+// the same 96 fresh creatures, paired. Registered in ROADMAP §87 before the run.
+constexpr uint32_t kCpReps = 96;
+constexpr uint32_t kCpRepOff = 1054;  // past §85's 958-1053
+struct CpArmDef {
+  const char* name;
+  float use, rec, vthr;
+};
+constexpr CpArmDef kCpArms[3] = {
+    {"comp undosed", 0.0f, 0.0f, 0.0f},          // MECHANISM NULL
+    {"comp tau3000", 0.20f, 3000.0f, 0.0f},      // THE CARRIER
+    {"comp tau3000 quiet", 0.20f, 3000.0f, 1.15f}};  // §78's co-primary
+constexpr uint32_t kCpArmCount = 3;
+constexpr uint32_t kCpNull = 0, kCpCarrier = 1, kCpQuiet = 2;
+
+bool run_comprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t cm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  if (cm < 0) {
+    std::printf("  REFUSED: this genome has no `comparator` module. Run it on\n"
+                "  dna/comparator.toml. Nothing was measured.\n");
+    return false;
+  }
+  std::printf("\n  §87 STAGE 2 — DOES THE M6 CONJUNCTION FORM AT A COMPARATOR?\n\n"
+              "  read and dosed    the `comparator` module (%u neurons); auditory->vocal\n"
+              "                    ships UNTOUCHED on every arm\n"
+              "  arms              undosed (null) / U 0.20 tau_rec 3000 (CARRIER) /\n"
+              "                    the same, self-voice silenced (co-primary)\n"
+              "  creatures         %u per arm, the SAME creatures, rep_off %u, paired\n"
+              "  window            samediff's overlap window, gap 200 ms\n\n",
+              dna.module(uint32_t(cm)).neurons, kCpReps, kCpRepOff);
+
+  std::vector<SdOut> res[kCpArmCount];
+  for (uint32_t a = 0; a < kCpArmCount; ++a) {
+    const CpArmDef d = kCpArms[a];
+    res[a] = parallel_reps<SdOut>(kCpReps, [&](uint32_t r) {
+      return run_samediff_session(blob, ticks, r, d.vthr, false, d.use, d.rec, false,
+                                  kCpRepOff, 0.0f, 0.0f, aibaby::ModuleRole::kComparator);
+    });
+  }
+
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true;
+  std::printf("  GATES AND COST\n");
+  for (uint32_t a = 0; a < kCpArmCount; ++a) {
+    uint32_t bad_patch = 0, scored = 0, fs_n = 0;
+    double att = 0, slp = 0, fs = 0;
+    std::vector<double> nv_, ns_;
+    const bool dosed = kCpArms[a].use > 0.0f;
+    for (const SdOut& o : res[a]) {
+      if (dosed ? o.stp_patched == 0 : o.stp_patched != 0) ++bad_patch;
+      att += o.attempted;
+      slp += o.slept;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      if (o.ok && o.gap[0].scored) {
+        ++scored;
+        nv_.push_back(o.gap[0].null_be[kFpVmem]);
+        ns_.push_back(o.gap[0].null_be[kFpSpike]);
+      }
+    }
+    double nv, nvs, ns, nss;
+    sd_stat(nv_, nv, nvs);
+    sd_stat(ns_, ns, nss);
+    const double sf = att > 0 ? slp / att : 1.0;
+    if (bad_patch) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    if (nv < 0.42 || nv > 0.58 || ns < 0.42 || ns > 0.58) g_null = false;
+    std::printf("    %-19s patch wrong %u  slept %.4f  first sleep %.0f (%u of %u)\n"
+                "    %-19s scored %u of %u  label-destroyed vmem %.4f +- %.4f, spikes %.4f +- %.4f\n",
+                kCpArms[a].name, bad_patch, sf, fs_n ? fs / fs_n : 0.0, fs_n, kCpReps, "",
+                scored, kCpReps, nv, nvs, ns, nss);
+  }
+  uint32_t ident = 0, pn = 0;
+  for (size_t i = 0; i < res[kCpNull].size() && i < res[kCpCarrier].size(); ++i) {
+    ++pn;
+    if (res[kCpNull][i].voc_spikes == res[kCpCarrier][i].voc_spikes) ++ident;
+  }
+  const bool g_live = pn > 0 && ident == 0;
+  std::printf("    §84 cost reference: slept 0.112, first sleep ~1099000 (heard, vocal dosed)\n"
+              "    G-PATCH  dosed arms wrote the tract, undosed did not   %s\n"
+              "    G-SLEPT  slept fraction under 0.20                     %s\n"
+              "    G-SCORED gap 200 scored on >= 80 per arm               %s\n"
+              "    G-NULL   label-destroyed in [0.42, 0.58]               %s\n"
+              "    G-LIVE   carrier comparator spikes differ from the\n"
+              "             undosed twin on every pair                    %s (%u of %u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident, pn);
+
+  const uint32_t rungs[3] = {kFpDrive, kFpVmem, kFpSpike};
+  double cell[kCpArmCount][3], cse[kCpArmCount][3], orc[kCpArmCount][3], ose[kCpArmCount][3];
+  std::printf("  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (own oracle)\n\n"
+              "    arm                 drive-exc                   vmem                        spikes                      spikes/tick\n");
+  for (uint32_t a = 0; a < kCpArmCount; ++a) {
+    std::printf("    %-19s", kCpArms[a].name);
+    for (uint32_t k = 0; k < 3; ++k) {
+      std::vector<double> c, o;
+      for (const SdOut& s : res[a])
+        if (s.ok && s.gap[0].scored) {
+          c.push_back(s.gap[0].mile_be[rungs[k]]);
+          o.push_back(s.gap[0].assembled[rungs[k]]);
+        }
+      sd_stat(c, cell[a][k], cse[a][k]);
+      sd_stat(o, orc[a][k], ose[a][k]);
+      std::printf("  %.4f+-%.4f (%.3f+-%.3f)%s", cell[a][k], cse[a][k], orc[a][k], ose[a][k],
+                  k > 0 && orc[a][k] < kSdBar ? "*" : " ");
+    }
+    std::vector<double> rate;
+    for (const SdOut& s : res[a])
+      if (s.voc_ticks > 0) rate.push_back(s.voc_spikes / s.voc_ticks);
+    double rm, rs;
+    sd_stat(rate, rm, rs);
+    std::printf("  %.4f+-%.4f\n", rm, rs);
+  }
+  std::printf("\n    * own oracle under %.3f: that cell CANNOT be tested against the bar.\n"
+              "    For comparison, VOCAL at this dose (§84/§85 references): vmem 0.678 /\n"
+              "    0.688 silenced, spike oracle 0.610 / 0.598.\n\n", kSdBar);
+
+  // Mechanism: carrier minus undosed, paired, on the comparator vmem cell.
+  std::vector<double> d;
+  for (size_t i = 0; i < res[kCpNull].size() && i < res[kCpCarrier].size(); ++i) {
+    const SdOut& x = res[kCpCarrier][i];
+    const SdOut& y = res[kCpNull][i];
+    if (x.ok && y.ok && x.gap[0].scored && y.gap[0].scored)
+      d.push_back(x.gap[0].mile_be[kFpVmem] - y.gap[0].mile_be[kFpVmem]);
+  }
+  double mm, ms;
+  sd_stat(d, mm, ms);
+
+  const double pc = cell[kCpCarrier][1], pcs = cse[kCpCarrier][1];
+  const double qc = cell[kCpQuiet][1], qcs = cse[kCpQuiet][1];
+  const double uc = cell[kCpNull][1], ucs = cse[kCpNull][1];
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_live;
+  std::printf("  THE REGISTERED READING\n\n"
+              "    PRIMARY     carrier vmem cell     %.4f +- %.4f  (oracle %.3f)\n"
+              "    CO-PRIMARY  silenced vmem cell    %.4f +- %.4f  (oracle %.3f)\n"
+              "    NULL        undosed vmem cell     %.4f +- %.4f  (oracle %.3f)\n"
+              "    MECHANISM   carrier - undosed     %+.4f +- %.4f  (%+.1f SE, paired, n %zu)\n\n",
+              pc, pcs, orc[kCpCarrier][1], qc, qcs, orc[kCpQuiet][1], uc, ucs,
+              orc[kCpNull][1], mm, ms, ms > 0 ? mm / ms : 0.0, d.size());
+  if (!gates || orc[kCpCarrier][1] < kSdBar) {
+    std::printf("    -> VOID. %s\n", !gates ? "A gate failed above."
+                                            : "The carrier's own vmem oracle is under the bar.");
+  } else if (pc - 2.0 * pcs > kSdBar && qc - 2.0 * qcs > kSdBar && mm > 2.0 * ms) {
+    std::printf("    -> THE CONJUNCTION FORMS AT THE COMPARATOR. Both primaries clear %.3f\n"
+                "       by 2 SE and the dose is what does it. M6's mechanism works on a\n"
+                "       tract that is not the voice's: the PREMISE of deviation (b) is\n"
+                "       removed, and ONLY the premise — shipping still needs §80's battery.\n",
+                kSdBar);
+  } else if (uc - 2.0 * ucs > kSdBar && std::fabs(mm) < 2.0 * ms) {
+    std::printf("    -> IT FORMS WITHOUT THE DOSE: the undosed comparator clears too and the\n"
+                "       paired change is under 2 SE. Not depression; no claim.\n");
+  } else if (pc - 2.0 * pcs > kSdBar && qc + 2.0 * qcs < kSdBar) {
+    std::printf("    -> CONFOUNDED BY THE ECHO: heard clears, silenced is under the bar by 2 SE.\n");
+  } else if (pc + 2.0 * pcs < kSdBar) {
+    std::printf("    -> DOES NOT FORM: the carrier is under the bar by 2 SE. §67's mechanism\n"
+                "       does not travel to a plain auditory-driven module; the line stops.\n");
+  } else {
+    std::printf("    -> NO VERDICT. Bounds as printed above.\n");
+  }
+  std::printf("\n    The spike rung at the comparator is REPORTED and carries no verdict.\n"
+              "    Its own oracle decides whether stage 3 (noise) has a testable target.\n");
+  return gates;
 }
 
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------

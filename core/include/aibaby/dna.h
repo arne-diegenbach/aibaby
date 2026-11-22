@@ -561,6 +561,11 @@ enum class ModuleRole : uint32_t {
   // `has_enteric_` stays false. That is what makes the shipped creature
   // bit-identical rather than merely unaffected.
   kEnteric = 11,
+  // ROADMAP §87. A module the instruments can FIND, and nothing else: no code
+  // path in the kernel or the brain reads this role. It exists so samediff's
+  // session can read and dose a module other than `vocal`, and the M6 mechanism
+  // can be tested on a tract that is not the voice's.
+  kComparator = 12,
   kRoleCount,
 };
 

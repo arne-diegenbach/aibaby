@@ -210,6 +210,7 @@ bool parse_role(const std::string& text, uint32_t& out) {
       {"interneuron", aibaby::ModuleRole::kInterneuron},
       {"context", aibaby::ModuleRole::kContext},
       {"enteric", aibaby::ModuleRole::kEnteric},  // §83, the second brain
+      {"comparator", aibaby::ModuleRole::kComparator},  // §87, read-only
   };
   for (const auto& entry : kRoles) {
     if (text == entry.name) {

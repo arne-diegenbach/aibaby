@@ -562,6 +562,11 @@ const Spec kSpecs[] = {
     {"facilquiet", 1680000, Expect::kPass, Tier::kLong,
      "PASS means the gates held with the self-voice silenced; whether §84's"
      " membrane gain survives is read from the printed branch"},
+    // §87 stage 2. Needs a genome with a `comparator` module; the shipped
+    // genome has none, so it refuses there, and that refusal is the guard.
+    {"comprobe", 1680000, Expect::kGuard, Tier::kLong,
+     "§87 stage 2: the M6 ladder read at a comparator module. Run on"
+     " dna/comparator.toml; refuses on a genome without one"},
     // §82 stage 1 at 352 creatures, seeds 48-399 so the sample that chose the n
     // is not re-tested. Same verdict semantics as `sleepdecay`.
     {"sleepdecaylong", 1600000, Expect::kPass, Tier::kLong,
@@ -2012,6 +2017,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sleepdecaylong") ok = run_sleepdecaylong(dna_blob, ticks, verbose);
   else if (name == "facilprobe") ok = run_facilprobe(dna_blob, ticks, verbose);
   else if (name == "facilquiet") ok = run_facilquiet(dna_blob, ticks, verbose);
+  else if (name == "comprobe") ok = run_comprobe(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
