@@ -1,0 +1,73 @@
+experiment: facilquiet
+
+  §84 FACILITATION ON THE M6 CREATURE — does it lift the spike rung?
+
+  dose              auditory->vocal, U 0.20, tau_rec 3000 ms on every arm
+  arms              tau_f 0 (reference) / 300 (shape) / 1000 (CARRIER)
+  creatures         96 per arm, the SAME creatures, rep_off 958, paired
+  window            samediff's overlap window, gap 200 ms
+  primary           paired change in the SPIKE rung's own oracle
+  co-primary        paired change in the MEMBRANE same/different cell
+  testable bar      a rung is testable when its own oracle >= 0.650
+
+  §85 SILENCED     voicing_threshold 1.15 on EVERY arm (quietecho's
+                    0.000-voiced rung): the self-voice is cut, so a membrane
+                    gain that survives here is not the creature's own echo
+
+  GATES
+    tau3000 alone  unpatched 0  slept 0.1121  first sleep 1100534 (96 of 96 slept)
+                   scored 96 of 96  label-destroyed vmem 0.4971 +- 0.0081, vocal 0.5019 +- 0.0078
+    + tau_f 300    unpatched 0  slept 0.1120  first sleep 1100576 (96 of 96 slept)
+                   scored 96 of 96  label-destroyed vmem 0.5006 +- 0.0074, vocal 0.5014 +- 0.0075
+    + tau_f 1000   unpatched 0  slept 0.1121  first sleep 1100614 (96 of 96 slept)
+                   scored 96 of 96  label-destroyed vmem 0.4877 +- 0.0073, vocal 0.4983 +- 0.0085
+    G-PATCH  every session wrote the tract     PASS
+    G-SLEPT  slept fraction under 0.20         PASS
+    G-SCORED gap 200 scored on >= 80 per arm   PASS
+    G-NULL   label-destroyed in [0.42, 0.58]   PASS
+    G-LIVE   carrier vocal spikes differ from
+             the reference twin on every pair  PASS (0 of 96 identical)
+
+  PER ARM, gap 200, overlap window: cell (own oracle)
+
+    arm             drive-exc                   vmem                        vocal (spikes)              vocal Hz/tick
+    tau3000 alone   0.8691+-0.0050 (1.000+-0.000)   0.6883+-0.0089 (0.725+-0.009)   0.5491+-0.0082 (0.598+-0.006)*  0.5509+-0.0008
+    + tau_f 300     0.8772+-0.0057 (1.000+-0.000)   0.7053+-0.0093 (0.732+-0.010)   0.5726+-0.0090 (0.604+-0.006)*  0.5517+-0.0008
+    + tau_f 1000    0.8757+-0.0051 (1.000+-0.000)   0.7217+-0.0091 (0.731+-0.009)   0.5757+-0.0081 (0.600+-0.006)*  0.5523+-0.0008
+
+    * own oracle under 0.650: that cell CANNOT be tested against the bar.
+    The reference arm replicates §77's `n77 tau3000` on fresh creatures:
+    there, vmem 0.6734 +- 0.0060 (oracle 0.762) and vocal 0.5504 +- 0.0051
+    (oracle 0.6169 +- 0.0044). Different seeds, so a replication, not identity.
+
+  PAIRED CONTRASTS against the reference, same creatures
+
+    arm             spike oracle          spike cell            vmem cell             vmem oracle
+    + tau_f 300     +0.0051+-0.0052 (+1.0 SE)  +0.0235+-0.0108 (+2.2 SE)  +0.0170+-0.0085 (+2.0 SE)  +0.0069+-0.0068 (+1.0 SE)  n 96
+    + tau_f 1000    +0.0019+-0.0060 (+0.3 SE)  +0.0266+-0.0106 (+2.5 SE)  +0.0334+-0.0084 (+4.0 SE)  +0.0063+-0.0066 (+1.0 SE)  n 96
+
+  THE REGISTERED READING — the carrier, tau_f 1000
+
+    primary     spike oracle change   +0.0019 +- 0.0060  (+0.3 SE)
+    co-primary  vmem cell change      +0.0334 +- 0.0084  (+4.0 SE)
+    carrier     spike oracle 0.6003 +- 0.0061, cell 0.5757 +- 0.0081
+                (§78's crossing O* = 0.6601, context only)
+
+    -> NO VERDICT on the primary: |change| under 2 SE, bounded by 0.0138.
+    AND THE MEMBRANE GAINS: the vmem cell rises by 2 SE.
+
+  §85 THE REGISTERED READING — does §84's membrane gain survive silencing?
+
+    silenced vmem cell change   +0.0334 +- 0.0084  (+4.0 SE)
+    §84 heard change            +0.0310 +- 0.0077
+    silenced minus heard        +0.0024 +- 0.0114  (+0.2 SE, both errors)
+
+    -> THE GAIN SURVIVES SILENCING: the membrane cell rises by 2 SE with
+       the self-voice cut, so §84's gain is NOT the creature's own echo.
+
+    NOT A SHIP CLAIM. This dose is on the `stp tau3000` creature, which the
+    project does not ship (§80). Any dose on auditory->vocal carries
+    `quietecho`'s `artic` column as a guard before it ships; this run cannot
+    see that column.
+wall=4293.68 s
+exit=0

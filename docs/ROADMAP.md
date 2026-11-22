@@ -21311,3 +21311,76 @@ bound; it carries no new verdict here.
 depression alone vs depression + tau_f 1000, asking whether facilitation restores the
 articulator echo that §80's depression dose destroyed. On any other branch step 2 is
 not licensed by this line.
+
+### §85 RESULT — BRANCH 2: THE MEMBRANE GAIN SURVIVES SILENCING, AT THE SAME SIZE (2026-11-22)
+
+RUN: `results/n85-facilquiet-1680k.log`, 1,680,000 ticks, exit 0, 4294 s. **Every gate
+PASSED** (288 sessions patched, slept 0.112, 96/96 scored, nulls 0.488-0.502, G-LIVE 0
+of 96 identical). Seeds 958-1053, never scored before.
+
+    paired, silenced, tau_f 1000 minus tau3000 alone, n 96
+      vmem cell      +0.0334 +- 0.0084   (+4.0 SE)   PRIMARY
+      §84 heard      +0.0310 +- 0.0077
+      silenced - heard  +0.0024 +- 0.0114 (+0.2 SE)
+      spike oracle   +0.0019 +- 0.0060   (+0.3 SE)   replicates §84's bound
+      vmem oracle    +0.0063 +- 0.0066   (+1.0 SE)
+    shape rung tau_f 300: vmem cell +0.0170 (+2.0 SE)
+
+**THE REGISTERED BRANCH IS 2. §84's GAIN IS NOT THE CREATURE'S OWN ECHO**: it appears at
+the same size with the self-voice cut, on a second, disjoint set of 96 creatures. That
+is now TWO replications on 192 fresh creatures, heard and silenced, at 4.0 SE each. The
+silenced carrier's membrane cell is **0.7217 +- 0.0091** against the 0.650 bar.
+
+**THE SPIKE ORACLE REPLICATES §84's NULL** (+0.3 SE, bound 0.0138; the carrier's oracle
+is 0.6003 +- 0.0061, under the bar), so **(c) STANDS ON BOTH SAMPLES.**
+
+**ONE COLUMN THAT MAY NOT BE READ, DISCLOSED.** The spike CELL rose +0.0266 (+2.5 SE)
+here and +0.0044 (+0.4 SE) in §84. It is an untestable cell — its own oracle is under
+0.650 on every arm — it was registered as neither primary, and the two samples
+disagree. **IT IS NOT A SPIKE RESULT AND MAY NOT BE QUOTED AS ONE.**
+
+**WHAT THIS LICENSES, AS REGISTERED: step 2 (§86).**
+
+## §86 — PRE-REGISTERED: DOES FACILITATION RESTORE THE ARTICULATOR ECHO THAT DEPRESSION KILLED? (2026-11-22)
+
+**Licensed by §85's branch 2; the owner approved this step 2026-11-22. Registered before
+either run.**
+
+**WHY IT MATTERS.** M6's deviation (b) is that the mechanism, `stp tau3000`, does not
+ship. It cannot ship because §80 measured it taking `quietecho`'s primary, the
+articulator echo, from **0.790 +- 0.008 to 0.519 +- 0.007** (chance ~0.50) on the shipped
+arm. Facilitation is the first dose that improves M6's membrane cell without moving the
+vocal rate. **If it also gives back the echo, deviation (b) has a route to removal. If it
+does not, the depression creature stays unshippable whatever facilitation adds.**
+
+**THE INSTRUMENT.** `quietecho` unchanged, at its registered 560,000 ticks, on two
+archived genomes built from `dna/default.toml` by six line-scoped edits each: the two
+`auditory -> vocal` blocks get `stp_use` 0.20 and `stp_recover_ms` 3000. One genome adds
+`stp_facil_ms` 0.0 and the other 1000.0. The files are `results/n85-step2-dep.toml` and
+`results/n85-step2-depfac.toml`; they differ from each other in exactly those two lines.
+Both genomes carry the same header seed, so creature k is the same creature in both
+runs, and the contrast is **paired per creature** from the per-seed rows.
+
+**PRIMARY: the paired change in `artic` on the `shipped` arm, depfac minus dep, n 36.**
+
+**GATES:**
+  - **G-REPRO**: the dep genome's shipped `artic` must reproduce §80's v75 figure 0.519
+    within 2 SE, both errors carried. Otherwise the dose is not the one §80 measured and
+    the run is VOID. Bit-identity with v75 is NOT expected, because DNA v85 added a field
+    since, so only the statistical match is gated.
+  - **G-SHUF**: the shuffled column at chance (0.42-0.58) on the shipped arm of both runs.
+  - `quietecho`'s own verdict line WILL read FAIL on the dep genome, because its control
+    requires the shipped arm to clear 0.75. That is the finding §80 made and is expected;
+    it is not a gate here.
+
+**BRANCHES, IN ORDER:**
+  1. **VOID** — a gate fails.
+  2. **RESTORED** — depfac's shipped `artic` minus 2 SE >= 0.75 (the instrument's own
+     bar). Facilitation gives the echo back. The next step would be the full
+     auditory->vocal battery §80 priced at 52 minutes, on both genomes, BEFORE any word
+     about shipping.
+  3. **PARTIAL** — paired change up by > 2 SE, but depfac under 0.75 at minus 2 SE. It
+     helps the echo but does not clear the guard: (b) stands.
+  4. **NO RESCUE** — |paired change| < 2 SE. (b) stands for this dose family, with the
+     bound printed.
+  5. **WORSE** — down by > 2 SE.
