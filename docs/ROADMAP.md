@@ -21421,3 +21421,120 @@ column is no better (0.728 -> 0.710).
     killed by depression itself, then whatever removes (b) has to give the
     conjunction WITHOUT depleting the tract the articulator echo is read through. That
     is a NEW MECHANISM line under §69's rule, and nothing here licenses one.
+
+## §87 — THE CASE FOR A COMPARATOR MODULE, AND ITS PRE-REGISTRATION (2026-11-22)
+
+**A NEW MECHANISM LINE, so §69's rule applies: it must be argued before it is built, and
+the argument must be able to refuse it.** Approved in outline by the owner on 2026-11-22.
+Nothing is shipped; `dna/default.toml` is not touched. The version before this line is
+tagged `v1.5.0-m6-scoped`.
+
+### WHY §67's REFUSAL OF A COMPARATOR NO LONGER HOLDS, IN ITS OWN TERMS
+
+§67 refused "a new comparator module" for one stated reason: *the synapse makes it
+unnecessary.* Depression on `auditory -> vocal` would give the conjunction for free,
+where vocal already receives both words. §69-§78 confirmed the half about the
+conjunction: M6 is met at the vocal membrane. **§80 and §86 refuted the half about it
+being free.** The same depletion takes `quietecho`'s articulator echo from 0.790 to
+0.519, which is chance. Facilitation cannot give it back (§86: +0.5 SE, bound a twelfth
+of the gap). So the synapse is still the mechanism, and the tract it sits on is the
+wrong one. **§67's mechanism stands. What changes is its location.**
+
+### WHAT THE MECHANISM NEEDS, AND WHAT IT DOES NOT
+
+§79's statement is the specification: *a synaptic state reads out nothing without drive
+through it.* The conjunction is B's drive arriving through A-depleted synapses. That is
+stimulus-specific adaptation (Mill et al. 2011), and each input channel depletes its own
+synapses. **It needs (i) the auditory spike pattern of A, (ii) depressing synapses from
+auditory, (iii) B's drive through them, and a membrane to sum it.** It does NOT need the
+target to sustain A or to be a motor module, and §78's silenced arm already showed the
+vocal echo is not what carries it. So a module receiving only auditory, through its own
+depressing tract, has every ingredient, while `auditory -> vocal` ships untouched.
+
+### WHAT IT REOPENS FOR (c), STATED AS A LATER STAGE ONLY
+
+The noise route to the threshold died partly on a STRUCTURAL confound: in `vocal`,
+`explore_scale = 1.0`, so the noise IS the exploration drive. A comparator carries
+`explore_scale = 0.0`, so its `noise_amp` is a free knob. **Nothing in this section
+claims noise will work.** The amplitude objection is separate and is untouched. It is
+stage 3 and needs its own registration.
+
+### HOW IT COULD REFUSE ITSELF
+
+  - **The echo still dies.** If a read-only module changes `quietecho`'s primary, the
+    coupling is not the tract and this line's premise is wrong (stage 1).
+  - **The conjunction does not form.** If the comparator's membrane does not clear the
+    bar with the dose, the vocal result depended on something specific to vocal, such
+    as its recurrent motor state or its learned weights, and §67's mechanism does not
+    travel (stage 2).
+  - **The undosed comparator clears too.** Then it is not the depression (stage 2's null).
+  - **It costs waking life.** §83: awake spikes pay a global fatigue tax. If first sleep
+    moves materially, every samediff anchor moves with it (reported in stage 2).
+
+### THE BUILD — `ModuleRole::kComparator`, read-only, nothing ships
+
+  - **A role, `kComparator = 12`**, with no special handling anywhere in the kernel. It
+    exists so the instruments can find the module.
+  - **`dna/comparator.toml`** is the shipped genome as an exact prefix, plus one appended
+    module and two projections. The module copies `vocal`'s neuron fields (126 neurons,
+    threshold 1.0, leak 20 ms, refractory 3 ms, `noise_amp` 0.22, target 5 Hz,
+    `inhib_fraction` 0.2, `conn_density` 0.5 at radius 0.4, IP on). It differs in
+    `explore_scale` 0, rebound off, lateral fields off, and **synaptic plasticity off**
+    (`syn_*_scale` 0), so nothing it receives is learned. The projections are exact
+    copies of the two `auditory -> vocal` blocks with `dst = "comparator"`, STP at 0 in
+    the file. **It has NO outgoing projections**, so it can reach behaviour only through
+    the global fatigue term and the re-rolled noise.
+  - **The instrument** reuses samediff's per-creature session with one added argument:
+    the ROLE whose module is read AND dosed. Default `kVocal`, so every existing arm is
+    unchanged by construction. With `kComparator`, the session patches
+    `auditory -> comparator` and computes the whole ladder there (`drive-exc`, `vmem`,
+    spikes). The `artic` spaces still read the real articulator.
+
+### STAGE 1 — THE ECHO GUARD (registered now)
+
+`quietecho` at its registered 560,000 ticks on `dna/comparator.toml`, which carries no
+dose in the file. Read the shipped arm's `artic`, paired per creature against
+`results/n80-revert-quietecho.log` (the shipped genome, 0.790 +- 0.008, same seeds).
+
+  - **PASS** — the comparator genome's shipped `artic` minus 2 SE >= 0.75, AND the
+    paired change is not below -2 SE. Go to stage 2.
+  - **FAIL** — either clause fails. The line stops and the coupling is investigated.
+
+**DISCLOSED: this guard is weak by construction.** A read-only module cannot touch the
+echo except through fatigue and noise. That is the point: stage 1 proves the build did
+not break the creature, not that the mechanism works. What makes the echo safe is the
+design. The dose never touches `auditory -> vocal`, and stage 2 runs WITH the dose on
+the comparator. **So stage 2 carries the cost reading** (first sleep and slept
+fraction against §84's ~1,099,000 and 0.112). Whether `quietecho` needs re-running with
+the dose live is decided by that reading, before stage 2's verdict is written.
+
+### STAGE 2 — THE LADDER AT THE COMPARATOR (registered now, run only after stage 1 passes)
+
+`comprobe`, 1,680,000 ticks, 96 fresh creatures, `rep_off` 1054 (past §85's 958-1053),
+the same creatures on every arm, paired. Every arm reads and doses the COMPARATOR.
+
+    arm                 dose on auditory->comparator   voice
+    comp undosed        none                           heard    MECHANISM NULL
+    comp tau3000        U 0.20, tau_rec 3000           heard    THE CARRIER
+    comp tau3000 quiet  U 0.20, tau_rec 3000           SILENCED §78's co-primary
+
+**GATES:** §84's five, applied to every arm (G-LIVE pairs carrier against undosed).
+**PRIMARY:** the carrier's comparator-`vmem` same/different cell in the overlap window at
+gap 200, read against the 0.650 bar on its own oracle. **CO-PRIMARY:** the same on the
+silenced arm. **MECHANISM:** paired carrier minus undosed on that cell.
+
+  1. **VOID** — a gate fails, or the carrier's own `vmem` oracle is under 0.650.
+  2. **THE CONJUNCTION FORMS AT THE COMPARATOR**: both primaries clear 0.650 by 2 SE,
+     AND carrier minus undosed is > 2 SE. M6's mechanism works on a module whose tract
+     is not the voice's. That removes the premise of deviation (b), and ONLY the premise:
+     shipping still needs the battery §80 priced, on a genome with the dose live.
+  3. **IT FORMS WITHOUT THE DOSE**: undosed also clears, and the paired change is under
+     2 SE. Not depression. No claim.
+  4. **CONFOUNDED BY THE ECHO**: heard clears and silenced is under the bar by 2 SE.
+  5. **DOES NOT FORM**: the carrier is under the bar by 2 SE. §67's mechanism does not
+     travel to a plain auditory-driven module, and this line stops.
+  6. **NO VERDICT** — anything else, with the bounds printed.
+
+**The spike rung at the comparator is REPORTED and carries no verdict** in stage 2.
+Whether its oracle reaches 0.650 decides whether stage 3 (noise) has a testable target.
+**Cost** — slept fraction and first-sleep tick per arm, against §84's 0.112 and ~1,099,000.
