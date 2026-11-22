@@ -557,6 +557,11 @@ const Spec kSpecs[] = {
     {"facilprobe", 1680000, Expect::kPass, Tier::kLong,
      "PASS means the gates held on all three arms; the direction is two-tailed"
      " and read from the printed branch"},
+    // §85. §84's three arms with the self-voice silenced, on fresh seeds.
+    // Same verdict semantics: PASS is the gates, the reading is the branch.
+    {"facilquiet", 1680000, Expect::kPass, Tier::kLong,
+     "PASS means the gates held with the self-voice silenced; whether §84's"
+     " membrane gain survives is read from the printed branch"},
     // §82 stage 1 at 352 creatures, seeds 48-399 so the sample that chose the n
     // is not re-tested. Same verdict semantics as `sleepdecay`.
     {"sleepdecaylong", 1600000, Expect::kPass, Tier::kLong,
@@ -2006,6 +2011,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "sleepdecay") ok = run_sleepdecay(dna_blob, ticks, verbose);
   else if (name == "sleepdecaylong") ok = run_sleepdecaylong(dna_blob, ticks, verbose);
   else if (name == "facilprobe") ok = run_facilprobe(dna_blob, ticks, verbose);
+  else if (name == "facilquiet") ok = run_facilquiet(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);

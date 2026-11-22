@@ -2465,6 +2465,7 @@ bool run_interoprobe(const std::vector<uint8_t>&, uint64_t, bool);     // §83 G
 bool run_sleepdecay(const std::vector<uint8_t>&, uint64_t, bool);      // §82 stage 1
 bool run_sleepdecaylong(const std::vector<uint8_t>&, uint64_t, bool);  // §82 stage 1, re-powered
 bool run_facilprobe(const std::vector<uint8_t>&, uint64_t, bool);      // §84 facilitation
+bool run_facilquiet(const std::vector<uint8_t>&, uint64_t, bool);      // §85 silenced control
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

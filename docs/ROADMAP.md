@@ -21269,3 +21269,45 @@ under every dose tried, and **the only open move on (c) is still a readout at th
 threshold, not another synaptic dose.** A tau_f ladder past 1000 is NOT licensed by
 this result: the spike primary sits at +0.4 SE, and the bound already excludes
 the required move.
+
+## §85 — PRE-REGISTERED: DOES §84's MEMBRANE GAIN SURVIVE WITH THE SELF-VOICE SILENCED? (2026-11-22)
+
+**REGISTERED BEFORE THE FULL RUN; the owner approved the step on 2026-11-22.** A
+400k smoke tests the code only and is not a result.
+
+**WHY THIS IS OWED BEFORE §84's GAIN IS QUOTED.** §84's co-primary rose +0.0310 +-
+0.0077 (4.0 SE) on HEARD creatures. §78 established that the membrane cell can be fed
+by PHYSICAL MIXING through the audible self-voice, and M6 is only met because a
+SILENCED arm survived. §84 had no silenced arm. So until this runs, §84's gain is
+HEARD-ONLY and may not be called synaptic.
+
+**THE INSTRUMENT.** `facilquiet`: §84's code path exactly, with `voicing_threshold`
+1.15 (quietecho's measured 0.000-voiced rung, the same setting as `n78 quiet tau3000`)
+on EVERY arm. Same three arms (tau_f 0 / 300 / 1000, carrier 1000), 96 creatures, all
+paired, at **`rep_off` 958**, past §84's 862-957, so never scored. 1,680,000 ticks. The
+refactor that added this passes `vthr` 0 and `rep_off` 862 for `facilprobe`, which
+are the values §84 ran with, so §84's command is unchanged by construction.
+
+**GATES:** §84's five, unchanged. **Not gated, disclosed:** that voicing is actually
+zero in-session; that rests on quietecho's measurement, as it did for §78.
+
+**PRIMARY: the paired change in the `vmem` same/different cell, carrier minus
+reference, on the silenced creatures.** It is compared against §84's +0.0310 as a
+constant, because the question is whether THAT gain survives. Branches, in code order:
+
+  1. **VOID** — a gate fails. §84's gain is neither confirmed nor withdrawn.
+  2. **Up by > 2 SE** — THE GAIN SURVIVES SILENCING: not the echo. The size is read
+     from `silenced minus heard`, which is printed with both errors.
+  3. **Down by > 2 SE** — the gain REVERSES; §84's gain is withdrawn as an echo effect.
+  4. **Under 2 SE, and the upper 2-SE bound is under +0.0310** — DOES NOT SURVIVE;
+     withdrawn as an echo effect until shown otherwise.
+  5. **Under 2 SE, and the bound does not exclude +0.0310** — NO VERDICT; §84's gain
+     stays HEARD-ONLY.
+
+The spike primary of §84 is printed again and read only as a replication of §84's
+bound; it carries no new verdict here.
+
+**WHAT FOLLOWS.** Only on branch 2 does the owner-approved step 2 run: `quietecho` on
+depression alone vs depression + tau_f 1000, asking whether facilitation restores the
+articulator echo that §80's depression dose destroyed. On any other branch step 2 is
+not licensed by this line.

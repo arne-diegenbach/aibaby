@@ -23890,8 +23890,11 @@ constexpr uint32_t kFpVmem = 8;    // the membrane, M6's co-primary
 constexpr uint32_t kFpDrive = 5;   // `drive-exc` — liveness of the dose
 constexpr double kFpOStar = 0.6601;  // §78's crossing, context only
 
-bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
-  (void)verbose;
+// §85 runs the same three arms with the self-voice silenced, on fresh seeds.
+// `vthr` 0 and `rep_off` 862 are §84 exactly; the silenced variant only adds
+// lines, so §84's printed output is unchanged.
+static bool run_facil_impl(const std::vector<uint8_t>& blob, uint64_t ticks, float vthr,
+                           uint32_t rep_off) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
     std::printf("  setup failed: the genome does not load\n");
@@ -23905,14 +23908,19 @@ bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
               "  primary           paired change in the SPIKE rung's own oracle\n"
               "  co-primary        paired change in the MEMBRANE same/different cell\n"
               "  testable bar      a rung is testable when its own oracle >= %.3f\n\n",
-              kFpUse, kFpRec, kFpReps, kFpRepOff, kSdBar);
+              kFpUse, kFpRec, kFpReps, rep_off, kSdBar);
+  if (vthr > 0.0f)
+    std::printf("  §85 SILENCED     voicing_threshold %.2f on EVERY arm (quietecho's\n"
+                "                    0.000-voiced rung): the self-voice is cut, so a membrane\n"
+                "                    gain that survives here is not the creature's own echo\n\n",
+                vthr);
 
   std::vector<SdOut> res[kFpArmCount];
   for (uint32_t a = 0; a < kFpArmCount; ++a) {
     const float fac = kFpArms[a].facil;
     res[a] = parallel_reps<SdOut>(kFpReps, [&](uint32_t r) {
-      return run_samediff_session(blob, ticks, r, 0.0f, false, kFpUse, kFpRec, false,
-                                  kFpRepOff, 0.0f, fac);
+      return run_samediff_session(blob, ticks, r, vthr, false, kFpUse, kFpRec, false,
+                                  rep_off, 0.0f, fac);
     });
   }
 
@@ -24081,11 +24089,53 @@ bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbo
     else
       std::printf("    The membrane cell does not move by 2 SE.\n");
   }
+  if (vthr > 0.0f) {
+    // §85's registered reading. The heard-arm effect it is tested against is
+    // §84's published figure, a constant here, because §85 asks whether THAT
+    // gain survives silencing — not whether some gain exists.
+    constexpr double kHeard = 0.0310;
+    std::printf("\n  §85 THE REGISTERED READING — does §84's membrane gain survive silencing?\n\n"
+                "    silenced vmem cell change   %+.4f +- %.4f  (%+.1f SE)\n"
+                "    §84 heard change            %+.4f +- 0.0077\n"
+                "    silenced minus heard        %+.4f +- %.4f  (%+.1f SE, both errors)\n\n",
+                p2, p2s, p2s > 0 ? p2 / p2s : 0.0, kHeard, p2 - kHeard,
+                std::sqrt(p2s * p2s + 0.0077 * 0.0077),
+                (p2 - kHeard) / std::sqrt(p2s * p2s + 0.0077 * 0.0077));
+    if (!gates)
+      std::printf("    -> VOID. A gate failed; §84's gain is neither confirmed nor withdrawn.\n");
+    else if (p2 - 2.0 * p2s > 0.0)
+      std::printf("    -> THE GAIN SURVIVES SILENCING: the membrane cell rises by 2 SE with\n"
+                  "       the self-voice cut, so §84's gain is NOT the creature's own echo.\n");
+    else if (p2 + 2.0 * p2s < 0.0)
+      std::printf("    -> THE GAIN REVERSES UNDER SILENCING: facilitation LOWERS the silenced\n"
+                  "       membrane cell. §84's gain is withdrawn as an echo effect.\n");
+    else if (p2 + 2.0 * p2s < kHeard)
+      std::printf("    -> THE GAIN DOES NOT SURVIVE: the silenced change is under 2 SE AND its\n"
+                  "       upper bound %.4f excludes §84's +%.4f. §84's gain is withdrawn as\n"
+                  "       an ECHO effect until shown otherwise.\n",
+                  p2 + 2.0 * p2s, kHeard);
+    else
+      std::printf("    -> NO VERDICT: under 2 SE and the bound %.4f does not exclude §84's\n"
+                  "       +%.4f. §84's gain stays HEARD-ONLY and may not be quoted as synaptic.\n",
+                  p2 + 2.0 * p2s, kHeard);
+  }
   std::printf("\n    NOT A SHIP CLAIM. This dose is on the `stp tau3000` creature, which the\n"
               "    project does not ship (§80). Any dose on auditory->vocal carries\n"
               "    `quietecho`'s `artic` column as a guard before it ships; this run cannot\n"
               "    see that column.\n");
   return gates;
+}
+
+bool run_facilprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_facil_impl(blob, ticks, 0.0f, kFpRepOff);
+}
+
+// §85. `rep_off` 958 = 862 + 96, past §84's block, so no section has scored
+// these seeds.
+bool run_facilquiet(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_facil_impl(blob, ticks, 1.15f, kFpRepOff + kFpReps);
 }
 
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------
