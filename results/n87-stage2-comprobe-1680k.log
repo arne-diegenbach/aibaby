@@ -1,0 +1,53 @@
+experiment: comprobe
+
+  §87 STAGE 2 — DOES THE M6 CONJUNCTION FORM AT A COMPARATOR?
+
+  read and dosed    the `comparator` module (126 neurons); auditory->vocal
+                    ships UNTOUCHED on every arm
+  arms              undosed (null) / U 0.20 tau_rec 3000 (CARRIER) /
+                    the same, self-voice silenced (co-primary)
+  creatures         96 per arm, the SAME creatures, rep_off 1054, paired
+  window            samediff's overlap window, gap 200 ms
+
+  GATES AND COST
+    comp undosed        patch wrong 0  slept 0.1118  first sleep 1103890 (96 of 96)
+                        scored 96 of 96  label-destroyed vmem 0.4951 +- 0.0076, spikes 0.4947 +- 0.0078
+    comp tau3000        patch wrong 0  slept 0.1120  first sleep 1103580 (96 of 96)
+                        scored 96 of 96  label-destroyed vmem 0.5055 +- 0.0073, spikes 0.4992 +- 0.0074
+    comp tau3000 quiet  patch wrong 0  slept 0.1118  first sleep 1104533 (96 of 96)
+                        scored 96 of 96  label-destroyed vmem 0.4943 +- 0.0088, spikes 0.4895 +- 0.0079
+    §84 cost reference: slept 0.112, first sleep ~1099000 (heard, vocal dosed)
+    G-PATCH  dosed arms wrote the tract, undosed did not   PASS
+    G-SLEPT  slept fraction under 0.20                     PASS
+    G-SCORED gap 200 scored on >= 80 per arm               PASS
+    G-NULL   label-destroyed in [0.42, 0.58]               PASS
+    G-LIVE   carrier comparator spikes differ from the
+             undosed twin on every pair                    PASS (0 of 96 identical)
+
+  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (own oracle)
+
+    arm                 drive-exc                   vmem                        spikes                      spikes/tick
+    comp undosed         0.5000+-0.0019 (0.500+-0.000)   0.5199+-0.0056 (0.988+-0.003)   0.5228+-0.0069 (0.980+-0.003)   0.5690+-0.0024
+    comp tau3000         0.8323+-0.0063 (1.000+-0.000)   0.7181+-0.0085 (0.832+-0.007)   0.5910+-0.0084 (0.708+-0.006)   0.5814+-0.0008
+    comp tau3000 quiet   0.8661+-0.0059 (1.000+-0.000)   0.7431+-0.0082 (0.853+-0.007)   0.6106+-0.0082 (0.728+-0.007)   0.5796+-0.0011
+
+    * own oracle under 0.650: that cell CANNOT be tested against the bar.
+    For comparison, VOCAL at this dose (§84/§85 references): vmem 0.678 /
+    0.688 silenced, spike oracle 0.610 / 0.598.
+
+  THE REGISTERED READING
+
+    PRIMARY     carrier vmem cell     0.7181 +- 0.0085  (oracle 0.832)
+    CO-PRIMARY  silenced vmem cell    0.7431 +- 0.0082  (oracle 0.853)
+    NULL        undosed vmem cell     0.5199 +- 0.0056  (oracle 0.988)
+    MECHANISM   carrier - undosed     +0.1982 +- 0.0101  (+19.6 SE, paired, n 96)
+
+    -> THE CONJUNCTION FORMS AT THE COMPARATOR. Both primaries clear 0.650
+       by 2 SE and the dose is what does it. M6's mechanism works on a
+       tract that is not the voice's: the PREMISE of deviation (b) is
+       removed, and ONLY the premise — shipping still needs §80's battery.
+
+    The spike rung at the comparator is REPORTED and carries no verdict.
+    Its own oracle decides whether stage 3 (noise) has a testable target.
+wall=4347.69 s
+exit=0

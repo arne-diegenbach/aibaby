@@ -21551,3 +21551,45 @@ Whether its oracle reaches 0.650 decides whether stage 3 (noise) has a testable 
 **Both registered clauses hold, so stage 2 runs.** As registered, this guard is weak by
 construction: it shows the build did not break the creature, and nothing about the
 mechanism. The dose-live cost is read in stage 2.
+
+### §87 STAGE 2 RESULT — BRANCH 2: THE CONJUNCTION FORMS AT THE COMPARATOR (2026-11-22)
+
+`results/n87-stage2-comprobe-1680k.log`, `comprobe` at 1,680,000 ticks on
+`dna/comparator.toml`, 96 fresh creatures (`rep_off` 1054), exit 0, 4348 s. Every gate
+passes: G-PATCH, G-SLEPT, G-SCORED (96 of 96 on every arm), G-NULL (label-destroyed
+`vmem` 0.494-0.506), and G-LIVE (0 of 96 carrier creatures spike-identical to the
+undosed twin).
+
+    arm                 vmem cell (own oracle)     spike cell (own oracle)
+    comp undosed        0.5199 +- 0.0056 (0.988)   0.5228 +- 0.0069 (0.980)
+    comp tau3000        0.7181 +- 0.0085 (0.832)   0.5910 +- 0.0084 (0.708)
+    comp tau3000 quiet  0.7431 +- 0.0082 (0.853)   0.6106 +- 0.0082 (0.728)
+
+    PRIMARY     carrier  vmem   0.7181 +- 0.0085   minus 2 SE 0.701 >= 0.650
+    CO-PRIMARY  silenced vmem   0.7431 +- 0.0082   minus 2 SE 0.727 >= 0.650
+    MECHANISM   carrier - undosed  +0.1982 +- 0.0101   (+19.6 SE, paired, n 96)
+
+**Branch 2, as registered.** Both primaries clear the bar by 2 SE, the undosed twin sits
+at chance, and the dose is what does it. M6's mechanism works on a module whose tract is
+not the voice's. **This removes the PREMISE of deviation (b), and ONLY the premise.**
+Shipping still needs §80's battery on a genome with the dose live. Nothing ships.
+
+**Not a cross-module comparison.** The comparator reads higher than vocal did at this
+dose (vmem 0.718 here, 0.678 in §84). But appending a module re-rolls the noise, the
+creatures are disjoint, and the comparator has no explore noise and no rebound. So the
+difference is reported and claimed as nothing.
+
+**Cost, read before the verdict as registered.** Slept fraction is 0.1118 / 0.1120 /
+0.1118, against §84's 0.112. First sleep is 1,103,890 undosed and 1,103,580 carrier,
+which is -310 ticks paired-by-arm on the same creatures. §84's ~1,099,000 is on a
+different genome and not comparable in absolute terms. **The dose costs no measurable
+waking life.** It also never touches `auditory -> vocal`, so stage 2 gives no reason to
+re-run `quietecho` with the dose live for THIS verdict. That run belongs to any future
+shipping battery, not to stage 2.
+
+**The spike rung, reported with no verdict.** At the comparator, the spike oracle is
+0.708 +- 0.006 heard and 0.728 +- 0.007 silenced. Both clear 0.650 by more than 9 SE,
+where vocal's were 0.610 / 0.598. **So at the comparator the spike rung is TESTABLE,
+and stage 3 has a target.** Its cell, 0.591 +- 0.008, sits 7 SE under the bar. The
+loss at the threshold (§70/§77) reproduces in a module with no motor role. That is
+reported here, not concluded: stage 2 registered no spike verdict.
