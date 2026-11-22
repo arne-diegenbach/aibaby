@@ -21384,3 +21384,40 @@ runs, and the contrast is **paired per creature** from the per-seed rows.
   4. **NO RESCUE** — |paired change| < 2 SE. (b) stands for this dose family, with the
      bound printed.
   5. **WORSE** — down by > 2 SE.
+
+### §86 RESULT — BRANCH 4: NO RESCUE. FACILITATION DOES NOT GIVE THE ECHO BACK (2026-11-22)
+
+RUNS: `results/n86-quietecho-dep.log` and `results/n86-quietecho-depfac.log`, 560,000
+ticks each, 1860 s and 1850 s. Both exit 1, which is `quietecho`'s control FAIL on a
+shipped arm under 0.75. As registered, that is the expected FAIL and not a gate.
+
+**GATES PASS.** G-REPRO: the dep genome's shipped `artic` is **0.519 +- 0.007**, which
+is §80's v75 figure to the printed digit, so the dose is the one §80 measured. G-SHUF:
+shuffled 0.509 and 0.510.
+
+    shipped arm, paired per creature (same seed in both genomes), n 36
+      artic dep       0.5188
+      artic depfac    0.5224
+      paired change   +0.0037 +- 0.0075   (+0.5 SE)   bound 0.0187
+      needed to reach the 0.75 bar: +0.23
+
+**BRANCH 4, NO RESCUE.** The articulator echo stays at chance with facilitation added.
+The bound, 0.019, is about a twelfth of the distance to the bar. Every other arm reads
+the same (deaf 0.518, loud 0.515, the threshold ladder 0.512-0.524), and the `echo`
+column is no better (0.728 -> 0.710).
+
+**WHAT §84-§86 ADD UP TO.**
+  - **Facilitation improves M6's MEMBRANE cell by ~+0.03 (4.0 SE, twice, heard and
+    silenced, 192 fresh creatures), with no rate shift.** The carrier reads 0.709 heard
+    and 0.722 silenced, against the 0.650 bar. That is real and it is the creature's
+    own synapses, not its echo.
+  - **It does not move the SPIKE rung** (+0.4 and +0.3 SE; bounds exclude
+    testability), so **deviation (c) STANDS**. The loss is at the threshold, as §77 said.
+  - **It does not rescue the ECHO** (+0.5 SE; bound a twelfth of the gap), so
+    **deviation (b) STANDS**. The depression creature stays unshippable, and
+    facilitation on top of it is unshippable for the same reason.
+  - **So no dose on `auditory -> vocal` tried so far removes either deviation. The
+    membrane margin got wider on a creature the project cannot ship.** If the echo is
+    killed by depression itself, then whatever removes (b) has to give the
+    conjunction WITHOUT depleting the tract the articulator echo is read through. That
+    is a NEW MECHANISM line under §69's rule, and nothing here licenses one.
