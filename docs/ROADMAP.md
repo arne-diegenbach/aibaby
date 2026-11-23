@@ -22176,3 +22176,76 @@ a different genome:**
     fixed before it runs.
 
 Nothing ships.
+
+## §91 — DOES THE CREATURE ANSWER A NEW WORD SOONER? THE ONSET READOUT (registered 2026-11-23)
+
+**Why this, and what is NOT changed.** §90 read the answer 200-600 ms after B, where the
+creature voices about 0.94 of the time. That ceiling was disclosed before §90 ran. This
+section asks the same question in the one place the ceiling cannot reach: HOW SOON the
+answer starts. Response latency is a standard infant measure, and in the first 200 ms the
+voice is still leaving the listening reflex. No stage-1 log recorded either readout, so
+nobody has seen them.
+
+Everything else is §90's:
+  - the genomes (`dna/comparator_wired.toml`, `dna/comparator.toml`);
+  - the wire at the copy weight;
+  - the dose, comparator noise 0, the probe OFF, the 1900 ms tail, gap 200;
+  - the three arms A (wired dosed), B (wired undosed) and C (unwired dosed);
+  - the gates.
+
+Nothing is tuned.
+
+**THE CLOSING RULE, WRITTEN NOW.** If §91 also reads NO EFFECT on both readouts, the
+comparator -> voice line is CLOSED at the copy weight, with no third readout and no
+weight ladder.
+
+### READOUTS (per trial, then per creature as different minus same)
+
+  - **L, onset latency:** ms from B's offset to the first voiced tick (`voicing > 0.5`,
+    `turntake`'s rule), searched over 0-2300 ms. A trial with no voiced tick is CENSORED
+    at 2300. The censored fraction is a gate. L_N = mean L(different) − mean L(same). A
+    NEGATIVE L_N means new words are answered SOONER.
+  - **E, early answer:** the voiced fraction 0-200 ms after B's offset.
+    E_N = E(different) − E(same).
+
+**Readings, on each readout:**
+  - I_C = X_N(A) − X_N(C), paired;
+  - I_B = X_N(A) − X_N(B), paired.
+
+**Two readouts are two looks, so the clearance is 2.5 SE, not 2**
+(Bonferroni over 2 needs 2.24; 2.5 is §87 stage 3's precedent). Two-tailed.
+
+### ARMS AND n
+
+96 creatures per arm, `rep_off` 1534-1629 (past §90's 1438-1533), 1,680,000 ticks.
+§90's stage 0 priced this session: first sleep at 0.73 of the budget, 60 gap-200 trials.
+No new pre-flight is run. The SE of L is unknown in advance, so the run PRINTS it, and a
+bound wider than the effect it could detect is reported as that, not as absence.
+
+### GATES (§90's, plus three)
+
+  - **§90's, unchanged:** G-PATCH, G-SLEPT, G-SCORED, G-REL and G-ANSWER (on §90's
+    window).
+  - **G-NULL:** on BOTH new readouts, with the labels shuffled within creature.
+  - **G-ONSET:** censored trials under 0.20 of the total on every arm. Otherwise L
+    measures how often the creature answers, not when.
+  - **G-EFLOOR:** E between 0.05 and 0.90 on every arm. Otherwise E has its own floor
+    or ceiling, and E is VOID while L may still be read.
+  - **G-LIVE:** wired differs from unwired on every pair, on the new readouts' sums.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** any gate except G-EFLOOR fails. If only G-EFLOOR fails, E is void and the
+     branches below are read on L alone.
+  2. **THE CREATURE ANSWERS NOVELTY IN TIME:** on L or on E, I_C and I_B both beyond
+     2.5 SE with the same sign. The readout and the sign are printed and named (on L,
+     negative = new answered SOONER). If BOTH readouts fire with signs that disagree
+     about direction (sooner but less, or later but more), the result is NO VERDICT.
+  3. **DRIVE, NOT RELATION:** on some readout |I_C| > 2.5 SE while |I_B| < 2.5 SE, and
+     branch 2 did not fire.
+  4. **INTRINSIC:** |X_N(C)| > 2.5 SE on some readout, and |I_C| < 2.5 SE on that readout.
+  5. **NO EFFECT:** |I_C| and |I_B| under 2.5 SE on every readout that is not void.
+     Bounds are printed. THE LINE CLOSES at the copy weight (the closing rule above).
+  6. **NO VERDICT:** anything else.
+
+**Reported only:** first sleep, and the mean L and E per arm (unpaired).
