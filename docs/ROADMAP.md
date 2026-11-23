@@ -22129,3 +22129,50 @@ inform any branch; stage 1 measures arm C on its own creatures.
 
 Stage 1 is unchanged otherwise: `dna/comparator_wired.toml`, an exact prefix assertion,
 three arms, `rep_off` 1438-1533, 1,680,000 ticks.
+
+### §90 STAGE 1 RESULT (2026-11-23) — BRANCH 5, NO EFFECT
+
+`results/n90-stage1-novans-1680k.log`, `novans`, 96 creatures per arm, `rep_off`
+1438-1533. Every gate PASSES:
+  - 96 of 96 creatures slept on every arm, at 1.12M-1.20M ticks.
+  - Slept fraction about 0.115.
+  - The shuffled N is within 2 SE of 0 on every arm.
+  - **G-REL** +0.2119 +- 0.0122: the relation is present at the comparator in this
+    session.
+  - **G-ANSWER:** answer minus tail is +0.24 to +0.29 on every arm.
+  - **G-LIVE:** 0 identical pairs.
+
+    arm               N (diff - same)      comparator spike cell
+    A wired dosed     +0.0021 +- 0.0028    0.7331 +- 0.0103
+    B wired undosed   +0.0017 +- 0.0023    0.5212 +- 0.0082
+    C unwired dosed   -0.0001 +- 0.0026    0.7417 +- 0.0085
+
+    I_C = N(A) - N(C)   +0.0022 +- 0.0030  (+0.7 SE, paired)
+    I_B = N(A) - N(B)   +0.0004 +- 0.0036  (+0.1 SE, paired)
+
+**The registered reading is NO EFFECT: |I_C| < 0.0081 and |I_B| < 0.0076.** The
+comparator carries the relation in its spikes, and the wire delivers its output to the
+voice (2,379 synapses, mean |w| 0.1355 at the end, against 0.12 at birth). Yet the
+creature's answer does not differ between a new word and a repeat. This holds at the copy
+weight only, and under the disclosed ceiling on a rise: the bound 0.0081 is about a
+seventh of the roughly +0.057 of room the ceiling leaves.
+
+**Reported only, NOT registered readings, and NOT paired. A and B are against C, which is
+a different genome:**
+  - **The wire raises the answer overall.** Answer minus tail is +0.272 on A and +0.286 on
+    B, against +0.2385 on C. The creature answers more when the comparator drives its
+    voice, whether or not the comparator carries the relation. That is the arousal shape
+    `turntake` first saw in 2026-08 (hearing raises babble), and it is drive, not novelty.
+  - **Cost:** first sleep on B (undosed, the comparator firing about 5x more) came 75k
+    ticks EARLIER than on A. That is §83's fatigue tax again, and §89 saw it too. A and C
+    sleep alike.
+
+**What this does NOT license.**
+  - Not "the creature cannot answer novelty". It bounds ONE wire at ONE weight, read
+    in ONE window that sits near a ceiling.
+  - A weight ladder or a moved window chosen after this result would be chasing a
+    branch, and is refused here.
+  - A new attempt needs its own registration, with a readout away from the ceiling
+    fixed before it runs.
+
+Nothing ships.

@@ -1,0 +1,54 @@
+experiment: novans
+
+  §90 STAGE 1 — DOES THE CREATURE ANSWER A NEW WORD DIFFERENTLY FROM A REPEAT?
+
+  genomes     A, B dna/comparator_wired.toml (1 comparator -> vocal projection)
+              C    dna/comparator.toml (0), an exact byte prefix of the wired file
+  creatures   96 per arm, the SAME rep numbers, rep_off 1438, paired
+  session     samediff, probe OFF, silent tail 1900 ms, comparator noise 0,
+              dose U 0.20 / tau_rec 3000 on auditory -> comparator (A, C)
+  readout     N = voiced(diff) - voiced(same), 200-600 ms after B, gap 200
+  DISCLOSED   arm C is a different genome: appending re-rolls noise, so A-C
+              pairs share rep numbers, not noise streams. The answer window
+              sits near a CEILING (stage 0: 0.943 voiced), so a rise is compressed.
+
+  GATES AND COST
+    A wired dosed    patch wrong 0  slept 0.1148  first sleep 1199256 (96 of 96)
+                     scored 96 of 96  shuffled N +0.0017 +- 0.0025  answer-tail +0.2720 +- 0.0062
+                     wire synapses 2379, mean |w| at end 0.1355
+    B wired undosed  patch wrong 0  slept 0.1145  first sleep 1124581 (96 of 96)
+                     scored 96 of 96  shuffled N -0.0048 +- 0.0030  answer-tail +0.2859 +- 0.0064
+                     wire synapses 2380, mean |w| at end 0.1352
+    C unwired dosed  patch wrong 0  slept 0.1150  first sleep 1200580 (96 of 96)
+                     scored 96 of 96  shuffled N +0.0007 +- 0.0026  answer-tail +0.2385 +- 0.0039
+                     wire synapses 0, mean |w| at end 0.0000
+    G-PATCH  dose, noise and wire where registered          PASS
+    G-SLEPT  slept fraction under 0.20 on every arm         PASS
+    G-SCORED >= 80 scored with behaviour rows per arm        PASS
+    G-NULL   shuffled N within 2 SE of 0 on every arm        PASS
+    G-REL    comparator spike cell A - B +0.2119 +- 0.0122      PASS
+    G-ANSWER answer minus tail >= +0.05 on every arm         PASS
+    G-LIVE   wired differs from unwired on every pair       PASS (0 identical)
+
+  PER ARM, gap 200
+
+    arm               N (diff - same)       comparator spike cell
+    A wired dosed     +0.0021 +- 0.0028     0.7331 +- 0.0103
+    B wired undosed   +0.0017 +- 0.0023     0.5212 +- 0.0082
+    C unwired dosed   -0.0001 +- 0.0026     0.7417 +- 0.0085
+
+  THE REGISTERED READING
+
+    I_C = N(A) - N(C)   +0.0022 +- 0.0030  (+0.7 SE, paired)   what the WIRE does
+    I_B = N(A) - N(B)   +0.0004 +- 0.0036  (+0.1 SE, paired)   what the RELATION does
+    N(C)                -0.0001 +- 0.0026  (-0.0 SE)           vocal's own
+
+    -> NO EFFECT. Bounds |I_C| < 0.0081, |I_B| < 0.0076, at the copy weight only,
+       and under the disclosed ceiling on a rise.
+
+    Nothing ships.
+
+real	134m3.881s
+user	1740m25.480s
+sys	1m40.775s
+exit=0
