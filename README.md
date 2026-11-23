@@ -21980,6 +21980,28 @@ built and none is a claim.
   memory into the motor pattern that reproduces it. It bears on THE GOAL (imitation),
   not on M6.
 
+### Checked 2026-11-23: infant habituation, the target of §90 (design, NOT RUN)
+
+§90 asks whether the creature answers a new word differently from a repeat. The question
+and both of its possible signs come from this work:
+
+- Sokolov, E. N. (1963). *Perception and the Conditioned Reflex.* Oxford: Pergamon. — the
+  orienting reflex. A response wanes as a stimulus repeats and returns when it changes,
+  because the brain compares the input against a stored model of the last one. That is
+  what the comparator module computes.
+- Fantz, R. L. (1964). *Visual experience in infants: decreased attention to familiar
+  patterns relative to novel ones.* Science 146(3644):668–670.
+  doi:10.1126/science.146.3644.668 — the novelty preference that turned habituation
+  into a measuring tool for infants.
+- Eimas, P. D., Siqueland, E. R., Jusczyk, P. & Vigorito, J. (1971). *Speech perception
+  in infants.* Science 171(3968):303–306. doi:10.1126/science.171.3968.303 — high-amplitude
+  sucking, an infant's response that habituates to a repeated speech sound and recovers
+  on a new one. It is the closest behavioural analogue of §90's readout.
+- Hunter, M. A. & Ames, E. W. (1988). *A multifactor model of infant preferences for
+  novel and familiar stimuli.* Advances in Infancy Research 5:69–95. — early in exposure
+  infants can prefer the FAMILIAR stimulus. That is why §90 is two-tailed and names both
+  signs.
+
 ### A note on where this project's record actually lives
 
 Two stores, and they are not the same store:

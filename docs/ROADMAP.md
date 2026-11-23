@@ -21979,3 +21979,121 @@ it is a conjunction, or that the pattern carries nothing. Nothing ships. The sil
 is reported only. A re-run with more creatures to push C's bound over 0.650 would be
 chasing a branch after the fact, and is refused here. A future count readout must be
 registered with its own bar AND a power calculation from this SD (0.0078 at n=96).
+
+## §90 — DOES THE CREATURE ANSWER A NEW WORD DIFFERENTLY FROM A REPEAT? (design, 2026-11-23, NO RUN)
+
+**A correction first.** M1d, answering after the caregiver stops, has been MET since DNA
+v44/v45 (`turntake`, +0.349 corrected, 6 of 6 seeds). The memory index's "NOT MET: M1d
+turn-taking" was a stale line and is fixed. So this line does not try to make the creature
+answer. It asks whether the answer DEPENDS ON WHAT WAS HEARD: does the creature answer a new
+word differently from a repeat? This is the infant habituation question (Sokolov 1963; Fantz
+1964; Eimas et al. 1971). It is also the first time the comparator's relation (§87-§89)
+would reach behaviour. Until now the comparator has had no outgoing projection.
+
+### THE MECHANISM: ONE PROJECTION, NO FREE PARAMETER
+
+`dna/comparator_wired.toml` = `dna/comparator.toml` as an EXACT BYTE PREFIX, plus ONE
+projection, `comparator -> vocal`. It is an exact copy of the excitatory
+`auditory -> vocal` tract: `source = "either"`, density 0.15, weight 0.12, delay 5 ms,
+jitter 1 ms, hebb 0, apical 0, STP 0. This is the same copy rule that built the
+comparator's own inputs in §87, so no weight is chosen by a result. A null here bounds this
+weight ONLY. Nothing else changes: `auditory -> vocal`, the rebound (its source is the
+ear, not the comparator) and every shipped module are untouched. Disclosed:
+  - `either` recruits the comparator's inhibitory cells too (inhib_fraction 0.2), as it
+    does on the tract it copies.
+  - The new synapses are reward-gated like every vocal input. The mean |weight| at the end
+    is REPORTED.
+
+The comparator runs at §88's carrier: `noise_amp` 0, with the dose (U 0.20, tau_rec
+3000 ms) on `auditory -> comparator` on dosed arms.
+
+**The sign is NOT constrained, so every reading is two-tailed.** The dosed comparator
+fires less on a repeat (§89: 0.093 against 0.516 spikes/tick undosed). So the wire sends
+vocal less drive after a repeat, which suggests "new > repeat". But vocal's rebound is a
+MEAN-SUBTRACTED term (DNA v45 is biphasic), so extra drive during the word can deepen the
+suppression as easily as it lifts the answer. Both directions are infant-like:
+dishabituation (new > repeat), and the familiarity preference early in exposure (Hunter &
+Ames 1988).
+
+### THE SESSION
+
+`samediff`'s trial (A, gap, B, 400 ms window), with three changes:
+  - **A silent tail after the window.** A new session parameter, `tail_ms`, defaults to
+    0, which is byte-identical to every earlier caller; `verify` proves it. Here it is set
+    to 1900, so the creature has 2300 ms of silence after B's offset, matching `turntake`'s
+    windows.
+  - **The §71 probe is OFF.** A sound in the answer window would trigger the listening
+    reflex.
+  - **The voiced fraction per trial** (`voicing > 0.5`, the rule `turntake` uses) is
+    recorded in two windows after B's offset:
+      - the ANSWER window, 200-600 ms (`turntake`'s burst window);
+      - the QUIET TAIL, 1400-2300 ms.
+
+The gap mix is samediff's {200, 800, 2000, 5000}. Gap 200 is READ, because it is where
+§87-§89 measured the relation. AA/AB/BA/BB stay balanced, so B's identity carries nothing
+about the label. An effect of which word B is cancels inside N.
+
+**Readout.** N = voiced(different) − voiced(same) in the answer window, at gap 200, per
+creature.
+
+### ARMS (same creatures, paired, fresh `rep_off` from 1438, past §89's 1342-1437)
+
+    arm                  genome                 dose    what it controls
+    A  wired dosed       comparator_wired       yes     THE CARRIER
+    B  wired undosed     comparator_wired       no      the wire's drive without the relation
+    C  unwired dosed     comparator             yes     vocal's own novelty answer, no wire
+
+**Readings:**
+  - I_C = N(A) − N(C), paired: what the WIRE does.
+  - I_B = N(A) − N(B), paired: what the RELATION does through the wire.
+
+**What passes if the creature is inert?** An inert voice gives N = 0 on every arm. A wire
+that only adds drive gives N(A) = N(B). An acoustic or own-voice effect of the trial is in
+arm C too. None of these fires branch 2.
+
+### GATES
+
+  - **G-PATCH:** the dose where registered, the comparator's noise at 0, and the wire
+    present on A and B only.
+  - **G-SLEPT:** slept fraction under 0.20 on every arm. G-SCORED: >= 80 creatures scored
+    on every arm.
+  - **G-NULL:** N with the same/different labels shuffled within creature lies within
+    2 SE of 0 on every arm.
+  - **G-REL (positive control, the relation is still there under the new timing):**
+    comparator spike cell A minus B, paired, > 2 SE.
+  - **G-ANSWER (M1d survives the wire):** answer minus quiet tail >= +0.05 (`turntake`'s
+    bar) on every arm. A wire that breaks answering is VOID, not a finding.
+  - **G-LIVE:** wired differs from unwired on every pair.
+
+### BRANCHES (written before any run)
+
+  1. **VOID:** a gate fails.
+  2. **THE CREATURE ANSWERS NOVELTY:** I_C and I_B both beyond 2 SE, with the SAME sign.
+     The sign is printed and named: new > repeat is dishabituation; repeat > new is a
+     familiarity preference. Nothing ships. Shipping is the owner's decision, and needs
+     the §80 battery for vocal's tracts (at least `quietecho`'s `artic` as a guard).
+  3. **DRIVE, NOT RELATION:** |I_C| > 2 SE and |I_B| < 2 SE. The wire changes the answer,
+     but the comparator's relation is not what does it.
+  4. **INTRINSIC:** |N(C)| > 2 SE and |I_C| < 2 SE. Vocal already answers novelty without
+     the wire, and the wire adds nothing measurable.
+  5. **NO EFFECT:** |I_C| and |I_B| both under 2 SE. Bounds are printed, and they bound
+     the copy weight only.
+  6. **NO VERDICT:** anything else, including I_C and I_B beyond 2 SE with opposite signs.
+
+**Cost, reported only:** first sleep and slept fraction, wired against unwired. §83's tax
+applies to a comparator that now drives a module.
+
+### STAGES
+
+  - **Stage 0 (build plus pre-flight, its numbers are NEVER results):**
+      - add `tail_ms` and the voiced-fraction windows;
+      - `verify` must pass unchanged;
+      - on arm C ALONE, 24 creatures at full length (1.68M ticks) on a disjoint
+        `rep_off` range, measure: the SD of N, where first sleep falls under the longer
+        trial, and whether any gap-200 trial is scored.
+    Stage 0 prices n so that SE(I) <= 0.01, buying headroom AGAINST the projection
+    (every SD projection here has come in low). If first sleep falls past 0.8 of the
+    budget, the budget is raised before stage 1 and the change is written here first.
+  - **Stage 1:** build `dna/comparator_wired.toml`, assert the exact prefix, then run
+    the three arms at stage 0's n. The registration above is not edited after stage 0,
+    except n and the budget.
