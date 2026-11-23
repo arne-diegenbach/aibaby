@@ -1,0 +1,52 @@
+experiment: comquiet
+
+  §88 — THE NOISELESS COMPARATOR, UNDER A RELATION CRITERION
+
+  read and dosed    the `comparator` module (126 neurons), noise_amp 0.00
+                    except the reference arm (0.22)
+  creatures         96 per arm, the SAME creatures, rep_off 1246, paired
+  criterion         R1 null in [0.42,0.58], R2 undosed under the bar by
+                    2 SE, R3 dose effect > 2 SE. XOR oracle PRINTED ONLY.
+
+  GATES AND COST
+    quiet undosed         patch wrong 0  slept 0.1122  first sleep 1128420 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4908 +- 0.0070, spikes 0.4986 +- 0.0066
+    quiet dosed           patch wrong 0  slept 0.1121  first sleep 1201526 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4955 +- 0.0074, spikes 0.4933 +- 0.0062
+    quiet dosed silenced  patch wrong 0  slept 0.1122  first sleep 1201837 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4886 +- 0.0078, spikes 0.5132 +- 0.0076
+    ref dosed n0.22       patch wrong 0  slept 0.1121  first sleep 1104161 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4996 +- 0.0074, spikes 0.5133 +- 0.0071
+    G-PATCH  dose where registered, noise on every arm    PASS
+    G-SLEPT  slept fraction under 0.20 on every arm        PASS
+    G-SCORED gap 200 scored on >= 80 per arm               PASS
+    G-NULL   R1: label-destroyed in [0.42, 0.58]           PASS
+    G-LIVE   carrier differs from undosed and reference    PASS (0 identical)
+
+  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (XOR oracle, printed only)
+
+    arm                    vmem                          spikes                        spikes/tick
+    quiet undosed           0.5289+-0.0051 (0.991+-0.002)   0.5231+-0.0067 (0.894+-0.004)   0.5035+-0.0069
+    quiet dosed             0.7776+-0.0085 (0.920+-0.008)   0.6753+-0.0068 (0.584+-0.004)   0.0833+-0.0053
+    quiet dosed silenced    0.8026+-0.0076 (0.917+-0.008)   0.6830+-0.0070 (0.591+-0.005)   0.0966+-0.0082
+    ref dosed n0.22         0.7157+-0.0101 (0.816+-0.007)   0.5991+-0.0087 (0.689+-0.007)   0.5822+-0.0008
+
+  THE REGISTERED READING — spike cells
+
+    PRIMARY     carrier             0.6753 +- 0.0068  minus 2 SE 0.6617
+    CO-PRIMARY  silenced            0.6830 +- 0.0070  minus 2 SE 0.6689
+    R2          undosed             0.5231 +- 0.0067  plus 2 SE 0.5366  PASS
+    R3          carrier - undosed   +0.1521 +- 0.0100  (+15.2 SE, paired)  PASS
+    REPLICATION carrier - reference +0.0762 +- 0.0122  (+6.3 SE, paired)
+
+    -> THE SPIKES CARRY THE RELATION. M6's spike rung is met at the
+       comparator UNDER THE RELATION CRITERION (not the XOR oracle), on a
+       genome that does not ship. Every quotation carries that clause.
+
+    NOT READ: whether the relation is a 1-D population-count signal.
+    Nothing ships.
+
+real	97m3.196s
+user	1297m17.342s
+sys	0m39.005s
+exit=0

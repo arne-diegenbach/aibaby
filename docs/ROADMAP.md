@@ -21822,3 +21822,60 @@ waking life at noise 0, and it is reported again here, not gated.
 **NOT READ, and stated so nobody infers it was:** whether the relation is a 1-D
 population-count signal. The session has no scalar count space, and building one now
 would be a new instrument inside a confirmation run.
+
+### §88 RESULT — BRANCH 2: THE SPIKES CARRY THE RELATION, UNDER THE RELATION CRITERION (2026-11-23)
+
+`results/n88-comquiet-1680k.log`, `comquiet` at 1,680,000 ticks on
+`dna/comparator.toml`, 96 creatures no section had scored (`rep_off` 1246), four arms,
+exit 0, 5823 s. Every gate passes, R1 included: the label-destroyed null reads
+0.489-0.513 on all arms.
+
+    arm                    vmem cell   spike cell (XOR oracle, printed only)   spikes/tick
+    quiet undosed          0.529       0.5231 +- 0.0067 (0.894)                 0.504
+    quiet dosed            0.778       0.6753 +- 0.0068 (0.584)                 0.083
+    quiet dosed silenced   0.803       0.6830 +- 0.0070 (0.591)                 0.097
+    ref dosed n0.22        0.716       0.5991 +- 0.0087 (0.689)                 0.582
+
+    PRIMARY     carrier    0.6753, minus 2 SE 0.6617 >= 0.650
+    CO-PRIMARY  silenced   0.6830, minus 2 SE 0.6689 >= 0.650
+    R2          undosed    0.5231, plus 2 SE 0.5366 < 0.650          PASS
+    R3          carrier - undosed    +0.1521 +- 0.0100 (+15.2 SE)    PASS
+    REPLICATION carrier - reference  +0.0762 +- 0.0122 (+6.3 SE)     (stage 3: +6.6)
+
+**Branch 2, as registered.** On fresh creatures the noiseless comparator's spikes say
+whether the word repeated, at 0.675. They also do it with the voice silenced, so the
+creature's own echo is not what carries it. The undosed twin decodes both words (XOR
+oracle 0.894) and reads chance on sameness, and the dose adds +15 SE. Stage 3's
+noiseless gain replicates almost exactly (+6.3 SE against +6.6).
+
+**THE CLAIM, WITH EVERY CLAUSE THAT TRAVELS WITH IT:**
+
+> M6's spike rung is met **at a read-only comparator module**, **under the relation
+> criterion (R1-R3) and not the XOR oracle**, with **comparator `noise_amp` 0**, on
+> **`dna/comparator.toml`, which does not ship**, in **the overlap window at gap 200**.
+
+**What this changes in M6's deviations.**
+- **(b)'s PREMISE was removed by §87 stage 2.** Depression on the voice's own tract
+  killed the echo. Depression on a separate tract does not.
+- **(c) is now met at the comparator** under a criterion that differs from the one (c)
+  was written against. It is NOT met at `vocal`, and it is NOT met under the XOR
+  oracle. Quoting (c) as "resolved" without the criterion clause is forbidden.
+- **(a), the window, is untouched.**
+- **The XOR oracle sits BELOW the cell on both dosed noiseless arms** (0.584 / 0.591).
+  §88 argued in advance why that does not void a positive claim: R2 is the artefact
+  control. It is still a disclosed oddity, not a strength.
+
+**Cost.** First sleep is 1,201,526 on the carrier against 1,104,161 on the reference.
+That is the +97,000 ticks stage 3 measured, reproduced: a quiet comparator lengthens
+waking life. The slept fraction is unchanged at 0.112.
+
+**NOT READ, as registered:** whether the relation is a 1-D population-count signal. The
+carrier fires 0.083 spikes/tick against the undosed arm's 0.504, so a repeat-means-fewer-
+spikes code is the obvious candidate. A count-only readout is the natural next
+instrument. If that single number carries the cell, the "conjunction" is stimulus-
+specific adaptation read as a rate. That is still a relation, but a much simpler one,
+and the claim's wording would need to say so.
+
+**What it would take to ship:** the comparator appended to `dna/default.toml` at noise
+0, and §80's battery on that genome. The append re-rolls noise, so every pinned anchor
+moves. That is the owner's decision and has not been made. **Nothing ships.**
