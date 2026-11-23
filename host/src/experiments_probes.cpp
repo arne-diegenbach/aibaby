@@ -7,6 +7,7 @@
 #include <limits>  // §60: quiet_NaN, so a missing module is never averaged as 0
 
 #include "experiments_common.h"
+#include "host/dna_toml.h"  // §90: novans compiles arm C's genome
 
 namespace aibaby_host {
 
@@ -18880,6 +18881,10 @@ struct SdOut {
   uint32_t stp_patched = 0;
   // §87 stage 3: 1 when the read module's `noise_amp` was overwritten.
   uint32_t noise_patched = 0;
+  // §90: comparator -> vocal synapses at the session's END, and their mean
+  // |weight|. 0 synapses on an unwired genome. Read only when `tail_ms` is on.
+  uint32_t wire_syn = 0;
+  double wire_w = 0.0;
   double voc_spikes = 0.0;
   double voc_ticks = 0.0;
   // §70. The three things that decide whether rung 1 was READ AT ALL.
@@ -19981,6 +19986,18 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       out.gap[g].tail_voiced = bv_tail[g];
       for (size_t i = 0; i < lab_a[g].size(); ++i)
         out.gap[g].same_lab.push_back(lab_a[g][i] == lab_b[g][i] ? 1 : 0);
+    }
+    const int32_t wc_m = s.dna.module_with_role(aibaby::ModuleRole::kComparator);
+    const int32_t wv_m = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    if (wc_m >= 0 && wv_m >= 0) {
+      const aibaby::Network& wnet = s.brain.network();
+      const uint32_t nw = wnet.tract_synapses(uint32_t(wc_m), uint32_t(wv_m), nullptr, 0);
+      std::vector<uint32_t> wid(nw, 0);
+      if (nw) wnet.tract_synapses(uint32_t(wc_m), uint32_t(wv_m), wid.data(), nw);
+      double ws = 0.0;
+      for (uint32_t id : wid) ws += std::fabs(double(wnet.synapse_weight(id)));
+      out.wire_syn = nw;
+      out.wire_w = nw ? ws / double(nw) : 0.0;
     }
   }
 
@@ -25043,6 +25060,257 @@ bool run_novpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
                 "       session; G-ANSWER would void stage 1 as registered. Report first.\n");
   else std::printf("    -> PRICED. Stage 1's n and budget are written into §90 before it runs.\n");
   return ok;
+}
+
+// --- novans (§90 stage 1): does the creature answer a new word differently? --
+// Arms A and B run on the genome given (dna/comparator_wired.toml); arm C on
+// dna/comparator.toml, compiled here and asserted to be the given file's exact
+// byte prefix. Branches are ROADMAP §90's, in its order.
+constexpr uint32_t kNaReps = 96;
+constexpr uint32_t kNaRepOff = 1438;   // past §89's 1342-1437
+constexpr const char* kNaUnwired = "dna/comparator.toml";
+constexpr uint32_t kNaArms = 3;
+constexpr uint32_t kNaA = 0, kNaB = 1, kNaC = 2;
+constexpr const char* kNaName[kNaArms] = {"A wired dosed", "B wired undosed",
+                                          "C unwired dosed"};
+
+namespace {
+struct NaRow {
+  bool have = false;
+  double n = 0.0;       // voiced(diff) - voiced(same), answer window, gap 200
+  double n_shuf = 0.0;  // the same with the labels shuffled within creature
+  double burst = 0.0;   // answer minus quiet tail, all gap-200 trials
+  double behave_sum = 0.0;
+};
+
+NaRow na_row(const SdOut& o, uint32_t rep) {
+  NaRow r;
+  const SdGapRow& g = o.gap[0];
+  const size_t nt = g.ans_voiced.size();
+  if (nt == 0 || g.same_lab.size() != nt || g.tail_voiced.size() != nt) return r;
+  auto diff_of = [&](const std::vector<int>& lab, double& out) {
+    double sa = 0, ns = 0, da = 0, nd = 0;
+    for (size_t i = 0; i < nt; ++i) {
+      if (lab[i]) { sa += g.ans_voiced[i]; ns += 1; }
+      else { da += g.ans_voiced[i]; nd += 1; }
+    }
+    if (ns == 0 || nd == 0) return false;
+    out = da / nd - sa / ns;
+    return true;
+  };
+  if (!diff_of(g.same_lab, r.n)) return r;
+  // Fisher-Yates with a splitmix stream seeded by the creature, so the null is
+  // reproducible and independent of the session's own RNG.
+  std::vector<int> sh = g.same_lab;
+  uint64_t z = 0x9E3779B97F4A7C15ull * (uint64_t(rep) + 1u);
+  for (size_t i = sh.size(); i > 1; --i) {
+    z += 0x9E3779B97F4A7C15ull;
+    uint64_t x = z;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ull;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBull;
+    x ^= x >> 31;
+    std::swap(sh[i - 1], sh[x % i]);
+  }
+  if (!diff_of(sh, r.n_shuf)) return r;
+  double at = 0, tt = 0;
+  for (size_t i = 0; i < nt; ++i) { at += g.ans_voiced[i]; tt += g.tail_voiced[i]; }
+  r.burst = (at - tt) / double(nt);
+  r.behave_sum = at + tt;
+  r.have = true;
+  return r;
+}
+
+uint32_t na_wires(const std::vector<uint8_t>& blob) {
+  aibaby::Dna d;
+  if (d.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return 999;
+  const int32_t c = d.module_with_role(aibaby::ModuleRole::kComparator);
+  const int32_t v = d.module_with_role(aibaby::ModuleRole::kVocal);
+  uint32_t n = 0;
+  for (uint32_t i = 0; c >= 0 && v >= 0 && i < d.projection_count(); ++i)
+    if (int32_t(d.projection(i).src) == c && int32_t(d.projection(i).dst) == v) ++n;
+  return n;
+}
+
+bool na_file(const char* path, std::string& out) {
+  FILE* f = std::fopen(path, "rb");
+  if (!f) return false;
+  char buf[65536];
+  size_t k;
+  while ((k = std::fread(buf, 1, sizeof(buf), f)) > 0) out.append(buf, k);
+  std::fclose(f);
+  return true;
+}
+}  // namespace
+
+bool run_novans(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> blob_c;
+  std::string err;
+  if (!compile_dna_toml(kNaUnwired, blob_c, err)) {
+    std::printf("  REFUSED: arm C's genome %s does not compile: %s\n", kNaUnwired, err.c_str());
+    return false;
+  }
+  const uint32_t w_ab = na_wires(blob), w_c = na_wires(blob_c);
+  std::string txt_c, txt_w;
+  const bool prefix = na_file(kNaUnwired, txt_c) && na_file("dna/comparator_wired.toml", txt_w) &&
+                      txt_w.size() > txt_c.size() && txt_w.compare(0, txt_c.size(), txt_c) == 0;
+  if (w_ab != 1 || w_c != 0 || !prefix) {
+    std::printf("  REFUSED: run this on dna/comparator_wired.toml. The given genome has %u\n"
+                "  comparator -> vocal projections (needs 1), %s has %u (needs 0), and the\n"
+                "  exact-prefix assertion %s. Nothing was measured.\n",
+                w_ab, kNaUnwired, w_c, prefix ? "holds" : "FAILS");
+    return false;
+  }
+  std::printf("\n  §90 STAGE 1 — DOES THE CREATURE ANSWER A NEW WORD DIFFERENTLY FROM A REPEAT?\n\n"
+              "  genomes     A, B dna/comparator_wired.toml (1 comparator -> vocal projection)\n"
+              "              C    %s (0), an exact byte prefix of the wired file\n"
+              "  creatures   %u per arm, the SAME rep numbers, rep_off %u, paired\n"
+              "  session     samediff, probe OFF, silent tail %llu ms, comparator noise 0,\n"
+              "              dose U 0.20 / tau_rec 3000 on auditory -> comparator (A, C)\n"
+              "  readout     N = voiced(diff) - voiced(same), %llu-%llu ms after B, gap 200\n"
+              "  DISCLOSED   arm C is a different genome: appending re-rolls noise, so A-C\n"
+              "              pairs share rep numbers, not noise streams. The answer window\n"
+              "              sits near a CEILING (stage 0: 0.943 voiced), so a rise is compressed.\n\n",
+              kNaUnwired, kNaReps, kNaRepOff, (unsigned long long)kSdTailNeed,
+              (unsigned long long)kSdAnsFrom, (unsigned long long)kSdAnsTo);
+
+  std::vector<SdOut> res[kNaArms];
+  for (uint32_t a = 0; a < kNaArms; ++a) {
+    const std::vector<uint8_t>& gb = a == kNaC ? blob_c : blob;
+    const bool dosed = a != kNaB;
+    res[a] = parallel_reps<SdOut>(kNaReps, [&](uint32_t r) {
+      return run_samediff_session(gb, ticks, r, 0.0f, false, dosed ? 0.20f : 0.0f,
+                                  dosed ? 3000.0f : 0.0f, false, kNaRepOff, 0.0f, 0.0f,
+                                  aibaby::ModuleRole::kComparator, 0.0f, kSdTailNeed);
+    });
+  }
+
+  std::vector<NaRow> rows[kNaArms];
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true, g_answer = true;
+  std::printf("  GATES AND COST\n");
+  for (uint32_t a = 0; a < kNaArms; ++a) {
+    uint32_t bad = 0, scored = 0, fs_n = 0;
+    double att = 0, slp = 0, fs = 0, wsyn = 0, ww = 0;
+    std::vector<double> ns_, bu_;
+    const bool dosed = a != kNaB;
+    const bool wired = a != kNaC;
+    for (uint32_t r = 0; r < res[a].size(); ++r) {
+      const SdOut& o = res[a][r];
+      if ((dosed ? o.stp_patched == 0 : o.stp_patched != 0) || o.noise_patched != 1 ||
+          (wired ? o.wire_syn == 0 : o.wire_syn != 0))
+        ++bad;
+      att += o.attempted;
+      slp += o.slept;
+      wsyn += o.wire_syn;
+      ww += o.wire_w;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      rows[a].push_back(na_row(o, r));
+      if (o.ok && o.gap[0].scored && rows[a].back().have) {
+        ++scored;
+        ns_.push_back(rows[a].back().n_shuf);
+        bu_.push_back(rows[a].back().burst);
+      }
+    }
+    double nm, nse, bm, bse;
+    sd_stat(ns_, nm, nse);
+    sd_stat(bu_, bm, bse);
+    const double sf = att > 0 ? slp / att : 1.0;
+    if (bad) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    // An empty set reads 0 +- 0 and would PASS: the gate needs creatures.
+    if (ns_.size() < 2 || std::fabs(nm) > 2.0 * nse) g_null = false;
+    if (bu_.size() < 2 || bm < 0.05) g_answer = false;
+    const double nres = res[a].empty() ? 1.0 : double(res[a].size());
+    std::printf("    %-16s patch wrong %u  slept %.4f  first sleep %.0f (%u of %u)\n"
+                "    %-16s scored %u of %u  shuffled N %+.4f +- %.4f  answer-tail %+.4f +- %.4f\n"
+                "    %-16s wire synapses %.0f, mean |w| at end %.4f\n",
+                kNaName[a], bad, sf, fs_n ? fs / fs_n : 0.0, fs_n, kNaReps, "", scored,
+                kNaReps, nm, nse, bm, bse, "", wsyn / nres, ww / nres);
+  }
+  auto paired = [&](uint32_t x, uint32_t y, auto fx, auto fy, double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[x].size() && i < res[y].size(); ++i) {
+      const SdOut& ox = res[x][i];
+      const SdOut& oy = res[y][i];
+      if (ox.ok && oy.ok && ox.gap[0].scored && oy.gap[0].scored && rows[x][i].have &&
+          rows[y][i].have)
+        d.push_back(fx(ox, rows[x][i]) - fy(oy, rows[y][i]));
+    }
+    sd_stat(d, m, se);
+  };
+  auto spk = [](const SdOut& o, const NaRow&) { return o.gap[0].mile_be[kFpSpike]; };
+  auto nof = [](const SdOut&, const NaRow& r) { return r.n; };
+  double rel, rels;
+  paired(kNaA, kNaB, spk, spk, rel, rels);
+  const bool g_rel = rel > 2.0 * rels;
+  uint32_t ident = 0;
+  for (size_t i = 0; i < rows[kNaA].size() && i < rows[kNaC].size(); ++i)
+    if (rows[kNaA][i].behave_sum == rows[kNaC][i].behave_sum) ++ident;
+  const bool g_live = ident == 0;
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_rel && g_answer && g_live;
+  std::printf("    G-PATCH  dose, noise and wire where registered          %s\n"
+              "    G-SLEPT  slept fraction under 0.20 on every arm         %s\n"
+              "    G-SCORED >= 80 scored with behaviour rows per arm        %s\n"
+              "    G-NULL   shuffled N within 2 SE of 0 on every arm        %s\n"
+              "    G-REL    comparator spike cell A - B %+.4f +- %.4f      %s\n"
+              "    G-ANSWER answer minus tail >= +0.05 on every arm         %s\n"
+              "    G-LIVE   wired differs from unwired on every pair       %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL", rel, rels,
+              g_rel ? "PASS" : "FAIL", g_answer ? "PASS" : "FAIL", g_live ? "PASS" : "FAIL",
+              ident);
+
+  double N[kNaArms], Ns[kNaArms];
+  std::printf("  PER ARM, gap 200\n\n"
+              "    arm               N (diff - same)       comparator spike cell\n");
+  for (uint32_t a = 0; a < kNaArms; ++a) {
+    std::vector<double> n, c;
+    for (size_t i = 0; i < res[a].size(); ++i)
+      if (res[a][i].ok && res[a][i].gap[0].scored && rows[a][i].have) {
+        n.push_back(rows[a][i].n);
+        c.push_back(res[a][i].gap[0].mile_be[kFpSpike]);
+      }
+    double cm, cs;
+    sd_stat(n, N[a], Ns[a]);
+    sd_stat(c, cm, cs);
+    std::printf("    %-16s  %+.4f +- %.4f     %.4f +- %.4f\n", kNaName[a], N[a], Ns[a], cm, cs);
+  }
+  double ic, ics, ib, ibs;
+  paired(kNaA, kNaC, nof, nof, ic, ics);
+  paired(kNaA, kNaB, nof, nof, ib, ibs);
+  std::printf("\n  THE REGISTERED READING\n\n"
+              "    I_C = N(A) - N(C)   %+.4f +- %.4f  (%+.1f SE, paired)   what the WIRE does\n"
+              "    I_B = N(A) - N(B)   %+.4f +- %.4f  (%+.1f SE, paired)   what the RELATION does\n"
+              "    N(C)                %+.4f +- %.4f  (%+.1f SE)           vocal's own\n\n",
+              ic, ics, ics > 0 ? ic / ics : 0.0, ib, ibs, ibs > 0 ? ib / ibs : 0.0, N[kNaC],
+              Ns[kNaC], Ns[kNaC] > 0 ? N[kNaC] / Ns[kNaC] : 0.0);
+  const bool ic_big = std::fabs(ic) > 2.0 * ics, ib_big = std::fabs(ib) > 2.0 * ibs;
+  const bool nc_big = std::fabs(N[kNaC]) > 2.0 * Ns[kNaC];
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (ic_big && ib_big && (ic > 0) == (ib > 0)) {
+    std::printf("    -> THE CREATURE ANSWERS NOVELTY. Sign: %s.\n"
+                "       Nothing ships; shipping is the owner's decision and needs the §80\n"
+                "       battery for vocal's tracts.\n",
+                ic > 0 ? "NEW > REPEAT (dishabituation)" : "REPEAT > NEW (familiarity preference)");
+  } else if (ic_big && !ib_big) {
+    std::printf("    -> DRIVE, NOT RELATION. The wire changes the answer; the comparator's\n"
+                "       relation is not what does it. Bound on I_B %.4f.\n",
+                std::fabs(ib) + 2.0 * ibs);
+  } else if (nc_big && !ic_big) {
+    std::printf("    -> INTRINSIC. Vocal already answers novelty without the wire; the wire\n"
+                "       adds nothing measurable (bound on I_C %.4f).\n",
+                std::fabs(ic) + 2.0 * ics);
+  } else if (!ic_big && !ib_big) {
+    std::printf("    -> NO EFFECT. Bounds |I_C| < %.4f, |I_B| < %.4f, at the copy weight only,\n"
+                "       and under the disclosed ceiling on a rise.\n",
+                std::fabs(ic) + 2.0 * ics, std::fabs(ib) + 2.0 * ibs);
+  } else {
+    std::printf("    -> NO VERDICT. Bounds as printed above.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return gates;
 }
 
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------
