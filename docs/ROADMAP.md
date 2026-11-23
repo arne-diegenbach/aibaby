@@ -21939,3 +21939,43 @@ hash checks the shipped genome.
 **A disclosed asymmetry.** On one dimension, nearest-centroid has nothing to dilute it.
 On 126 dimensions, uninformative neurons add distance noise. So C can exceed F without
 the pattern being harmful, and branch 3 includes C > F.
+
+### §89 RESULT (2026-11-23) — BRANCH 6, NO VERDICT
+
+`results/n89-comcount-1680k.log`. Every gate PASSES. First sleep lands between 1.13M
+and 1.20M ticks on every arm, so the 1.68M run saw the post-sleep creature. 96 of 96
+creatures were scored on every arm. The count's label-destroyed null reads 0.490 to 0.508.
+
+    arm                    full spike cell    count cell         vmem cell          spikes/tick
+    quiet undosed          0.5190 +- 0.0068   0.5172 +- 0.0063   0.5318 +- 0.0063   0.5162
+    quiet dosed            0.6663 +- 0.0078   0.6586 +- 0.0078   0.7592 +- 0.0084   0.0929
+    quiet dosed silenced   0.6721 +- 0.0072   0.6643 +- 0.0072   0.7992 +- 0.0086   0.1030
+
+    F         0.6663, minus 2 SE 0.6507   -> clears the bar: branch 2 does NOT fire
+    C         0.6586, minus 2 SE 0.6431   -> does NOT clear: branch 3 does NOT fire
+    F - C     +0.0077 +- 0.0049 (+1.6 SE) -> under 2 SE: branches 4 and 5 do NOT fire
+    C - Cu    +0.1415 +- 0.0096 (+14.8 SE)
+
+**The registered reading is NO VERDICT.** It is not branch 3: the count's point estimate
+sits above the bar, but its lower bound does not, and the registration asked for the
+bound. "The comparator signals a repeat by firing less" is NOT licensed as the claim.
+
+**What may be said, as bounds:**
+  - **§88 replicates on a second, disjoint sample.** F 0.6663 against §88's 0.6753, with
+    the lower bound 0.6507 above the bar. That is narrow: one SE less and branch 2 fires.
+  - **The pattern adds at most 0.0175** (F - C + 2 SE) over the count. The count carries
+    0.1586 of the full cell's 0.1663 above chance. This is a point ratio, NOT a
+    decomposition, because no branch licensed one.
+  - **The count moves with the dose at +14.8 SE.** Dosed, the module fires 0.093
+    spikes/tick against 0.516 undosed. Depression cuts the comparator's drive by about
+    5.5x.
+
+**Cost, reported only.** First sleep came 72k ticks LATER on the dosed arm
+(1,197,918 against 1,125,696). That matches the fatigue tax in §83: fewer spikes, less
+fatigue.
+
+**What this does NOT license.** It does not show that the relation is a rate code, that
+it is a conjunction, or that the pattern carries nothing. Nothing ships. The silenced arm
+is reported only. A re-run with more creatures to push C's bound over 0.650 would be
+chasing a branch after the fact, and is refused here. A future count readout must be
+registered with its own bar AND a power calculation from this SD (0.0078 at n=96).

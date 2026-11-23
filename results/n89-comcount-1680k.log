@@ -1,0 +1,44 @@
+experiment: comcount
+
+  §89 — IS THE COMPARATOR'S RELATION A POPULATION COUNT?
+
+  read and dosed    the `comparator` module (126 neurons), noise_amp 0.00
+  creatures         96 per arm, the SAME creatures, rep_off 1342, paired
+  count cell        the spike space summed to one number per trial; same
+                    window, folds, trials and decoder as the full cell
+
+  GATES AND COST
+    quiet undosed         patch wrong 0  slept 0.1125  first sleep 1125696 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.5031, spikes 0.4951, count 0.4987 +- 0.0081
+    quiet dosed           patch wrong 0  slept 0.1120  first sleep 1197918 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4936, spikes 0.4875, count 0.4898 +- 0.0070
+    quiet dosed silenced  patch wrong 0  slept 0.1118  first sleep 1198696 (96 of 96)
+                          scored 96 of 96  label-destroyed vmem 0.4968, spikes 0.5051, count 0.5081 +- 0.0063
+    G-PATCH  dose where registered, noise on every arm    PASS
+    G-SLEPT  slept fraction under 0.20 on every arm        PASS
+    G-SCORED gap 200 scored on >= 80 per arm               PASS
+    G-NULL   label-destroyed in [0.42, 0.58], count too    PASS
+    G-LIVE   carrier differs from undosed on every pair    PASS (0 identical)
+
+  PER ARM, gap 200, overlap window, AT THE COMPARATOR
+
+    arm                    full spike cell     count cell          vmem cell           spikes/tick
+    quiet undosed          0.5190 +- 0.0068   0.5172 +- 0.0063   0.5318 +- 0.0063   0.5162
+    quiet dosed            0.6663 +- 0.0078   0.6586 +- 0.0078   0.7592 +- 0.0084   0.0929
+    quiet dosed silenced   0.6721 +- 0.0072   0.6643 +- 0.0072   0.7992 +- 0.0086   0.1030
+
+  THE REGISTERED READING — carrier
+
+    F   full spike cell            0.6663 +- 0.0078  minus 2 SE 0.6507
+    C   count cell                 0.6586 +- 0.0078  minus 2 SE 0.6431
+    F - C                          +0.0077 +- 0.0049  (+1.6 SE, paired)
+    C - Cu (count vs undosed)      +0.1415 +- 0.0096  (+14.8 SE, paired)
+
+    -> NO VERDICT. Bounds as printed above.
+
+    The silenced arm is reported only. Nothing ships.
+
+real	138m24.305s
+user	1705m19.491s
+sys	1m13.047s
+exit=0
