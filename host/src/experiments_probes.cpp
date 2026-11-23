@@ -18768,6 +18768,10 @@ struct SdGapRow {
   double null_be[kSdSpaces] = {};    // ...with the labels destroyed
   double ing_a_be[kSdSpaces] = {};   // A's identity during B
   double ing_b_be[kSdSpaces] = {};   // B's identity during B
+  // §89: the read module's spike space summed to ONE number per trial, same
+  // window, same folds, same decoder as `mile_be[2]`.
+  double count_be = 0.0;
+  double count_null_be = 0.0;
   // §65: RECOVERABLE, as against REPRESENTED.
   double asm_real[kSdPairCount] = {};   // per-trial assembled readout — §65's primary
   double asm_null[kSdPairCount] = {};   // ...with the labels destroyed
@@ -20064,6 +20068,17 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       // freshest and B is already legible.
       row.mile_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], ysame, train);
       row.null_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], yshuf, train);
+      if (sp == 2) {
+        std::vector<std::vector<double>> cnt;
+        cnt.reserve(feat[g][kSdWBE][sp].size());
+        for (const std::vector<double>& v : feat[g][kSdWBE][sp]) {
+          double s = 0.0;
+          for (double x : v) s += x;
+          cnt.push_back({s});
+        }
+        row.count_be = holdout_accuracy(cnt, ysame, train);
+        row.count_null_be = holdout_accuracy(cnt, yshuf, train);
+      }
       row.ing_a_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], ya, train);
       row.ing_b_be[sp] = holdout_accuracy(feat[g][kSdWBE][sp], yb, train);
       // THE ORACLE, REPAIRED, AND THE WINDOW IS ASSIGNED PER SPACE FAMILY FROM
@@ -24721,6 +24736,160 @@ bool run_comquiet(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n    NOT READ: whether the relation is a 1-D population-count signal.\n"
               "    Nothing ships.\n");
+  return gates;
+}
+
+// --- comcount (§89): is the comparator's relation a 1-D population count? ---
+constexpr uint32_t kCcReps = 96;
+constexpr uint32_t kCcRepOff = 1342;  // past §88's 1246-1341
+constexpr CqArmDef kCcArms[3] = {
+    {"quiet undosed", 0.0f, 0.0f, 0.0f, 0.0f},
+    {"quiet dosed", 0.20f, 3000.0f, 0.0f, 0.0f},
+    {"quiet dosed silenced", 0.20f, 3000.0f, 1.15f, 0.0f}};
+constexpr uint32_t kCcArmCount = 3;
+constexpr uint32_t kCcNull = 0, kCcCarrier = 1;
+
+bool run_comcount(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t cm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  if (cm < 0) {
+    std::printf("  REFUSED: this genome has no `comparator` module. Run it on\n"
+                "  dna/comparator.toml. Nothing was measured.\n");
+    return false;
+  }
+  std::printf("\n  §89 — IS THE COMPARATOR'S RELATION A POPULATION COUNT?\n\n"
+              "  read and dosed    the `comparator` module (%u neurons), noise_amp 0.00\n"
+              "  creatures         %u per arm, the SAME creatures, rep_off %u, paired\n"
+              "  count cell        the spike space summed to one number per trial; same\n"
+              "                    window, folds, trials and decoder as the full cell\n\n",
+              dna.module(uint32_t(cm)).neurons, kCcReps, kCcRepOff);
+
+  std::vector<SdOut> res[kCcArmCount];
+  for (uint32_t a = 0; a < kCcArmCount; ++a) {
+    const CqArmDef d = kCcArms[a];
+    res[a] = parallel_reps<SdOut>(kCcReps, [&](uint32_t r) {
+      return run_samediff_session(blob, ticks, r, d.vthr, false, d.use, d.rec, false,
+                                  kCcRepOff, 0.0f, 0.0f, aibaby::ModuleRole::kComparator,
+                                  d.noise);
+    });
+  }
+
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true;
+  std::printf("  GATES AND COST\n");
+  for (uint32_t a = 0; a < kCcArmCount; ++a) {
+    uint32_t bad = 0, scored = 0, fs_n = 0;
+    double att = 0, slp = 0, fs = 0;
+    std::vector<double> nv_, ns_, nc_;
+    const bool dosed = kCcArms[a].use > 0.0f;
+    for (const SdOut& o : res[a]) {
+      if ((dosed ? o.stp_patched == 0 : o.stp_patched != 0) || o.noise_patched != 1) ++bad;
+      att += o.attempted;
+      slp += o.slept;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      if (o.ok && o.gap[0].scored) {
+        ++scored;
+        nv_.push_back(o.gap[0].null_be[kFpVmem]);
+        ns_.push_back(o.gap[0].null_be[kFpSpike]);
+        nc_.push_back(o.gap[0].count_null_be);
+      }
+    }
+    double nv, nvs, ns, nss, nc, ncs;
+    sd_stat(nv_, nv, nvs);
+    sd_stat(ns_, ns, nss);
+    sd_stat(nc_, nc, ncs);
+    const double sf = att > 0 ? slp / att : 1.0;
+    if (bad) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    if (nv < 0.42 || nv > 0.58 || ns < 0.42 || ns > 0.58 || nc < 0.42 || nc > 0.58)
+      g_null = false;
+    std::printf("    %-21s patch wrong %u  slept %.4f  first sleep %.0f (%u of %u)\n"
+                "    %-21s scored %u of %u  label-destroyed vmem %.4f, spikes %.4f, count %.4f +- %.4f\n",
+                kCcArms[a].name, bad, sf, fs_n ? fs / fs_n : 0.0, fs_n, kCcReps, "",
+                scored, kCcReps, nv, ns, nc, ncs);
+  }
+  uint32_t ident = 0;
+  for (size_t i = 0; i < res[kCcCarrier].size() && i < res[kCcNull].size(); ++i)
+    if (res[kCcCarrier][i].voc_spikes == res[kCcNull][i].voc_spikes) ++ident;
+  const bool g_live = ident == 0;
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_live;
+  std::printf("    G-PATCH  dose where registered, noise on every arm    %s\n"
+              "    G-SLEPT  slept fraction under 0.20 on every arm        %s\n"
+              "    G-SCORED gap 200 scored on >= 80 per arm               %s\n"
+              "    G-NULL   label-destroyed in [0.42, 0.58], count too    %s\n"
+              "    G-LIVE   carrier differs from undosed on every pair    %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident);
+
+  auto full_of = [](const SdOut& s) { return s.gap[0].mile_be[kFpSpike]; };
+  auto count_of = [](const SdOut& s) { return s.gap[0].count_be; };
+  double F[kCcArmCount], Fs[kCcArmCount], C[kCcArmCount], Cs[kCcArmCount];
+  std::printf("  PER ARM, gap 200, overlap window, AT THE COMPARATOR\n\n"
+              "    arm                    full spike cell     count cell          vmem cell           spikes/tick\n");
+  for (uint32_t a = 0; a < kCcArmCount; ++a) {
+    std::vector<double> f, c, v, rate;
+    for (const SdOut& s : res[a]) {
+      if (s.ok && s.gap[0].scored) {
+        f.push_back(full_of(s));
+        c.push_back(count_of(s));
+        v.push_back(s.gap[0].mile_be[kFpVmem]);
+      }
+      if (s.voc_ticks > 0) rate.push_back(s.voc_spikes / s.voc_ticks);
+    }
+    double vm, vs, rm, rs;
+    sd_stat(f, F[a], Fs[a]);
+    sd_stat(c, C[a], Cs[a]);
+    sd_stat(v, vm, vs);
+    sd_stat(rate, rm, rs);
+    std::printf("    %-21s  %.4f +- %.4f   %.4f +- %.4f   %.4f +- %.4f   %.4f\n",
+                kCcArms[a].name, F[a], Fs[a], C[a], Cs[a], vm, vs, rm);
+  }
+  std::printf("\n");
+
+  auto paired = [](const std::vector<SdOut>& x, const std::vector<SdOut>& y,
+                   double (*fx)(const SdOut&), double (*fy)(const SdOut&), double& m,
+                   double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < x.size() && i < y.size(); ++i)
+      if (x[i].ok && y[i].ok && x[i].gap[0].scored && y[i].gap[0].scored)
+        d.push_back(fx(x[i]) - fy(y[i]));
+    sd_stat(d, m, se);
+  };
+  double d1, d1s, d2, d2s;
+  paired(res[kCcCarrier], res[kCcCarrier], +full_of, +count_of, d1, d1s);
+  paired(res[kCcCarrier], res[kCcNull], +count_of, +count_of, d2, d2s);
+  const double f = F[kCcCarrier], fs = Fs[kCcCarrier], c = C[kCcCarrier], cs = Cs[kCcCarrier];
+  std::printf("  THE REGISTERED READING — carrier\n\n"
+              "    F   full spike cell            %.4f +- %.4f  minus 2 SE %.4f\n"
+              "    C   count cell                 %.4f +- %.4f  minus 2 SE %.4f\n"
+              "    F - C                          %+.4f +- %.4f  (%+.1f SE, paired)\n"
+              "    C - Cu (count vs undosed)      %+.4f +- %.4f  (%+.1f SE, paired)\n\n",
+              f, fs, f - 2.0 * fs, c, cs, c - 2.0 * cs, d1, d1s, d1s > 0 ? d1 / d1s : 0.0, d2,
+              d2s, d2s > 0 ? d2 / d2s : 0.0);
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (f - 2.0 * fs < kSdBar) {
+    std::printf("    -> §88 DOES NOT REPLICATE on this sample: F minus 2 SE is %.4f, under\n"
+                "       %.3f. No decomposition is claimed.\n", f - 2.0 * fs, kSdBar);
+  } else if (c - 2.0 * cs >= kSdBar && d1 < 2.0 * d1s) {
+    std::printf("    -> THE COUNT CARRIES IT. The relation is a RATE code: the comparator\n"
+                "       signals a repeat by firing less. Re-word §88 accordingly.\n");
+  } else if (d1 > 2.0 * d1s && d2 > 2.0 * d2s) {
+    std::printf("    -> THE PATTERN ADDS TO THE COUNT. The count carries %+.4f over its\n"
+                "       undosed twin; the pattern adds %+.4f on top.\n", d2, d1);
+  } else if (d1 > 2.0 * d1s && d2 < 2.0 * d2s) {
+    std::printf("    -> THE PATTERN CARRIES IT ALONE: the count is no better than its\n"
+                "       undosed twin; the relation is in which neurons fire.\n");
+  } else {
+    std::printf("    -> NO VERDICT. Bounds as printed above.\n");
+  }
+  std::printf("\n    The silenced arm is reported only. Nothing ships.\n");
   return gates;
 }
 

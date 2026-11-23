@@ -21879,3 +21879,63 @@ and the claim's wording would need to say so.
 **What it would take to ship:** the comparator appended to `dna/default.toml` at noise
 0, and §80's battery on that genome. The append re-rolls noise, so every pinned anchor
 moves. That is the owner's decision and has not been made. **Nothing ships.**
+
+## §89 — IS THE RELATION A POPULATION COUNT? (registered 2026-11-23)
+
+Owner's call, 2026-11-23: "go with the population-count readout next". §88 left this
+open and named it: the dosed noiseless comparator fires 0.083 spikes/tick against the
+undosed arm's 0.504. So "a repeat fires less" is the obvious candidate for what carries
+its 0.675. **The answer changes the claim's WORDING, not its truth.** A count code is
+stimulus-specific adaptation read as a rate (Mill et al. 2011). That is still a
+relation, and a far simpler one than a conjunction pattern.
+
+### THE INSTRUMENT, AND WHY IT CANNOT MOVE AN OLD COLUMN
+
+The session's spike space is the read module's per-neuron spike counts in the overlap
+window (`kSdWBE`). The new cell sums them to ONE number per trial and reads it:
+  - with the same decoder (`holdout_accuracy`, standardised nearest centroid; on one
+    dimension that is a midpoint threshold);
+  - on the same folds and the same trials, after the same reordering;
+  - against the same labels, plus the label-destroyed shuffle.
+
+It is computed after every existing column, draws no random number, and writes no
+state. So every earlier column must come back bit-identical; the fast tier's pinned
+hash checks the shipped genome.
+
+### RUN
+
+`comcount`, 1,680,000 ticks, `dna/comparator.toml`, 96 fresh creatures, `rep_off` 1342
+(past §88's 1246-1341), paired, comparator `noise_amp` 0 on every arm:
+
+    arm                    dose     voice
+    quiet undosed          no       heard     the count's null
+    quiet dosed            yes      heard     THE CARRIER
+    quiet dosed silenced   yes      SILENCED  reported, no verdict
+
+**GATES:**
+  - **G-PATCH, G-SLEPT (< 0.20 on every arm), G-SCORED (>= 80), G-LIVE:** as in §88.
+  - **G-NULL:** the label-destroyed null in [0.42, 0.58] on vmem, on spikes, AND on the
+    count.
+
+**READINGS (carrier, gap 200):**
+  - F, the full spike cell;
+  - C, the count cell;
+  - F - C, paired;
+  - C - Cu, the count minus the undosed count, paired.
+
+  1. **VOID** — a gate fails.
+  2. **§88 DOES NOT REPLICATE** — F minus 2 SE < 0.650. §88's claim is reported against
+     this second sample, with the bound printed. No decomposition is claimed.
+  3. **THE COUNT CARRIES IT** — C minus 2 SE >= 0.650, AND F - C is under 2 SE. The
+     relation is a rate code. §88's claim is re-worded: the comparator signals a repeat
+     by firing less. "Conjunction" is not used for it.
+  4. **THE PATTERN ADDS TO THE COUNT** — F - C > 2 SE AND C - Cu > 2 SE. The count
+     carries part of it, and which neurons fire carries more. The size of each part is
+     printed.
+  5. **THE PATTERN CARRIES IT ALONE** — F - C > 2 SE AND C - Cu under 2 SE. The count
+     says nothing, and the relation is in the pattern.
+  6. **NO VERDICT** — anything else, bounds printed.
+
+**A disclosed asymmetry.** On one dimension, nearest-centroid has nothing to dilute it.
+On 126 dimensions, uninformative neurons add distance noise. So C can exceed F without
+the pattern being harmful, and branch 3 includes C > F.

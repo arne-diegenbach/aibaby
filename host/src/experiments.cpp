@@ -573,6 +573,9 @@ const Spec kSpecs[] = {
     {"comquiet", 1680000, Expect::kGuard, Tier::kLong,
      "§88: the noiseless comparator under a relation criterion fixed before the"
      " run. Run on dna/comparator.toml; refuses on a genome without one"},
+    {"comcount", 1680000, Expect::kGuard, Tier::kLong,
+     "§89: is the comparator's relation a 1-D population count? Run on"
+     " dna/comparator.toml; refuses on a genome without one"},
     // §82 stage 1 at 352 creatures, seeds 48-399 so the sample that chose the n
     // is not re-tested. Same verdict semantics as `sleepdecay`.
     {"sleepdecaylong", 1600000, Expect::kPass, Tier::kLong,
@@ -2026,6 +2029,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "comprobe") ok = run_comprobe(dna_blob, ticks, verbose);
   else if (name == "comnoise") ok = run_comnoise(dna_blob, ticks, verbose);
   else if (name == "comquiet") ok = run_comquiet(dna_blob, ticks, verbose);
+  else if (name == "comcount") ok = run_comcount(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
