@@ -22097,3 +22097,35 @@ applies to a comparator that now drives a module.
   - **Stage 1:** build `dna/comparator_wired.toml`, assert the exact prefix, then run
     the three arms at stage 0's n. The registration above is not edited after stage 0,
     except n and the budget.
+
+### §90 STAGE 0 — PRICED (2026-11-23). THESE NUMBERS ARE NEVER RESULTS.
+
+`results/n90-stage0-novpre-1680k.log`, `novpre`: arm C only, 24 creatures, `rep_off`
+9000-9023 (disjoint from every registered range).
+  - **Checks:** the patch was correct on 24 of 24 and every creature had behaviour rows.
+  - **Sleep:** slept fraction 0.114. All 24 creatures slept; the latest first sleep was at
+    1,227,734 ticks, 0.731 of the budget. That is under 0.8, so **the budget stays at
+    1,680,000**.
+  - **Trials:** 60 gap-200 trials kept per creature (the tail lengthens the round, so 68
+    rounds instead of 100).
+  - **SD(N) across creatures:** 0.0147. Projected SD(I) is 0.0207 (sqrt(2) x, the
+    uncorrelated case). With x1.5 headroom, SE(I) <= 0.01 needs 7 creatures per arm.
+
+**Stage 1's n is 96 per arm**, not 7. The binding constraints are G-SCORED (>= 80) and
+G-REL, the comparator's paired relation, which §88/§89 measured at n=96. At n=96 the
+projected SE(I) is about 0.002.
+
+**A ceiling, disclosed before stage 1 and NOT a change to the registration.** The answer
+window is voiced 0.943 of the time on arm C. Answer minus tail is +0.238, so G-ANSWER is
+clearly feasible. But it leaves at most about +0.057 of room for an answer to RISE, and
+about 0.94 for it to FALL. The two tails of §90 are therefore not equally reachable.
+"New > repeat" is compressed by a ceiling, and a small |I| in that direction is not
+evidence of a small mechanism. The windows are NOT moved after seeing this, because the
+registration fixed them. If stage 1 reads branch 5 or the compressed tail, this ceiling is
+the first thing its bounds must carry.
+
+Stage 0 also printed N on arm C. It is a pre-flight figure, NOT quoted, and it does not
+inform any branch; stage 1 measures arm C on its own creatures.
+
+Stage 1 is unchanged otherwise: `dna/comparator_wired.toml`, an exact prefix assertion,
+three arms, `rep_off` 1438-1533, 1,680,000 ticks.

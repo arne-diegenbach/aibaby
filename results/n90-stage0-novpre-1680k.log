@@ -1,0 +1,33 @@
+experiment: novpre
+
+  §90 STAGE 0 — PRICING THE NOVELTY ANSWER ON ARM C (unwired, dosed)
+  THESE NUMBERS ARE A PRE-FLIGHT AND ARE NEVER QUOTED AS RESULTS.
+
+  creatures   24, rep_off 9000 (disjoint from every registered arm)
+  session     samediff, probe OFF, silent tail 1900 ms, comparator noise 0,
+              dose U 0.20 / tau_rec 3000 on auditory -> comparator
+  windows     answer 200-600 ms, quiet tail 1400-2300 ms after B's offset
+
+  CHECKS
+    patch wrong         0 of 24
+    no behaviour rows   0 of 24
+    slept fraction      0.1140   (stage 1 gate: under 0.20)
+    first sleep         mean 1202280, latest 1227734, 24 of 24 slept; budget 1680000
+                        latest / budget 0.731   (stage 0 rule: raise the budget past 0.8)
+    gap-200 trials kept min 60, mean 60.4 per creature
+
+  PRE-FLIGHT READINGS (arm C, gap 200) — NOT RESULTS
+    voiced, answer window        0.9432 +- 0.0054
+    voiced, quiet tail           0.7052 +- 0.0060
+    answer minus tail            +0.2380 +- 0.0064   (G-ANSWER needs >= +0.05)
+    N = diff - same, answer      -0.0066 +- 0.0030   over 24 creatures
+    SD(N) across creatures       0.0147
+    SD(I) projected, sqrt(2)SD   0.0207
+    n for SE(I) <= 0.01, x1.5    7 creatures per arm
+
+    -> PRICED. Stage 1's n and budget are written into §90 before it runs.
+
+real	12m45.448s
+user	152m20.528s
+sys	0m11.223s
+exit=0

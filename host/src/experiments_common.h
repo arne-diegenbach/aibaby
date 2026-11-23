@@ -2470,6 +2470,7 @@ bool run_comprobe(const std::vector<uint8_t>&, uint64_t, bool);       // §87 st
 bool run_comnoise(const std::vector<uint8_t>&, uint64_t, bool);       // §87 stage 3
 bool run_comquiet(const std::vector<uint8_t>&, uint64_t, bool);       // §88
 bool run_comcount(const std::vector<uint8_t>&, uint64_t, bool);       // §89
+bool run_novpre(const std::vector<uint8_t>&, uint64_t, bool);         // §90 stage 0
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

@@ -18662,6 +18662,11 @@ constexpr double kSdSleepMax = 0.20;
 constexpr uint32_t kSdMinTrials = 16;     // ctxsrc's floor for a held-out split
 constexpr uint64_t kSdRoundTicks =
     kSdGapCount * (2 * kSdWord + kSdScore) + 200 + 800 + 2000 + 5000;
+// §90. The answer and quiet-tail windows, measured from B's offset, and the
+// silent tail a session needs before they fit. `turntake`'s windows.
+constexpr uint64_t kSdAnsFrom = 200, kSdAnsTo = 600;
+constexpr uint64_t kSdTailFrom = 1400, kSdTailTo = 2300;
+constexpr uint64_t kSdTailNeed = kSdTailTo - kSdScore;   // 1900
 
 // The four windows a trial is cut into.
 // §64 adds `kSdWBE`, the first 400 ms of the SECOND word. §63 scored
@@ -18772,6 +18777,12 @@ struct SdGapRow {
   // window, same folds, same decoder as `mile_be[2]`.
   double count_be = 0.0;
   double count_null_be = 0.0;
+  // §90: the BEHAVIOUR after B, per kept trial, in step with the labels. Filled
+  // only when the session ran with `tail_ms >= kSdTailNeed`, so every earlier
+  // caller leaves them empty. `ans_voiced` is the voiced fraction 200-600 ms
+  // after B's offset (turntake's burst window), `tail_voiced` 1400-2300 ms.
+  std::vector<double> ans_voiced, tail_voiced;
+  std::vector<int> same_lab;
   // §65: RECOVERABLE, as against REPRESENTED.
   double asm_real[kSdPairCount] = {};   // per-trial assembled readout — §65's primary
   double asm_null[kSdPairCount] = {};   // ...with the labels destroyed
@@ -19013,7 +19024,10 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
                            uint32_t rep_off, float burst_ms,
                            float stp_facil = 0.0f,
                            aibaby::ModuleRole read_role = aibaby::ModuleRole::kVocal,
-                           float read_noise = -1.0f) {
+                           float read_noise = -1.0f,
+                           uint64_t tail_ms = 0) {
+  // §90. `tail_ms` appends silence after the scoring window. At 0 the trial,
+  // the round length and every window are exactly as before.
   // §87. `read_role` is the module the whole ladder is READ on and the dose is
   // WRITTEN to (auditory -> that module). Every pre-§87 caller takes the
   // default, so the vocal module is read and dosed exactly as before.
@@ -19122,8 +19136,11 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
 
   // Rounded DOWN to a multiple of four, so that each gap's cell list is exactly
   // balanced rather than nearly so.
-  const uint64_t rounds = (ticks / kSdRoundTicks) / 4u * 4u;
+  const uint64_t round_ticks = kSdRoundTicks + kSdGapCount * tail_ms;
+  const uint64_t rounds = (ticks / round_ticks) / 4u * 4u;
   if (rounds == 0) return out;
+  const bool behave = tail_ms >= kSdTailNeed;
+  std::vector<double> bv_ans[kSdGapCount], bv_tail[kSdGapCount];
 
   // Per gap: four windows x five spaces of features, plus the two label columns.
   std::vector<std::vector<double>> feat[kSdGapCount][kSdWinCount][kSdSpaces];
@@ -19212,8 +19229,9 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       const int a = int(cell >> 1), b = int(cell & 1u);
       const uint64_t b_on = kSdWord + gap;
       const uint64_t b_off = b_on + kSdWord;
-      const uint64_t len = b_off + kSdScore;
+      const uint64_t len = b_off + kSdScore + tail_ms;
       const uint64_t pre_from = b_on - (gap < kSdPre ? gap : kSdPre);
+      double ans_v = 0.0, ans_n = 0.0, tail_v = 0.0, tail_n = 0.0;   // §90
 
       std::vector<std::vector<double>> bins(
           kSdWinCount, std::vector<double>(size_t(wa) + wc + wv, 0.0));
@@ -19384,6 +19402,14 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           slept = true;
           if (out.first_sleep_tick == 0) out.first_sleep_tick = tick_now;
         }
+        // §90. A host-side read of the voice, no RNG and no kernel state, so
+        // nothing downstream can move. The rule is `turntake`'s.
+        if (behave && t >= b_off) {
+          const uint64_t dt_b = t - b_off;
+          const double vo = s.brain.voice().voicing > aibaby::Scalar(0.5) ? 1.0 : 0.0;
+          if (dt_b >= kSdAnsFrom && dt_b < kSdAnsTo) { ans_v += vo; ans_n += 1.0; }
+          if (dt_b >= kSdTailFrom && dt_b < kSdTailTo) { tail_v += vo; tail_n += 1.0; }
+        }
 
         // A TICK CAN BELONG TO TWO WINDOWS, and that is deliberate. `kSdWBE`
         // OVERLAPS the front of `kSdWB` rather than carving it up: making the
@@ -19404,7 +19430,7 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           if (t < b_on + kSdOverlap) wins[nwin++] = kSdWBE;          // 400 ms rung
           if (t < b_on + kSdSweepMs[0]) wins[nwin++] = kSdWBE100;
           if (t < b_on + kSdSweepMs[1]) wins[nwin++] = kSdWBE200;
-        } else if (t >= b_off) wins[nwin++] = kSdWS;
+        } else if (t >= b_off && t < b_off + kSdScore) wins[nwin++] = kSdWS;
         // §75. THE ISI TEST, AND IT RUNS ABOVE THE `continue` ON PURPOSE.
         //
         // `last_v` has to see EVERY tick's spikes or the interval it reports is
@@ -19943,6 +19969,18 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       }
       lab_a[g].push_back(a);
       lab_b[g].push_back(b);
+      if (behave) {
+        bv_ans[g].push_back(ans_n > 0.0 ? ans_v / ans_n : 0.0);
+        bv_tail[g].push_back(tail_n > 0.0 ? tail_v / tail_n : 0.0);
+      }
+    }
+  }
+  if (behave) {
+    for (uint32_t g = 0; g < kSdGapCount; ++g) {
+      out.gap[g].ans_voiced = bv_ans[g];
+      out.gap[g].tail_voiced = bv_tail[g];
+      for (size_t i = 0; i < lab_a[g].size(); ++i)
+        out.gap[g].same_lab.push_back(lab_a[g][i] == lab_b[g][i] ? 1 : 0);
     }
   }
 
@@ -24891,6 +24929,120 @@ bool run_comcount(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   }
   std::printf("\n    The silenced arm is reported only. Nothing ships.\n");
   return gates;
+}
+
+// --- novpre (§90 stage 0): price the novelty-answer readout on arm C alone ---
+// ITS NUMBERS ARE NEVER RESULTS. It runs the UNWIRED dosed comparator (§90's
+// arm C) with the silent tail, on a rep_off range no registered arm uses, and
+// prints what stage 1 needs: the SD of N, where first sleep falls, how many
+// gap-200 trials survive, and whether the answer is still visible above the
+// quiet tail (G-ANSWER's feasibility).
+constexpr uint32_t kNpReps = 24;
+constexpr uint32_t kNpRepOff = 9000;   // disjoint from every §87-§90 range
+constexpr uint64_t kNpTail = kSdTailNeed;
+constexpr double kNpSeTarget = 0.01;   // §90: SE(I) <= 0.01
+constexpr double kNpHeadroom = 1.5;    // against the projection, never to it
+
+bool run_novpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  if (dna.module_with_role(aibaby::ModuleRole::kComparator) < 0) {
+    std::printf("  REFUSED: this genome has no `comparator` module. Run it on\n"
+                "  dna/comparator.toml. Nothing was measured.\n");
+    return false;
+  }
+  std::printf("\n  §90 STAGE 0 — PRICING THE NOVELTY ANSWER ON ARM C (unwired, dosed)\n"
+              "  THESE NUMBERS ARE A PRE-FLIGHT AND ARE NEVER QUOTED AS RESULTS.\n\n"
+              "  creatures   %u, rep_off %u (disjoint from every registered arm)\n"
+              "  session     samediff, probe OFF, silent tail %llu ms, comparator noise 0,\n"
+              "              dose U 0.20 / tau_rec 3000 on auditory -> comparator\n"
+              "  windows     answer %llu-%llu ms, quiet tail %llu-%llu ms after B's offset\n\n",
+              kNpReps, kNpRepOff, (unsigned long long)kNpTail,
+              (unsigned long long)kSdAnsFrom, (unsigned long long)kSdAnsTo,
+              (unsigned long long)kSdTailFrom, (unsigned long long)kSdTailTo);
+
+  const std::vector<SdOut> res = parallel_reps<SdOut>(kNpReps, [&](uint32_t r) {
+    return run_samediff_session(blob, ticks, r, 0.0f, false, 0.20f, 3000.0f, false,
+                                kNpRepOff, 0.0f, 0.0f, aibaby::ModuleRole::kComparator,
+                                0.0f, kNpTail);
+  });
+
+  uint32_t bad = 0, fs_n = 0, empty = 0;
+  double att = 0, slp = 0, fs = 0, fs_max = 0;
+  size_t tmin = SIZE_MAX, tsum = 0;
+  std::vector<double> n_c, burst, ans_all, tail_all;
+  for (const SdOut& o : res) {
+    if (o.stp_patched == 0 || o.noise_patched != 1) ++bad;
+    att += o.attempted;
+    slp += o.slept;
+    if (o.first_sleep_tick > 0) {
+      fs += double(o.first_sleep_tick);
+      ++fs_n;
+      if (double(o.first_sleep_tick) > fs_max) fs_max = double(o.first_sleep_tick);
+    }
+    const SdGapRow& g = o.gap[0];
+    const size_t nt = g.ans_voiced.size();
+    if (nt == 0 || g.same_lab.size() != nt || g.tail_voiced.size() != nt) { ++empty; continue; }
+    tmin = std::min(tmin, nt);
+    tsum += nt;
+    double sa = 0, ns = 0, da = 0, nd = 0, at = 0, tt = 0;
+    for (size_t i = 0; i < nt; ++i) {
+      if (g.same_lab[i]) { sa += g.ans_voiced[i]; ns += 1; }
+      else { da += g.ans_voiced[i]; nd += 1; }
+      at += g.ans_voiced[i];
+      tt += g.tail_voiced[i];
+    }
+    if (ns > 0 && nd > 0) n_c.push_back(da / nd - sa / ns);
+    burst.push_back((at - tt) / double(nt));
+    ans_all.push_back(at / double(nt));
+    tail_all.push_back(tt / double(nt));
+  }
+  const double sf = att > 0 ? slp / att : 1.0;
+  const double fs_mean = fs_n ? fs / fs_n : 0.0;
+  std::printf("  CHECKS\n"
+              "    patch wrong         %u of %u\n"
+              "    no behaviour rows   %u of %u\n"
+              "    slept fraction      %.4f   (stage 1 gate: under 0.20)\n"
+              "    first sleep         mean %.0f, latest %.0f, %u of %u slept; budget %llu\n"
+              "                        latest / budget %.3f   (stage 0 rule: raise the budget past 0.8)\n"
+              "    gap-200 trials kept min %zu, mean %.1f per creature\n\n",
+              bad, kNpReps, empty, kNpReps, sf, fs_mean, fs_max, fs_n, kNpReps,
+              (unsigned long long)ticks, ticks ? fs_max / double(ticks) : 0.0,
+              tmin == SIZE_MAX ? size_t(0) : tmin,
+              res.empty() ? 0.0 : double(tsum) / double(res.size()));
+
+  double nm, nse, bm, bse, am, ase, tm, tse;
+  sd_stat(n_c, nm, nse);
+  sd_stat(burst, bm, bse);
+  sd_stat(ans_all, am, ase);
+  sd_stat(tail_all, tm, tse);
+  const double sd = nse * std::sqrt(double(n_c.size()));
+  // I is a PAIRED difference of two arms' N on the same creatures. Its SD is
+  // projected as sqrt(2) x SD(N), the uncorrelated case; pairing can only
+  // lower it if the arms covary positively, and it is not assumed to.
+  const double sd_i = std::sqrt(2.0) * sd;
+  const double n_need = std::ceil(kNpHeadroom * (sd_i / kNpSeTarget) * (sd_i / kNpSeTarget));
+  std::printf("  PRE-FLIGHT READINGS (arm C, gap 200) — NOT RESULTS\n"
+              "    voiced, answer window        %.4f +- %.4f\n"
+              "    voiced, quiet tail           %.4f +- %.4f\n"
+              "    answer minus tail            %+.4f +- %.4f   (G-ANSWER needs >= +0.05)\n"
+              "    N = diff - same, answer      %+.4f +- %.4f   over %zu creatures\n"
+              "    SD(N) across creatures       %.4f\n"
+              "    SD(I) projected, sqrt(2)SD   %.4f\n"
+              "    n for SE(I) <= %.2f, x%.1f    %.0f creatures per arm\n\n",
+              am, ase, tm, tse, bm, bse, nm, nse, n_c.size(), sd, sd_i, kNpSeTarget,
+              kNpHeadroom, n_need);
+  const bool ok = bad == 0 && empty == 0 && n_c.size() == kNpReps;
+  if (!ok) std::printf("    -> PRE-FLIGHT INCOMPLETE: a check above failed; stage 1 is not priced.\n");
+  else if (bm < 0.05)
+    std::printf("    -> WARNING: the answer is not visible above the quiet tail in this\n"
+                "       session; G-ANSWER would void stage 1 as registered. Report first.\n");
+  else std::printf("    -> PRICED. Stage 1's n and budget are written into §90 before it runs.\n");
+  return ok;
 }
 
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------
