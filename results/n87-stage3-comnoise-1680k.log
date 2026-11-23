@@ -1,0 +1,66 @@
+experiment: comnoise
+
+  §87 STAGE 3 — CAN NOISE CARRY THE CONJUNCTION ACROSS THE COMPARATOR'S
+  THRESHOLD?
+
+  read, dosed, noised  the `comparator` module (126 neurons, genome noise_amp 0.22)
+  ladder               noise_amp 0.00 / 0.22 (REFERENCE) / 0.44 / 0.88,
+                       each WITH the dose (U 0.20, tau_rec 3000) and WITHOUT
+  creatures            96 per arm, the SAME creatures, rep_off 1150, paired
+  clear                2.5 SE, because four rungs are read at once
+
+  GATES AND COST
+    undosed n0.00   patch wrong 0  slept 0.1117  first sleep 1129484 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5086 +- 0.0080, spikes 0.5272 +- 0.0073
+    undosed n0.22   patch wrong 0  slept 0.1122  first sleep 1104811 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5087 +- 0.0090, spikes 0.5052 +- 0.0077
+    undosed n0.44   patch wrong 0  slept 0.1121  first sleep 1081418 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5062 +- 0.0084, spikes 0.5069 +- 0.0083
+    undosed n0.88   patch wrong 0  slept 0.1122  first sleep 1032996 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5172 +- 0.0073, spikes 0.5276 +- 0.0065
+    dosed   n0.00   patch wrong 0  slept 0.1118  first sleep 1201888 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5011 +- 0.0069, spikes 0.5029 +- 0.0069
+    dosed   n0.22   patch wrong 0  slept 0.1121  first sleep 1104453 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5183 +- 0.0073, spikes 0.5025 +- 0.0085
+    dosed   n0.44   patch wrong 0  slept 0.1122  first sleep 1079408 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5014 +- 0.0089, spikes 0.5069 +- 0.0083
+    dosed   n0.88   patch wrong 0  slept 0.1118  first sleep 1029556 (96 of 96)
+                    scored 96 of 96  label-destroyed vmem 0.5174 +- 0.0076, spikes 0.5150 +- 0.0060
+    G-PATCH  dose where registered, noise on every arm      PASS
+    G-SLEPT  reference pair under 0.20 (others EXCLUDED)    PASS
+    G-SCORED gap 200 scored on >= 80 per arm                PASS
+    G-NULL   label-destroyed in [0.42, 0.58]                PASS
+    G-LIVE   dose and every rung change the spikes          PASS (0 identical)
+
+  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (own oracle)
+
+    arm              vmem                          spikes                        spikes/tick
+    undosed n0.00     0.5173+-0.0060 (0.991+-0.002)    0.5097+-0.0058 (0.892+-0.004)    0.4939+-0.0078
+    undosed n0.22     0.5240+-0.0067 (0.990+-0.002)    0.5065+-0.0064 (0.982+-0.002)    0.5683+-0.0027
+    undosed n0.44     0.5160+-0.0060 (0.970+-0.005)    0.5164+-0.0078 (0.975+-0.006)    0.6465+-0.0022
+    undosed n0.88     0.5214+-0.0076 (0.851+-0.011)    0.5311+-0.0063 (0.655+-0.013)    0.8279+-0.0020
+    dosed   n0.00     0.7711+-0.0092 (0.933+-0.006)    0.6636+-0.0065 (0.583+-0.005)*   0.0820+-0.0053
+    dosed   n0.22     0.7219+-0.0092 (0.826+-0.007)    0.5895+-0.0084 (0.705+-0.008)    0.5809+-0.0010
+    dosed   n0.44     0.6449+-0.0094 (0.660+-0.007)    0.5541+-0.0082 (0.546+-0.004)*   0.6730+-0.0006
+    dosed   n0.88     0.5599+-0.0081 (0.524+-0.003)*   0.5248+-0.0054 (0.503+-0.001)*   0.8586+-0.0005
+
+    * own oracle under 0.650: that cell CANNOT be tested against the bar.
+
+  THE REGISTERED READING — the dosed SPIKE cell, rung by rung
+
+    rung    spike cell         oracle   minus 2.5 SE   dose effect (paired)     noise effect vs 0.22 (paired)
+    n0.00   0.6636 +- 0.0065   0.583    0.6473          +0.1539 +- 0.0085 (+18.0)   +0.0741 +- 0.0112 ( +6.6)
+    n0.22   0.5895 +- 0.0084   0.705    0.5686          +0.0830 +- 0.0100 ( +8.3)   reference
+    n0.44   0.5541 +- 0.0082   0.546    0.5334          +0.0376 +- 0.0098 ( +3.8)   -0.0354 +- 0.0092 ( -3.9)
+    n0.88   0.5248 +- 0.0054   0.503    0.5114          -0.0063 +- 0.0051 ( -1.2)   -0.0647 +- 0.0096 ( -6.7)
+
+    -> NOISE MOVES THE SPIKE CELL (BOTH WAYS) BUT NO RUNG CLEARS. Best upper bound
+       0.6800. The noise route is located and does not reach the bar on this
+       ladder.
+
+    Undosed rungs exist ONLY as the per-rung mechanism null. Nothing ships.
+
+real	206m2.822s
+user	2711m3.899s
+sys	2m53.497s
+exit=0

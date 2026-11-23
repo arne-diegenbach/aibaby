@@ -21667,3 +21667,77 @@ Branches 4 and 5 are reached only through 1-3 failing, so together they are exha
 **Nothing ships on any branch.** A branch 2 removes (c) at a module that does not ship.
 Making it ship needs the comparator in `dna/default.toml` and §80's battery, which is a
 separate decision for the owner.
+
+### §87 STAGE 3 RESULT — BRANCH 4: NOISE MOVES THE SPIKE CELL, AND THE WAY IT MOVES IT IS DOWN (2026-11-23)
+
+`results/n87-stage3-comnoise-1680k.log`, `comnoise` at 1,680,000 ticks on
+`dna/comparator.toml`, 96 fresh creatures (`rep_off` 1150) on eight arms, exit 0,
+12,363 s. Every gate passes, and no arm is excluded: the slept fraction is 0.1117-0.1122
+on all eight.
+
+    dosed rung   vmem cell (oracle)    spike cell (oracle)    dose effect      noise vs 0.22   spikes/tick
+    n0.00        0.771 +- 0.009 (0.933)  0.664 +- 0.007 (0.583*)  +0.154 (+18.0)   +0.074 (+6.6)   0.082
+    n0.22 REF    0.722 +- 0.009 (0.826)  0.590 +- 0.008 (0.705)   +0.083 (+8.3)    reference       0.581
+    n0.44        0.645 +- 0.009 (0.660)  0.554 +- 0.008 (0.546*)  +0.038 (+3.8)    -0.035 (-3.9)   0.673
+    n0.88        0.560 +- 0.008 (0.524*) 0.525 +- 0.005 (0.503*)  -0.006 (-1.2)    -0.065 (-6.7)   0.859
+    (* own oracle under 0.650: untestable; undosed rungs all at 0.507-0.531)
+
+**Branch 4, as registered: no rung clears, and noise moves the spike cell beyond 2.5 SE
+in both directions.** "Both ways" is the code's literal output: the ladder is
+MONOTONE, and its sign is the opposite of the stochastic-resonance hope. **More noise
+LOWERS the conjunction, and less noise RAISES it, at the spikes AND at the membrane.**
+- The vmem cell falls 0.771 -> 0.722 -> 0.645 -> 0.560.
+- The dose effect falls +18.0 -> +8.3 -> +3.8 -> -1.2 SE.
+- Noise dilutes the depleted-synapse signal at the membrane before any threshold sees it.
+
+There is no inverted U on this ladder. The shipped 0.22 already sits on the harmful side.
+This is McDonnell & Abbott's caution, measured. **The noise route is closed at the
+comparator in the UPWARD direction:** among testable rungs the best upper bound is the
+reference's 0.590 + 2.5 x 0.0084 = 0.611. The code printed 0.680. That figure includes
+the untestable n0.00 rung, so it is not the line's ceiling, and it is corrected here.
+
+**THE NOISELESS RUNG, REPORTED UNDER THE REGISTERED RULE AND NOT CLAIMED.**
+- Dosed n0.00 reads a spike cell of 0.664 +- 0.0065, or 0.647 minus 2.5 SE, 0.003 under
+  the bar.
+- That is +18.0 SE over its undosed twin and +6.6 SE over the reference.
+- It fires 0.082 spikes/tick, about 0.65 Hz per neuron.
+- **Its own oracle is 0.583, below the bar and BELOW ITS OWN CELL. So by the rule
+  registered before the run, it cannot be tested, and it is not a result.**
+
+Why the cell can exceed its oracle is already known. The oracle is decode-A x decode-B,
+XORed. §76 showed that this bounds the decode-then-compare family only. A same/different
+RELATION read directly is not bounded by it: "the XOR ceiling is not general".
+
+At near-silent firing, the readout cannot decode which word was heard, but it can still
+read whether the word repeated. That is plausibly stimulus-specific adaptation (Mill et
+al. 2011) read out as a rate: a repeat arrives through depleted synapses and fires less.
+**This is a hypothesis, derived after the data, and it licenses nothing.** Testing it
+needs:
+- a NEW registration;
+- fresh creatures;
+- a testability criterion fixed in advance that is not the XOR oracle. The obvious
+  candidate is the label-destroyed null plus a ceiling for the relation;
+- the noise level chosen BEFORE the run. Choosing n0.00 because it read best here is
+  selection.
+
+**Cost: noise moves waking life, with nothing downstream to pay for it.** On the dosed
+arms, first sleep is:
+- 1,201,888 at n0.00;
+- 1,104,453 at the reference;
+- 1,079,408 at n0.44;
+- 1,029,556 at n0.88.
+
+That is a monotone shift of about +/-8% that follows the comparator's own firing rate,
+in a module with no outgoing projection. **§83's fatigue tax, reproduced as a
+dose-response on a second module.** The slept fraction does not move. A quiet comparator
+buys about 97,000 ticks of waking life over the shipped noise. Any samediff anchor read
+on a different comparator noise must carry that shift.
+
+**What stage 3 leaves.**
+- **The membrane claim strengthens with less noise.** The vmem cell reaches 0.771, and
+  its oracle (0.933) clears.
+- **(c) still stands at the comparator** on every testable rung.
+- **The next lead is a registration of the noiseless comparator** with a relation
+  ceiling fixed in advance. Kern & Chao's threshold adaptation (README, 2026-11-23) is a
+  second route at the same threshold.
+- **Nothing ships.**
