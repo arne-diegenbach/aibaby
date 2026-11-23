@@ -18668,6 +18668,7 @@ constexpr uint64_t kSdRoundTicks =
 constexpr uint64_t kSdAnsFrom = 200, kSdAnsTo = 600;
 constexpr uint64_t kSdTailFrom = 1400, kSdTailTo = 2300;
 constexpr uint64_t kSdTailNeed = kSdTailTo - kSdScore;   // 1900
+constexpr uint64_t kSdEarlyTo = 200;   // §91: the early-answer window, 0-200 ms
 
 // The four windows a trial is cut into.
 // §64 adds `kSdWBE`, the first 400 ms of the SECOND word. §63 scored
@@ -18784,6 +18785,10 @@ struct SdGapRow {
   // after B's offset (turntake's burst window), `tail_voiced` 1400-2300 ms.
   std::vector<double> ans_voiced, tail_voiced;
   std::vector<int> same_lab;
+  // §91: ms from B's offset to the first voiced tick, CENSORED at kSdTailTo when
+  // none came, and the voiced fraction 0-200 ms after B's offset.
+  std::vector<double> onset_ms, early_voiced;
+  std::vector<int> onset_cens;
   // §65: RECOVERABLE, as against REPRESENTED.
   double asm_real[kSdPairCount] = {};   // per-trial assembled readout — §65's primary
   double asm_null[kSdPairCount] = {};   // ...with the labels destroyed
@@ -19146,6 +19151,8 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   if (rounds == 0) return out;
   const bool behave = tail_ms >= kSdTailNeed;
   std::vector<double> bv_ans[kSdGapCount], bv_tail[kSdGapCount];
+  std::vector<double> bv_early[kSdGapCount], bv_onset[kSdGapCount];   // §91
+  std::vector<int> bv_cens[kSdGapCount];
 
   // Per gap: four windows x five spaces of features, plus the two label columns.
   std::vector<std::vector<double>> feat[kSdGapCount][kSdWinCount][kSdSpaces];
@@ -19237,6 +19244,8 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       const uint64_t len = b_off + kSdScore + tail_ms;
       const uint64_t pre_from = b_on - (gap < kSdPre ? gap : kSdPre);
       double ans_v = 0.0, ans_n = 0.0, tail_v = 0.0, tail_n = 0.0;   // §90
+      double early_v = 0.0, early_n = 0.0;                            // §91
+      int64_t onset = -1;                                             // §91
 
       std::vector<std::vector<double>> bins(
           kSdWinCount, std::vector<double>(size_t(wa) + wc + wv, 0.0));
@@ -19414,6 +19423,8 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
           const double vo = s.brain.voice().voicing > aibaby::Scalar(0.5) ? 1.0 : 0.0;
           if (dt_b >= kSdAnsFrom && dt_b < kSdAnsTo) { ans_v += vo; ans_n += 1.0; }
           if (dt_b >= kSdTailFrom && dt_b < kSdTailTo) { tail_v += vo; tail_n += 1.0; }
+          if (dt_b < kSdEarlyTo) { early_v += vo; early_n += 1.0; }
+          if (onset < 0 && vo > 0.0 && dt_b < kSdTailTo) onset = int64_t(dt_b);
         }
 
         // A TICK CAN BELONG TO TWO WINDOWS, and that is deliberate. `kSdWBE`
@@ -19977,6 +19988,9 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
       if (behave) {
         bv_ans[g].push_back(ans_n > 0.0 ? ans_v / ans_n : 0.0);
         bv_tail[g].push_back(tail_n > 0.0 ? tail_v / tail_n : 0.0);
+        bv_early[g].push_back(early_n > 0.0 ? early_v / early_n : 0.0);
+        bv_onset[g].push_back(onset >= 0 ? double(onset) : double(kSdTailTo));
+        bv_cens[g].push_back(onset >= 0 ? 0 : 1);
       }
     }
   }
@@ -19984,6 +19998,9 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
     for (uint32_t g = 0; g < kSdGapCount; ++g) {
       out.gap[g].ans_voiced = bv_ans[g];
       out.gap[g].tail_voiced = bv_tail[g];
+      out.gap[g].early_voiced = bv_early[g];
+      out.gap[g].onset_ms = bv_onset[g];
+      out.gap[g].onset_cens = bv_cens[g];
       for (size_t i = 0; i < lab_a[g].size(); ++i)
         out.gap[g].same_lab.push_back(lab_a[g][i] == lab_b[g][i] ? 1 : 0);
     }
@@ -25306,6 +25323,259 @@ bool run_novans(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
     std::printf("    -> NO EFFECT. Bounds |I_C| < %.4f, |I_B| < %.4f, at the copy weight only,\n"
                 "       and under the disclosed ceiling on a rise.\n",
                 std::fabs(ic) + 2.0 * ics, std::fabs(ib) + 2.0 * ibs);
+  } else {
+    std::printf("    -> NO VERDICT. Bounds as printed above.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return gates;
+}
+
+// --- novonset (§91): does the creature answer a new word SOONER? -------------
+// §90's arms, genomes and gates; two readouts off §90's ceiling, 2.5 SE for two
+// looks, branches in ROADMAP §91's order.
+constexpr uint32_t kNoRepOff = 1534;   // past §90's 1438-1533
+constexpr double kNoClear = 2.5;
+constexpr uint32_t kNoReads = 2;
+constexpr uint32_t kNoL = 0, kNoE = 1;
+constexpr const char* kNoReadName[kNoReads] = {"L onset (ms)", "E early 0-200"};
+
+namespace {
+struct NoRow {
+  bool have = false;
+  double xn[kNoReads] = {};    // different minus same
+  double xs[kNoReads] = {};    // the same with labels shuffled within creature
+  double mean[kNoReads] = {};  // over all gap-200 trials
+  double cens = 0.0;           // censored trials (count)
+  double trials = 0.0;
+  double burst = 0.0;          // §90's answer minus tail, for G-ANSWER
+};
+
+NoRow no_row(const SdOut& o, uint32_t rep) {
+  NoRow r;
+  const SdGapRow& g = o.gap[0];
+  const size_t nt = g.onset_ms.size();
+  if (nt == 0 || g.same_lab.size() != nt || g.early_voiced.size() != nt ||
+      g.onset_cens.size() != nt || g.ans_voiced.size() != nt || g.tail_voiced.size() != nt)
+    return r;
+  const std::vector<double>* col[kNoReads] = {&g.onset_ms, &g.early_voiced};
+  std::vector<int> sh = g.same_lab;
+  uint64_t z = 0xD1B54A32D192ED03ull * (uint64_t(rep) + 7u);
+  for (size_t i = sh.size(); i > 1; --i) {
+    z += 0x9E3779B97F4A7C15ull;
+    uint64_t x = z;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ull;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBull;
+    x ^= x >> 31;
+    std::swap(sh[i - 1], sh[x % i]);
+  }
+  for (uint32_t k = 0; k < kNoReads; ++k) {
+    double s[2] = {}, n[2] = {}, ss[2] = {}, sn[2] = {}, tot = 0;
+    for (size_t i = 0; i < nt; ++i) {
+      const double v = (*col[k])[i];
+      s[g.same_lab[i] ? 1 : 0] += v; n[g.same_lab[i] ? 1 : 0] += 1;
+      ss[sh[i] ? 1 : 0] += v; sn[sh[i] ? 1 : 0] += 1;
+      tot += v;
+    }
+    if (n[0] == 0 || n[1] == 0 || sn[0] == 0 || sn[1] == 0) return r;
+    r.xn[k] = s[0] / n[0] - s[1] / n[1];
+    r.xs[k] = ss[0] / sn[0] - ss[1] / sn[1];
+    r.mean[k] = tot / double(nt);
+  }
+  double at = 0, tt = 0;
+  for (size_t i = 0; i < nt; ++i) {
+    r.cens += g.onset_cens[i];
+    at += g.ans_voiced[i];
+    tt += g.tail_voiced[i];
+  }
+  r.trials = double(nt);
+  r.burst = (at - tt) / double(nt);
+  r.have = true;
+  return r;
+}
+}  // namespace
+
+bool run_novonset(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> blob_c;
+  std::string err;
+  if (!compile_dna_toml(kNaUnwired, blob_c, err)) {
+    std::printf("  REFUSED: arm C's genome %s does not compile: %s\n", kNaUnwired, err.c_str());
+    return false;
+  }
+  const uint32_t w_ab = na_wires(blob), w_c = na_wires(blob_c);
+  std::string txt_c, txt_w;
+  const bool prefix = na_file(kNaUnwired, txt_c) && na_file("dna/comparator_wired.toml", txt_w) &&
+                      txt_w.size() > txt_c.size() && txt_w.compare(0, txt_c.size(), txt_c) == 0;
+  if (w_ab != 1 || w_c != 0 || !prefix) {
+    std::printf("  REFUSED: run this on dna/comparator_wired.toml. The given genome has %u\n"
+                "  comparator -> vocal projections (needs 1), %s has %u (needs 0), and the\n"
+                "  exact-prefix assertion %s. Nothing was measured.\n",
+                w_ab, kNaUnwired, w_c, prefix ? "holds" : "FAILS");
+    return false;
+  }
+  std::printf("\n  §91 — DOES THE CREATURE ANSWER A NEW WORD SOONER? (the onset readout)\n\n"
+              "  genomes     A, B dna/comparator_wired.toml; C %s (exact prefix)\n"
+              "  creatures   %u per arm, the SAME rep numbers, rep_off %u, paired\n"
+              "  readouts    L = ms from B's offset to the first voiced tick (censored at %llu)\n"
+              "              E = voiced fraction 0-%llu ms after B's offset\n"
+              "              each as different minus same; negative L = new answered SOONER\n"
+              "  clearance   %.1f SE, two-tailed (two looks)\n\n",
+              kNaUnwired, kNaReps, kNoRepOff, (unsigned long long)kSdTailTo,
+              (unsigned long long)kSdEarlyTo, kNoClear);
+
+  std::vector<SdOut> res[kNaArms];
+  for (uint32_t a = 0; a < kNaArms; ++a) {
+    const std::vector<uint8_t>& gb = a == kNaC ? blob_c : blob;
+    const bool dosed = a != kNaB;
+    res[a] = parallel_reps<SdOut>(kNaReps, [&](uint32_t r) {
+      return run_samediff_session(gb, ticks, r, 0.0f, false, dosed ? 0.20f : 0.0f,
+                                  dosed ? 3000.0f : 0.0f, false, kNoRepOff, 0.0f, 0.0f,
+                                  aibaby::ModuleRole::kComparator, 0.0f, kSdTailNeed);
+    });
+  }
+
+  std::vector<NoRow> rows[kNaArms];
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true, g_answer = true;
+  bool g_onset = true, e_floor = true;
+  std::printf("  GATES AND COST\n");
+  for (uint32_t a = 0; a < kNaArms; ++a) {
+    uint32_t bad = 0, scored = 0, fs_n = 0;
+    double att = 0, slp = 0, fs = 0, cens = 0, trials = 0;
+    std::vector<double> sh[kNoReads], mn[kNoReads], bu;
+    const bool dosed = a != kNaB;
+    const bool wired = a != kNaC;
+    for (uint32_t r = 0; r < res[a].size(); ++r) {
+      const SdOut& o = res[a][r];
+      if ((dosed ? o.stp_patched == 0 : o.stp_patched != 0) || o.noise_patched != 1 ||
+          (wired ? o.wire_syn == 0 : o.wire_syn != 0))
+        ++bad;
+      att += o.attempted;
+      slp += o.slept;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      rows[a].push_back(no_row(o, r));
+      const NoRow& w = rows[a].back();
+      if (o.ok && o.gap[0].scored && w.have) {
+        ++scored;
+        for (uint32_t k = 0; k < kNoReads; ++k) { sh[k].push_back(w.xs[k]); mn[k].push_back(w.mean[k]); }
+        bu.push_back(w.burst);
+        cens += w.cens;
+        trials += w.trials;
+      }
+    }
+    double sm[kNoReads], ss[kNoReads], mm[kNoReads], ms[kNoReads], bm, bs;
+    for (uint32_t k = 0; k < kNoReads; ++k) {
+      sd_stat(sh[k], sm[k], ss[k]);
+      sd_stat(mn[k], mm[k], ms[k]);
+      if (sh[k].size() < 2 || std::fabs(sm[k]) > 2.0 * ss[k]) g_null = false;
+    }
+    sd_stat(bu, bm, bs);
+    const double sf = att > 0 ? slp / att : 1.0;
+    const double cf = trials > 0 ? cens / trials : 1.0;
+    if (bad) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    if (bu.size() < 2 || bm < 0.05) g_answer = false;
+    if (cf >= 0.20) g_onset = false;
+    if (mn[kNoE].empty() || mm[kNoE] < 0.05 || mm[kNoE] > 0.90) e_floor = false;
+    std::printf("    %-16s patch wrong %u  slept %.4f  first sleep %.0f (%u of %u)  scored %u\n"
+                "    %-16s mean L %.1f ms  mean E %.4f  censored %.4f  answer-tail %+.4f\n"
+                "    %-16s shuffled L_N %+.2f +- %.2f   shuffled E_N %+.4f +- %.4f\n",
+                kNaName[a], bad, sf, fs_n ? fs / fs_n : 0.0, fs_n, kNaReps, scored, "",
+                mm[kNoL], mm[kNoE], cf, bm, "", sm[kNoL], ss[kNoL], sm[kNoE], ss[kNoE]);
+  }
+  auto paired = [&](uint32_t x, uint32_t y, auto fx, auto fy, double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[x].size() && i < res[y].size(); ++i) {
+      if (res[x][i].ok && res[y][i].ok && res[x][i].gap[0].scored && res[y][i].gap[0].scored &&
+          rows[x][i].have && rows[y][i].have)
+        d.push_back(fx(res[x][i], rows[x][i]) - fy(res[y][i], rows[y][i]));
+    }
+    sd_stat(d, m, se);
+  };
+  auto spk = [](const SdOut& o, const NoRow&) { return o.gap[0].mile_be[kFpSpike]; };
+  double rel, rels;
+  paired(kNaA, kNaB, spk, spk, rel, rels);
+  const bool g_rel = rel > 2.0 * rels;
+  uint32_t ident = 0;
+  for (size_t i = 0; i < rows[kNaA].size() && i < rows[kNaC].size(); ++i)
+    if (rows[kNaA][i].mean[kNoL] == rows[kNaC][i].mean[kNoL] &&
+        rows[kNaA][i].mean[kNoE] == rows[kNaC][i].mean[kNoE])
+      ++ident;
+  const bool g_live = ident == 0;
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_rel && g_answer &&
+                     g_onset && g_live;
+  std::printf("    G-PATCH   dose, noise and wire where registered         %s\n"
+              "    G-SLEPT   slept fraction under 0.20 on every arm        %s\n"
+              "    G-SCORED  >= 80 scored with behaviour rows per arm       %s\n"
+              "    G-NULL    both shuffled readouts within 2 SE of 0        %s\n"
+              "    G-REL     comparator spike cell A - B %+.4f +- %.4f     %s\n"
+              "    G-ANSWER  §90's answer minus tail >= +0.05             %s\n"
+              "    G-ONSET   censored under 0.20 on every arm               %s\n"
+              "    G-EFLOOR  E in [0.05, 0.90] on every arm (else E void)   %s\n"
+              "    G-LIVE    wired differs from unwired on every pair      %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL", rel, rels,
+              g_rel ? "PASS" : "FAIL", g_answer ? "PASS" : "FAIL", g_onset ? "PASS" : "FAIL",
+              e_floor ? "PASS" : "FAIL (E VOID)", g_live ? "PASS" : "FAIL", ident);
+
+  double ic[kNoReads], ics[kNoReads], ib[kNoReads], ibs[kNoReads], nc[kNoReads], ncs[kNoReads];
+  std::printf("  THE REGISTERED READING (paired, gap 200)\n\n");
+  for (uint32_t k = 0; k < kNoReads; ++k) {
+    auto xk = [k](const SdOut&, const NoRow& r) { return r.xn[k]; };
+    paired(kNaA, kNaC, xk, xk, ic[k], ics[k]);
+    paired(kNaA, kNaB, xk, xk, ib[k], ibs[k]);
+    std::vector<double> c;
+    for (size_t i = 0; i < res[kNaC].size(); ++i)
+      if (res[kNaC][i].ok && res[kNaC][i].gap[0].scored && rows[kNaC][i].have)
+        c.push_back(rows[kNaC][i].xn[k]);
+    sd_stat(c, nc[k], ncs[k]);
+    const char* fmt = k == kNoL
+        ? "    %-14s I_C %+8.3f +- %.3f (%+.1f SE)   I_B %+8.3f +- %.3f (%+.1f SE)   N(C) %+8.3f +- %.3f%s\n"
+        : "    %-14s I_C %+8.4f +- %.4f (%+.1f SE)  I_B %+8.4f +- %.4f (%+.1f SE)  N(C) %+8.4f +- %.4f%s\n";
+    std::printf(fmt, kNoReadName[k], ic[k], ics[k], ics[k] > 0 ? ic[k] / ics[k] : 0.0, ib[k],
+                ibs[k], ibs[k] > 0 ? ib[k] / ibs[k] : 0.0, nc[k], ncs[k],
+                (k == kNoE && !e_floor) ? "   [VOID]" : "");
+  }
+  std::printf("\n");
+  bool live[kNoReads] = {true, e_floor};
+  int fire_sign[kNoReads] = {0, 0};   // +1 = new answered sooner/more, -1 = later/less
+  bool drive = false, intrinsic = false, all_small = true;
+  for (uint32_t k = 0; k < kNoReads; ++k) {
+    if (!live[k]) continue;
+    const bool cb = std::fabs(ic[k]) > kNoClear * ics[k];
+    const bool bb = std::fabs(ib[k]) > kNoClear * ibs[k];
+    const bool nb = std::fabs(nc[k]) > kNoClear * ncs[k];
+    if (cb && bb && (ic[k] > 0) == (ib[k] > 0)) {
+      // Direction in plain terms: on L a NEGATIVE difference means sooner.
+      const bool towards_new = k == kNoL ? ic[k] < 0 : ic[k] > 0;
+      fire_sign[k] = towards_new ? 1 : -1;
+    }
+    if (cb && !bb) drive = true;
+    if (nb && !cb) intrinsic = true;
+    if (cb || bb) all_small = false;
+  }
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (fire_sign[kNoL] != 0 && fire_sign[kNoE] != 0 && fire_sign[kNoL] != fire_sign[kNoE]) {
+    std::printf("    -> NO VERDICT: both readouts fire and disagree about direction.\n");
+  } else if (fire_sign[kNoL] != 0 || fire_sign[kNoE] != 0) {
+    const int sg = fire_sign[kNoL] != 0 ? fire_sign[kNoL] : fire_sign[kNoE];
+    std::printf("    -> THE CREATURE ANSWERS NOVELTY IN TIME, on %s%s. Direction: %s.\n"
+                "       Nothing ships; shipping is the owner's decision and needs the §80\n"
+                "       battery for vocal's tracts.\n",
+                fire_sign[kNoL] != 0 ? "L" : "E",
+                (fire_sign[kNoL] != 0 && fire_sign[kNoE] != 0) ? " and E" : "",
+                sg > 0 ? "NEW answered sooner / more" : "REPEAT answered sooner / more");
+  } else if (drive) {
+    std::printf("    -> DRIVE, NOT RELATION: the wire moves a readout; the relation does not.\n");
+  } else if (intrinsic) {
+    std::printf("    -> INTRINSIC: vocal's own N(C) moves; the wire adds nothing measurable.\n");
+  } else if (all_small) {
+    std::printf("    -> NO EFFECT on every live readout. Bounds: L |I_C| < %.2f ms, |I_B| < %.2f ms%s.\n"
+                "       By §91's closing rule the comparator -> voice line CLOSES at the\n"
+                "       copy weight.\n",
+                std::fabs(ic[kNoL]) + kNoClear * ics[kNoL], std::fabs(ib[kNoL]) + kNoClear * ibs[kNoL],
+                e_floor ? "; E bounds as printed" : "; E VOID");
   } else {
     std::printf("    -> NO VERDICT. Bounds as printed above.\n");
   }

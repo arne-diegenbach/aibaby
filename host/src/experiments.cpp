@@ -582,6 +582,9 @@ const Spec kSpecs[] = {
     {"novans", 1680000, Expect::kGuard, Tier::kLong,
      "§90 stage 1: does the creature answer a new word differently from a repeat?"
      " Run on dna/comparator_wired.toml from the repo root; refuses otherwise"},
+    {"novonset", 1680000, Expect::kGuard, Tier::kLong,
+     "§91: does the creature answer a new word SOONER? Onset latency and the"
+     " 0-200 ms answer. Run on dna/comparator_wired.toml from the repo root"},
     // §82 stage 1 at 352 creatures, seeds 48-399 so the sample that chose the n
     // is not re-tested. Same verdict semantics as `sleepdecay`.
     {"sleepdecaylong", 1600000, Expect::kPass, Tier::kLong,
@@ -2038,6 +2041,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "comcount") ok = run_comcount(dna_blob, ticks, verbose);
   else if (name == "novpre") ok = run_novpre(dna_blob, ticks, verbose);
   else if (name == "novans") ok = run_novans(dna_blob, ticks, verbose);
+  else if (name == "novonset") ok = run_novonset(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
   else if (name == "snapshot") ok = run_snapshot(dna_blob, ticks, verbose);
