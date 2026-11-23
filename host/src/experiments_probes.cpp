@@ -24550,6 +24550,180 @@ bool run_comnoise(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   return gates;
 }
 
+// --- comquiet (§88): the noiseless comparator, read under a RELATION criterion
+// fixed before the run. The XOR oracle bounds decode-then-compare only (§76), so
+// it is printed and gates nothing; R1-R3 in ROADMAP §88 replace it.
+constexpr uint32_t kCqReps = 96;
+constexpr uint32_t kCqRepOff = 1246;  // past §87 stage 3's 1150-1245
+struct CqArmDef {
+  const char* name;
+  float use, rec, vthr, noise;
+};
+constexpr CqArmDef kCqArms[4] = {
+    {"quiet undosed", 0.0f, 0.0f, 0.0f, 0.0f},            // R2/R3 null
+    {"quiet dosed", 0.20f, 3000.0f, 0.0f, 0.0f},          // THE CARRIER
+    {"quiet dosed silenced", 0.20f, 3000.0f, 1.15f, 0.0f},  // co-primary
+    {"ref dosed n0.22", 0.20f, 3000.0f, 0.0f, 0.22f}};    // stage 3's reference
+constexpr uint32_t kCqArmCount = 4;
+constexpr uint32_t kCqNull = 0, kCqCarrier = 1, kCqQuiet = 2, kCqRef = 3;
+
+bool run_comquiet(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  setup failed: the genome does not load\n");
+    return false;
+  }
+  const int32_t cm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  if (cm < 0) {
+    std::printf("  REFUSED: this genome has no `comparator` module. Run it on\n"
+                "  dna/comparator.toml. Nothing was measured.\n");
+    return false;
+  }
+  std::printf("\n  §88 — THE NOISELESS COMPARATOR, UNDER A RELATION CRITERION\n\n"
+              "  read and dosed    the `comparator` module (%u neurons), noise_amp 0.00\n"
+              "                    except the reference arm (0.22)\n"
+              "  creatures         %u per arm, the SAME creatures, rep_off %u, paired\n"
+              "  criterion         R1 null in [0.42,0.58], R2 undosed under the bar by\n"
+              "                    2 SE, R3 dose effect > 2 SE. XOR oracle PRINTED ONLY.\n\n",
+              dna.module(uint32_t(cm)).neurons, kCqReps, kCqRepOff);
+
+  std::vector<SdOut> res[kCqArmCount];
+  for (uint32_t a = 0; a < kCqArmCount; ++a) {
+    const CqArmDef d = kCqArms[a];
+    res[a] = parallel_reps<SdOut>(kCqReps, [&](uint32_t r) {
+      return run_samediff_session(blob, ticks, r, d.vthr, false, d.use, d.rec, false,
+                                  kCqRepOff, 0.0f, 0.0f, aibaby::ModuleRole::kComparator,
+                                  d.noise);
+    });
+  }
+
+  bool g_patch = true, g_slept = true, g_scored = true, g_null = true;
+  std::printf("  GATES AND COST\n");
+  for (uint32_t a = 0; a < kCqArmCount; ++a) {
+    uint32_t bad = 0, scored = 0, fs_n = 0;
+    double att = 0, slp = 0, fs = 0;
+    std::vector<double> nv_, ns_;
+    const bool dosed = kCqArms[a].use > 0.0f;
+    for (const SdOut& o : res[a]) {
+      if ((dosed ? o.stp_patched == 0 : o.stp_patched != 0) || o.noise_patched != 1) ++bad;
+      att += o.attempted;
+      slp += o.slept;
+      if (o.first_sleep_tick > 0) { fs += double(o.first_sleep_tick); ++fs_n; }
+      if (o.ok && o.gap[0].scored) {
+        ++scored;
+        nv_.push_back(o.gap[0].null_be[kFpVmem]);
+        ns_.push_back(o.gap[0].null_be[kFpSpike]);
+      }
+    }
+    double nv, nvs, ns, nss;
+    sd_stat(nv_, nv, nvs);
+    sd_stat(ns_, ns, nss);
+    const double sf = att > 0 ? slp / att : 1.0;
+    if (bad) g_patch = false;
+    if (sf >= 0.20) g_slept = false;
+    if (scored < 80) g_scored = false;
+    if (nv < 0.42 || nv > 0.58 || ns < 0.42 || ns > 0.58) g_null = false;
+    std::printf("    %-21s patch wrong %u  slept %.4f  first sleep %.0f (%u of %u)\n"
+                "    %-21s scored %u of %u  label-destroyed vmem %.4f +- %.4f, spikes %.4f +- %.4f\n",
+                kCqArms[a].name, bad, sf, fs_n ? fs / fs_n : 0.0, fs_n, kCqReps, "",
+                scored, kCqReps, nv, nvs, ns, nss);
+  }
+  auto identical = [&](const std::vector<SdOut>& x, const std::vector<SdOut>& y) {
+    uint32_t n = 0;
+    for (size_t i = 0; i < x.size() && i < y.size(); ++i)
+      if (x[i].voc_spikes == y[i].voc_spikes) ++n;
+    return n;
+  };
+  const uint32_t live_bad =
+      identical(res[kCqCarrier], res[kCqNull]) + identical(res[kCqCarrier], res[kCqRef]);
+  const bool g_live = live_bad == 0;
+  const bool gates = g_patch && g_slept && g_scored && g_null && g_live;
+  std::printf("    G-PATCH  dose where registered, noise on every arm    %s\n"
+              "    G-SLEPT  slept fraction under 0.20 on every arm        %s\n"
+              "    G-SCORED gap 200 scored on >= 80 per arm               %s\n"
+              "    G-NULL   R1: label-destroyed in [0.42, 0.58]           %s\n"
+              "    G-LIVE   carrier differs from undosed and reference    %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_slept ? "PASS" : "FAIL",
+              g_scored ? "PASS" : "FAIL", g_null ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", live_bad);
+
+  const uint32_t rg[2] = {kFpVmem, kFpSpike};
+  double cell[kCqArmCount][2], cse[kCqArmCount][2], orc[kCqArmCount][2], ose[kCqArmCount][2];
+  std::printf("  PER ARM, gap 200, overlap window, AT THE COMPARATOR: cell (XOR oracle, printed only)\n\n"
+              "    arm                    vmem                          spikes                        spikes/tick\n");
+  for (uint32_t a = 0; a < kCqArmCount; ++a) {
+    std::printf("    %-21s", kCqArms[a].name);
+    for (uint32_t j = 0; j < 2; ++j) {
+      std::vector<double> c, o;
+      for (const SdOut& s : res[a])
+        if (s.ok && s.gap[0].scored) {
+          c.push_back(s.gap[0].mile_be[rg[j]]);
+          o.push_back(s.gap[0].assembled[rg[j]]);
+        }
+      sd_stat(c, cell[a][j], cse[a][j]);
+      sd_stat(o, orc[a][j], ose[a][j]);
+      std::printf("   %.4f+-%.4f (%.3f+-%.3f)", cell[a][j], cse[a][j], orc[a][j], ose[a][j]);
+    }
+    std::vector<double> rate;
+    for (const SdOut& s : res[a])
+      if (s.voc_ticks > 0) rate.push_back(s.voc_spikes / s.voc_ticks);
+    double rm, rs;
+    sd_stat(rate, rm, rs);
+    std::printf("   %.4f+-%.4f\n", rm, rs);
+  }
+  std::printf("\n");
+
+  auto paired = [&](const std::vector<SdOut>& x, const std::vector<SdOut>& y, double& m,
+                    double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < x.size() && i < y.size(); ++i)
+      if (x[i].ok && y[i].ok && x[i].gap[0].scored && y[i].gap[0].scored)
+        d.push_back(x[i].gap[0].mile_be[kFpSpike] - y[i].gap[0].mile_be[kFpSpike]);
+    sd_stat(d, m, se);
+  };
+  double r3, r3s, rp, rps;
+  paired(res[kCqCarrier], res[kCqNull], r3, r3s);
+  paired(res[kCqCarrier], res[kCqRef], rp, rps);
+  const double pc = cell[kCqCarrier][1], pcs = cse[kCqCarrier][1];
+  const double qc = cell[kCqQuiet][1], qcs = cse[kCqQuiet][1];
+  const double uc = cell[kCqNull][1], ucs = cse[kCqNull][1];
+  const bool r2 = uc + 2.0 * ucs < kSdBar;
+  const bool r3ok = r3 > 2.0 * r3s;
+  std::printf("  THE REGISTERED READING — spike cells\n\n"
+              "    PRIMARY     carrier             %.4f +- %.4f  minus 2 SE %.4f\n"
+              "    CO-PRIMARY  silenced            %.4f +- %.4f  minus 2 SE %.4f\n"
+              "    R2          undosed             %.4f +- %.4f  plus 2 SE %.4f  %s\n"
+              "    R3          carrier - undosed   %+.4f +- %.4f  (%+.1f SE, paired)  %s\n"
+              "    REPLICATION carrier - reference %+.4f +- %.4f  (%+.1f SE, paired)\n\n",
+              pc, pcs, pc - 2.0 * pcs, qc, qcs, qc - 2.0 * qcs, uc, ucs, uc + 2.0 * ucs,
+              r2 ? "PASS" : "FAIL", r3, r3s, r3s > 0 ? r3 / r3s : 0.0, r3ok ? "PASS" : "FAIL",
+              rp, rps, rps > 0 ? rp / rps : 0.0);
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (!r2) {
+    std::printf("    -> IT CLEARS WITHOUT THE DOSE (R2 fails): the undosed cell is not under\n"
+                "       the bar by 2 SE. No claim.\n");
+  } else if (pc - 2.0 * pcs >= kSdBar && qc - 2.0 * qcs >= kSdBar && r3ok) {
+    std::printf("    -> THE SPIKES CARRY THE RELATION. M6's spike rung is met at the\n"
+                "       comparator UNDER THE RELATION CRITERION (not the XOR oracle), on a\n"
+                "       genome that does not ship. Every quotation carries that clause.\n");
+  } else if (pc - 2.0 * pcs >= kSdBar && qc + 2.0 * qcs < kSdBar) {
+    std::printf("    -> CONFOUNDED BY THE ECHO: heard clears, silenced is under the bar by 2 SE.\n");
+  } else if (rp > 2.0 * rps) {
+    std::printf("    -> STAGE 3's GAIN REPLICATES, NOTHING CLEARS. Upper bound %.4f.\n",
+                pc + 2.0 * pcs);
+  } else if (rp < 2.0 * rps) {
+    std::printf("    -> DOES NOT REPLICATE: carrier minus reference is under 2 SE.\n"
+                "       Bound %.4f.\n", rp + 2.0 * rps);
+  } else {
+    std::printf("    -> NO VERDICT. Bounds as printed above.\n");
+  }
+  std::printf("\n    NOT READ: whether the relation is a 1-D population-count signal.\n"
+              "    Nothing ships.\n");
+  return gates;
+}
+
 // --- echopred (§66): can an EFFERENCE COPY cancel a matching word? ----------
 //
 // ROADMAP §66, and it is a GATE on a genome change rather than the change

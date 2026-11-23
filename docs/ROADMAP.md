@@ -21741,3 +21741,84 @@ on a different comparator noise must carry that shift.
   ceiling fixed in advance. Kern & Chao's threshold adaptation (README, 2026-11-23) is a
   second route at the same threshold.
 - **Nothing ships.**
+
+## §88 — THE NOISELESS COMPARATOR, AND A RELATION CRITERION FIXED BEFORE THE RUN (registered 2026-11-23)
+
+Owner's call, 2026-11-23: "go with the noiseless comparator registration". Nothing ships.
+`dna/default.toml` is untouched.
+
+### WHY THE XOR ORACLE IS NOT THE TESTABILITY CRITERION HERE, ARGUED BEFORE ANY DATA
+
+§87 stage 3's noiseless rung read a spike cell of 0.664 against its own oracle of 0.583.
+The oracle decodes A, decodes B, and XORs them. **§76 already established that this bounds
+the decode-then-compare family and nothing else.** Same/different is a RELATION, and
+`drive-sim` clears the XOR ceiling on the shipped creature. A cell above its XOR oracle
+is therefore not an anomaly in itself. It is what a direct relation readout looks like,
+for instance a repeat arriving through depleted synapses and firing less (Mill et al.
+2011's stimulus-specific adaptation).
+
+The XOR oracle existed to stop a refusal on a space that could not succeed. For a
+POSITIVE claim, what must be excluded is an artefact. So this section replaces it with
+three conditions, all fixed now:
+
+  - **R1, the floor.** The label-destroyed null is in [0.42, 0.58] on every arm, so the
+    decoder is not reading the label from leakage.
+  - **R2, identity is not enough.** The UNDOSED twin's spike cell is under the bar by
+    2 SE. Stage 3's undosed noiseless arm decoded word identity at an XOR oracle of 0.892
+    while its cell sat at 0.510. A space that knows both words and still reads chance
+    on sameness rules out "the decoder reads B's identity and the trial set is
+    unbalanced".
+  - **R3, the dose does it.** Carrier minus undosed, paired, on the spike cell, > 2 SE.
+
+**THE DEVIATION THIS CARRIES, WRITTEN BEFORE THE RESULT.** Any claim from this section
+is read under the RELATION criterion, not the XOR oracle, and must say so wherever it is
+quoted. It is a different criterion from M6's (c), not a quiet repair of it.
+
+**THE NOISE LEVEL WAS CHOSEN ON STAGE 3's DATA, AND THIS RUN IS THE CONFIRMATION.**
+`noise_amp` 0.00 on the comparator was picked because it read best. That is selection.
+It is admissible only because this run uses creatures no section has scored
+(`rep_off` 1246, past stage 3's 1150-1245) and the level is fixed here.
+
+### RUN
+
+`comquiet`, 1,680,000 ticks, `dna/comparator.toml`, 96 fresh creatures, `rep_off` 1246,
+the same creatures on all four arms, paired. Every arm reads and doses the comparator.
+
+    arm                  dose (U 0.20, tau_rec 3000)   comparator noise   voice
+    quiet undosed        no                            0.00               heard     R2/R3 null
+    quiet dosed          yes                           0.00               heard     THE CARRIER
+    quiet dosed silenced yes                           0.00               SILENCED  co-primary (§78)
+    ref dosed            yes                           0.22               heard     stage 3's reference
+
+**GATES:**
+  - **G-PATCH:** the dose is on exactly the dosed arms, and the noise is written on all.
+  - **G-SCORED:** >= 80 of 96 per arm.
+  - **G-NULL:** R1, on vmem and spikes.
+  - **G-SLEPT:** < 0.20 on every arm.
+  - **G-LIVE:** carrier spikes differ from undosed on every pair, AND from the reference
+    on every pair.
+
+**PRIMARY:** the carrier's comparator SPIKE cell, overlap window, gap 200, against 0.650.
+**CO-PRIMARY:** the silenced arm's. **The XOR oracles are PRINTED and carry no gate.**
+
+  1. **VOID** — a gate fails.
+  2. **THE SPIKES CARRY THE RELATION** — both primaries minus 2 SE >= 0.650, AND R2, AND
+     R3. M6's spike rung is met at the comparator UNDER THE RELATION CRITERION, on a
+     genome that does not ship. Every quotation carries that clause.
+  3. **IT CLEARS WITHOUT THE DOSE** — R2 fails: the undosed cell is not under the bar by
+     2 SE. No claim.
+  4. **CONFOUNDED BY THE ECHO** — the carrier clears, and the silenced arm plus 2 SE is
+     under 0.650.
+  5. **STAGE 3's GAIN REPLICATES, NOTHING CLEARS** — carrier minus reference, paired,
+     > 2 SE, and branch 2 fails. The noiseless gain is real, and the bar is not reached.
+     Its upper bound is printed.
+  6. **DOES NOT REPLICATE** — carrier minus reference is under 2 SE. Stage 3's +6.6 SE
+     was not this module's property. The bound is printed.
+  7. **NO VERDICT** — anything else.
+
+**Cost** — slept fraction and first sleep per arm. Stage 3 measured +97,000 ticks of
+waking life at noise 0, and it is reported again here, not gated.
+
+**NOT READ, and stated so nobody infers it was:** whether the relation is a 1-D
+population-count signal. The session has no scalar count space, and building one now
+would be a new instrument inside a confirmation run.
