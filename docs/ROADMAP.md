@@ -22375,3 +22375,73 @@ flips in stage 3 or 4.
 
 **COST.** Stage 0 at the desk; stage 1 minutes; stage 2 about 90 min; stage 3 about 20 min. Stage 4
 is days and waits for the owner.
+
+### §92 STAGE 0 — THE CHANNEL AUDIT: FOUR CHANNELS, TWO OF THEM NEW, AND NOTHING ELSE (2026-11-24)
+
+A desk audit of every loop in `core/` that runs over all modules (`brain.cpp`, `network.cpp`,
+`critic.cpp`, `senses.cpp`, `snapshot.cpp`), asking for each one whether the comparator's presence
+can change what happens in ANOTHER module. Registered before stage 2 runs.
+
+**THE CHANNELS (the comparator reaches the rest of the creature through these and only these):**
+
+  - **(i) Fatigue.** `brain.cpp:640-643`, activity = `spike_count / live_neurons`. This is the only
+    reader of either total in the brain. Registered; stage 2 measures it.
+  - **(ii) The runtime noise stream.** `network.cpp:2521`: ONE shared `rng_` and one
+    `signed_uniform()` per neuron per tick, drawn in module order and "regardless". The comparator
+    is the last module, so its 126 draws come after every other module's within a tick, and every
+    module's draws from tick 2 onward come from a shifted stream. The build-time draws for the
+    existing modules are NOT moved, because the comparator's positions, intra-module wiring and
+    projections all come after theirs. Growth draws from the same runtime `rng_`
+    (`network.cpp:3726-3876`), so `central`'s grown neurons also come out of the shifted stream.
+    Registered; it reaches every instrument, which is why stage 4 exists.
+  - **(iii) Compute (NEW).** 126 more neurons and their synapses on every tick. This changes no
+    dynamics but is a cost of shipping. Stage 2 PRINTS wall time per arm (reported, not a reading).
+  - **(iv) Snapshot layout (NEW).** `snapshot.cpp:143` refuses a snapshot whose `module_count`
+    differs (`kLayoutMismatch`). A creature saved under today's genome (`--snapshot`, the browser
+    creature) CANNOT RESUME on the shipped candidate; it would have to hatch fresh. This is a
+    one-time cost, stated here and not measured.
+
+**CHECKED AND INERT (each read in the source):**
+  - Exploration: delivered per module, and the comparator's `explore_scale` is 0
+    (`brain.cpp:343`, `network.cpp:2931` skips gate ≤ 0).
+  - Growth and pruning: `growable()` is association-only (`network.cpp:3569`). The comparator never
+    grows or prunes, and never moves growth's shared counters.
+  - Reward and neuromodulation: per module (`network.cpp:2870-2884`). The comparator's own gains
+    move only synapses ONTO the comparator, and it has no outgoing synapse.
+  - Critical periods, homeostasis and IP, and sleep downscaling: per module or per target neuron
+    (`network.cpp:2915`, `3246`, `4037-4050`).
+  - Role lookups: first match by role (`brain.cpp:55-74`, `network.cpp:507-588`). `kComparator`
+    (12) is a role no other lookup asks for.
+  - Replay: its perturbation snapshot covers every neuron, but the comparator's perturbation is
+    identically 0 (explore_scale 0).
+  - `mean_plasticity()` and the telemetry totals (`network.cpp:3541`, `4137`): read only by the
+    panel and by experiment printouts, never by the dynamics.
+
+So stage 2's registered readouts cover channel (i), stage 4 covers (ii), (iii) is printed, and (iv)
+is a stated cost. No further readout is owed.
+
+### §92 STAGE 1 — G-IDENT PASSES: THE GENOME AND THE PATCH BUILD THE SAME CREATURE (2026-11-24)
+
+`dna/comparator_ship.toml` is built: `dna/default.toml` as an exact prefix (checked with `cmp`;
+default md5 still fb419735…), then §87's comparator block with three edits and nothing else. The
+edits are `noise_amp` 0.22 → 0.0, and `stp_use` 0.0 → 0.20 and `stp_recover_ms` 0.0 → 3000.0 on
+both auditory→comparator blocks. A header comment, and a correction of §87's comment that said STP
+is 0, are comment-only.
+
+`comquiet` ran at 300k (`--allow-short`) on `dna/comparator.toml` and on the candidate, 96 creatures
+per arm each. Every printed column of the **dosed arm** is IDENTICAL between the two runs, and so are
+the silenced arm and the n0.22 reference. **G-IDENT PASSES.**
+
+Only the **undosed** arm and the gates derived from it (G-LIVE, R3) differ. That was expected: the
+patch path writes nothing when the dose is 0, so on the candidate the "undosed" arm inherits the dose
+from the genome. It is the patch path's convention, not a difference between the two creatures, and
+on the candidate that arm IS the dosed arm (96 identical). These 300k runs are below first sleep, so
+none of their values is quoted.
+
+### §92 STAGE 2 AMENDED BEFORE THE RUN — G-SLEEPERS (2026-11-24)
+
+The 500k smoke of `shipcost` evaluated every gate. Because it ran below first sleep, no creature
+on either arm slept, so both sleep readouts read 0 ± 0. The instrument then printed "NO MEASURED
+SLEEP COST" with zero-width bounds: an empty set passing as a result (the same defect §90's G-NULL
+had). **Added before the full run:** G-SLEEPERS requires at least 80 of 96 creatures to have slept
+on each arm, and otherwise the reading is VOID. No smoke figure is quoted. verify PASS.

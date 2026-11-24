@@ -5,6 +5,7 @@
 
 #include <cstring>
 #include <limits>  // §60: quiet_NaN, so a missing module is never averaged as 0
+#include <chrono>  // §92: shipcost prints wall time per creature
 
 #include "experiments_common.h"
 #include "host/dna_toml.h"  // §90: novans compiles arm C's genome
@@ -18890,6 +18891,12 @@ struct SdOut {
   // |weight|. 0 synapses on an unwired genome. Read only when `tail_ms` is on.
   uint32_t wire_syn = 0;
   double wire_w = 0.0;
+  // §92: the fatigue channel's inputs, summed over EVERY stepped tick of the
+  // session. Host-side reads of totals the kernel already keeps; no RNG and no
+  // kernel state, so no existing arm can move.
+  uint64_t stepped_ticks = 0, asleep_ticks = 0;
+  double all_spk = 0.0, live_sum = 0.0, cmp_spk = 0.0;
+  uint32_t cmp_neurons = 0;
   double voc_spikes = 0.0;
   double voc_ticks = 0.0;
   // §70. The three things that decide whether rung 1 was READ AT ALL.
@@ -19128,6 +19135,8 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   if (!ear.configure(acfg, error)) return out;
   const int32_t aud = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
   const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+  const int32_t cmp_mod = s.dna.module_with_role(aibaby::ModuleRole::kComparator);
+  if (cmp_mod >= 0) out.cmp_neurons = s.brain.network().module(uint32_t(cmp_mod)).live();
   const int32_t voc = s.dna.module_with_role(read_role);
   if (aud < 0 || cen < 0 || voc < 0) return out;
   const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
@@ -19415,6 +19424,15 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
         if (s.brain.asleep()) {
           slept = true;
           if (out.first_sleep_tick == 0) out.first_sleep_tick = tick_now;
+        }
+        {
+          // §92. The two totals fatigue reads (brain.cpp:640), and the comparator's share.
+          const aibaby::Network& fnet = s.brain.network();
+          ++out.stepped_ticks;
+          if (s.brain.asleep()) ++out.asleep_ticks;
+          out.all_spk += double(fnet.spike_count());
+          out.live_sum += double(fnet.live_neurons());
+          if (cmp_mod >= 0) out.cmp_spk += double(fnet.module(uint32_t(cmp_mod)).spikes);
         }
         // §90. A host-side read of the voice, no RNG and no kernel state, so
         // nothing downstream can move. The rule is `turntake`'s.
@@ -27013,5 +27031,236 @@ bool run_overlapgate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verb
               "  kernel state was modified, so `verify`'s hash MUST be unmoved. A moved\n"
               "  hash is a bug in this instrument.\n");
   return true;
+}
+
+// --- shipcost (§92 stage 2): what shipping the comparator costs the creature
+//
+// Two genomes, NO patch on either: D = dna/default.toml (compiled here), S = the
+// candidate dna/comparator_ship.toml (the blob given, asserted byte-identical to a
+// fresh compile of that file, and asserted to carry default.toml as an exact text
+// prefix). The samediff session with §90's silent tail, so the creature HEARS
+// words, which is where the comparator does its work. Readouts are S - D per
+// arm mean, read on the UNPAIRED (Welch) SE because appending re-rolls the noise;
+// the paired SE is printed beside it and not read. Two-tailed, 2 SE.
+constexpr uint32_t kScReps = 96;
+constexpr uint32_t kScRepOff = 1630;  // past §91's 1534-1629
+constexpr const char* kScShip = "dna/comparator_ship.toml";
+constexpr const char* kScDefault = "dna/default.toml";
+
+struct ScRow {
+  bool have = false;
+  double first_sleep = 0.0;  // ticks; 0 = never slept (counted separately)
+  double asleep = 0.0;       // fraction of stepped ticks
+  double answer = 0.0;       // voiced 200-600 ms after B, all gaps pooled
+  double all_rate = 0.0;     // spikes per live neuron per tick: fatigue's activity
+  double cmp_rate = 0.0;     // the comparator's own spikes per neuron per tick
+  double wall_s = 0.0;
+};
+
+ScRow sc_row(const SdOut& o, double wall_s) {
+  ScRow r;
+  if (!o.ok || o.stepped_ticks == 0) return r;
+  r.have = true;
+  r.first_sleep = double(o.first_sleep_tick);
+  r.asleep = double(o.asleep_ticks) / double(o.stepped_ticks);
+  double v = 0.0, n = 0.0;
+  for (uint32_t g = 0; g < kSdGapCount; ++g)
+    for (double x : o.gap[g].ans_voiced) { v += x; n += 1.0; }
+  r.answer = n > 0.0 ? v / n : 0.0;
+  r.all_rate = o.live_sum > 0.0 ? o.all_spk / o.live_sum : 0.0;
+  r.cmp_rate = o.cmp_neurons ? o.cmp_spk / (double(o.cmp_neurons) * double(o.stepped_ticks))
+                             : 0.0;
+  r.wall_s = wall_s;
+  return r;
+}
+
+bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> blob_d, blob_s;
+  std::string err;
+  if (!compile_dna_toml(kScDefault, blob_d, err) || !compile_dna_toml(kScShip, blob_s, err)) {
+    std::printf("  REFUSED: a genome does not compile: %s\n", err.c_str());
+    return false;
+  }
+  std::string txt_d, txt_s;
+  const bool prefix = na_file(kScDefault, txt_d) && na_file(kScShip, txt_s) &&
+                      txt_s.size() > txt_d.size() && txt_s.compare(0, txt_d.size(), txt_d) == 0;
+  const bool given = blob == blob_s;
+  if (!prefix || !given) {
+    std::printf("  REFUSED: run this on %s. The given genome %s a fresh compile of\n"
+                "  that file, and the exact-prefix assertion against %s %s.\n"
+                "  Nothing was measured.\n",
+                kScShip, given ? "matches" : "does NOT match", kScDefault,
+                prefix ? "holds" : "FAILS");
+    return false;
+  }
+  std::printf("\n  §92 STAGE 2 — WHAT DOES SHIPPING THE COMPARATOR COST THE CREATURE?\n\n"
+              "  genomes     D %s, S %s (D is an exact text prefix)\n"
+              "  creatures   %u per arm, the SAME rep numbers, rep_off %u, NO patch on either\n"
+              "  session     samediff, probe OFF, silent tail %llu ms; S's comparator is read\n"
+              "  readouts    first sleep, asleep fraction, answer (voiced %llu-%llu ms after B,\n"
+              "              all gaps); each S - D, UNPAIRED SE, 2 SE two-tailed\n"
+              "  DISCLOSED   appending re-rolls the noise, so pairs share rep numbers, not noise.\n"
+              "              Nothing ships in §92; shipping is the owner's decision.\n\n",
+              kScDefault, kScShip, kScReps, kScRepOff, (unsigned long long)kSdTailNeed,
+              (unsigned long long)kSdAnsFrom, (unsigned long long)kSdAnsTo);
+
+  constexpr uint32_t kD = 0, kS = 1;
+  const char* name[2] = {"D default", "S candidate"};
+  std::vector<SdOut> res[2];
+  std::vector<double> wall[2];
+  for (uint32_t a = 0; a < 2; ++a) {
+    const std::vector<uint8_t>& gb = a == kD ? blob_d : blob_s;
+    wall[a].assign(kScReps, 0.0);
+    res[a] = parallel_reps<SdOut>(kScReps, [&](uint32_t r) {
+      const auto t0 = std::chrono::steady_clock::now();
+      SdOut o = run_samediff_session(
+          gb, ticks, r, 0.0f, false, 0.0f, 0.0f, false, kScRepOff, 0.0f, 0.0f,
+          a == kD ? aibaby::ModuleRole::kVocal : aibaby::ModuleRole::kComparator, -1.0f,
+          kSdTailNeed);
+      wall[a][r] = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+      return o;
+    });
+  }
+
+  std::vector<ScRow> rows[2];
+  uint32_t scored[2] = {0, 0}, patched = 0;
+  for (uint32_t a = 0; a < 2; ++a)
+    for (uint32_t r = 0; r < res[a].size(); ++r) {
+      const SdOut& o = res[a][r];
+      if (o.stp_patched || o.noise_patched) ++patched;
+      rows[a].push_back(sc_row(o, wall[a][r]));
+      if (o.ok && o.gap[0].scored && rows[a].back().have) ++scored[a];
+    }
+
+  // Per-arm means over creatures that have a row. First sleep is averaged over
+  // creatures that slept, and the count that did not is printed beside it.
+  struct Col { double m = 0, se = 0; };
+  auto col = [&](uint32_t a, auto f, bool sleepers_only, uint32_t* n_used) {
+    std::vector<double> v;
+    for (const ScRow& r : rows[a])
+      if (r.have && (!sleepers_only || r.first_sleep > 0.0)) v.push_back(f(r));
+    Col c;
+    sd_stat(v, c.m, c.se);
+    if (n_used) *n_used = uint32_t(v.size());
+    return c;
+  };
+  auto fs = [](const ScRow& r) { return r.first_sleep; };
+  auto as = [](const ScRow& r) { return r.asleep; };
+  auto an = [](const ScRow& r) { return r.answer; };
+  auto ar = [](const ScRow& r) { return r.all_rate; };
+  auto cr = [](const ScRow& r) { return r.cmp_rate; };
+  auto ws = [](const ScRow& r) { return r.wall_s; };
+  auto paired_se = [&](auto f, bool sleepers_only) {
+    std::vector<double> d;
+    for (size_t i = 0; i < rows[kD].size() && i < rows[kS].size(); ++i) {
+      const ScRow& x = rows[kS][i];
+      const ScRow& y = rows[kD][i];
+      if (!x.have || !y.have) continue;
+      if (sleepers_only && (x.first_sleep <= 0.0 || y.first_sleep <= 0.0)) continue;
+      d.push_back(f(x) - f(y));
+    }
+    double m, se;
+    sd_stat(d, m, se);
+    return se;
+  };
+
+  // G-REL: the comparator still does its job when the genome carries it.
+  std::vector<double> cell;
+  for (const SdOut& o : res[kS])
+    if (o.ok && o.gap[0].scored) cell.push_back(o.gap[0].mile_be[kFpSpike]);
+  double cm, cse;
+  sd_stat(cell, cm, cse);
+  const bool g_rel = cell.size() >= 2 && cm - 2.0 * cse > 0.5;
+  const bool g_scored = scored[kD] >= 80 && scored[kS] >= 80;
+  uint32_t ident = 0;
+  for (size_t i = 0; i < res[kD].size() && i < res[kS].size(); ++i)
+    if (res[kD][i].all_spk == res[kS][i].all_spk) ++ident;
+  const bool g_live = ident == 0;
+  const bool g_patch = patched == 0;
+  const bool gates = g_rel && g_scored && g_live && g_patch;
+
+  std::printf("  GATES\n"
+              "    G-PATCH   no dose or noise patch on either arm           %s (%u patched)\n"
+              "    G-SCORED  >= 80 scored per arm (D %u, S %u)               %s\n"
+              "    G-REL     S's comparator spike cell %.4f +- %.4f, minus 2 SE %.4f > 0.5  %s\n"
+              "    G-LIVE    S differs from D on every pair              %s (%u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", patched, scored[kD], scored[kS],
+              g_scored ? "PASS" : "FAIL", cm, cse, cm - 2.0 * cse, g_rel ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident);
+
+  std::printf("  PER ARM (unpaired means over creatures)\n\n"
+              "    arm           first sleep (ticks)       slept    asleep frac        answer"
+              "             wall s/creature\n");
+  Col F[2], A[2], N[2], W[2];
+  uint32_t nslept[2];
+  for (uint32_t a = 0; a < 2; ++a) {
+    F[a] = col(a, fs, true, &nslept[a]);
+    A[a] = col(a, as, false, nullptr);
+    N[a] = col(a, an, false, nullptr);
+    W[a] = col(a, ws, false, nullptr);
+    std::printf("    %-12s  %9.0f +- %6.0f       %2u/%-3u  %.4f +- %.4f   %.4f +- %.4f   %.1f +- %.1f\n",
+                name[a], F[a].m, F[a].se, nslept[a], kScReps, A[a].m, A[a].se, N[a].m, N[a].se,
+                W[a].m, W[a].se);
+  }
+  // G-SLEEPERS (§92 amendment, before the full run). The smoke showed that with
+  // no creature asleep both sleep readouts read 0 +- 0 and printed "no measured
+  // cost" with zero-width bounds: an empty set passing. The sleep readouts need
+  // creatures that slept, on both arms.
+  const bool g_sleepers = nslept[kD] >= 80 && nslept[kS] >= 80;
+  std::printf("\n    G-SLEEPERS >= 80 creatures slept on each arm (D %u, S %u)      %s\n",
+              nslept[kD], nslept[kS], g_sleepers ? "PASS" : "FAIL");
+  const Col RD = col(kD, ar, false, nullptr), RS = col(kS, ar, false, nullptr);
+  const Col RC = col(kS, cr, false, nullptr);
+  std::printf("\n  FATIGUE'S ACTIVITY (spikes per live neuron per tick; printed, not read)\n"
+              "    D creature mean        %.5f +- %.5f\n"
+              "    S creature mean        %.5f +- %.5f\n"
+              "    S comparator alone     %.5f +- %.5f  -> it fires %s the creature's mean,\n"
+              "                                             so on its own it %s fatigue\n\n",
+              RD.m, RD.se, RS.m, RS.se, RC.m, RC.se,
+              RC.m < RD.m ? "BELOW" : "ABOVE", RC.m < RD.m ? "DILUTES" : "ADDS TO");
+
+  struct Rd { const char* what; double d, se, pse; bool big; };
+  auto mk = [&](const char* what, const Col* c, auto f, bool sl) {
+    Rd r;
+    r.what = what;
+    r.d = c[kS].m - c[kD].m;
+    r.se = std::sqrt(c[kS].se * c[kS].se + c[kD].se * c[kD].se);
+    r.pse = paired_se(f, sl);
+    r.big = r.se > 0.0 && std::fabs(r.d) > 2.0 * r.se;
+    return r;
+  };
+  const Rd rf = mk("first sleep, ticks", F, fs, true);
+  const Rd ra = mk("asleep fraction", A, as, false);
+  const Rd rn = mk("answer (M1d guard)", N, an, false);
+  std::printf("  THE REGISTERED READING (S - D)\n\n");
+  for (const Rd& r : {rf, ra, rn})
+    std::printf("    %-20s %+12.5f +- %.5f  (%+.1f SE unpaired; paired SE %.5f, not read)  %s\n",
+                r.what, r.d, r.se, r.se > 0 ? r.d / r.se : 0.0, r.pse,
+                r.big ? "BEYOND 2 SE" : "within 2 SE");
+  std::printf("\n");
+  if (!gates || !g_sleepers) {
+    std::printf("    -> VOID. A gate failed above; nothing is priced.\n");
+  } else if (rf.big || ra.big) {
+    const bool earlier = (rf.big && rf.d < 0) || (ra.big && ra.d > 0);
+    const bool later = (rf.big && rf.d > 0) || (ra.big && ra.d < 0);
+    std::printf("    -> STAGE 2: A SLEEP COST. The candidate sleeps %s.\n"
+                "       Branch 3 if stages 3 and 4 find no casualty.\n",
+                earlier && later ? "EARLIER on one readout and LATER on the other (NO single sign)"
+                : earlier        ? "EARLIER: it takes waking life (§62)"
+                                 : "LATER: this CHANGES the creature and is not called a benefit");
+  } else {
+    std::printf("    -> STAGE 2: NO MEASURED SLEEP COST. Bounds |first sleep| < %.0f ticks,\n"
+                "       |asleep fraction| < %.4f. Branch 4 if stages 3 and 4 find no casualty.\n",
+                std::fabs(rf.d) + 2.0 * rf.se, std::fabs(ra.d) + 2.0 * ra.se);
+  }
+  if (gates && rn.big)
+    std::printf("       M1d GUARD: the answer moves %+.4f (%+.1f SE). Reported as a change in\n"
+                "       turn-taking; a casualty only if `turntake` flips in stage 3 or 4.\n",
+                rn.d, rn.d / rn.se);
+  std::printf("       Wall time S/D %.3f (printed, not read: a broken creature can be fast).\n",
+              W[kD].m > 0 ? W[kS].m / W[kD].m : 0.0);
+  std::printf("\n    Nothing ships.\n");
+  return gates && g_sleepers;
 }
 }  // namespace aibaby_host
