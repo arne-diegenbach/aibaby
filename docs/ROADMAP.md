@@ -22487,3 +22487,58 @@ sleeps would measure this; §92 does not claim it.
 **WHERE §92 STANDS.** Stage 2 holds branch 3's sleep condition. Branch 3 itself also needs stages 3
 and 4 to find no casualty. Stage 3 (the fast verify on the candidate, about 20 min) is next. Stage 4
 waits for the owner. Nothing ships.
+
+### §92 STAGE 3 RESULT — BRANCH 2: NOT SHIPPABLE AS IS. `calibrate` IS THE CASUALTY (2026-11-24)
+
+`results/n92-stage3-verify-candidate.log`: `verify` on `dna/comparator_ship.toml`, 54 min.
+Determinism PASS. The pinned hash FAILS, by construction. **24 experiments as expected and 1 not:
+`calibrate`, expected PASS, got FAIL.** It PASSES on `dna/default.toml` with the same binary
+(`verify PASS`, stage 2's verify). It is not a G-SELF anchor of the default genome, so under the
+registration it is a **casualty**, and **branch 2 fires: NOT SHIPPABLE AS IS.** By the stage rule,
+stage 4 does not run.
+
+**THE CASUALTY'S ROWS** (free-running rate against the genome target; tolerance ±0.25 Hz; one
+creature at the genome seed, 120k ticks, `ip_rate` and `scaling_rate` at 0):
+
+| module | default | candidate | target | candidate verdict |
+|---|---|---|---|---|
+| central | 6.60 | 6.69 | 6.81 | ok |
+| auditory | 2.52 | 2.56 | 2.55 | ok |
+| vision | 2.53 | 2.50 | 2.54 | ok |
+| **somato** | 4.45 (−0.11) | **4.10 (−0.46)** | 4.56 | **STALE** |
+| vocal | 4.12 | 3.98 | 5.00 | by design |
+| **expression** | 7.24 (+0.02) | **6.78 (−0.44)** | 7.22 | **STALE** |
+| **comparator** | — | **0.00 (−5.00)** | 5.00 | **STALE** |
+
+**WHAT THE ROWS SAY, without the attribution the registration defers:**
+
+  - **The comparator's own row is a defect IN THE CANDIDATE, and it is real.** §87 copied vocal's
+    `target_rate_hz = 5.0`. With noise at 0 and no sound, the comparator free-runs at 0.00 Hz. In
+    life `ip_rate` is not 0, so intrinsic plasticity pushes its thresholds toward a 5 Hz target it
+    never reaches: stage 2 measured it at 0.61 Hz (0.00061 per neuron per tick) while hearing
+    words. **Every comparator result since §88 was measured with the homeostat fighting the
+    genome** (calibrate's own warning text). Those results stand as measurements of THAT creature,
+    but no future build may treat the comparator's calibration as clean.
+  - **somato and expression** moved by −0.35 and −0.46 Hz against default. Neither module receives
+    anything from the comparator (stage 0). The candidate differs for them only in channel (ii),
+    the re-rolled noise stream (§83 saw `somato` move 12% the same way). The registration says
+    channel (i) against channel (ii) is told apart **in a later registration, not here**, so this
+    is stated as the only channel the audit leaves open, not as a finding. One creature at one
+    seed: whether `calibrate`'s single-seed estimate is robust to a noise re-roll at all is part of
+    that later question.
+
+**§92 CONCLUDES: NOT SHIPPABLE AS IS.** Nothing ships, and nothing was going to (owner's decision).
+The price list the owner has:
+  - sleep comes 9% later by dilution (stage 2);
+  - +7.2% compute;
+  - saved creatures cannot resume (stage 0);
+  - `calibrate` fails: the comparator's own target is stale, and somato and expression move off
+    target under the re-rolled noise.
+
+**WHAT A SHIPPABLE CANDIDATE WOULD NEED (each its own registration):**
+  - (a) A calibrated comparator target. Setting it to the free-running rate changes what the
+    homeostat does to the comparator, so §88's relation must be re-measured on that genome (G-REL
+    as in stage 2).
+  - (b) A test of whether somato's and expression's shifts are the noise re-roll. One way is
+    `calibrate` across several seeds on both genomes, so a seed-level spread can be compared with
+    the shift.
