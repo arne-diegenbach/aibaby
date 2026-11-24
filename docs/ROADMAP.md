@@ -22279,3 +22279,99 @@ in §90. That is a level shift in drive, not a novelty answer, and it is not a r
 **By the closing rule** the comparator → voice line closes at the copy weight. DO NOT ladder the
 wire's weight. DO NOT add a third window or readout to this wire. The comparator itself stays
 read-only, and shipping it remains the owner's decision. Nothing ships.
+
+## §92 — WHAT WOULD SHIPPING THE COMPARATOR COST? THE PRICE, NOT THE DECISION (registered 2026-11-24)
+
+**THE QUESTION.** Since §87 the read-only comparator has been the creature's one working new
+organ. §88 found its noiseless spikes carry the same/different relation (0.675, under the relation
+criterion rather than the XOR oracle). That holds on `dna/comparator.toml`, which does not ship.
+§89–§91 asked it for more and closed every follow-up. Shipping is **the owner's decision** and has
+not been made, because its cost has never been measured. **§92 measures the cost. NOTHING SHIPS IN
+§92 whatever it reads.** Its result is the price list the owner decides on.
+
+**THE CANDIDATE — `dna/comparator_ship.toml`.** `dna/default.toml` as an EXACT PREFIX (asserted on
+the text), plus the comparator block from `dna/comparator.toml` with §88's dose WRITTEN INTO THE
+GENOME instead of patched at hatch:
+  - `noise_amp = 0.0` on the comparator;
+  - `stp_use = 0.20`, `stp_recover_ms = 3000.0`, `stp_facil_ms = 0.0` on BOTH auditory→comparator
+    blocks (the `either` and the `inhibitory` source). These are the fields and values the §87–§91
+    patch writes, on every auditory→comparator projection it finds.
+
+`dna/default.toml` is NOT touched (md5 fb419735…). Shipping would be the next DNA version, a
+separate edit, made only on the owner's word.
+
+**WHY THE §80 RULE ("pick the instruments by the tract you touched") GIVES NO SHORT LIST HERE.**
+The comparator has no outgoing projection, so it touches no existing tract. It can reach the rest
+of the creature only through channels the kernel shares across modules. Two are known now:
+  - **(i) Fatigue.** `brain.cpp:641`: activity = spike_count / live_neurons. The comparator adds 126
+    neurons to the denominator and its own spikes to the numerator. Sleep therefore moves in a
+    direction set by whether its rate is above or below the creature's mean. That sign is not known
+    in advance, so the reading is TWO-TAILED. §83 showed this channel cost the enteric module 23
+    points of waking life.
+  - **(ii) The noise draw.** Appending a module re-rolls the noise every other module gets (§83
+    moved `somato` 12%). It is not an effect of the comparator's computation, but it IS a cost of
+    shipping: every existing record becomes another seed's record, and any borderline instrument
+    can flip.
+
+Channel (ii) reaches every instrument, so no tract-based subset is defensible.
+
+### STAGES, in order; each runs only if the one before it passed
+
+  0. **CHANNEL AUDIT (desk, no run).** Enumerate every place `core/` aggregates across modules: the
+     fatigue activity, any global neuromodulator or reward term, replay and dream selection,
+     homeostasis, RNG stream order. Write the list into this section BEFORE stage 2 runs. Any channel
+     beyond (i) and (ii) gets a printed readout in stage 2, or a stated reason why it cannot move.
+  1. **G-IDENT (minutes).** Run `comquiet` at a short budget (`--allow-short`) on
+     `dna/comparator.toml` and on the candidate. On the candidate its dosed, noiseless arm patches
+     values the genome already carries, so that arm's rows must be BIT-IDENTICAL across the two
+     runs. Any difference means the TOML and the patch do not build the same creature, and §92 is
+     VOID.
+  2. **`shipcost` (new instrument, about 90 min).** The `samediff` session (the protocol on which the
+     comparator does its job; `sleep` has no ear, so it would read the comparator at rest). Two arms,
+     96 creatures each, 1.68M ticks, the same rep numbers starting at a fresh rep_off, NO patches on
+     either arm:
+       - D: `dna/default.toml`;
+       - S: the candidate.
+     Readouts per arm:
+       - first sleep tick;
+       - asleep fraction of the session;
+       - §90's answer window (voiced 200–600 ms after B), which guards M1d;
+       - the comparator's mean rate against the creature's mean rate. This is printed, and it
+         explains the sign of channel (i) after the fact; it is not a reading.
+     The difference is S minus D. Appending re-rolls noise, so the pairing is partial: SE is
+     UNPAIRED (Welch) and the paired SE is printed beside it, not read. The bar is 2 SE, two-tailed.
+     Gates:
+       - G-REL: on S, the comparator spike cell (gap 200) is at least 0.5 + 2 SE. The organ still
+         does its job when the genome carries it.
+       - G-SCORED: at least 80 creatures scored per arm.
+       - G-LIVE: S differs from D on every pair.
+  3. **`verify` (fast tier) on the candidate (about 20 min).** By construction the pinned hash MOVES
+     (a genome change). Any other experiment not as expected is a casualty. A G-SELF anchor of the
+     default genome failing counts as by construction only if its own printed gate names that anchor.
+  4. **`verify-long` and `verify-teach` on BOTH genomes (days).** This stage runs ONLY ON THE OWNER'S
+     GO after stages 0–3, because §80's long tier took 44 h per genome and there is no long-tier
+     record on the current default since the v75 revert. A failure is a casualty only if the same
+     instrument passes on default in the same stage. A failure on both genomes is PRE-EXISTING and is
+     reported, not charged to the comparator.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** G-IDENT fails, the prefix assertion fails, or G-REL, G-SCORED or G-LIVE fails. Nothing
+     is priced.
+  2. **NOT SHIPPABLE AS IS:** any casualty in stage 3 or 4. The casualty's rows are the result, and
+     the stage-2 readouts are reported beside them so channel (i) and channel (ii) can be told apart
+     in a later registration, not in this one.
+  3. **SHIPPABLE WITH A SLEEP COST:** no casualty, and |Δ asleep fraction| or |Δ first sleep| beyond
+     2 SE. The sign is printed and named: earlier sleep takes waking life (§62: sleep is where
+     performance falls off); later sleep CHANGES the creature too and is not called a benefit.
+  4. **SHIPPABLE AT NO MEASURED SLEEP COST:** no casualty, and both sleep readouts within 2 SE. Bounds
+     printed.
+  5. **QUALIFIER:** if stage 4 was not run, branch 3 or 4 is stated as "priced on the fast tier
+     only". By §80, that is NOT a licence to ship.
+
+The M1d guard: an S − D answer-window difference beyond 2 SE in either direction is reported with
+branches 3 and 4 as a change in the creature's turn-taking. It is not a casualty unless `turntake`
+flips in stage 3 or 4.
+
+**COST.** Stage 0 at the desk; stage 1 minutes; stage 2 about 90 min; stage 3 about 20 min. Stage 4
+is days and waits for the owner.
