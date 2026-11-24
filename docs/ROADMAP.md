@@ -22249,3 +22249,33 @@ bound wider than the effect it could detect is reported as that, not as absence.
   6. **NO VERDICT:** anything else.
 
 **Reported only:** first sleep, and the mean L and E per arm (unpaired).
+
+### §91 RESULT — BRANCH 5, NO EFFECT. THE COMPARATOR → VOICE LINE CLOSES AT THE COPY WEIGHT (2026-11-24)
+
+`results/n91-novonset-1680k.log`, 1.68M ticks, 96 creatures per arm, 135 min. Every gate
+PASSES: G-REL +0.2015 ± 0.0120 (§90's +0.2119 ± 0.0122 replicates), G-ONSET censored
+0.0000 on every arm, G-EFLOOR E 0.62–0.66. All 96 creatures per arm slept, and first
+sleep fell at 1.13–1.20M ticks, above the smoke budget and inside the run.
+
+| readout | I_C (wire) | I_B (relation) | N(C) (vocal's own) |
+|---|---|---|---|
+| L onset, ms | −1.475 ± 1.283 (−1.1 SE) | +1.757 ± 1.539 (+1.1 SE) | +0.652 ± 0.983 |
+| E early 0–200 ms | +0.0039 ± 0.0061 (+0.6 SE) | −0.0121 ± 0.0070 (−1.7 SE) | −0.0005 ± 0.0047 |
+
+No contrast reaches 2.5 SE on either readout, so this is **branch 5**. The bounds are at 2.5 SE:
+  - On L: |I_C| < 4.7 ms and |I_B| < 5.6 ms. The creature answers about 65–70 ms after a word
+    ends, so the bound is roughly 7–8% of its own latency.
+  - On E: |I_C| < 0.019 and |I_B| < 0.030 in voiced fraction.
+
+The wire does not make the creature answer a new word sooner, or more within the first 200 ms,
+than a repeat. This holds at the copy weight and within these bounds. With §90 it holds on
+three windows (the answer window, the onset and the early window) and on two kinds of readout
+(amount and time).
+
+**Reported only, unpaired.** Arm B (wired, undosed) answers about 8 ms sooner and slightly more
+in 0–200 ms (mean L 62.2 against 70.7 and 68.2 ms). It also slept about 78k ticks earlier, as
+in §90. That is a level shift in drive, not a novelty answer, and it is not a registered reading.
+
+**By the closing rule** the comparator → voice line closes at the copy weight. DO NOT ladder the
+wire's weight. DO NOT add a third window or readout to this wire. The comparator itself stays
+read-only, and shipping it remains the owner's decision. Nothing ships.

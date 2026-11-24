@@ -1,0 +1,46 @@
+experiment: novonset
+
+  §91 — DOES THE CREATURE ANSWER A NEW WORD SOONER? (the onset readout)
+
+  genomes     A, B dna/comparator_wired.toml; C dna/comparator.toml (exact prefix)
+  creatures   96 per arm, the SAME rep numbers, rep_off 1534, paired
+  readouts    L = ms from B's offset to the first voiced tick (censored at 2300)
+              E = voiced fraction 0-200 ms after B's offset
+              each as different minus same; negative L = new answered SOONER
+  clearance   2.5 SE, two-tailed (two looks)
+
+  GATES AND COST
+    A wired dosed    patch wrong 0  slept 0.1145  first sleep 1202422 (96 of 96)  scored 96
+                     mean L 70.7 ms  mean E 0.6202  censored 0.0000  answer-tail +0.2569
+                     shuffled L_N -0.00 +- 1.16   shuffled E_N +0.0018 +- 0.0053
+    B wired undosed  patch wrong 0  slept 0.1148  first sleep 1125373 (96 of 96)  scored 96
+                     mean L 62.2 ms  mean E 0.6565  censored 0.0000  answer-tail +0.2702
+                     shuffled L_N -0.52 +- 1.27   shuffled E_N +0.0005 +- 0.0058
+    C unwired dosed  patch wrong 0  slept 0.1143  first sleep 1203458 (96 of 96)  scored 96
+                     mean L 68.2 ms  mean E 0.6312  censored 0.0000  answer-tail +0.2329
+                     shuffled L_N +0.64 +- 1.07   shuffled E_N -0.0005 +- 0.0049
+    G-PATCH   dose, noise and wire where registered         PASS
+    G-SLEPT   slept fraction under 0.20 on every arm        PASS
+    G-SCORED  >= 80 scored with behaviour rows per arm       PASS
+    G-NULL    both shuffled readouts within 2 SE of 0        PASS
+    G-REL     comparator spike cell A - B +0.2015 +- 0.0120     PASS
+    G-ANSWER  §90's answer minus tail >= +0.05             PASS
+    G-ONSET   censored under 0.20 on every arm               PASS
+    G-EFLOOR  E in [0.05, 0.90] on every arm (else E void)   PASS
+    G-LIVE    wired differs from unwired on every pair      PASS (0 identical)
+
+  THE REGISTERED READING (paired, gap 200)
+
+    L onset (ms)   I_C   -1.475 +- 1.283 (-1.1 SE)   I_B   +1.757 +- 1.539 (+1.1 SE)   N(C)   +0.652 +- 0.983
+    E early 0-200  I_C  +0.0039 +- 0.0061 (+0.6 SE)  I_B  -0.0121 +- 0.0070 (-1.7 SE)  N(C)  -0.0005 +- 0.0047
+
+    -> NO EFFECT on every live readout. Bounds: L |I_C| < 4.68 ms, |I_B| < 5.60 ms; E bounds as printed.
+       By §91's closing rule the comparator -> voice line CLOSES at the
+       copy weight.
+
+    Nothing ships.
+
+real	135m10.141s
+user	1747m5.090s
+sys	1m17.491s
+exit=0
