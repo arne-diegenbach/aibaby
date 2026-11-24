@@ -22445,3 +22445,45 @@ on either arm slept, so both sleep readouts read 0 ± 0. The instrument then pri
 SLEEP COST" with zero-width bounds: an empty set passing as a result (the same defect §90's G-NULL
 had). **Added before the full run:** G-SLEEPERS requires at least 80 of 96 creatures to have slept
 on each arm, and otherwise the reading is VOID. No smoke figure is quoted. verify PASS.
+
+### §92 STAGE 2 RESULT — THE CANDIDATE SLEEPS 9% LATER, AND THE ARITHMETIC OF FATIGUE ACCOUNTS FOR ALL OF IT (2026-11-24)
+
+`results/n92-stage2-shipcost-1680k.log`, 96 creatures per arm, rep_off 1630, 89 min. Every gate
+PASSES: G-PATCH, G-SCORED (96/96), G-REL (S's comparator spike cell 0.7418 ± 0.0094), G-LIVE (0
+identical), and G-SLEEPERS (96/96 slept on each arm).
+
+| readout, S − D | value | reading |
+|---|---|---|
+| first sleep | **+101,218 ± 1,723 ticks (+58.8 SE)**; D 1,100,380, S 1,201,598 | **BEYOND 2 SE: LATER** |
+| asleep fraction | 0.1109 on both arms, SE 0.0000 | **NOT IDENTIFIED** (see below) |
+| answer, the M1d guard | −0.0014 ± 0.0031 (−0.5 SE) | within 2 SE |
+
+**THE ASLEEP FRACTION IS A CONSTANT BY CONSTRUCTION, NOT A NULL.** Recovery runs at a fixed
+0.000003 per ms and does not depend on activity, so a sleep lasts exactly (0.90 − 0.35) / 0.000003
+= 183,333 ticks. Every creature first sleeps between 1.1M and 1.2M ticks and wakes 183k later; a
+second sleep cannot fit before the session ends. The fraction is therefore 183,333 / 1.65M = 0.1109
+for every creature on both arms. Its "within 2 SE" line is a constant regressor and is NOT READ.
+The instrument should have refused it; the defect is named here rather than fixed post hoc.
+
+**THE REGISTERED READING: branch 3's sleep condition fires, sign LATER.** The registration does not
+call this a benefit. It is a change in the creature: on the candidate the creature runs about 9%
+longer before it tires.
+
+**THE MECHANISM IS CHANNEL (i), AND IT IS DILUTION, NOT WORK.** Fatigue reads activity as spikes
+per LIVE NEURON per tick (`brain.cpp:640`). The comparator fires at 0.00061 per neuron per tick,
+about an eighth of the creature's 0.00483. Adding 126 quiet neurons lowers the average to 0.00441.
+Fatigue then fills more slowly, in proportion: the predicted ratio is 0.00483 / 0.00441 = 1.095,
+i.e. 1.2051M, and the measured first sleep is 1.2016M (0.3% off). So **the comparator makes the
+creature sleep later by ADDING QUIET NEURONS, not by doing anything.** Any quiet module would do
+the same. This is the mirror of §83, where 120 loud enteric neurons pulled sleep 2.4x earlier.
+**Fatigue measures a MEAN RATE, not total work, so adding a module of any size re-prices sleep.**
+
+**Derived, NOT measured:** over a longer life each wake period stretches by the same 9.5% while a
+sleep keeps its fixed length, so the asleep share of life falls. A session long enough for two
+sleeps would measure this; §92 does not claim it.
+
+**Reported only:** the candidate costs 7.2% more wall time per creature (389.6 against 363.3 s).
+
+**WHERE §92 STANDS.** Stage 2 holds branch 3's sleep condition. Branch 3 itself also needs stages 3
+and 4 to find no casualty. Stage 3 (the fast verify on the candidate, about 20 min) is next. Stage 4
+waits for the owner. Nothing ships.
