@@ -27263,4 +27263,176 @@ bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
   std::printf("\n    Nothing ships.\n");
   return gates && g_sleepers;
 }
+
+// --- calcmp (§93 stage 1): does the comparator keep the relation once its target is calibrated?
+//
+// Three genomes that differ ONLY in the comparator's own fields (asserted: each
+// carries dna/default.toml as an exact text prefix, and the run refuses unless the
+// given blob is R). The module count is the same, so they share one noise stream and
+// pairs by rep are valid. No patches. The primary per arm is the comparator SPIKE
+// cell at gap 200, read ABSOLUTELY against 0.5 (cell - 2 SE > 0.5 = carries it).
+constexpr uint32_t kCmReps = 96;
+constexpr uint32_t kCmRepOff = 1726;  // past §92's 1630-1725
+constexpr uint32_t kCmArms = 3;
+constexpr uint32_t kCmR = 0, kCmA = 1, kCmB = 2;
+constexpr const char* kCmFile[kCmArms] = {"dna/comparator_ship.toml", "dna/comparator_cal.toml",
+                                          "dna/comparator_cal_fixed.toml"};
+constexpr const char* kCmName[kCmArms] = {"R stale 5 Hz", "A target 0", "B target 0, IP off"};
+
+bool run_calcmp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> gb[kCmArms];
+  std::string err, txt_d, txt;
+  bool prefix = na_file("dna/default.toml", txt_d);
+  for (uint32_t a = 0; a < kCmArms; ++a) {
+    if (!compile_dna_toml(kCmFile[a], gb[a], err)) {
+      std::printf("  REFUSED: %s does not compile: %s\n", kCmFile[a], err.c_str());
+      return false;
+    }
+    prefix = prefix && na_file(kCmFile[a], txt) && txt.size() > txt_d.size() &&
+             txt.compare(0, txt_d.size(), txt_d) == 0;
+  }
+  if (!prefix || blob != gb[kCmR]) {
+    std::printf("  REFUSED: run this on %s. The given genome %s it, and the exact-prefix\n"
+                "  assertion against dna/default.toml %s. Nothing was measured.\n",
+                kCmFile[kCmR], blob == gb[kCmR] ? "matches" : "does NOT match",
+                prefix ? "holds" : "FAILS");
+    return false;
+  }
+  std::printf("\n  §93 — DOES THE COMPARATOR KEEP THE RELATION ONCE ITS TARGET IS CALIBRATED?\n\n"
+              "  genomes     R %s (target 5.0, IP on)\n"
+              "              A %s (target 0.0, IP on)\n"
+              "              B %s (target 0.0, IP off)\n"
+              "  creatures   %u per arm, the SAME rep numbers, rep_off %u, PAIRED, no patches\n"
+              "  session     samediff, probe OFF, silent tail %llu ms, comparator read\n"
+              "  primary     comparator SPIKE cell, gap 200: carries it iff cell - 2 SE > 0.5\n\n",
+              kCmFile[kCmR], kCmFile[kCmA], kCmFile[kCmB], kCmReps, kCmRepOff,
+              (unsigned long long)kSdTailNeed);
+
+  std::vector<SdOut> res[kCmArms];
+  for (uint32_t a = 0; a < kCmArms; ++a)
+    res[a] = parallel_reps<SdOut>(kCmReps, [&](uint32_t r) {
+      return run_samediff_session(gb[a], ticks, r, 0.0f, false, 0.0f, 0.0f, false, kCmRepOff,
+                                  0.0f, 0.0f, aibaby::ModuleRole::kComparator, -1.0f,
+                                  kSdTailNeed);
+    });
+
+  auto good = [](const SdOut& o) { return o.ok && o.gap[0].scored; };
+  bool g_patch = true, g_scored = true, g_sleepers = true;
+  double cell[kCmArms], cse[kCmArms];
+  // §93 amendment (before the full run): the 500k smoke found A and B fire NO
+  // comparator spike on any creature, so their cell is exactly 0.5 with SE 0 and
+  // the SE-guarded lacks() could never fire. The registration counts "VOID by
+  // silence" as not carrying the relation; silent[a] is that case, by count.
+  // A re-smoke showed 15 of 96 creatures DO fire somewhere in the session yet
+  // still score exactly 0.5, so silence is defined at the READOUT: a creature is
+  // silent when its cell is exactly 0.5 (nothing in the scored windows to rank).
+  // The whole-session zero-spike count is printed beside it, not read.
+  bool silent[kCmArms];
+  uint32_t n_silent[kCmArms], n_zero[kCmArms];
+  std::printf("  GATES AND PER ARM (unpaired means; the cell is the primary)\n\n"
+              "    arm                  scored slept  spike cell        vmem cell         "
+              "thr at end        rate /neuron/tick   first sleep\n");
+  for (uint32_t a = 0; a < kCmArms; ++a) {
+    uint32_t scored = 0, slept = 0, patched = 0;
+    n_silent[a] = 0;
+    n_zero[a] = 0;
+    std::vector<double> c, vm, th, rt, fs;
+    for (const SdOut& o : res[a]) {
+      if (o.stp_patched || o.noise_patched) ++patched;
+      if (o.first_sleep_tick > 0) { ++slept; fs.push_back(double(o.first_sleep_tick)); }
+      if (!good(o)) continue;
+      ++scored;
+      if (o.gap[0].mile_be[kFpSpike] == 0.5) ++n_silent[a];
+      if (o.cmp_spk == 0.0) ++n_zero[a];
+      c.push_back(o.gap[0].mile_be[kFpSpike]);
+      vm.push_back(o.gap[0].mile_be[kFpVmem]);
+      th.push_back(o.thr_bar_end);
+      if (o.cmp_neurons && o.stepped_ticks)
+        rt.push_back(o.cmp_spk / (double(o.cmp_neurons) * double(o.stepped_ticks)));
+    }
+    if (patched) g_patch = false;
+    if (scored < 80) g_scored = false;
+    if (slept < 80) g_sleepers = false;
+    silent[a] = scored > 0 && n_silent[a] == scored;
+    double vmm, vms, thm, ths, rtm, rts, fsm, fss;
+    sd_stat(c, cell[a], cse[a]);
+    if (c.size() < 2) cse[a] = 0.0;
+    sd_stat(vm, vmm, vms);
+    sd_stat(th, thm, ths);
+    sd_stat(rt, rtm, rts);
+    sd_stat(fs, fsm, fss);
+    std::printf("    %-20s %3u   %3u   %.4f +- %.4f   %.4f +- %.4f   %.4f +- %.4f   "
+                "%.6f +- %.6f   %.0f +- %.0f\n",
+                kCmName[a], scored, slept, cell[a], cse[a], vmm, vms, thm, ths, rtm, rts, fsm,
+                fss);
+  }
+  // An arm with no scored creatures has no SE; it must not read as "carries it".
+  auto carries = [&](uint32_t a) { return cse[a] > 0.0 && cell[a] - 2.0 * cse[a] > 0.5; };
+  auto lacks = [&](uint32_t a) {
+    return silent[a] || (cse[a] > 0.0 && cell[a] + 2.0 * cse[a] <= 0.5);
+  };
+  const bool g_ref = carries(kCmR);
+  uint32_t ident_a = 0, ident_b = 0;
+  for (size_t i = 0; i < kCmReps && i < res[kCmA].size() && i < res[kCmB].size(); ++i) {
+    if (res[kCmA][i].cmp_spk == res[kCmR][i].cmp_spk) ++ident_a;
+    if (res[kCmB][i].cmp_spk == res[kCmR][i].cmp_spk) ++ident_b;
+  }
+  const bool g_live = ident_a == 0 && ident_b == 0;
+  const bool gates = g_patch && g_scored && g_sleepers && g_ref && g_live;
+  std::printf("\n    G-PATCH    nothing patched                                  %s\n"
+              "    G-SCORED   >= 80 scored per arm                             %s\n"
+              "    G-SLEEPERS >= 80 slept per arm                              %s\n"
+              "    G-CALROW   stage 0: comparator row ok on A and B            (results/n93-stage0-*)\n"
+              "    G-REF      R carries it: %.4f - 2 SE = %.4f > 0.5           %s\n"
+              "    G-LIVE     A, B differ from R on every pair  %s (A %u, B %u identical)\n\n",
+              g_patch ? "PASS" : "FAIL", g_scored ? "PASS" : "FAIL", g_sleepers ? "PASS" : "FAIL",
+              cell[kCmR], cell[kCmR] - 2.0 * cse[kCmR], g_ref ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident_a, ident_b);
+
+  auto paired = [&](uint32_t x, double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[x].size() && i < res[kCmR].size(); ++i)
+      if (good(res[x][i]) && good(res[kCmR][i]))
+        d.push_back(res[x][i].gap[0].mile_be[kFpSpike] - res[kCmR][i].gap[0].mile_be[kFpSpike]);
+    sd_stat(d, m, se);
+  };
+  double dam, das, dbm, dbs;
+  paired(kCmA, dam, das);
+  paired(kCmB, dbm, dbs);
+  std::printf("  THE REGISTERED READING (each arm's cell against 0.5)\n\n");
+  for (uint32_t a = kCmA; a <= kCmB; ++a)
+    std::printf("    %-20s %.4f +- %.4f   minus 2 SE %.4f, plus 2 SE %.4f   -> %s\n",
+                kCmName[a], cell[a], cse[a], cell[a] - 2.0 * cse[a], cell[a] + 2.0 * cse[a],
+                carries(a) ? "CARRIES IT"
+                : silent[a] ? "SILENT, DOES NOT CARRY IT"
+                : lacks(a)  ? "DOES NOT CARRY IT"
+                            : "0.5 INSIDE 2 SE");
+  std::printf("    silent at the readout (cell exactly 0.5): R %u, A %u, B %u  (an arm is\n"
+              "      SILENT when all its scored creatures are)\n"
+              "    no comparator spike all session (printed, not read): R %u, A %u, B %u\n",
+              n_silent[kCmR], n_silent[kCmA], n_silent[kCmB], n_zero[kCmR], n_zero[kCmA],
+              n_zero[kCmB]);
+  std::printf("    reported only: A - R %+.4f +- %.4f, B - R %+.4f +- %.4f (paired)\n\n", dam,
+              das, dbm, dbs);
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (carries(kCmA)) {
+    std::printf("    -> IT SURVIVES THE HONEST HOMEOSTAT. A is the shipping candidate and\n"
+                "       re-enters §92 at stages 2 and 3; question (b) stays open.\n");
+  } else if (lacks(kCmA) && carries(kCmB)) {
+    std::printf("    -> IT NEEDS THE THRESHOLD HELD. A loses the relation, B keeps it. B is the\n"
+                "       candidate, disclosed as the shipped creature's first module with its\n"
+                "       homeostat OFF.\n");
+  } else if (lacks(kCmA) && lacks(kCmB)) {
+    std::printf("    -> THE STALE TARGET MADE IT. Neither calibrated arm carries the relation\n"
+                "       while R does. The comparator as designed does not carry it; it is NOT\n"
+                "       SHIPPABLE until a new registration gives a reason to build differently.\n");
+  } else {
+    std::printf("    -> NO VERDICT. 0.5 lies inside a calibrated arm's 2-SE band where the\n"
+                "       branch needs it outside. Nothing is claimed for that arm.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return gates;
+}
 }  // namespace aibaby_host

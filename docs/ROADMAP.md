@@ -22616,3 +22616,45 @@ cell against 0.5. A's and B's first sleep against R's is the dilution check: a q
 dilutes fatigue more.
 
 **COST.** Stage 0 seconds; stage 1 about 2.3 h (3 arms × 96, as §91). Nothing ships in §93.
+
+### §93 STAGE 0 — G-CALROW PASSES ON BOTH CALIBRATED GENOMES (2026-11-24)
+
+The two genomes are built from `dna/comparator_ship.toml`, with `dna/default.toml` an exact prefix
+of each (checked with `cmp`; default md5 still fb419735…). `diff` against the candidate shows only:
+  - `dna/comparator_cal.toml` (A): `target_rate_hz` 5.0 → 0.0, plus a two-line header comment;
+  - `dna/comparator_cal_fixed.toml` (B): the same, plus `ip_wake_scale` and `ip_sleep_scale`
+    1.0 → 0.0.
+
+`calibrate` on each (`results/n93-stage0-calibrate-*.log`): the **comparator row reads 0.00 Hz
+against 0.00 Hz, ok, on both.** **G-CALROW PASSES.** Both still print `calibrate FAIL`, on somato
+(−0.46) and expression (−0.44) only, the same values as §92's candidate. That is expected, since the
+three genomes share one noise stream. It is §92's deferred question (b), and it is not a §93 gate.
+
+### §93 STAGE 1 AMENDED BEFORE THE FULL RUN — A SILENT ARM IS COUNTED, NOT SE-GUARDED (2026-11-24)
+
+The 500k smoke (below first sleep: every arm 0 slept, G-SLEEPERS FAIL, VOID; NO FIGURE FROM IT IS
+QUOTED) exposed a hole in the code, not in the registration. **On both A and B every creature's cell
+was exactly 0.5**, so each arm read 0.5 with SE 0. Nothing the comparator did fell in a scored
+window, although a first re-smoke showed 15 of 96 creatures per arm fire SOMEWHERE in the session. The code's
+`lacks()` required SE > 0, so a silent arm could never read "does not carry it" and would have
+fallen to NO VERDICT. Branch 3 already counts "VOID by silence" as not carrying the relation. The
+amendment makes the code say what the registration says:
+  - `silent[a]`: every scored creature on arm a has a cell of exactly 0.5, so the readout had
+    nothing to rank. It is COUNTED, not inferred from the SE. A first version counted zero
+    spikes over the whole session instead. Its own smoke refuted it (81 of 96 silent by that test,
+    96 of 96 by the readout), and it was replaced before the full run. The whole-session count
+    is still printed and is not read.
+  - `lacks(a)` = `silent[a]`, or the old test (SE > 0 and cell + 2 SE ≤ 0.5).
+  - The reading row labels a silent arm "SILENT, DOES NOT CARRY IT" and prints the silent count
+    per arm.
+
+Nothing else changes: gates, branches, order, n, ticks and rep numbers are as registered. Whether
+the calibrated arms stay silent past first sleep is exactly what the full run reads. The smoke
+cannot say, because a smoke below first sleep is another creature.
+
+**What silence would mean, written now, before the run:** the comparator's genome threshold (1.0)
+is above anything its auditory input drives, so the relation measured since §88 would exist
+only because the homeostat pulled the thresholds toward the 0.20 floor in pursuit of a 5 Hz target
+it never reached. That is branch 4 if R carries it and both calibrated arms are silent. Since A's
+IP only acts when the module fires, a mostly silent A barely moves off 1.0, and A and B are then
+nearly the same creature (their smoke rows were identical to four places).
