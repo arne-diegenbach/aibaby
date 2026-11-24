@@ -22542,3 +22542,77 @@ The price list the owner has:
   - (b) A test of whether somato's and expression's shifts are the noise re-roll. One way is
     `calibrate` across several seeds on both genomes, so a seed-level spread can be compared with
     the shift.
+
+## §93 — DOES THE COMPARATOR STILL TELL SAME FROM DIFFERENT ONCE ITS TARGET IS CALIBRATED? (registered 2026-11-24)
+
+**THE QUESTION.** §92 stage 3 found that the comparator's `target_rate_hz = 5.0` (copied from vocal
+in §87) is stale: with noise 0 and no sound it free-runs at 0.00 Hz. In life the homeostat (IP,
+`ip_rate` 0.0003, thresholds bounded to [0.20, 4.00]) has been pulling its thresholds DOWN toward a
+5 Hz target it never reaches: it fired at 0.61 Hz in §92 stage 2. **So every comparator result since
+§88 was measured with IP fighting the genome, and possibly with the thresholds driven toward the
+0.20 floor, five times more excitable than the genome's 1.0.** §93 asks whether the relation
+survives once the target is honest. If it does not, the relation was made by the stale target,
+not by the comparator as designed.
+
+**THE GENOMES.** Each is `dna/comparator_ship.toml` with only the named comparator fields changed,
+`dna/default.toml` an exact prefix of each (asserted), and the module count unchanged. So the three
+differ ONLY in the comparator's own parameters and share one noise stream. Pairing by rep is
+therefore valid, and SE is read PAIRED.
+  - **R `dna/comparator_ship.toml`,** the §92 candidate (target 5.0, IP on). This is the reference
+    and must reproduce §92's relation.
+  - **A `dna/comparator_cal.toml`:** `target_rate_hz = 0.0`. This is calibrate's own instruction
+    ("reset the genome to the left column") applied literally, with IP on as in every shipped
+    module. A target of 0 means any firing raises the thresholds. That is what an honest
+    homeostat does to a module that is silent at rest.
+  - **B `dna/comparator_cal_fixed.toml`:** `target_rate_hz = 0.0`, and also `ip_wake_scale = 0.0`
+    and `ip_sleep_scale = 0.0`. The homeostat is off on the comparator, so its thresholds stay at
+    the genome's 1.0. This is the mechanism arm: a second change, named as one.
+
+### STAGES
+
+  0. **The calibrate row (seconds).** Run `calibrate` on A and on B. The **comparator's** row must
+     read `ok` on both. That is the gate the genome edit exists to pass. Somato and expression may
+     still read STALE (the deferred §92 question (b)). They are reported and are not a §93 gate.
+  1. **`calcmp` (new instrument, about 2.3 h).** The samediff session with §90's silent tail, no
+     patches, 96 creatures per arm, 1.68M ticks, the same rep numbers at rep_off 1726 (past §92's
+     1630–1725). The comparator is read.
+     - **Primary per arm:** the comparator SPIKE cell at gap 200 (`kFpSpike`), the measure §92
+       stage 2's G-REL used.
+     - **"Carries the relation"** means the cell minus 2 SE is above 0.5.
+     - **Printed beside it, not read:** the comparator's mean threshold at the session's end, its
+       rate in spikes per neuron per tick, first sleep, and the vmem cell. The threshold column is
+       what says whether IP drove R toward the floor.
+
+### GATES
+
+  - G-PATCH: nothing patched.
+  - G-SCORED: at least 80 per arm.
+  - G-SLEEPERS: at least 80 slept per arm.
+  - G-CALROW: stage 0's comparator row is `ok` on A and B.
+  - **G-REF:** R's cell minus 2 SE is above 0.5. §92's relation replicates on fresh creatures;
+    otherwise there is nothing to calibrate away.
+  - G-LIVE: A and B each differ from R on every pair.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** any gate fails.
+  2. **IT SURVIVES THE HONEST HOMEOSTAT:** A carries the relation. A becomes the shipping candidate
+     and re-enters §92 at stage 2 (sleep cost) and stage 3 (verify), with question (b) still open.
+     B is reported.
+  3. **IT NEEDS THE THRESHOLD HELD:** A does not carry the relation (its cell plus 2 SE is at or
+     under 0.5, or it is VOID by silence) and B does. The honest homeostat removes the relation,
+     and a fixed threshold keeps it. B becomes the candidate, disclosed as a module with its
+     homeostat OFF, the first such module in the shipped creature.
+  4. **THE STALE TARGET MADE IT:** neither A nor B carries the relation, and R does (G-REF). The
+     relation measured in §88–§92 was produced by IP driving the thresholds of a mis-targeted
+     module down. **The comparator as designed does not carry it.** No candidate exists, and the
+     comparator is NOT SHIPPABLE until a new registration gives a reason to build differently.
+  5. **NO VERDICT:** 0.5 lies inside A's ±2 SE band (and branch 2 did not fire), or inside B's when
+     branch 3 would need it. Nothing is claimed for that arm.
+
+**Reported only:** A minus R and B minus R, as paired differences in the cell. These say how much
+of R's relation the calibration costs, and are NOT the reading; the reading is each arm's absolute
+cell against 0.5. A's and B's first sleep against R's is the dilution check: a quieter comparator
+dilutes fatigue more.
+
+**COST.** Stage 0 seconds; stage 1 about 2.3 h (3 arms × 96, as §91). Nothing ships in §93.
