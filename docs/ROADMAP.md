@@ -22658,3 +22658,68 @@ only because the homeostat pulled the thresholds toward the 0.20 floor in pursui
 it never reached. That is branch 4 if R carries it and both calibrated arms are silent. Since A's
 IP only acts when the module fires, a mostly silent A barely moves off 1.0, and A and B are then
 nearly the same creature (their smoke rows were identical to four places).
+
+### §93 RESULT — BRANCH 5, NO VERDICT; THE CALIBRATED COMPARATOR IS BOUNDED AT CHANCE (2026-11-25)
+
+`results/n93-calcmp-1680k.log` (1.68M ticks, 96 creatures per arm, rep_off 1726, 2 h 03 min).
+**Every gate PASSES.** G-PATCH; G-SCORED 96/96/96; G-SLEEPERS 96/96/96; G-CALROW (stage 0);
+**G-REF: R 0.7402 ± 0.0082, minus 2 SE 0.7238 > 0.5, so §92's relation REPLICATES on fresh
+creatures**; G-LIVE 0 identical pairs.
+
+| arm | spike cell (primary) | thr at end | rate /neuron/tick | first sleep |
+|---|---|---|---|---|
+| R target 5.0, IP on | 0.7402 ± 0.0082 | 0.2001 ± 0.0001 | 0.000602 | 1,202,933 ± 1,373 |
+| A target 0.0, IP on | 0.4993 ± 0.0025 | 1.0000 ± 0.0000 | 0.000000 | 1,222,360 ± 799 |
+| B target 0.0, IP off | 0.4993 ± 0.0025 | 1.0000 ± 0.0000 | 0.000000 | 1,222,360 ± 799 |
+
+**THE REGISTERED READING: NO VERDICT (branch 5).** A's band runs from 0.4943 to 0.5043 and contains
+0.5, so branch 2 does not fire. Branch 3 and branch 4 need A to "lack" the relation: its cell plus
+2 SE at or under 0.5, or the arm SILENT. 0.5043 is above 0.5, and only 19 of 96 creatures per arm
+are silent at the readout, so the arm is not SILENT. **Nothing is claimed for either calibrated
+arm under the registered rule.**
+
+**WHAT IS MEASURED, AS A BOUND AND NOT A VERDICT.**
+  - The calibrated comparator's cell is at most 0.5043 at 2 SE, so it sits **within 0.005 of
+    chance**, while R reads 0.74 on the same creatures. The paired loss is A − R −0.2409 ± 0.0086
+    (−28 SE). Reported only, as registered.
+  - A and B are **identical to the printed precision in every column**: cell, vmem, threshold,
+    rate, first sleep. At target 0 the homeostat never moves A's thresholds off the genome's
+    1.0, because A barely fires (84 of 96 creatures fire no comparator spike all session). The
+    "honest homeostat" and the "homeostat off" are the same creature.
+  - R's thresholds end at **0.2001, on the homeostat's 0.20 floor.** The relation measured since
+    §88 lives at that floor, five times more excitable than the genome's 1.0. The homeostat put
+    it there while pursuing a 5 Hz target the module never reaches (it runs at 0.60 Hz).
+  - Dilution check (reported only): the calibrated arms sleep **19,427 ticks later** than R. A
+    quieter comparator dilutes fatigue further, the sign §92 predicts.
+
+**WHY THE REGISTRATION COULD NOT REACH A VERDICT, AND THE LESSON.** The "lacks" clause asked for
+the cell plus 2 SE to be **at or under 0.5**. For an arm that sits exactly AT chance, that means
+landing two SE BELOW chance, which happens about 2.5% of the time. The clause written to catch
+"the relation is gone" therefore almost never fires when the relation IS gone. §93 never wrote down
+the probability that its refusal clause fires ("POWER IS NOT THE ERROR MODEL"). Had it done so,
+the number would have been ≈ 0.025 under exactly the outcome the branch was written for. **A test
+of absence needs an equivalence margin fixed in advance** (for example, "cell plus 2 SE under
+0.55"), not a one-sided test against the null value. The silence amendment covered the
+degenerate case, SE 0, and not this one.
+
+**WHAT THIS DOES AND DOES NOT SAY.**
+  - It DOES say the comparator as configured in §92's candidate is not shippable as is, and that
+    simply calibrating its target does not give a candidate: A is not one.
+  - It does NOT say "the comparator cannot tell same from different". It does NOT say "the stale
+    target made it" as a verdict, since branch 4 did not fire. Quote it only as the bound above.
+  - The fair reading of R: the module works **at the operating point the homeostat found**
+    (thresholds 0.20, about 0.6 Hz), not at the genome's birth values.
+
+**NEXT, NOT REGISTERED (the owner's call):** match at the operating point (memory rule "MATCH AT THE
+OPERATING POINT"). Write the comparator genome with the threshold R's homeostat converged to
+(0.20) and a target equal to the rate R actually runs at (about 0.6 Hz, measured free-running by
+`calibrate`, not taken from this table). Then re-measure G-REL with an equivalence-margin branch
+for absence. That makes the genome honest without moving the creature off the point where the
+relation lives.
+
+**Credit.** The homeostat under test is Desai, Rutherford & Turrigiano's intrinsic plasticity
+(1999) and Turrigiano's self-tuning neuron (2008). Its gradient-rule form is Triesch (2005). The
+comparator's depressing synapses are Tsodyks & Markram (1997). All are already in the README
+References.
+
+**Nothing ships.**

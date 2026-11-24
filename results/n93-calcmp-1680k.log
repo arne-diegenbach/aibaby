@@ -1,0 +1,41 @@
+experiment: calcmp
+
+  §93 — DOES THE COMPARATOR KEEP THE RELATION ONCE ITS TARGET IS CALIBRATED?
+
+  genomes     R dna/comparator_ship.toml (target 5.0, IP on)
+              A dna/comparator_cal.toml (target 0.0, IP on)
+              B dna/comparator_cal_fixed.toml (target 0.0, IP off)
+  creatures   96 per arm, the SAME rep numbers, rep_off 1726, PAIRED, no patches
+  session     samediff, probe OFF, silent tail 1900 ms, comparator read
+  primary     comparator SPIKE cell, gap 200: carries it iff cell - 2 SE > 0.5
+
+  GATES AND PER ARM (unpaired means; the cell is the primary)
+
+    arm                  scored slept  spike cell        vmem cell         thr at end        rate /neuron/tick   first sleep
+    R stale 5 Hz          96    96   0.7402 +- 0.0082   0.8729 +- 0.0086   0.2001 +- 0.0001   0.000602 +- 0.000034   1202933 +- 1373
+    A target 0            96    96   0.4993 +- 0.0025   0.8824 +- 0.0091   1.0000 +- 0.0000   0.000000 +- 0.000000   1222360 +- 799
+    B target 0, IP off    96    96   0.4993 +- 0.0025   0.8824 +- 0.0091   1.0000 +- 0.0000   0.000000 +- 0.000000   1222360 +- 799
+
+    G-PATCH    nothing patched                                  PASS
+    G-SCORED   >= 80 scored per arm                             PASS
+    G-SLEEPERS >= 80 slept per arm                              PASS
+    G-CALROW   stage 0: comparator row ok on A and B            (results/n93-stage0-*)
+    G-REF      R carries it: 0.7402 - 2 SE = 0.7238 > 0.5           PASS
+    G-LIVE     A, B differ from R on every pair  PASS (A 0, B 0 identical)
+
+  THE REGISTERED READING (each arm's cell against 0.5)
+
+    A target 0           0.4993 +- 0.0025   minus 2 SE 0.4943, plus 2 SE 0.5043   -> 0.5 INSIDE 2 SE
+    B target 0, IP off   0.4993 +- 0.0025   minus 2 SE 0.4943, plus 2 SE 0.5043   -> 0.5 INSIDE 2 SE
+    silent at the readout (cell exactly 0.5): R 0, A 19, B 19  (an arm is
+      SILENT when all its scored creatures are)
+    no comparator spike all session (printed, not read): R 0, A 84, B 84
+    reported only: A - R -0.2409 +- 0.0086, B - R -0.2409 +- 0.0086 (paired)
+
+    -> NO VERDICT. 0.5 lies inside a calibrated arm's 2-SE band where the
+       branch needs it outside. Nothing is claimed for that arm.
+
+    Nothing ships.
+95758.63user 68.33system 2:03:00elapsed 1298%CPU (0avgtext+0avgdata 2355944maxresident)k
+0inputs+8outputs (0major+10317065minor)pagefaults 0swaps
+exit=0
