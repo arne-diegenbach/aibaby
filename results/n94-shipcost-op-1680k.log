@@ -1,0 +1,46 @@
+experiment: shipcost_op
+
+  §94 -> §92 STAGE 2 ON P — WHAT DOES SHIPPING THE COMPARATOR COST THE CREATURE?
+
+  genomes     D dna/default.toml, S dna/comparator_op.toml (D is an exact text prefix)
+  creatures   96 per arm, the SAME rep numbers, rep_off 1918, NO patch on either
+  session     samediff, probe OFF, silent tail 1900 ms; S's comparator is read
+  readouts    first sleep, asleep fraction, answer (voiced 200-600 ms after B,
+              all gaps); each S - D, UNPAIRED SE, 2 SE two-tailed
+  DISCLOSED   appending re-rolls the noise, so pairs share rep numbers, not noise.
+              Nothing ships in §92; shipping is the owner's decision.
+
+  GATES
+    G-PATCH   no dose or noise patch on either arm           PASS (0 patched)
+    G-SCORED  >= 80 scored per arm (D 96, S 96)               PASS
+    G-REL     S's comparator spike cell 0.7492 +- 0.0091, minus 2 SE 0.7310 > 0.5  PASS
+    G-LIVE    S differs from D on every pair              PASS (0 identical)
+
+  PER ARM (unpaired means over creatures)
+
+    arm           first sleep (ticks)       slept    asleep frac        answer             wall s/creature
+    D default       1100486 +-    865       96/96   0.1109 +- 0.0000   0.9082 +- 0.0019   201.5 +- 2.5
+    S candidate     1211150 +-    917       96/96   0.1109 +- 0.0000   0.9096 +- 0.0020   238.6 +- 3.0
+
+    G-SLEEPERS >= 80 creatures slept on each arm (D 96, S 96)      PASS
+
+  FATIGUE'S ACTIVITY (spikes per live neuron per tick; printed, not read)
+    D creature mean        0.00483 +- 0.00000
+    S creature mean        0.00438 +- 0.00000
+    S comparator alone     0.00031 +- 0.00001  -> it fires BELOW the creature's mean,
+                                             so on its own it DILUTES fatigue
+
+  THE REGISTERED READING (S - D)
+
+    first sleep, ticks   +110664.14583 +- 1261.18429  (+87.7 SE unpaired; paired SE 271.32585, not read)  BEYOND 2 SE
+    asleep fraction          +0.00000 +- 0.00000  (+0.0 SE unpaired; paired SE 0.00000, not read)  within 2 SE
+    answer (M1d guard)       +0.00132 +- 0.00280  (+0.5 SE unpaired; paired SE 0.00228, not read)  within 2 SE
+
+    -> STAGE 2: A SLEEP COST. The candidate sleeps LATER: this CHANGES the creature and is not called a benefit.
+       Branch 3 if stages 3 and 4 find no casualty.
+       Wall time S/D 1.184 (printed, not read: a broken creature can be fast).
+
+    Nothing ships.
+40773.35user 28.08system 51:46.63elapsed 1313%CPU (0avgtext+0avgdata 2344260maxresident)k
+0inputs+8outputs (0major+6219854minor)pagefaults 0swaps
+exit=0

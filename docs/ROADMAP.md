@@ -22946,3 +22946,48 @@ read.
 
 **Credit:** the fatigue arithmetic this prices is §83's and §92's. The papers behind the
 comparator are as in §94.
+
+### §94 → §92 STAGE 2 ON P, RESULT — THE SAME PRICE AS §92: A LATER SLEEP, NOTHING ELSE (2026-11-25)
+
+`results/n94-shipcost-op-1680k.log` (1.68M ticks, 96 per arm, rep_off 1918, 52 min). **Every gate
+PASSES:** G-PATCH, G-SCORED 96/96, **G-REL 0.7492 ± 0.0091 (minus 2 SE 0.7310)**, G-LIVE 0
+identical, G-SLEEPERS 96/96.
+
+| readout (S − D, Welch unpaired, 2 SE two-tailed) | value | reading |
+|---|---|---|
+| first sleep | **+110,664 ± 1,261 ticks (+87.7 SE)**; 1.100M → 1.211M | BEYOND 2 SE |
+| answer (M1d guard) | +0.0013 ± 0.0028 (+0.5 SE) | within 2 SE |
+| asleep fraction | 0 ± 0, a constant by construction (§92) | NOT READ |
+
+**Branch:** §92 stage 2's "A SLEEP COST". P makes the creature sleep LATER. That changes the
+creature and is not called a benefit. It becomes branch 3 if stages 3 and 4 find no casualty.
+
+**The prediction held this time.** The registered, non-gating prediction was about +111k ticks; the
+measurement is +110,664. Fatigue's dilution arithmetic also accounts for it:
+  - the creature's mean activity is D 0.00483 against S 0.00438, a ratio of 1.103;
+  - the first-sleep ratio is 1.101.
+
+The whole cost is the mean-rate dilution of §92, slightly larger because P's comparator is quieter
+(0.00031, against the §92 candidate's 0.00061). The relation replicates on a third fresh sample:
+§94 0.7436, here 0.7492.
+
+**Wall time S/D 1.184 (printed, not read).** §92 measured 1.072. The machine was not idle across
+both runs, so this is not a compute price. If compute matters to the owner, it needs a timing
+run on an idle machine.
+
+**WHERE THE CANDIDATE STANDS.** P is §92's candidate, with the comparator honestly calibrated.
+  - It carries the relation.
+  - It leaves turn-taking unchanged.
+  - Its one measured cost is a 10% later first sleep, fully explained.
+  - The three remaining blockers are unchanged:
+    - (i) **`calibrate` FAILS on somato/expression** (§92 question (b)). It needs its own
+      registration.
+    - (ii) Stage 3, the fast verify, has to be re-run on P. Expected: the same single
+      `calibrate` failure.
+    - (iii) Stage 4, the long and teach tiers on both genomes, takes days and needs the owner's go.
+
+**Credit:** the fatigue arithmetic is §83's and §92's. The comparator rests on Tsodyks & Markram
+(1997), and its homeostat on Desai, Rutherford & Turrigiano (1999), Turrigiano (2008) and
+Triesch (2005). All are in the README References.
+
+**Nothing ships.**
