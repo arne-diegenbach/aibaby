@@ -20853,6 +20853,17 @@ audit of names cited in the text against names appearing here (2026-10-09).**
   the naming milestone is measured against all rest on this data set. It was
   credited only in a source comment.
 
+- **Testing for absence with a margin (§94's decision rule).** Schuirmann, D. J.
+  (1987). *A comparison of the two one-sided tests procedure and the power
+  approach for assessing the equivalence of average bioavailability.* Journal of
+  Pharmacokinetics and Biopharmaceutics 15(6), 657-680.
+  <https://doi.org/10.1007/BF01068419> — "the relation is gone" has to be shown
+  inside a margin fixed in advance, not as a failure to reject the null value.
+  §93 wrote its absence clause against the null value (cell + 2 SE ≤ 0.5), so it
+  fired with probability ≈ 0.025 on an arm at chance and the result went to NO
+  VERDICT. §94's LACKS clause (cell + 2 SE < 0.55) is Schuirmann's one-sided test
+  against the margin. It was cited earlier in prose only; this is its entry.
+
 - **The slow store (DNA v41's third gate).** Benna, M. K. & Fusi, S. (2016).
   *Computational principles of synaptic memory consolidation.* Nature
   Neuroscience 19(12), 1697-1706. <https://doi.org/10.1038/nn.4401> — the

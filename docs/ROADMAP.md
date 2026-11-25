@@ -22723,3 +22723,109 @@ comparator's depressing synapses are Tsodyks & Markram (1997). All are already i
 References.
 
 **Nothing ships.**
+
+## §94 — DOES THE COMPARATOR CARRY THE RELATION WHEN ITS GENOME IS WRITTEN AT THE OPERATING POINT? (registered 2026-11-25)
+
+**THE QUESTION.** §93 left the relation in one place: R, whose homeostat ends at **threshold 0.2001,
+on the 0.20 floor**, running at about 0.6 Hz in life. Calibrating the target to 0 put the
+thresholds back at the genome's 1.0, and the relation went to within 0.005 of chance. That is a
+bound, not a verdict. §94 writes the genome **where R's creature actually operates**: birth
+threshold 0.20, the homeostat's own floor. It asks whether the relation is then carried by an
+honest genome, one that `calibrate` passes. That is the operating-point rule ("MATCH AT THE
+OPERATING POINT") applied to the comparator. **Disclosure:** 0.2001 is samediff's operating point.
+An operating threshold is protocol-dependent and must not be carried to another instrument
+(standing rule).
+
+**THE GENOMES.** Each is `dna/comparator_ship.toml` with only the named comparator fields changed,
+`dna/default.toml` an exact prefix (asserted), and the module count unchanged. They share one noise
+stream, so pairing by rep is valid.
+  - **R `dna/comparator_ship.toml`**, the reference, as in §93.
+  - **P `dna/comparator_op.toml`:** `threshold = 0.20`, and `target_rate_hz` = **whatever stage 0's
+    `calibrate` reads for the comparator at threshold 0.20**, written in verbatim. The homeostat
+    stays ON. This is the honest genome: born at the operating point, with a target the module
+    actually free-runs at.
+  - **H `dna/comparator_op_held.toml`:** P, plus `ip_wake_scale = 0.0` and `ip_sleep_scale =
+    0.0`. The threshold is held at 0.20 for life. This is the mechanism arm: a second change,
+    named as one.
+
+**WHAT P'S HOMEOSTAT WILL DO, DERIVED BEFORE THE RUN.** `calibrate` measures free-running with no
+sound. If the comparator free-runs at 0.00 Hz even at threshold 0.20, P's target is 0. Then any
+firing in life RAISES its thresholds, and P may drift back toward §93's silent arms. Stage 1's
+threshold-at-end column reads that drift directly. **That case is a legitimate outcome, not a
+defect:** it is what the honest homeostat does to this module, and branch 3 is written for it.
+
+### STAGES
+
+  0. **The calibrate rows (seconds).**
+     - Build P with `threshold = 0.20` and the target left at 5.0. Run `calibrate`, read the
+       comparator's free-running rate, and write it into P's `target_rate_hz` (and H's).
+     - Re-run `calibrate` on P and on H. **G-CALROW: the comparator row reads `ok` on both.**
+     - Somato and expression are reported and are not a gate (§92's question (b)).
+     - Stage 0 prints the free-running rate itself. If it is 0.00, that is recorded and §94
+       proceeds as registered.
+  1. **`calop` (new instrument; `calcmp` with the arms and files changed, about 2 h).**
+     - samediff, §90's silent tail, no patches, comparator read, 96 creatures per arm, 1.68M
+       ticks.
+     - **rep_off 1822**, past §93's 1726–1821.
+     - **Primary per arm:** the comparator SPIKE cell at gap 200.
+     - Printed beside it, not read: vmem cell, threshold at end, rate, first sleep, and the
+       silent-at-readout count.
+
+### THE DECISION RULE: A MARGIN, NOT THE NULL VALUE (§93's lesson)
+
+**Margin m = 0.55, fixed now.** It is the smallest relation worth shipping a module for. It sits
+well below R's 0.74 and well above §93's calibrated 0.50. A relation under 0.55 counts as absent
+for shipping, and the write-up must say so in those words.
+  - **CARRIES:** cell − 2 SE > 0.55.
+  - **LACKS:** cell + 2 SE < 0.55, or the arm is SILENT (every scored creature at exactly 0.5).
+  - **NO VERDICT:** otherwise. The two clauses test against the same number from opposite sides,
+    so they cannot both fire.
+
+**FIRING PROBABILITIES, AS NUMBERS, BEFORE THE RUN** (SEs from §93: 0.0082 for a working arm,
+0.0025 for an arm at chance):
+  - An arm truly at R's level (0.74, SE 0.0082): CARRIES fires with probability ≈ 1. Its 2-SE
+    lower edge is 0.72, 21 SE clear of the margin.
+  - An arm truly at chance (0.50, SE 0.0025): LACKS fires with probability ≈ 1. Its upper edge,
+    0.505, is 18 SE under the margin. §93's clause had ≈ 0.025 here.
+  - NO VERDICT needs a true cell within about 2 SE of 0.55: roughly **0.534–0.566** at SE 0.008.
+    That is the only band that refuses.
+
+### GATES
+
+  - G-PATCH: nothing patched.
+  - G-SCORED: at least 80 scored per arm.
+  - G-SLEEPERS: at least 80 slept per arm.
+  - G-CALROW: stage 0 reads `ok` on P and H.
+  - **G-REF:** R CARRIES under the margin (cell − 2 SE > 0.55).
+  - G-LIVE: P and H each differ from R on every pair.
+  - **G-BIRTH:** P's and H's comparator mean threshold **at the session's start** reads 0.20. This
+    shows the genome edit reached the creature. The instrument prints the threshold at the
+    first tick.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** any gate fails.
+  2. **THE HONEST GENOME CARRIES IT:** P carries the relation. P becomes the shipping candidate,
+     with a genome `calibrate` passes on the comparator row. It re-enters §92 at stage 2 (sleep
+     cost) and stage 3 (fast verify), with question (b) still open. Shipping stays the owner's
+     decision.
+  3. **IT NEEDS THE THRESHOLD HELD:** P lacks it and H carries it. The honest homeostat moves the
+     module off the operating point. H becomes the candidate, disclosed as the shipped creature's
+     **first module with its homeostat OFF**. P's threshold-at-end is quoted with it.
+  4. **THE BIRTH THRESHOLD IS NOT THE OPERATING POINT:** both P and H lack it while R carries it.
+     R reaches 0.20 by a trajectory, and being born there does not reproduce what R has. The
+     difference is the path: early-life plasticity elsewhere, co-adapted while the comparator's
+     thresholds fell. Nothing is a candidate. **The comparator is NOT SHIPPABLE until a new
+     registration names the missing ingredient.**
+  5. **NO VERDICT:** the arm the branch needs sits in the refusing band. Nothing is claimed for it.
+
+**Reported only:** P − R and H − R as paired differences, threshold at end per arm, and first sleep
+per arm. The last is the dilution check: a comparator at 0.20 from birth should fire MORE than R
+early on, so it should sleep EARLIER than R. That sign is derived, not a gate.
+
+**COST.** Stage 0 takes seconds; stage 1 about 2 h (as §93). Nothing ships in §94.
+
+**Credit (carried):** Desai, Rutherford & Turrigiano (1999) and Turrigiano (2008) for the
+homeostat; Triesch (2005) for its rule; Tsodyks & Markram (1997) for the comparator's synapses. The
+equivalence-margin test is Schuirmann (1987) and the TOST procedure. It is new to this list and is
+added to the README References.
