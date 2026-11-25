@@ -22855,3 +22855,64 @@ added to the README References.
     0.005 of 0.20. A new `SdOut` field, read once after the session is built.
 
 The registered branches are printed verbatim. It refuses any genome but R.
+
+### §94 RESULT — BRANCH 2: THE HONEST GENOME CARRIES IT (2026-11-25)
+
+`results/n94-calop-1680k.log` (1.68M ticks, 96 creatures per arm, rep_off 1822). **Every gate
+PASSES:** G-PATCH; G-SCORED 96/96/96; G-SLEEPERS 96/96/96; G-CALROW (stage 0); **G-REF R 0.7361 ±
+0.0088, minus 2 SE 0.7185 > 0.55**; G-LIVE 0 identical; **G-BIRTH**, every P and H creature born at
+0.2000.
+
+| arm | spike cell (primary) | − 2 SE | thr at end | rate /neuron/tick | first sleep |
+|---|---|---|---|---|---|
+| R thr 1.0, target 5, IP on | 0.7361 ± 0.0088 | 0.7185 | 0.2001 | 0.000631 | 1,200,869 ± 1,555 |
+| **P thr 0.20, target 0.47, IP on** | **0.7436 ± 0.0094** | **0.7249** | 0.2042 | 0.000318 | 1,210,846 ± 892 |
+| H thr 0.20, IP off | 0.7188 ± 0.0106 | 0.6976 | 0.2000 | 0.005613 | 1,069,838 ± 27,202 |
+
+**THE REGISTERED READING: P CARRIES IT** (0.7249 > 0.55, 17 SE clear of the margin). Branch 2
+fires. H also carries it (reported). No creature on any arm is silent at the readout.
+
+**WHAT IT SAYS.** A comparator genome that `calibrate` passes on its own row carries the
+same/different relation **as strongly as the mis-targeted candidate**: P − R **+0.0076 ± 0.0081
+(+0.9 SE, paired)**. Writing the genome at the operating point loses nothing. The relation since
+§88 was real, and so was the reason it needed IP: **the threshold, not the target.** A genome
+born at threshold 1.0 needs a homeostat chasing a stale target to drag it to 0.20. A genome born
+at 0.20, with the target it actually free-runs at, stays there: its thresholds end at 0.2042,
+held by the homeostat it no longer fights.
+
+**REPORTED, NOT READ.**
+  - **P is the quietest comparator measured.** It fires at half R's rate, because its homeostat
+    holds 0.47 Hz where R's chased 5 Hz from the floor. It therefore sleeps **9,977 ticks LATER
+    than R**: more dilution, §92's mechanism. **The registration's derived sign was WRONG.** It
+    predicted P would sleep EARLIER, reasoning that it fires more early in life. Whatever P does
+    early is outweighed by its rate over the whole session. The derived sign is withdrawn, and it
+    was not a gate.
+  - **H is LOUD and EXPENSIVE.** With no homeostat, it fires about 18× R's rate and sleeps
+    **131,031 ticks EARLIER**, with a 17× wider spread. That is §83's tax on a loud module, and
+    it carries the relation slightly less well (H − R −0.0173 ± 0.0096, −1.8 SE). **H is not a
+    candidate, and the homeostat earns its place on this module.**
+  - Wall time 10 h 44 min elapsed at 163% CPU. The machine was shared during the run, so this is
+    not a cost figure. §92's +7.2% stands as the compute price.
+
+**HOW IT TRAVELS.** "The comparator carries the same/different relation (spike cell 0.74, gap 200,
+UNDER THE RELATION CRITERION, NOT THE XOR ORACLE) on `dna/comparator_op.toml`, a genome whose
+comparator row `calibrate` passes; it does NOT SHIP." `calibrate` as a whole still FAILS on that
+genome, on somato and expression: §92's question (b), still open and still the blocker to a
+clean candidate.
+
+**NEXT (registered consequence of branch 2, each step the owner's go):**
+  - P re-enters §92 at stage 2: `shipcost` with P in place of the §92 candidate (sleep cost
+    against the default, M1d answer, G-REL).
+  - Then stage 3: the fast verify, where `calibrate` will still fail on (b).
+  - Question (b) needs its own registration: is somato and expression's −0.46/−0.44 the noise
+    re-roll of appending a module (channel ii), and what calibrates it? Multi-seed `calibrate` on
+    both genomes.
+
+**Credit.**
+  - The homeostat that now holds the threshold instead of fighting it: Desai, Rutherford &
+    Turrigiano (1999); Turrigiano (2008); Triesch (2005).
+  - The comparator's depressing synapses: Tsodyks & Markram (1997).
+  - The margin rule that let absence and presence both be read: Schuirmann (1987).
+  - All are in the README References.
+
+**Nothing ships.**

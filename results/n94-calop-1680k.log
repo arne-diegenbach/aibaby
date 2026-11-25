@@ -1,0 +1,43 @@
+experiment: calop
+
+  §94 — DOES THE COMPARATOR CARRY THE RELATION WITH ITS GENOME AT THE OPERATING POINT?
+
+  genomes     R dna/comparator_ship.toml (threshold 1.0, target 5.0, IP on)
+              P dna/comparator_op.toml (threshold 0.20, target 0.47, IP on)
+              H dna/comparator_op_held.toml (threshold 0.20, target 0.47, IP off)
+  creatures   96 per arm, the SAME rep numbers, rep_off 1822, PAIRED, no patches
+  session     samediff, probe OFF, silent tail 1900 ms, comparator read
+  primary     comparator SPIKE cell, gap 200, against the MARGIN 0.55:
+              CARRIES iff cell - 2 SE > 0.55; LACKS iff cell + 2 SE < 0.55 or SILENT
+
+  GATES AND PER ARM (unpaired means; the cell is the primary)
+
+    arm                  scored slept  spike cell        vmem cell         thr at birth  thr at end        rate /neuron/tick   first sleep
+    R thr 1.0, target 5   96    96   0.7361 +- 0.0088   0.8781 +- 0.0090   1.0000        0.2001 +- 0.0000   0.000631 +- 0.000038   1200869 +- 1555
+    P thr 0.20, IP on     96    96   0.7436 +- 0.0094   0.8702 +- 0.0090   0.2000        0.2042 +- 0.0005   0.000318 +- 0.000006   1210846 +- 892
+    H thr 0.20, IP off    96    96   0.7188 +- 0.0106   0.8631 +- 0.0089   0.2000        0.2000 +- 0.0000   0.005613 +- 0.001067   1069838 +- 27202
+
+    G-PATCH    nothing patched                                  PASS
+    G-SCORED   >= 80 scored per arm                             PASS
+    G-SLEEPERS >= 80 slept per arm                              PASS
+    G-CALROW   stage 0: comparator row ok on P and H            (results/n94-stage0-*)
+    G-REF      R carries it: 0.7361 - 2 SE = 0.7185 > 0.55          PASS
+    G-LIVE     P, H differ from R on every pair  PASS (P 0, H 0 identical)
+    G-BIRTH    P, H threshold at birth = 0.20 +- 0.005   PASS (P 0, H 0 off)
+
+  THE REGISTERED READING (each arm's cell against the margin 0.55)
+
+    P thr 0.20, IP on    0.7436 +- 0.0094   minus 2 SE 0.7249, plus 2 SE 0.7624   -> CARRIES IT
+    H thr 0.20, IP off   0.7188 +- 0.0106   minus 2 SE 0.6976, plus 2 SE 0.7399   -> CARRIES IT
+    silent at the readout (cell exactly 0.5): R 0, P 0, H 0
+    no comparator spike all session (printed, not read): R 0, P 0, H 0
+    reported only: P - R +0.0076 +- 0.0081, H - R -0.0173 +- 0.0096 (paired)
+
+    -> THE HONEST GENOME CARRIES IT. P is the shipping candidate (calibrate's
+       comparator row passes) and re-enters §92 at stages 2 and 3; question (b)
+       stays open. Shipping is the owner's decision.
+
+    Nothing ships.
+63300.33user 42.88system 10:44:29elapsed 163%CPU (0avgtext+0avgdata 2357880maxresident)k
+0inputs+8outputs (0major+10296575minor)pagefaults 0swaps
+exit=0
