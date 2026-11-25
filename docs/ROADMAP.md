@@ -23035,3 +23035,96 @@ a seed-level fluctuation from a genome-level shift.
 **Credit:** as in §94.
 
 **Nothing ships.**
+
+## §95 — IS THE CANDIDATE'S `calibrate` FAILURE A SHIFT OR A DRAW? (§92 QUESTION (b), registered 2026-11-25)
+
+**THE QUESTION.** On P (`dna/comparator_op.toml`), `calibrate` reads somato at 4.10 Hz (target
+4.56, −0.46) and expression at 6.78 (target 7.22, −0.44). On default they read −0.11 and +0.02.
+Tolerance is ±0.25 Hz. Neither module receives anything from the comparator (§92 stage 0). §95
+asks whether appending the comparator **shifts** these modules' free-running rates, or whether
+the −0.46/−0.44 is **one draw** from a re-rolled random stream that `calibrate`'s single-seed
+estimate cannot absorb.
+
+**HOW `calibrate` MEASURES, READ FROM THE CODE** (`experiments_milestones.cpp`,
+`measure_free_running`):
+  - one creature, at the genome's seed;
+  - 120k ticks, with `ip_rate`, `scaling_rate` and growth at 0, and no sound;
+  - the module's `mean_rate`, an EMA of per-neuron rates, read ONCE at the last tick.
+
+**One seed sets both the wiring and the runtime noise** (`brain.cpp:51`, `rng_.seed(header.seed)`).
+Appending a module changes the draws that follow it.
+
+**DERIVED BEFORE THE RUN.**
+  - **(1) The comparator has no causal route to these modules in this measurement.** §92 stage 0's
+    audit found four channels. In `calibrate`, three are closed:
+    - no projection out of the comparator;
+    - compute is not a channel;
+    - the snapshot layout is not a channel.
+
+    Fatigue reaches the modules only through SLEEP, and 120k ticks sits far below first sleep
+    (about 1.1M in samediff; G-AWAKE checks it). That leaves (ii), the re-rolled random stream. A
+    re-roll is a ZERO-MEAN perturbation across seeds, so **the expected seed-mean shift is 0.**
+  - **(2) Selection.** Default's targets were written from default's reading at THIS seed
+    ("reset the genome to the left column"). So default sits near target at seed 0 partly by
+    construction, and any re-roll is expected to move a module AWAY from target. That is
+    regression away from a selected point, not a defect.
+
+**THE GENOMES.** D `dna/default.toml` and P `dna/comparator_op.toml`, unchanged. P carries D as an
+exact prefix (asserted).
+
+### STAGES
+
+  0. **Pre-flight (seconds to minutes; ITS NUMBERS ARE NEVER RESULTS).** 24 seeds per genome on a
+     DISJOINT seed set (indices 1000–1023). Measure SD(P − D) per module, then fix n by the rule:
+     **the smallest n in {96, 192, 384, 768} for which P(NO SHIFT fires | true shift 0) ≥ 0.95 on
+     both modules,** using SE = 1.5 × SD/√n (§ "every SD projection here has come in low": the
+     headroom is bought against the projection). If 768 does not reach 0.95, stage 1 runs at 768
+     and the firing probability is printed as a number with the result.
+  1. **`calseeds` (new instrument).** For seed index r = 0 … n−1, with seed = genome seed + r × 7919
+     (the formula `calibrate`'s own wiring sweep uses), run `measure_free_running` on D and on P,
+     paired by r. Every module's rate is recorded. **Primary per module (somato, expression):**
+     Δ = mean over r of (P − D), with a PAIRED SE.
+
+### DECISION RULE: A MARGIN (§93's lesson; Schuirmann 1987)
+
+**Margin 0.10 Hz,** fixed now: under half of `calibrate`'s ±0.25 tolerance.
+  - **NO SHIFT:** |Δ| + 2 SE < 0.10.
+  - **SHIFT:** |Δ| − 2 SE > 0.10.
+  - **NO VERDICT:** otherwise.
+
+### GATES
+
+  - G-PREFIX: D is an exact text prefix of P, and both compile.
+  - **G-REPRO:** at r = 0, both genomes reproduce `calibrate`'s own rows to 0.005 Hz: somato and
+    expression on D (4.45/7.24) and on P (4.10/6.78). This shows the instrument measures
+    `calibrate`'s quantity.
+  - **G-AWAKE:** no creature on either genome is asleep at any point in its 120k ticks. That
+    keeps fatigue's channel shut.
+  - G-N: every seed on both genomes produced a reading.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** any gate fails.
+  2. **A DRAW, NOT A SHIFT:** NO SHIFT on both somato and expression. Appending the comparator does
+     not move them. P's `calibrate` failure is the single-seed estimate meeting a re-rolled
+     stream. **(b) is answered, and the comparator is cleared of it.** The remaining blocker is
+     `calibrate`'s single-seed verdict itself, a shipped test. Changing it is its own registration
+     and the owner's call. P's targets are NOT edited to chase a draw.
+  3. **A SHIFT:** SHIFT on either module. Appending moves that module's free-running rate in the
+     seed mean, which derivation (1) says it cannot. **The audit missed a channel**, and finding
+     it comes before any target is re-derived. Its sign is reported.
+  4. **NO VERDICT:** a module in the refusing band. Nothing is claimed for it, and (b) stays open.
+
+**Reported only.**
+  - Per genome and module: the seed-mean rate against target, and the fraction of seeds at which
+    that module alone would fail `calibrate`'s ±0.25. This measures how often default ITSELF would
+    fail at another seed, which is the scale of derivation (2).
+  - SD(P − D) per module: the size of one re-roll.
+  - Every other module's Δ.
+
+**COST.** Stage 0 is 48 calibrate creatures; stage 1 is 2n. Each is 120k ticks; `calibrate` takes
+seconds per creature, so minutes in all. Nothing ships in §95.
+
+**Credit.** The equivalence-margin rule is Schuirmann (1987), already in the README References.
+No new literature is drawn on. The question is an estimator's robustness, answered from the
+project's own kernel.
