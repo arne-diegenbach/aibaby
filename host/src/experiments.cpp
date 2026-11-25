@@ -591,6 +591,12 @@ const Spec kSpecs[] = {
     {"shipcost_op", 1680000, Expect::kGuard, Tier::kLong,
      "§94 -> §92 stage 2: the same price, on the operating-point candidate."
      " Run on dna/comparator_op.toml"},
+    {"calseedspre", 120000, Expect::kGuard, Tier::kLong,
+     "§95 stage 0: SD(P - D) of calibrate's free-running rates on 24 disjoint seeds, and"
+     " the n stage 1 runs at. Its numbers are never results. Run on dna/comparator_op.toml"},
+    {"calseeds", 120000, Expect::kGuard, Tier::kLong,
+     "§95 stage 1: is the candidate's calibrate failure a shift or a draw? Seed-paired"
+     " free-running rates, margin 0.10 Hz. Run on dna/comparator_op.toml"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2057,6 +2063,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "shipcost") ok = run_shipcost(dna_blob, ticks, verbose);
   else if (name == "shipcost_op") ok = run_shipcost_op(dna_blob, ticks, verbose);
   else if (name == "calcmp") ok = run_calcmp(dna_blob, ticks, verbose);
+  else if (name == "calseedspre") ok = run_calseedspre(dna_blob, ticks, verbose);
+  else if (name == "calseeds") ok = run_calseeds(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});

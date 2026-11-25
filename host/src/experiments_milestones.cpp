@@ -7,6 +7,7 @@
 #include <numeric>
 #include <random>
 #include "experiments_common.h"
+#include "host/dna_toml.h"  // §95: calseeds compiles both genomes
 #include "host/mel.h"
 #include "host/wav.h"
 
@@ -3451,6 +3452,274 @@ bool run_calibrate(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
                 "  and the duty cycle is the number that tells you they have.\n");
   }
   return pass;
+}
+
+
+// --- calseeds (§95): is the candidate's calibrate failure a shift or a draw?
+//
+// `calibrate`'s own measurement (`measure_free_running`'s quiet settings: ip,
+// scaling and growth off, no sound, the module's EMA mean_rate read once at the
+// last tick) repeated over seed variants, seed = genome seed + r * 7919 (the
+// formula `dropped_across_seeds` sweeps), on default (D) and the operating-point
+// candidate (P), PAIRED by r. r = 0 is calibrate's own creature (G-REPRO).
+// Stage 0 (`calseedspre`) measures SD(P - D) on DISJOINT indices 1000-1023 and
+// fixes n; its numbers are never results. Stage 1 (`calseeds`) reads Delta =
+// mean(P - D) against the registered margin 0.10 Hz.
+namespace {
+constexpr const char* kCsD = "dna/default.toml";
+constexpr const char* kCsP = "dna/comparator_op.toml";
+constexpr double kCsMargin = 0.10;
+constexpr double kCsTol = 0.25;          // calibrate's kRateTolerance, restated for the print
+constexpr uint32_t kCsPreFrom = 1000, kCsPreN = 24;
+// Stage 1's n, fixed by stage 0's rule and written here AFTER stage 0 (ROADMAP §95).
+// 0 = not yet fixed, and `calseeds` refuses. Stage 0 (results/n95-stage0-calseedspre.log)
+// chose 768, the cap: expression's P(NO SHIFT | true 0) is 0.947 there, under the 0.95
+// the rule asks for, so that probability is printed with the result as registered.
+constexpr uint32_t kCsN = 768;
+constexpr double kCsFireExpr = 0.947, kCsFireSom = 1.000;
+
+struct CsOut {
+  bool ok = false, slept = false;
+  std::vector<double> rate;  // per module, calibrate's quantity
+};
+
+CsOut cs_measure(const std::vector<uint8_t>& blob, uint64_t ticks, uint32_t r) {
+  CsOut o;
+  std::vector<uint8_t> quiet = blob;
+  {
+    auto* h = reinterpret_cast<aibaby::DnaHeader*>(quiet.data());
+    const uint64_t seed = h->seed + uint64_t(r) * 7919ull;
+    h->seed = seed;
+    h->homeo.ip_rate = 0.0f;
+    h->homeo.scaling_rate = 0.0f;
+    h->growth.enabled = 0;
+  }
+  Session s;
+  std::string error;
+  if (!s.init(quiet, error)) return o;
+  for (uint64_t t = 0; t < ticks; ++t) {
+    s.brain.step();
+    if (s.brain.asleep()) o.slept = true;
+  }
+  for (uint32_t m = 0; m < s.brain.network().module_count(); ++m)
+    o.rate.push_back(double(s.brain.network().module(m).mean_rate));
+  o.ok = true;
+  return o;
+}
+
+bool cs_text(const char* path, std::string& out) {
+  FILE* f = std::fopen(path, "rb");
+  if (!f) return false;
+  out.clear();
+  char buf[65536];
+  size_t k;
+  while ((k = std::fread(buf, 1, sizeof buf, f)) > 0) out.append(buf, k);
+  std::fclose(f);
+  return true;
+}
+
+void cs_mse(const std::vector<double>& x, double& m, double& sd, double& se) {
+  m = sd = se = 0.0;
+  if (x.empty()) return;
+  for (double v : x) m += v;
+  m /= double(x.size());
+  if (x.size() < 2) return;
+  double ss = 0.0;
+  for (double v : x) ss += (v - m) * (v - m);
+  sd = std::sqrt(ss / double(x.size() - 1));
+  se = sd / std::sqrt(double(x.size()));
+}
+
+double cs_phi(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
+
+bool run_calseeds_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  std::vector<uint8_t> bd, bp;
+  std::string err, td, tp;
+  if (!compile_dna_toml(kCsD, bd, err) || !compile_dna_toml(kCsP, bp, err)) {
+    std::printf("  REFUSED: a genome does not compile: %s\n", err.c_str());
+    return false;
+  }
+  const bool g_prefix = cs_text(kCsD, td) && cs_text(kCsP, tp) && tp.size() > td.size() &&
+                        tp.compare(0, td.size(), td) == 0;
+  if (!g_prefix || blob != bp) {
+    std::printf("  REFUSED: run this on %s. The given genome %s it; the exact-prefix\n"
+                "  assertion against %s %s. Nothing was measured.\n",
+                kCsP, blob == bp ? "matches" : "does NOT match", kCsD,
+                g_prefix ? "holds" : "FAILS");
+    return false;
+  }
+  if (!pre && kCsN == 0) {
+    std::printf("  REFUSED: stage 1's n is not fixed yet. Run `calseedspre` (stage 0), apply\n"
+                "  its rule, and write n into kCsN. Nothing was measured.\n");
+    return false;
+  }
+  aibaby::Dna dd, dp;
+  if (dd.load(bd.data(), bd.size()) != aibaby::DnaStatus::kOk ||
+      dp.load(bp.data(), bp.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  REFUSED: a genome does not load.\n");
+    return false;
+  }
+  const uint32_t nd = dd.module_count();
+  const uint32_t n = pre ? kCsPreN : kCsN;
+  const uint32_t from = pre ? kCsPreFrom : 0;
+  std::printf("\n  §95 %s — IS P's CALIBRATE FAILURE A SHIFT OR A DRAW?\n\n"
+              "  genomes     D %s, P %s (D an exact text prefix of P)\n"
+              "  creatures   %u seed variants per genome, r = %u..%u, seed = genome seed + r * 7919,\n"
+              "              PAIRED by r; calibrate's quiet settings, %llu ticks, rate read at the end\n"
+              "%s\n",
+              pre ? "STAGE 0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "STAGE 1",
+              kCsD, kCsP, n, from, from + n - 1, (unsigned long long)ticks,
+              pre ? "  purpose     SD(P - D) per module, and the n stage 1 runs at\n" : "");
+
+  std::vector<CsOut> rd = parallel_reps<CsOut>(n, [&](uint32_t i) {
+    return cs_measure(bd, ticks, from + i);
+  });
+  std::vector<CsOut> rp = parallel_reps<CsOut>(n, [&](uint32_t i) {
+    return cs_measure(bp, ticks, from + i);
+  });
+
+  uint32_t okd = 0, okp = 0, sd_ = 0, sp_ = 0;
+  for (uint32_t i = 0; i < n; ++i) {
+    if (rd[i].ok && rd[i].rate.size() == nd) ++okd;
+    if (rp[i].ok && rp[i].rate.size() == dp.module_count()) ++okp;
+    if (rd[i].slept) ++sd_;
+    if (rp[i].slept) ++sp_;
+  }
+  const bool g_n = okd == n && okp == n;
+  const bool g_awake = sd_ == 0 && sp_ == 0;
+  if (!g_n) {
+    std::printf("  G-N FAIL: D %u of %u, P %u of %u readings. VOID.\n", okd, n, okp, n);
+    return false;
+  }
+
+  // Per module (the shared prefix: D's modules), paired difference and reports.
+  int32_t i_som = -1, i_exp = -1;
+  std::printf("  %-12s %8s   %-22s %-22s %-24s %s\n", "module", "target", "D seed-mean +- SD",
+              "P seed-mean +- SD", "Delta = P - D (paired)", "fail +-0.25 at a seed: D, P");
+  std::vector<double> dsd(nd, 0.0), dm(nd, 0.0), dse(nd, 0.0);
+  for (uint32_t m = 0; m < nd; ++m) {
+    const char* nm = dd.module(m).name;
+    if (std::strcmp(nm, "somato") == 0) i_som = int32_t(m);
+    if (std::strcmp(nm, "expression") == 0) i_exp = int32_t(m);
+    const double tgt = double(dd.module(m).target_rate_hz);
+    std::vector<double> xd, xp, dx;
+    uint32_t fd = 0, fp = 0;
+    for (uint32_t i = 0; i < n; ++i) {
+      xd.push_back(rd[i].rate[m]);
+      xp.push_back(rp[i].rate[m]);
+      dx.push_back(rp[i].rate[m] - rd[i].rate[m]);
+      if (std::fabs(rd[i].rate[m] - tgt) > kCsTol) ++fd;
+      if (std::fabs(rp[i].rate[m] - tgt) > kCsTol) ++fp;
+    }
+    double md, sdd, sed, mp, sdp, sep;
+    cs_mse(xd, md, sdd, sed);
+    cs_mse(xp, mp, sdp, sep);
+    cs_mse(dx, dm[m], dsd[m], dse[m]);
+    std::printf("  %-12s %6.2f Hz   %6.3f +- %5.3f         %6.3f +- %5.3f         "
+                "%+7.4f +- %6.4f (SD %.3f)   %u/%u, %u/%u\n",
+                nm, tgt, md, sdd, mp, sdp, dm[m], dse[m], dsd[m], fd, n, fp, n);
+  }
+  if (dp.module_count() > nd) {
+    std::vector<double> xc;
+    for (uint32_t i = 0; i < n; ++i) xc.push_back(rp[i].rate[nd]);
+    double mc, sdc, sec;
+    cs_mse(xc, mc, sdc, sec);
+    std::printf("  %-12s %6.2f Hz   %-22s %6.3f +- %5.3f   (P only)\n", dp.module(nd).name,
+                double(dp.module(nd).target_rate_hz), "—", mc, sdc);
+  }
+  std::printf("\n    G-PREFIX   D an exact prefix of P, both compile          PASS\n"
+              "    G-N        every seed read on both genomes (%u, %u)        PASS\n"
+              "    G-AWAKE    no creature asleep in its %llu ticks (D %u, P %u slept)   %s\n",
+              okd, okp, (unsigned long long)ticks, sd_, sp_, g_awake ? "PASS" : "FAIL");
+  if (i_som < 0 || i_exp < 0) {
+    std::printf("  somato or expression not found. VOID.\n");
+    return false;
+  }
+  const uint32_t key[2] = {uint32_t(i_som), uint32_t(i_exp)};
+
+  if (pre) {
+    std::printf("\n  STAGE 0 RULE: smallest n in {96, 192, 384, 768} with P(NO SHIFT | true 0) >= 0.95\n"
+                "  on BOTH modules, SE = 1.5 x SD / sqrt(n), margin %.2f Hz\n\n", kCsMargin);
+    const uint32_t cand[4] = {96, 192, 384, 768};
+    uint32_t chosen = 0;
+    for (uint32_t c : cand) {
+      double pmin = 1.0;
+      std::printf("    n %4u:", c);
+      for (uint32_t k = 0; k < 2; ++k) {
+        const double se = 1.5 * dsd[key[k]] / std::sqrt(double(c));
+        const double room = kCsMargin - 2.0 * se;
+        const double pf = room > 0.0 && se > 0.0 ? 2.0 * cs_phi(room / se) - 1.0 : 0.0;
+        pmin = std::min(pmin, pf);
+        std::printf("  %s SE %.4f P(fires) %.3f", dd.module(key[k]).name, se, pf);
+      }
+      std::printf("\n");
+      if (chosen == 0 && pmin >= 0.95) chosen = c;
+    }
+    if (chosen == 0) chosen = 768;
+    std::printf("\n    -> stage 1 runs at n = %u%s. Write it into kCsN. These numbers are NOT results.\n",
+                chosen, chosen == 768 ? " (768 is the cap; print the firing probability with the result)" : "");
+    return g_awake;
+  }
+
+  // Stage 1: G-REPRO and the registered reading.
+  const double repro_d[2] = {4.45, 7.24}, repro_p[2] = {4.10, 6.78};
+  bool g_repro = true;
+  for (uint32_t k = 0; k < 2; ++k) {
+    // calibrate prints two decimals, so its row is the reading rounded; a
+    // reproduction within 0.005 is "rounds to the same printed value".
+    if (std::fabs(rd[0].rate[key[k]] - repro_d[k]) > 0.005 ||
+        std::fabs(rp[0].rate[key[k]] - repro_p[k]) > 0.005)
+      g_repro = false;
+  }
+  std::printf("    G-REPRO    r = 0 reproduces calibrate: somato D %.3f P %.3f, expression D %.3f P %.3f   %s\n",
+              rd[0].rate[key[0]], rp[0].rate[key[0]], rd[0].rate[key[1]], rp[0].rate[key[1]],
+              g_repro ? "PASS" : "FAIL");
+  const bool gates = g_awake && g_repro;
+  std::printf("\n  THE REGISTERED READING (margin %.2f Hz; NO SHIFT iff |Delta| + 2 SE < %.2f,\n"
+              "  SHIFT iff |Delta| - 2 SE > %.2f)\n"
+              "  stage 0's P(NO SHIFT fires | true shift 0) at n = %u: somato %.3f, expression %.3f\n"
+              "  (expression under 0.95 at the cap, printed as registered)\n\n",
+              kCsMargin, kCsMargin, kCsMargin, kCsN, kCsFireSom, kCsFireExpr);
+  bool shift_any = false, noshift_all = true;
+  for (uint32_t k = 0; k < 2; ++k) {
+    const uint32_t m = key[k];
+    const double a = std::fabs(dm[m]);
+    const bool ns = a + 2.0 * dse[m] < kCsMargin;
+    const bool sh = a - 2.0 * dse[m] > kCsMargin;
+    if (sh) shift_any = true;
+    if (!ns) noshift_all = false;
+    std::printf("    %-12s Delta %+.4f +- %.4f   |Delta| +/- 2 SE: [%.4f, %.4f]   -> %s\n",
+                dd.module(m).name, dm[m], dse[m], a - 2.0 * dse[m], a + 2.0 * dse[m],
+                ns ? "NO SHIFT" : sh ? "SHIFT" : "NO VERDICT");
+  }
+  if (!gates) {
+    std::printf("\n    -> VOID. A gate failed above.\n");
+  } else if (noshift_all) {
+    std::printf("\n    -> A DRAW, NOT A SHIFT. Appending the comparator does not move somato or\n"
+                "       expression; P's calibrate failure is the single-seed estimate meeting a\n"
+                "       re-rolled stream. (b) is answered and the comparator is cleared of it.\n"
+                "       The remaining blocker is calibrate's single-seed verdict itself: its own\n"
+                "       registration, the owner's call. P's targets are NOT edited to chase a draw.\n");
+  } else if (shift_any) {
+    std::printf("\n    -> A SHIFT. Appending moves a module's free-running rate in the seed mean,\n"
+                "       which the audit says it cannot: the audit MISSED A CHANNEL. Find it before\n"
+                "       any target is re-derived.\n");
+  } else {
+    std::printf("\n    -> NO VERDICT. A module sits in the refusing band; (b) stays open.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return gates;
+}
+}  // namespace
+
+bool run_calseedspre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_calseeds_impl(blob, ticks, true);
+}
+
+bool run_calseeds(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_calseeds_impl(blob, ticks, false);
 }
 
 

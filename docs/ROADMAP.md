@@ -23128,3 +23128,32 @@ seconds per creature, so minutes in all. Nothing ships in §95.
 **Credit.** The equivalence-margin rule is Schuirmann (1987), already in the README References.
 No new literature is drawn on. The question is an estimator's robustness, answered from the
 project's own kernel.
+
+### §95 STAGE 0 — THE PRE-FLIGHT FIXES n = 768 (THE CAP); ITS NUMBERS ARE NEVER RESULTS (2026-11-25)
+
+`results/n95-stage0-calseedspre.log`: 24 seeds per genome at the disjoint indices 1000–1023,
+39 s. G-PREFIX, G-N and G-AWAKE PASS: no creature slept in 120k ticks, so fatigue's channel is shut
+as derived.
+  - **SD(P − D):** somato 0.221 Hz, expression **0.470 Hz**.
+  - **Rule:** with SE = 1.5 × SD/√n against the 0.10 Hz margin, somato reaches 0.95 at n = 192.
+    **Expression reaches only 0.947 at n = 768,** the cap.
+  - **Stage 1 runs at n = 768** (about 20 min). As registered, the firing probability is printed
+    with the result: somato 1.000, expression 0.947.
+
+**Two things the pre-flight shows that bear on the DESIGN, stated as such and not as results.**
+  - **Expression's re-roll is large.** Its SD(P − D) of 0.47 Hz is about twice `calibrate`'s
+    ±0.25 tolerance. At seeds this far from seed 0, default fails the ±0.25 test on somato and on
+    expression at most of the 24 seeds. If stage 1 confirms it, that is derivation (2) at full
+    size: the single-seed verdict is a draw even on default. Stage 1's "fail at a seed" column is
+    the measurement.
+  - **The comparator's free-running rate in P varies hugely across seeds** (P only, printed, not
+    a §95 quantity). §94 wrote P's `target_rate_hz = 0.47` from ONE seed. Whether that target is
+    representative is a question for §94's candidate, not §95. **It is recorded here so the next
+    registration cannot miss it, and it is NOT quoted as a number** until a run registered for it
+    measures it.
+
+The instrument as built is `calseedspre`/`calseeds` in `experiments_milestones.cpp`:
+  - It reuses `measure_free_running`'s quiet settings, with the seed overwritten as
+    genome seed + r × 7919.
+  - It refuses any genome but P, and refuses stage 1 until n is written in.
+  - G-REPRO is read at r = 0 in stage 1.
