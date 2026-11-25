@@ -18954,6 +18954,7 @@ struct SdOut {
   double vmem_bar_sum = 0.0;  // over scored trials, of the module mean
   uint64_t vmem_bar_n = 0;    // ...and how many trials are behind it
   double thr_bar_end = 0.0;   // mean threshold over the WHOLE vocal module
+  double cmp_thr_birth = 0.0; // §94: comparator mean threshold before tick 0
   // §81's RE-SPECIFIED PRE-FLIGHT, AND IT EXISTS BECAUSE THE FIRST ONE ASKED
   // THE WRONG QUESTION IN THE WRONG UNITS.
   //
@@ -19137,6 +19138,15 @@ SdOut run_samediff_session(const std::vector<uint8_t>& blob, uint64_t ticks,
   const int32_t cen = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
   const int32_t cmp_mod = s.dna.module_with_role(aibaby::ModuleRole::kComparator);
   if (cmp_mod >= 0) out.cmp_neurons = s.brain.network().module(uint32_t(cmp_mod)).live();
+  // §94 G-BIRTH: the comparator's mean threshold before the first tick, so a
+  // genome edit to `threshold` is shown to reach the creature.
+  if (cmp_mod >= 0) {
+    const aibaby::ModuleState& mc = s.brain.network().module(uint32_t(cmp_mod));
+    double st = 0.0;
+    for (uint32_t j = 0; j < mc.live(); ++j)
+      st += double(s.brain.network().threshold(mc.begin + j));
+    if (mc.live() > 0) out.cmp_thr_birth = st / double(mc.live());
+  }
   const int32_t voc = s.dna.module_with_role(read_role);
   if (aud < 0 || cen < 0 || voc < 0) return out;
   const aibaby::ModuleState& ms_a = s.brain.network().module(uint32_t(aud));
@@ -27431,6 +27441,184 @@ bool run_calcmp(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   } else {
     std::printf("    -> NO VERDICT. 0.5 lies inside a calibrated arm's 2-SE band where the\n"
                 "       branch needs it outside. Nothing is claimed for that arm.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return gates;
+}
+
+// --- calop (§94 stage 1): does the comparator carry the relation when its genome
+// is written at the operating point?
+//
+// calcmp's session and gates, on three genomes that differ ONLY in the
+// comparator's fields (exact-prefix asserted; the run refuses unless the blob is
+// R). Arms: R the §92 candidate; P threshold 0.20 + target = calibrate's 0.47 Hz
+// reading, IP on; H = P with IP off. The decision is against a MARGIN fixed at
+// registration (§93's lesson, Schuirmann 1987): CARRIES iff cell - 2 SE > 0.55,
+// LACKS iff cell + 2 SE < 0.55 or the arm is silent at the readout.
+constexpr uint32_t kCoReps = 96;
+constexpr uint32_t kCoRepOff = 1822;  // past §93's 1726-1821
+constexpr uint32_t kCoArms = 3;
+constexpr uint32_t kCoR = 0, kCoP = 1, kCoH = 2;
+constexpr double kCoMargin = 0.55;
+constexpr double kCoBirth = 0.20;
+constexpr const char* kCoFile[kCoArms] = {"dna/comparator_ship.toml", "dna/comparator_op.toml",
+                                          "dna/comparator_op_held.toml"};
+constexpr const char* kCoName[kCoArms] = {"R thr 1.0, target 5", "P thr 0.20, IP on",
+                                          "H thr 0.20, IP off"};
+
+bool run_calop(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> gb[kCoArms];
+  std::string err, txt_d, txt;
+  bool prefix = na_file("dna/default.toml", txt_d);
+  for (uint32_t a = 0; a < kCoArms; ++a) {
+    if (!compile_dna_toml(kCoFile[a], gb[a], err)) {
+      std::printf("  REFUSED: %s does not compile: %s\n", kCoFile[a], err.c_str());
+      return false;
+    }
+    prefix = prefix && na_file(kCoFile[a], txt) && txt.size() > txt_d.size() &&
+             txt.compare(0, txt_d.size(), txt_d) == 0;
+  }
+  if (!prefix || blob != gb[kCoR]) {
+    std::printf("  REFUSED: run this on %s. The given genome %s it, and the exact-prefix\n"
+                "  assertion against dna/default.toml %s. Nothing was measured.\n",
+                kCoFile[kCoR], blob == gb[kCoR] ? "matches" : "does NOT match",
+                prefix ? "holds" : "FAILS");
+    return false;
+  }
+  std::printf("\n  §94 — DOES THE COMPARATOR CARRY THE RELATION WITH ITS GENOME AT THE OPERATING POINT?\n\n"
+              "  genomes     R %s (threshold 1.0, target 5.0, IP on)\n"
+              "              P %s (threshold 0.20, target 0.47, IP on)\n"
+              "              H %s (threshold 0.20, target 0.47, IP off)\n"
+              "  creatures   %u per arm, the SAME rep numbers, rep_off %u, PAIRED, no patches\n"
+              "  session     samediff, probe OFF, silent tail %llu ms, comparator read\n"
+              "  primary     comparator SPIKE cell, gap 200, against the MARGIN %.2f:\n"
+              "              CARRIES iff cell - 2 SE > %.2f; LACKS iff cell + 2 SE < %.2f or SILENT\n\n",
+              kCoFile[kCoR], kCoFile[kCoP], kCoFile[kCoH], kCoReps, kCoRepOff,
+              (unsigned long long)kSdTailNeed, kCoMargin, kCoMargin, kCoMargin);
+
+  std::vector<SdOut> res[kCoArms];
+  for (uint32_t a = 0; a < kCoArms; ++a)
+    res[a] = parallel_reps<SdOut>(kCoReps, [&](uint32_t r) {
+      return run_samediff_session(gb[a], ticks, r, 0.0f, false, 0.0f, 0.0f, false, kCoRepOff,
+                                  0.0f, 0.0f, aibaby::ModuleRole::kComparator, -1.0f,
+                                  kSdTailNeed);
+    });
+
+  auto good = [](const SdOut& o) { return o.ok && o.gap[0].scored; };
+  bool g_patch = true, g_scored = true, g_sleepers = true, g_birth = true;
+  double cell[kCoArms], cse[kCoArms];
+  bool silent[kCoArms];
+  uint32_t n_silent[kCoArms], n_zero[kCoArms], birth_bad[kCoArms];
+  std::printf("  GATES AND PER ARM (unpaired means; the cell is the primary)\n\n"
+              "    arm                  scored slept  spike cell        vmem cell         "
+              "thr at birth  thr at end        rate /neuron/tick   first sleep\n");
+  for (uint32_t a = 0; a < kCoArms; ++a) {
+    uint32_t scored = 0, slept = 0, patched = 0;
+    n_silent[a] = n_zero[a] = birth_bad[a] = 0;
+    std::vector<double> c, vm, tb, th, rt, fs;
+    for (const SdOut& o : res[a]) {
+      if (o.stp_patched || o.noise_patched) ++patched;
+      if (o.first_sleep_tick > 0) { ++slept; fs.push_back(double(o.first_sleep_tick)); }
+      if (o.ok) {
+        tb.push_back(o.cmp_thr_birth);
+        if (a != kCoR && std::fabs(o.cmp_thr_birth - kCoBirth) > 0.005) ++birth_bad[a];
+      }
+      if (!good(o)) continue;
+      ++scored;
+      if (o.gap[0].mile_be[kFpSpike] == 0.5) ++n_silent[a];
+      if (o.cmp_spk == 0.0) ++n_zero[a];
+      c.push_back(o.gap[0].mile_be[kFpSpike]);
+      vm.push_back(o.gap[0].mile_be[kFpVmem]);
+      th.push_back(o.thr_bar_end);
+      if (o.cmp_neurons && o.stepped_ticks)
+        rt.push_back(o.cmp_spk / (double(o.cmp_neurons) * double(o.stepped_ticks)));
+    }
+    if (patched) g_patch = false;
+    if (scored < 80) g_scored = false;
+    if (slept < 80) g_sleepers = false;
+    if (a != kCoR && (birth_bad[a] > 0 || tb.empty())) g_birth = false;
+    silent[a] = scored > 0 && n_silent[a] == scored;
+    double vmm, vms, tbm, tbs, thm, ths, rtm, rts, fsm, fss;
+    sd_stat(c, cell[a], cse[a]);
+    if (c.size() < 2) cse[a] = 0.0;
+    sd_stat(vm, vmm, vms);
+    sd_stat(tb, tbm, tbs);
+    sd_stat(th, thm, ths);
+    sd_stat(rt, rtm, rts);
+    sd_stat(fs, fsm, fss);
+    std::printf("    %-20s %3u   %3u   %.4f +- %.4f   %.4f +- %.4f   %.4f        %.4f +- %.4f   "
+                "%.6f +- %.6f   %.0f +- %.0f\n",
+                kCoName[a], scored, slept, cell[a], cse[a], vmm, vms, tbm, thm, ths, rtm, rts,
+                fsm, fss);
+  }
+  auto carries = [&](uint32_t a) {
+    return !silent[a] && cse[a] > 0.0 && cell[a] - 2.0 * cse[a] > kCoMargin;
+  };
+  auto lacks = [&](uint32_t a) {
+    return silent[a] || (cse[a] > 0.0 && cell[a] + 2.0 * cse[a] < kCoMargin);
+  };
+  const bool g_ref = carries(kCoR);
+  uint32_t ident_p = 0, ident_h = 0;
+  for (size_t i = 0; i < kCoReps && i < res[kCoP].size() && i < res[kCoH].size(); ++i) {
+    if (res[kCoP][i].cmp_spk == res[kCoR][i].cmp_spk) ++ident_p;
+    if (res[kCoH][i].cmp_spk == res[kCoR][i].cmp_spk) ++ident_h;
+  }
+  const bool g_live = ident_p == 0 && ident_h == 0;
+  const bool gates = g_patch && g_scored && g_sleepers && g_ref && g_live && g_birth;
+  std::printf("\n    G-PATCH    nothing patched                                  %s\n"
+              "    G-SCORED   >= 80 scored per arm                             %s\n"
+              "    G-SLEEPERS >= 80 slept per arm                              %s\n"
+              "    G-CALROW   stage 0: comparator row ok on P and H            (results/n94-stage0-*)\n"
+              "    G-REF      R carries it: %.4f - 2 SE = %.4f > %.2f          %s\n"
+              "    G-LIVE     P, H differ from R on every pair  %s (P %u, H %u identical)\n"
+              "    G-BIRTH    P, H threshold at birth = %.2f +- 0.005   %s (P %u, H %u off)\n\n",
+              g_patch ? "PASS" : "FAIL", g_scored ? "PASS" : "FAIL", g_sleepers ? "PASS" : "FAIL",
+              cell[kCoR], cell[kCoR] - 2.0 * cse[kCoR], kCoMargin, g_ref ? "PASS" : "FAIL",
+              g_live ? "PASS" : "FAIL", ident_p, ident_h, kCoBirth, g_birth ? "PASS" : "FAIL",
+              birth_bad[kCoP], birth_bad[kCoH]);
+
+  auto paired = [&](uint32_t x, double& m, double& se) {
+    std::vector<double> d;
+    for (size_t i = 0; i < res[x].size() && i < res[kCoR].size(); ++i)
+      if (good(res[x][i]) && good(res[kCoR][i]))
+        d.push_back(res[x][i].gap[0].mile_be[kFpSpike] - res[kCoR][i].gap[0].mile_be[kFpSpike]);
+    sd_stat(d, m, se);
+  };
+  double dpm, dps, dhm, dhs;
+  paired(kCoP, dpm, dps);
+  paired(kCoH, dhm, dhs);
+  std::printf("  THE REGISTERED READING (each arm's cell against the margin %.2f)\n\n", kCoMargin);
+  for (uint32_t a = kCoP; a <= kCoH; ++a)
+    std::printf("    %-20s %.4f +- %.4f   minus 2 SE %.4f, plus 2 SE %.4f   -> %s\n",
+                kCoName[a], cell[a], cse[a], cell[a] - 2.0 * cse[a], cell[a] + 2.0 * cse[a],
+                carries(a)  ? "CARRIES IT"
+                : silent[a] ? "SILENT, LACKS IT"
+                : lacks(a)  ? "LACKS IT (under the margin)"
+                            : "NO VERDICT (the margin inside 2 SE)");
+  std::printf("    silent at the readout (cell exactly 0.5): R %u, P %u, H %u\n"
+              "    no comparator spike all session (printed, not read): R %u, P %u, H %u\n"
+              "    reported only: P - R %+.4f +- %.4f, H - R %+.4f +- %.4f (paired)\n\n",
+              n_silent[kCoR], n_silent[kCoP], n_silent[kCoH], n_zero[kCoR], n_zero[kCoP],
+              n_zero[kCoH], dpm, dps, dhm, dhs);
+  if (!gates) {
+    std::printf("    -> VOID. A gate failed above.\n");
+  } else if (carries(kCoP)) {
+    std::printf("    -> THE HONEST GENOME CARRIES IT. P is the shipping candidate (calibrate's\n"
+                "       comparator row passes) and re-enters §92 at stages 2 and 3; question (b)\n"
+                "       stays open. Shipping is the owner's decision.\n");
+  } else if (lacks(kCoP) && carries(kCoH)) {
+    std::printf("    -> IT NEEDS THE THRESHOLD HELD. The honest homeostat moves the module off the\n"
+                "       operating point; H is the candidate, disclosed as the shipped creature's\n"
+                "       first module with its homeostat OFF. Quote P's threshold at end with it.\n");
+  } else if (lacks(kCoP) && lacks(kCoH)) {
+    std::printf("    -> THE BIRTH THRESHOLD IS NOT THE OPERATING POINT. Both lack it while R\n"
+                "       carries it: R reaches 0.20 by a trajectory that being born there does not\n"
+                "       reproduce. No candidate; NOT SHIPPABLE until a new registration names the\n"
+                "       missing ingredient.\n");
+  } else {
+    std::printf("    -> NO VERDICT. The arm the branch needs has the margin inside its 2-SE band.\n"
+                "       Nothing is claimed for it.\n");
   }
   std::printf("\n    Nothing ships.\n");
   return gates;

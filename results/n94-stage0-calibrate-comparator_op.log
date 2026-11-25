@@ -1,0 +1,24 @@
+experiment: calibrate
+  free-running rates, measured with ip_rate and scaling_rate at 0.
+  A target that does not match is a module whose every later
+  measurement includes intrinsic plasticity fighting the genome.
+
+  module       free-running       target   verdict
+  central           6.69 Hz      6.81 Hz   -0.12  ok
+  auditory          2.56 Hz      2.55 Hz   +0.01  ok
+  vision            2.50 Hz      2.54 Hz   -0.04  ok
+  somato            4.10 Hz      4.56 Hz   -0.46  STALE — reset the genome to the left column
+  vocal             3.98 Hz      5.00 Hz   -1.02  by design — holds the duty cycle down
+  expression        6.78 Hz      7.22 Hz   -0.44  STALE — reset the genome to the left column
+  comparator        0.47 Hz      0.47 Hz   -0.00  ok
+
+  amplitude floor  0.45 against an operating point of 0.50 (5.00 / 10.0 Hz)
+                   margin +0.05 — want at least 0.10  THIN, and structurally so
+                   a floor below a pinned operating point is a creature that is
+                   always above it. Not fixable by retuning — see the README.
+
+  in-degree caps across the 9 seeds g2 and m3 sweep
+
+  calibrate FAIL — 2 modules off target, 0 seeds wiring badly. Amplitude floor thin (structural).
+  Re-run `babble` after fixing: rule 1 and behaviour can collide,
+  and the duty cycle is the number that tells you they have.

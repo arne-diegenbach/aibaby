@@ -22829,3 +22829,29 @@ early on, so it should sleep EARLIER than R. That sign is derived, not a gate.
 homeostat; Triesch (2005) for its rule; Tsodyks & Markram (1997) for the comparator's synapses. The
 equivalence-margin test is Schuirmann (1987) and the TOST procedure. It is new to this list and is
 added to the README References.
+
+### §94 STAGE 0 — G-CALROW PASSES; THE COMPARATOR FREE-RUNS AT 0.47 Hz AT THRESHOLD 0.20 (2026-11-25)
+
+  - **Free-running rate at threshold 0.20:** `calibrate` on P built with `threshold = 0.20` and the
+    target still at 5.0 (`results/n94-stage0-calibrate-pre.log`) reads the comparator at
+    **0.47 Hz**. It is not 0, so §94's derived worst case (target 0, the homeostat only able to
+    raise the thresholds) does NOT apply. P's homeostat has a nonzero target to hold.
+  - **The genomes, as built.** `diff` against `dna/comparator_ship.toml` shows only the registered
+    fields and a two-line header each. `dna/default.toml` is an exact prefix of both (`cmp`), and
+    the default's md5 is still fb419735…
+    - `dna/comparator_op.toml` (P): `threshold` 1.0 → 0.20; `target_rate_hz` 5.0 → 0.47,
+      calibrate's reading written in verbatim.
+    - `dna/comparator_op_held.toml` (H): P, plus `ip_wake_scale` and `ip_sleep_scale` 1.0 → 0.0.
+  - **G-CALROW PASSES.** The comparator row reads 0.47 Hz against 0.47 Hz, `ok`, on both
+    (`results/n94-stage0-calibrate-comparator_op*.log`). Both still print `calibrate FAIL`, on
+    somato (−0.46) and expression (−0.44) only, the same values as §92 and §93. That is §92's
+    question (b) and not a §94 gate.
+
+**Stage 1 instrument `calop`, as built.** It is `calcmp` with:
+  - the arms and files changed;
+  - rep_off 1822;
+  - the margin 0.55, with CARRIES excluding a SILENT arm;
+  - G-BIRTH: every P and H creature's comparator mean threshold before the first tick within
+    0.005 of 0.20. A new `SdOut` field, read once after the session is built.
+
+The registered branches are printed verbatim. It refuses any genome but R.
