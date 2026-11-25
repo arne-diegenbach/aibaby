@@ -23157,3 +23157,72 @@ The instrument as built is `calseedspre`/`calseeds` in `experiments_milestones.c
     genome seed + r × 7919.
   - It refuses any genome but P, and refuses stage 1 until n is written in.
   - G-REPRO is read at r = 0 in stage 1.
+
+### §95 RESULT — BRANCH 2: A DRAW, NOT A SHIFT. THE COMPARATOR IS CLEARED OF (b); `calibrate`'S SINGLE SEED IS NOT (2026-11-25)
+
+`results/n95-calseeds-768.log`: 768 seeds per genome, paired, 24 min. **Every gate PASSES:**
+  - G-PREFIX;
+  - G-N 768/768;
+  - G-AWAKE: no creature slept;
+  - **G-REPRO:** at r = 0, somato D 4.450, P 4.102 and expression D 7.244, P 6.782 reproduce
+    `calibrate`'s 4.45/4.10/7.24/6.78. The instrument measures `calibrate`'s quantity.
+
+| module | Δ = P − D (paired) | \|Δ\| ± 2 SE | reading |
+|---|---|---|---|
+| somato | +0.0240 ± 0.0094 | [0.005, 0.043] | **NO SHIFT** (under the 0.10 margin) |
+| expression | +0.0147 ± 0.0180 | [−0.021, 0.051] | **NO SHIFT** |
+
+Registered firing probability at n = 768: somato 1.000, expression 0.947. **The reading: A DRAW, NOT
+A SHIFT.** Appending the comparator moves neither module by as much as 0.10 Hz in the seed mean.
+P's −0.46/−0.44 at seed 0 is one draw from a re-rolled stream. **§92's question (b) is answered:
+the comparator is cleared of it.** As registered, P's targets are NOT edited to chase the draw.
+
+**STATED WITH IT, SO THE RESULT IS NOT READ AS "EXACTLY ZERO":** somato's Δ sits 2.6 SE from 0
+(+0.024 Hz, about a tenth of `calibrate`'s tolerance), and vision's sits at −2.1 SE (−0.009). With
+six modules compared, two beyond 2 SE is more than chance alone usually gives. **Derivation (1)'s
+"exactly zero" is therefore NOT confirmed. What is confirmed is the margin:** any shift is under
+0.043 Hz on somato and 0.051 Hz on expression at 2 SE, and the margin is what the shipping question
+needed. If the owner wants the residual chased, its sign is UP (P a little faster), the opposite of
+the seed-0 draw. That needs its own registration.
+
+**WHAT THE REPORTED COLUMNS SAY: DERIVATION (2) AT FULL SIZE, AND IT IS ABOUT THE SHIPPED GENOME.**
+Default itself, at a random seed, would FAIL `calibrate`'s ±0.25 test on:
+
+| module | default fails at | default seed-mean | target | seed-mean − target |
+|---|---|---|---|---|
+| somato | **583 of 768 seeds (76%)** | 4.187 | 4.56 | −0.37 |
+| expression | 531 of 768 (69%) | 6.975 | 7.22 | −0.25 |
+| central | 391 of 768 (51%) | 6.565 | 6.81 | −0.25 |
+| auditory | 74 of 768 (10%) | 2.508 | 2.55 | −0.04 |
+
+(vocal is off target by design.) **The shipped genome's targets are its seed-0 readings, not its
+genome-level operating points.** `calibrate` PASSES on default only at the seed the targets were
+copied from. That is regression to the mean (Galton 1886) in its plainest form: a value selected
+because it was read at one point regresses at every other point.
+  - **Consequence for every past result, stated and NOT acted on:** in a creature at another seed,
+    intrinsic plasticity pulls somato, expression and central UP toward targets above their seed-mean
+    free-running rates. Every multi-seed experiment has always run that way, and it is part of
+    "the creature". It is not a defect any past result failed to control, because every arm of
+    every paired comparison shared it.
+  - **Consequence for the gate:** `calibrate`'s single-seed verdict cannot certify ANY appended
+    genome. A re-roll fails it about 70% of the time on somato alone, whatever is appended.
+
+**WHAT THIS LEAVES, FOR THE OWNER.**
+  - (b) is closed for the comparator.
+  - The remaining blocker before §92 stage 4 is `calibrate`'s single-seed verdict itself.
+    `calibrate` is a shipped test, so changing it is its own registration and the owner's call.
+    The natural form is a seed-mean verdict.
+  - It would ALSO re-open the default's targets. They would fail a seed-mean `calibrate` on
+    somato (−0.37), and on expression and central, which sit right at the tolerance edge. Changing
+    shipped targets changes the shipped creature, so it must be priced as such, not slipped in
+    with a gate fix.
+  - **P's own comparator target has the same disease,** and worse. It was written from one seed
+    (§94 stage 0), and the comparator's free-running rate varies enormously across seeds. That is
+    the next registration's to measure; §95 printed the row and does NOT quote it.
+
+**Credit.**
+  - Galton, F. (1886), regression towards mediocrity: the mechanism of derivation (2). New to the
+    README References and added there.
+  - Schuirmann (1987): the margin rule that let "no shift" be read.
+
+**Nothing ships.**

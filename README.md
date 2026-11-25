@@ -20864,6 +20864,15 @@ audit of names cited in the text against names appearing here (2026-10-09).**
   VERDICT. §94's LACKS clause (cell + 2 SE < 0.55) is Schuirmann's one-sided test
   against the margin. It was cited earlier in prose only; this is its entry.
 
+- **Regression to the mean, which is why the shipped targets pass only at one
+  seed (§95).** Galton, F. (1886). *Regression towards mediocrity in hereditary
+  stature.* Journal of the Anthropological Institute of Great Britain and
+  Ireland 15, 246-263. <https://doi.org/10.2307/2841583> — a value chosen
+  because of where it was read regresses everywhere else. `calibrate` sets each
+  module's target from one creature at the genome seed, so default passes there
+  and fails ±0.25 Hz at 76% of 768 other seeds on somato (69% on expression).
+  That is why P's seed-0 failure was a draw, not a shift.
+
 - **The slow store (DNA v41's third gate).** Benna, M. K. & Fusi, S. (2016).
   *Computational principles of synaptic memory consolidation.* Nature
   Neuroscience 19(12), 1697-1706. <https://doi.org/10.1038/nn.4401> — the
