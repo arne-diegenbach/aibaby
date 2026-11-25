@@ -22991,3 +22991,47 @@ run on an idle machine.
 Triesch (2005). All are in the README References.
 
 **Nothing ships.**
+
+### §94 → §92 STAGE 3 ON P — REGISTERED BEFORE THE RUN (2026-11-25)
+
+This is §92 stage 3 unchanged, run on `dna/comparator_op.toml`: `verify` with the same binary. The
+casualty rule and branches are §92's.
+  - The pinned hash fails by construction.
+  - Any experiment not as expected that PASSES on default is a casualty.
+  - A casualty → branch 2, NOT SHIPPABLE AS IS, and stage 4 does not run.
+
+**Expected, written now:** one casualty, `calibrate`, on somato and expression only. The comparator
+row is ok since §94 stage 0. If that is what lands, branch 2 fires again, and the ONLY remaining
+blocker before stage 4 is §92's question (b). Any other casualty is new and is reported as such.
+
+### §94 → §92 STAGE 3 ON P, RESULT — BRANCH 2 AGAIN, AS PREDICTED: ONE CASUALTY, AND IT IS (b) (2026-11-25)
+
+`results/n94-stage3-verify-op.log`: `verify` on `dna/comparator_op.toml`, 24 min.
+  - Determinism PASS; pinned hash FAIL, by construction.
+  - **24 experiments as expected, 1 not: `calibrate`, expected PASS, got FAIL.** It PASSES on
+    default, so it is a casualty, and **branch 2 fires: NOT SHIPPABLE AS IS.** Stage 4 does not
+    run.
+
+**The casualty is exactly the one written down before the run.**
+
+| module | default | P | target | verdict on P |
+|---|---|---|---|---|
+| somato | 4.45 (−0.11) | **4.10 (−0.46)** | 4.56 | STALE |
+| expression | 7.24 (+0.02) | **6.78 (−0.44)** | 7.22 | STALE |
+| comparator | — | **0.47 (−0.00)** | 0.47 | **ok** (STALE in §92) |
+
+Central, auditory and vision are ok. Vocal is off target by design, as on default. Against §92
+stage 3, P removed the comparator's own STALE row and changed nothing else. somato and expression
+read the same to two decimals as §92's candidate. That fits channel (ii), the noise re-roll from
+appending a module, but **the attribution is still deferred by registration and is not stated as a
+finding.**
+
+**THE ONLY BLOCKER LEFT BEFORE STAGE 4 IS §92's QUESTION (b):** are somato's and expression's
+−0.46/−0.44 a property of appending ANY module (a re-rolled noise stream that `calibrate`'s
+single-seed, single-creature estimate cannot absorb), or something the comparator does? It needs
+its own registration. The obvious design is multi-seed `calibrate` on default and P, which tells
+a seed-level fluctuation from a genome-level shift.
+
+**Credit:** as in §94.
+
+**Nothing ships.**
