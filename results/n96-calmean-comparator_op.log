@@ -1,0 +1,28 @@
+experiment: calmean
+
+  §96 calmean — seed-mean free-running rates, 96 held-out seeds (r = 2000..2095,
+  seed = genome seed + r * 7919), calibrate's quiet settings, 120000 ticks.
+  Verdict vs +-0.25 Hz: OK iff |d| + 2 SE <= 0.25, STALE iff |d| - 2 SE > 0.25,
+  else UNRESOLVED (counts against a pass).
+
+  module         target      mean      SD      SE   median        d   verdict
+  central       6.81 Hz  6.590 Hz   0.178  0.0181    6.600   -0.220   UNRESOLVED — too close to the tolerance to call at this n
+  auditory      2.55 Hz  2.511 Hz   0.168  0.0172    2.510   -0.039   OK
+  vision        2.54 Hz  2.557 Hz   0.153  0.0156    2.542   +0.017   OK
+  somato        4.56 Hz  4.218 Hz   0.194  0.0198    4.210   -0.342   STALE
+  vocal         5.00 Hz  3.964 Hz   0.683  0.0697    3.906   -1.036   by design — holds the duty cycle down
+  expression    7.22 Hz  7.034 Hz   0.511  0.0522    7.064   -0.186   UNRESOLVED — too close to the tolerance to call at this n
+  comparator    0.47 Hz  1.032 Hz   1.165  0.1189    0.663   +0.562   STALE
+
+  in-degree caps across the 9 seeds g2 and m3 sweep
+
+    G-N        96 of 96 seeds read                               PASS
+    G-AWAKE    no creature asleep in its 120000 ticks (0 slept)       PASS
+
+  calmean FAIL — 2 STALE, 2 UNRESOLVED, 0 seeds wiring badly
+  Reported, not gated (§96): calibrate in verify is unchanged.
+
+real	1m40.514s
+user	20m17.573s
+sys	0m9.444s
+exit=1

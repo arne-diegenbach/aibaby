@@ -2479,6 +2479,7 @@ bool run_calcmp(const std::vector<uint8_t>&, uint64_t, bool);         // §93
 bool run_calop(const std::vector<uint8_t>&, uint64_t, bool);          // §94
 bool run_calseedspre(const std::vector<uint8_t>&, uint64_t, bool);    // §95 stage 0
 bool run_calseeds(const std::vector<uint8_t>&, uint64_t, bool);       // §95 stage 1
+bool run_calmean(const std::vector<uint8_t>&, uint64_t, bool);        // §96
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

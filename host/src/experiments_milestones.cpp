@@ -3712,6 +3712,89 @@ bool run_calseeds_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pr
 }
 }  // namespace
 
+// --- calmean (§96): a seed-mean `calibrate`, on whatever genome it is given.
+//
+// calibrate's quiet measurement on 96 HELD-OUT seeds (r = 2000..2095, disjoint
+// from §95's 0-767 and 1000-1023). Per module: seed-mean, SD, SE, median,
+// mean - target, and a margin verdict against calibrate's own +-0.25 Hz: OK iff
+// |d| + 2 SE <= 0.25, STALE iff |d| - 2 SE > 0.25, else UNRESOLVED, which counts
+// AGAINST a pass. Vocal and sensory-driven modules are exempt with calibrate's
+// reasons; the in-degree sweep is calibrate's. NOT in verify (§96).
+bool run_calmean(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  constexpr uint32_t kCmnFrom = 2000, kCmnN = 96;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
+    std::printf("  genome rejected\n");
+    return false;
+  }
+  const uint32_t nm = dna.module_count();
+  std::printf("\n  §96 calmean — seed-mean free-running rates, %u held-out seeds (r = %u..%u,\n"
+              "  seed = genome seed + r * 7919), calibrate's quiet settings, %llu ticks.\n"
+              "  Verdict vs +-%.2f Hz: OK iff |d| + 2 SE <= %.2f, STALE iff |d| - 2 SE > %.2f,\n"
+              "  else UNRESOLVED (counts against a pass).\n\n",
+              kCmnN, kCmnFrom, kCmnFrom + kCmnN - 1, (unsigned long long)ticks, kCsTol, kCsTol,
+              kCsTol);
+  std::vector<CsOut> rs = parallel_reps<CsOut>(kCmnN, [&](uint32_t i) {
+    return cs_measure(blob, ticks, kCmnFrom + i);
+  });
+  uint32_t ok_n = 0, slept = 0;
+  for (const CsOut& o : rs) {
+    if (o.ok && o.rate.size() == nm) ++ok_n;
+    if (o.slept) ++slept;
+  }
+  const bool g_n = ok_n == kCmnN, g_awake = slept == 0;
+  if (!g_n) {
+    std::printf("  G-N FAIL: %u of %u seeds read. VOID.\n", ok_n, kCmnN);
+    return false;
+  }
+  const int32_t vocal = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  std::printf("  %-12s %8s %9s %7s %7s %8s %8s   %s\n", "module", "target", "mean", "SD", "SE",
+              "median", "d", "verdict");
+  uint32_t stale = 0, unresolved = 0;
+  for (uint32_t m = 0; m < nm; ++m) {
+    const aibaby::DnaModule& md = dna.module(m);
+    std::vector<double> x;
+    for (const CsOut& o : rs) x.push_back(o.rate[m]);
+    double mean, sd, se;
+    cs_mse(x, mean, sd, se);
+    std::vector<double> srt = x;
+    std::sort(srt.begin(), srt.end());
+    const double med = srt.size() % 2 ? srt[srt.size() / 2]
+                                      : 0.5 * (srt[srt.size() / 2 - 1] + srt[srt.size() / 2]);
+    const double tgt = double(md.target_rate_hz), d = mean - tgt, a = std::fabs(d);
+    const bool is_vocal = vocal >= 0 && uint32_t(vocal) == m;
+    const bool sensory = md.role == uint32_t(aibaby::ModuleRole::kVisualCortex) ||
+                         md.role == uint32_t(aibaby::ModuleRole::kVisualForm);
+    const char* v;
+    if (a + 2.0 * se <= kCsTol) {
+      v = "OK";
+    } else if (is_vocal) {
+      v = "by design — holds the duty cycle down";
+    } else if (sensory) {
+      v = "by design — driven by the retina, not itself";
+    } else if (a - 2.0 * se > kCsTol) {
+      v = "STALE";
+      ++stale;
+    } else {
+      v = "UNRESOLVED — too close to the tolerance to call at this n";
+      ++unresolved;
+    }
+    std::printf("  %-12s %5.2f Hz %6.3f Hz %7.3f %7.4f %8.3f %+8.3f   %s\n", md.name, tgt, mean,
+                sd, se, med, d, v);
+  }
+  std::printf("\n  in-degree caps across the %u seeds g2 and m3 sweep\n", kCalibrationSeeds);
+  const uint32_t bad_seeds = dropped_across_seeds(blob, verbose);
+  std::printf("\n    G-N        %u of %u seeds read                               PASS\n"
+              "    G-AWAKE    no creature asleep in its %llu ticks (%u slept)       %s\n",
+              ok_n, kCmnN, (unsigned long long)ticks, slept, g_awake ? "PASS" : "FAIL");
+  const bool pass = g_awake && stale == 0 && unresolved == 0 && bad_seeds == 0;
+  std::printf("\n  calmean %s — %u STALE, %u UNRESOLVED, %u seed%s wiring badly%s\n",
+              pass ? "PASS" : "FAIL", stale, unresolved, bad_seeds, bad_seeds == 1 ? "" : "s",
+              g_awake ? "" : "; VOID (a creature slept)");
+  std::printf("  Reported, not gated (§96): calibrate in verify is unchanged.\n");
+  return pass;
+}
+
 bool run_calseedspre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_calseeds_impl(blob, ticks, true);

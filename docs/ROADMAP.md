@@ -23306,3 +23306,50 @@ for the same reason.** The run tests that prediction on fresh seeds.
 verdict. Both are in the README References. The derivation-set / held-out-set split is ordinary
 cross-validation practice and is credited with Stone (1974) if the next registration uses it to
 set targets.
+
+### §96 RESULT — BRANCH 3: DEFAULT FAILS A SEED-MEAN `calibrate`, EXACTLY AS PREDICTED (2026-11-25)
+
+`results/n96-calmean-default.log` and `results/n96-calmean-comparator_op.log`: 96 held-out seeds
+each (r 2000–2095), 80 s and 100 s. G-N 96/96 and G-AWAKE (0 slept) PASS on both, and no seed wires
+badly.
+
+| module | target | D mean − target (SE) | D verdict | P mean − target (SE) | P verdict | predicted |
+|---|---|---|---|---|---|---|
+| central | 6.81 | −0.236 (0.017) | UNRESOLVED | −0.220 (0.018) | UNRESOLVED | UNRESOLVED ✓ |
+| auditory | 2.55 | −0.052 (0.014) | OK | −0.039 (0.017) | OK | OK ✓ |
+| vision | 2.54 | +0.023 (0.018) | OK | +0.017 (0.016) | OK | (not predicted) |
+| **somato** | 4.56 | **−0.372 (0.020)** | **STALE** | −0.342 (0.020) | STALE | STALE ✓ |
+| vocal | 5.00 | −1.093 | by design | −1.036 | by design | — |
+| expression | 7.22 | −0.206 (0.051) | UNRESOLVED | −0.186 (0.052) | UNRESOLVED | UNRESOLVED ✓ |
+| comparator | 0.47 | — | — | **+0.562 (0.119)**, median 0.663 | **STALE** | UNRESOLVED or STALE ✓ |
+
+**Every registered prediction held on seeds §95 never touched.** That confirms §95's means as a
+property of the genomes, not of a seed set.
+  - **Branch 3: DEFAULT FAILS** (1 STALE, 2 UNRESOLVED). A seed-mean `calibrate` cannot enter
+    `verify` without re-deriving default's targets. **`calmean` is kept as an instrument,
+    reported and NOT gated.** `verify` is unchanged.
+  - **Branch 4 (P differs from D on a shared module) does NOT fire.** P gets D's verdict on all
+    six shared modules, as §95's "no shift" says it must.
+  - **P's comparator is STALE in the seed mean:** 1.03 Hz against the 0.47 written from one seed.
+    Its distribution is skewed (median 0.66, SD 1.17), so whether its target should be a mean or a
+    median is a question for the re-derivation, not answered here.
+
+**WHAT THE PROJECT NOW KNOWS ABOUT ITS OWN CALIBRATION.** The shipped genome's somato target sits
+0.37 Hz (8%) above where somato free-runs on average. Central and expression sit about 0.2 Hz above,
+inside the tolerance but not provably so at n = 96. So in nearly every creature, intrinsic
+plasticity spends its effort pulling somato up toward a target chosen at one seed. Every past
+result was measured in that creature, and every paired arm shared it, so nothing is retracted.
+
+**NEXT, IF THE OWNER WANTS IT (not registered):** target re-derivation as a change to the shipped
+creature.
+  - Targets come from §95's derivation seeds (0–767): D's seed-means, and the comparator's for P.
+  - They are checked by `calmean` on these held-out seeds (2000–2095), and must PASS.
+  - The edit is priced like a genome change (§80): the fast tier, plus every long instrument
+    whose tract runs through somato, central or expression. That last list has to be built first.
+  - If it passes, `calmean` replaces `calibrate` in `verify`.
+
+Cross-validation practice is credited to Stone (1974) in that registration.
+
+**Credit:** Galton (1886), Schuirmann (1987), as in §95 and §96.
+
+**Nothing ships.**
