@@ -23533,3 +23533,110 @@ would then read wrongly.
 contracts the same way, central's target ends well below the one-pass 6.57 Hz. The critic's feature
 scale then moves by much more than 3.6%. Stage 2 and the owner's stage-3 decision must quote the
 FINAL central target, not the first-pass one.
+
+### §97 STAGE 0 RESULT — C BUILT; A FIXED POINT AT PASS 7, CENTRAL AT 6.34 Hz (2026-11-25)
+
+`results/n97-calderive.log`: 768 derivation seeds per pass, 133 min. That is 19 min per pass, not
+the 12 projected.
+  - **Every gate PASSES:** G-PREFIX-SCOPE (3 lines differ, all of them set target lines), G-N,
+    G-AWAKE, and G-REPRO (r = 0 reads somato 4.450 and expression 7.244 exactly).
+  - `dna/default.toml` is unchanged, md5 fb419735….
+
+| module | D target | pass 1 mean | fixed point (C) | C − D |
+|---|---|---|---|---|
+| central | 6.81 | 6.565 | **6.34** | −0.47 |
+| somato | 4.56 | 4.187 | **4.19** | −0.37 |
+| expression | 7.22 | 6.975 | **6.86** | −0.36 |
+| auditory, vision | 2.55, 2.54 | 2.508, 2.561 | unchanged (never joined) | 0 |
+| vocal | 5.00 | 3.933 | exempt | 0 |
+
+  - **The amendment was needed.** Central's steps were 0.12, 0.06, 0.03, 0.02, 0.01 and then 0.00,
+    so the fixed point came at pass 7. Under the registered cap of 4 the run would have been VOID
+    by arithmetic. The registered first-pass predictions held (6.57, 4.19, 6.98), and **the one-pass
+    central target is 0.23 Hz above the fixed point.**
+  - **Somato does not feed back.** It read 4.187 at every pass: its target touches only the
+    homeostat, which is off in the measurement. Expression drifts down with central (6.975 → 6.862)
+    because central drives it.
+  - **Vision drifts UP as central's target falls:** 2.561 → 2.612, ending +0.072 off its
+    unchanged target. That is under the 0.10 Hz join threshold, so it was not re-derived. Stage 1
+    reads it.
+  - **What this costs the creature, before any behavioural run.** The critic's features are
+    normalised by 3 × central's target, so in C every critic feature is **7.4% larger**
+    (6.81 / 6.34). The registration's 3.6% was the one-pass figure, and the amendment said to quote
+    the final one. The homeostat now aims central 0.47 Hz lower, somato 0.37 lower and expression
+    0.36 lower.
+
+### §97 STAGES 1–2 RESULT — BRANCH 4: C PASSES `calmean` ON FRESH SEEDS; FAST TIER CLEAN BUT FOR `calibrate`; THE LONG TIER WAITS FOR THE OWNER (2026-11-26)
+
+**Stage 1 — PASS** (`results/n97-stage1-calmeanfresh-C.log`, fresh r 3000–3095; and
+`results/n97-stage1-calmean2000-C.log`, r 2000–2095):
+
+| module | C target | fresh: d (SE) | verdict | r 2000–2095: d (SE) | verdict | default on r 2000–2095 (§96) |
+|---|---|---|---|---|---|---|
+| central | 6.34 | −0.015 (0.016) | OK | +0.003 (0.016) | OK | UNRESOLVED |
+| auditory | 2.55 | +0.012 (0.014) | OK | −0.001 (0.014) | OK | OK |
+| vision | 2.54 | +0.072 (0.016) | OK | +0.078 (0.017) | OK | OK (+0.023) |
+| somato | 4.19 | +0.012 (0.021) | OK | −0.002 (0.020) | OK | STALE |
+| expression | 6.86 | +0.026 (0.050) | OK | +0.042 (0.048) | OK | UNRESOLVED |
+| vocal | 5.00 | −1.183 | by design | −1.161 | by design | by design |
+
+  - G-N and G-AWAKE PASS, and 0 seeds wire badly.
+  - **The seed mean generalises:** every re-derived module lands within 0.05 Hz of its target on
+    seeds no genome had been read on.
+  - Vision's +0.07 is the drift stage 0 showed: central fires less, so vision fires more. It is OK
+    with room to spare (|d| + 2 SE = 0.10).
+
+**Stage 2 — `verify` on C and on D, same binary** (`results/n97-stage2-verify-{C,D}.log`, 48 min
+each).
+
+| | D | C |
+|---|---|---|
+| verdict | PASS (25/25) | FAIL (24 as expected, 1 not) |
+| determinism | PASS | PASS |
+| pinned hash | PASS | FAIL (moves by construction, as registered) |
+
+  - **The one experiment not as expected is `calibrate`, as predicted.** Somato at seed 0 reads
+    4.45 against C's 4.19, which is **+0.26 STALE**, exactly the registered number.
+  - **The prediction for expression was WRONG.** I predicted +0.26 from D's seed-0 reading of
+    7.244. On C, expression's seed-0 reading itself fell to 7.08 with central's target, so it
+    reads **+0.22, ok**. The failure is somato's alone. That does not change the conclusion:
+    the single-seed `calibrate` cannot pass C.
+  - **Positive-control rows, C against D: every one holds.**
+
+| instrument | D | C | note |
+|---|---|---|---|
+| M2 B1 | 1.000 | 0.967 | shuffled control 0.40 → 0.46 |
+| `selfcode` caregiver | 0.982 | 0.986 | |
+| `selfcode` self − fixedF1 | +0.124 (6.2 SE) | +0.094 (4.4 SE) | Δ −0.030, about 1 SE |
+| `stpprobe` limits | all inside | all inside | |
+| `tauprobe` central 8x/1x | 4.43 | 4.36 | |
+| `ipprobe` relaxed gap | 247% | 245% | |
+| `interoprobe` r(central, hunger) | −0.278 | −0.258 | 0.6 SE |
+| `pcprobe` self-test | 1.000 | 0.999 | |
+| `pruneprobe` competitive removals | 8908 | 8800 | |
+| `m3probe` voice | 0.92 | 0.90 | |
+| `gazeprobe` servo | 0.80 | 0.79 | |
+
+    `pcprobe`'s "quiet" column (R² −2.5 → −78) is a near-zero-variance denominator in both the
+    model and its persistence baseline. It is not a control.
+  - **WATCH, the largest descriptive move in the tier: `babble`'s vocal module rate falls from
+    5.37 to 3.91 Hz (−27%), and its auditory rate from 3.19 to 2.55 Hz.** The larynx's output does
+    not move with it: duty 0.50 → 0.52, vocalisations 338 → 339, mean amplitude 0.487 → 0.491,
+    formants identical. This is one creature with no SE, so it is not a casualty under the
+    registered rule. **But it is on the auditory → vocal side, the tract §80 showed a green fast
+    tier cannot price, so stage 3 must read §80's tract instruments FIRST.** That means
+    `quietecho`'s `artic` guard and the 9 instruments of §80, about 52 min, which is a cheap
+    prefix of the 88 h.
+
+**BRANCH 4 (registered): FAST TIER CLEAN, LONG TIER NOT YET RUN.**
+  - C is a CANDIDATE, NOT shippable: a green fast tier does not price a genome edit (§80).
+  - C also cannot ship without the swap. The single-seed `calibrate` fails on it by construction,
+    so shipping C means replacing `calibrate` with `calmean` (r 2000–2095) in `verify` in the same
+    change.
+  - Stage 3 (`verify-long` + `verify-teach` on both genomes, about 88 h) runs only on the owner's
+    go. The recommended order: §80's auditory → vocal instruments first, given the WATCH row.
+
+**Archived:** `dna/default_seedmean.toml` (C). The per-pass genomes are reproducible from
+`calderive` and are not kept.
+
+**Nothing ships.**

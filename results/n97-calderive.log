@@ -1,0 +1,93 @@
+experiment: calderive
+
+  §97 STAGE 0 — calderive: seed-mean targets, 768 derivation seeds (r = 0..767,
+  seed = genome seed + r * 7919), calibrate's quiet settings, 120000 ticks.
+  Set starts {central, somato, expression}; join at > 0.10 Hz; fixed point when no
+  proposed target moves by >= 0.01 Hz; at most 8 passes.
+
+  pass 1 — measured genome: dna/default.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.81 Hz  6.565 Hz   0.175  0.0063    6.558    6.57 Hz   re-derived
+  auditory      2.55 Hz  2.508 Hz   0.150  0.0054    2.511    2.55 Hz   
+  vision        2.54 Hz  2.561 Hz   0.152  0.0055    2.554    2.54 Hz   
+  somato        4.56 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.933 Hz   0.688  0.0248    3.874    5.00 Hz   exempt
+  expression    7.22 Hz  6.975 Hz   0.524  0.0189    6.952    6.98 Hz   re-derived
+
+    G-REPRO    r = 0: somato 4.450 (4.450), expression 7.244 (7.244)   PASS
+  wrote dna/default_seedmean_pass1.toml
+
+  pass 2 — measured genome: dna/default_seedmean_pass1.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.57 Hz  6.449 Hz   0.168  0.0061    6.439    6.45 Hz   re-derived
+  auditory      2.55 Hz  2.534 Hz   0.150  0.0054    2.532    2.55 Hz   
+  vision        2.54 Hz  2.587 Hz   0.153  0.0055    2.582    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.915 Hz   0.689  0.0249    3.855    5.00 Hz   exempt
+  expression    6.98 Hz  6.922 Hz   0.516  0.0186    6.898    6.92 Hz   re-derived
+  wrote dna/default_seedmean_pass2.toml
+
+  pass 3 — measured genome: dna/default_seedmean_pass2.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.45 Hz  6.389 Hz   0.168  0.0061    6.378    6.39 Hz   re-derived
+  auditory      2.55 Hz  2.547 Hz   0.151  0.0054    2.547    2.55 Hz   
+  vision        2.54 Hz  2.600 Hz   0.152  0.0055    2.593    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.908 Hz   0.691  0.0249    3.842    5.00 Hz   exempt
+  expression    6.92 Hz  6.889 Hz   0.506  0.0182    6.850    6.89 Hz   re-derived
+  wrote dna/default_seedmean_pass3.toml
+
+  pass 4 — measured genome: dna/default_seedmean_pass3.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.39 Hz  6.360 Hz   0.166  0.0060    6.347    6.36 Hz   re-derived
+  auditory      2.55 Hz  2.554 Hz   0.150  0.0054    2.552    2.55 Hz   
+  vision        2.54 Hz  2.608 Hz   0.154  0.0056    2.598    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.901 Hz   0.687  0.0248    3.846    5.00 Hz   exempt
+  expression    6.89 Hz  6.877 Hz   0.504  0.0182    6.850    6.88 Hz   re-derived
+  wrote dna/default_seedmean_pass4.toml
+
+  pass 5 — measured genome: dna/default_seedmean_pass4.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.36 Hz  6.344 Hz   0.165  0.0060    6.329    6.34 Hz   re-derived
+  auditory      2.55 Hz  2.557 Hz   0.151  0.0054    2.552    2.55 Hz   
+  vision        2.54 Hz  2.611 Hz   0.152  0.0055    2.602    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.893 Hz   0.684  0.0247    3.822    5.00 Hz   exempt
+  expression    6.88 Hz  6.869 Hz   0.501  0.0181    6.843    6.87 Hz   re-derived
+  wrote dna/default_seedmean_pass5.toml
+
+  pass 6 — measured genome: dna/default_seedmean_pass5.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.34 Hz  6.335 Hz   0.163  0.0059    6.323    6.34 Hz   re-derived
+  auditory      2.55 Hz  2.559 Hz   0.150  0.0054    2.560    2.55 Hz   
+  vision        2.54 Hz  2.612 Hz   0.151  0.0055    2.606    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.891 Hz   0.685  0.0247    3.817    5.00 Hz   exempt
+  expression    6.87 Hz  6.862 Hz   0.505  0.0182    6.828    6.86 Hz   re-derived
+  wrote dna/default_seedmean_pass6.toml
+
+  pass 7 — measured genome: dna/default_seedmean_pass6.toml
+  module         target      mean      SD      SE   median   proposed   
+  central       6.34 Hz  6.335 Hz   0.163  0.0059    6.323    6.34 Hz   re-derived
+  auditory      2.55 Hz  2.559 Hz   0.150  0.0054    2.560    2.55 Hz   
+  vision        2.54 Hz  2.612 Hz   0.151  0.0055    2.606    2.54 Hz   
+  somato        4.19 Hz  4.187 Hz   0.191  0.0069    4.197    4.19 Hz   re-derived
+  vocal         5.00 Hz  3.891 Hz   0.685  0.0247    3.817    5.00 Hz   exempt
+  expression    6.86 Hz  6.862 Hz   0.505  0.0182    6.828    6.86 Hz   re-derived
+
+  -> FIXED POINT at pass 7: no proposed target moves by >= 0.01 Hz.
+
+  C = dna/default_seedmean.toml (pass 6's genome)
+    G-PREFIX-SCOPE  C differs from D on 3 lines, all set target lines   PASS
+    G-N             768 of 768 seeds every pass                       PASS
+    G-AWAKE         no creature asleep in any pass                 PASS
+    G-REPRO         (pass 1, above)                                PASS
+    D untouched     dna/default.toml text unchanged                    PASS
+
+  -> C BUILT; stage 1 next. Nothing ships.
+
+real	133m30.537s
+user	1772m27.624s
+sys	10m57.787s
+exit=0
