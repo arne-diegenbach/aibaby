@@ -20873,6 +20873,19 @@ audit of names cited in the text against names appearing here (2026-10-09).**
   and fails ±0.25 Hz at 76% of 768 other seeds on somato (69% on expression).
   That is why P's seed-0 failure was a draw, not a shift.
 
+- **Derive on one sample, judge on another (§97).** Stone, M. (1974).
+  *Cross-validatory choice and assessment of statistical predictions.* Journal
+  of the Royal Statistical Society, Series B 36(2), 111-147.
+  <https://doi.org/10.1111/j.2517-6161.1974.tb00994.x> — §97 sets each target
+  from 768 derivation seeds and judges it with `calmean` on 96 fresh seeds that
+  no genome has been read on.
+
+- **A family-wise threshold over many rows (§97).** Dunn, O. J. (1961).
+  *Multiple comparisons among means.* Journal of the American Statistical
+  Association 56(293), 52-64. <https://doi.org/10.1080/01621459.1961.10482090>
+  — comparing about 100 long-tier primaries at 2 SE would flag about 5 by
+  chance, so §97 calls a row a MOVE only past 3.5 SE.
+
 - **The slow store (DNA v41's third gate).** Benna, M. K. & Fusi, S. (2016).
   *Computational principles of synaptic memory consolidation.* Nature
   Neuroscience 19(12), 1697-1706. <https://doi.org/10.1038/nn.4401> — the

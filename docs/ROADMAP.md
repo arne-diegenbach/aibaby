@@ -23353,3 +23353,153 @@ Cross-validation practice is credited to Stone (1974) in that registration.
 **Credit:** Galton (1886), Schuirmann (1987), as in §95 and §96.
 
 **Nothing ships.**
+
+## §97 — RE-DERIVE THE SHIPPED TARGETS FROM A SEED MEAN, AS A CHANGE TO THE SHIPPED CREATURE (registered 2026-11-25)
+
+**THE QUESTION.** §96 found that default fails a seed-mean `calibrate`: somato STALE (−0.372 Hz),
+central and expression UNRESOLVED (−0.236, −0.206). Their targets are seed-0 readings (§95). §97
+builds a candidate genome **C** whose targets are seed means. It then asks two things:
+  - does C pass `calmean` on seeds nothing has touched?
+  - what does the change cost the creature?
+
+**THIS IS A CHANGE TO THE SHIPPED CREATURE, NOT A BOOK-KEEPING EDIT.** `target_rate_hz` is read by
+the kernel in four places, and §97 prices all four:
+  1. **Intrinsic plasticity's setpoint**, every module (`network.cpp:641`, and `:3700` for grown
+     neurons). A lower target means the homeostat pulls each neuron toward a lower rate all
+     session.
+  2. **A grown neuron's starting rate estimate** (`rate_ema_`, `network.cpp:3731`).
+  3. **Divisive normalisation's reference**, central only, the one module with `norm_gain` 1.0
+     (`network.cpp:750`). Central's free-running rate therefore DEPENDS on its own target. The
+     genome already says so: "norm_gain 1.0 makes its target a fixed point rather than a
+     measurement" (`default.toml` near line 2254). A re-derived central target moves central's
+     rate, and through central's projections, expression's and vision's.
+  4. **The critic's feature scale.** The critic reads central (`brain.cpp:66`) and normalises its
+     features by 3 × central's target (`critic.cpp:52`). Lowering central's target from 6.81 to
+     about 6.57 Hz scales every critic feature up by about 3.6%. That is a change to the learning
+     signal, not just to the homeostat.
+
+So the sign of the effect on behaviour is NOT derived, and every reading below is two-tailed.
+
+**WHAT §97 DOES NOT DO.**
+  - It does not edit `dna/default.toml`; its md5 stays fb419735526b1fe189be8264a63f5d95. C is a
+    separate file. Shipping C, and swapping `calmean` into `verify`, is the OWNER'S CALL after the
+    stages below.
+  - It does not touch P or the comparator. The comparator's target is out of scope, for a derived
+    reason. At §96's SD (1.17 Hz) its `calmean` SE at n = 96 is 0.12, so OK needs
+    |mean − target| ≤ 0.01 Hz. Its derivation mean has an SE of about 0.09 at n = 768 and moved
+    0.17 Hz between §95 and §96. C's procedure cannot give it a verdict. Its target (mean or median,
+    and on how many seeds) needs its own registration.
+  - It does not re-derive vocal or the sensory-driven modules, which are exempt by design as in
+    `calibrate`, unless the fixed-point rule below pulls one in.
+
+### THE CANDIDATE C (`dna/default_seedmean.toml`)
+
+C is default with **only** `target_rate_hz` edited, on the modules re-derived by this procedure:
+
+  - **Measurement.** `calibrate`'s quiet settings (`measure_free_running`: IP, scaling and growth
+    off, no sound, 120k ticks) on the **DERIVATION seeds** r = 0 … 767, seed = genome seed +
+    r × 7919. This is §95's set.
+  - **Statistic: the seed MEAN, rounded to 0.01 Hz.** `calmean`'s verdict is on the mean, so the
+    target is the mean. D's distributions are roughly symmetric (§95: SDs 0.18 to 0.52 Hz), unlike
+    the comparator's.
+  - **The set to re-derive.** It starts as {central, somato, expression}, §96's non-OK modules. Any
+    other non-exempt module whose derivation mean ends more than **0.10 Hz** (§95's margin) from
+    its target after a pass joins the set.
+  - **FIXED POINT.** Central's rate depends on its own target (item 3), so one pass is not enough.
+    The steps are:
+    1. Measure C_k on the derivation seeds and set each target in the set to its mean.
+    2. Repeat.
+    3. Stop when no target in the set moves by 0.01 Hz or more between passes.
+    4. **At most 4 passes.** No convergence by then means VOID: the target has no seed-mean fixed
+       point at this rounding.
+  - **The tool.** A new instrument, `calderive`, does the measurement. It prints, per pass, the
+    seed mean, SD, SE and median of every module, plus the proposed target. Each pass writes its
+    genome file (`default_seedmean_pass<k>.toml`). The last one is copied to C. Targets are edited
+    by a regex SCOPED TO EACH MODULE'S BLOCK. A test asserts that C differs from D on exactly the
+    `target_rate_hz` lines of the set and nowhere else. This is the global-`re.sub` lesson.
+  - **Expected first pass, from §95's means.** The predictions are central 6.57, somato 4.19,
+    expression 6.98 Hz. Central's second pass is NOT predicted, because the sign of normalisation's
+    feedback on central's own rate is not derived.
+
+### STAGES (each read before the next starts)
+
+  0. **`calderive` on D → C.** It costs about 12 min per pass, 768 seeds on one genome, which is
+     half of §95's 24 min for two genomes. That is at most 48 min.
+     - G-PREFIX-SCOPE: C differs from D only on the set's `target_rate_hz` lines.
+     - G-AWAKE: no creature asleep.
+     - G-N: 768 of 768 seeds read.
+     - G-REPRO: pass 1's r = 0 reading reproduces §95's (somato 4.450, expression 7.244, within
+       0.005).
+  1. **`calmean` on C, on FRESH held-out seeds r = 3000 … 3095.** These have never been read on
+     any genome. §96 already read D on 2000–2095, and D's numbers there are known, so that set is
+     held out from the derivation but NOT unseen by me. The fresh set is the registered check.
+     `calmean` gains a seed-offset argument; its default stays at 2000 so §96 is reproducible. The
+     2000–2095 reading is printed beside the fresh one, because that is the set `verify` would
+     gate on.
+     - Stage 1 PASSES iff every non-exempt module is OK on the fresh set.
+     - **Firing probability, as numbers.** Take d = held-out mean − derivation mean, with
+       SE_d = √(SE_held² + SE_der²), from §95/§96's SDs. P(OK) is then about 1.000 on somato and
+       central, and about 0.99 on expression (OK needs |d| ≤ 0.143; SE_d is 0.057). The
+       predicted outcome is PASS. A FAIL means the seed mean itself does not generalise, which
+       would be a finding.
+  2. **`verify` (fast tier) on C, about 20 min.**
+     - **Predicted casualty, by construction: `calibrate` itself.** Its single seed 0 reads somato
+       4.450 and expression 7.244. Against C's predicted 4.19 and 6.98 those are +0.26 and +0.26,
+       both outside ±0.25. That is the whole point of §95, and it is why C cannot ship without the
+       swap.
+     - Printed as numbers, NOT read as a casualty: the same failure was predicted before the run.
+       If `calibrate` PASSES on C, the prediction was wrong, and that is reported.
+     - The pinned hash moves, by construction.
+     - **Any OTHER experiment not as expected is a casualty.** As in §92 stage 3, compare the
+       POSITIVE-CONTROL ROWS against D's, not only the verdicts (§80).
+     - Stage 3 does not start while a non-`calibrate` casualty stands.
+  3. **`verify-long` and `verify-teach` on BOTH genomes, ON THE OWNER'S GO ONLY.** That is about
+     44 h per genome (§80), with no current long-tier record on D (§92). Central feeds the
+     critic, so every taught instrument runs through a re-derived target, and there is no smaller
+     honest list.
+     - A failure is a casualty only if the same instrument passes on D in the same stage. A
+       failure on both is PRE-EXISTING.
+     - **Each instrument's primary is also compared two-tailed, C − D.** With about 100 rows, a
+       2 SE rule would flag about 5 by chance. So a row is a **MOVE** only past **3.5 SE**, which
+       is about 5% family-wise over 100 rows (Dunn 1961). A row between 2 and 3.5 SE is printed as
+       WATCH and is not a casualty. A move that IMPROVES a row is reported as a move: it still says
+       a past result depended on the stale target.
+
+### GATES
+
+  - Stage 0's four gates (above).
+  - G-N and G-AWAKE in stage 1, as in §96.
+  - The md5 of `dna/default.toml` is unchanged at the end of every stage.
+
+### BRANCHES (written before any run, read in this order)
+
+  1. **VOID:** a gate fails, or the fixed point does not converge in 4 passes. Then nothing is
+     priced. Non-convergence is reported with the per-pass targets: it would mean central's
+     normalisation makes a seed-mean target ill-defined.
+  2. **C FAILS `calmean` on the fresh seeds** (stage 1). The seed mean does not generalise. Stop.
+     Nothing ships, and the result says calibration needs more than a mean.
+  3. **A FAST-TIER CASUALTY other than `calibrate`** (stage 2). Stop before the long tier. The
+     casualties are the finding: they name results that depended on a seed-0 target.
+  4. **FAST TIER CLEAN, LONG TIER NOT YET RUN.** This is the expected state after stages 0–2. C is
+     a candidate, NOT shippable: §80 showed a green fast tier does not price a genome edit. Stage 3
+     waits for the owner.
+  5. **LONG TIER CLEAN** (no casualty, no MOVE). C is shippable. Shipping means two things:
+     - C's targets replace default's;
+     - `calmean` (r 2000–2095) replaces `calibrate` in `verify`.
+
+     Both are one change, and the owner's call.
+  6. **LONG-TIER CASUALTIES OR MOVES.** C is not shippable as is. Each one is listed, signed, with
+     the module path that carries it.
+
+**COST.** Stages 0–2 are about 1.5 h of machine time. Stage 3 is about 88 h, on the owner's go.
+
+**Credit.**
+  - Stone (1974), for choosing a quantity on one sample and judging it on another
+    (derivation seeds and fresh held-out seeds).
+  - Dunn (1961), for the family-wise threshold over many rows.
+  - Galton (1886), for why a one-seed target fails elsewhere.
+  - Schuirmann (1987), for the margin verdicts.
+
+All four are in the README References.
+
+**Nothing ships.**
