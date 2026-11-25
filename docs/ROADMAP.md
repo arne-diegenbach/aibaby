@@ -23226,3 +23226,83 @@ because it was read at one point regresses at every other point.
   - Schuirmann (1987): the margin rule that let "no shift" be read.
 
 **Nothing ships.**
+
+## §96 — A SEED-MEAN `calibrate`: WHAT DOES IT SAY ABOUT DEFAULT AND P? (registered 2026-11-25)
+
+**THE QUESTION.** §95 showed that `calibrate`'s single-seed verdict is a draw. Default's targets are
+its own seed-0 readings, and at a random seed default fails ±0.25 Hz on somato 76% of the time.
+§96 builds the verdict §95 points to, a **seed-mean** `calibrate`, and asks what it says about the
+shipped genome and about P.
+
+**WHAT §96 DOES NOT DO.**
+  - It does not replace `calibrate` in `verify`.
+  - It edits no target in any genome.
+
+§95's 768-seed means predict that default FAILS a seed-mean verdict on somato. Swapping the gate
+would then turn the shipped genome's fast tier red, and fixing that means re-deriving default's
+targets. **That changes the shipped creature** (intrinsic plasticity pulls every creature toward
+its targets), and §80 showed a green fast tier does not price a genome edit. So the swap and any
+target change belong to a later registration, priced on the full battery. §96 builds and reads
+the instrument.
+
+**THE INSTRUMENT `calmean`.**
+  - `calibrate`'s quiet measurement (`measure_free_running` settings), on **96 seeds**:
+    seed = genome seed + r × 7919, r = **2000 … 2095**. That is DISJOINT from §95's 0–767 and
+    1000–1023, so nothing that suggested a target is re-used to judge it.
+  - Per module it prints: seed-mean, SD, SE, median, and seed-mean − target.
+  - Vocal and the sensory-driven modules are exempt with their reasons, exactly as `calibrate`.
+  - The in-degree sweep is unchanged.
+  - **Verdict per module, a margin rule against `calibrate`'s own ±0.25 tolerance:**
+    - **OK:** |mean − target| + 2 SE ≤ 0.25.
+    - **STALE:** |mean − target| − 2 SE > 0.25.
+    - **UNRESOLVED:** otherwise, meaning too close to the tolerance to call at n = 96. It is
+      printed with the SE, and it counts AGAINST a pass: a gate must not pass on a module it
+      cannot place.
+  - The seed set is fixed, so the test is deterministic.
+
+**PREDICTIONS, AS NUMBERS, FROM §95's 768-SEED MEANS (a different seed set; SE at n = 96 projected
+as SD/√96):**
+
+| genome, module | §95 seed-mean − target | SD | projected SE | predicted verdict |
+|---|---|---|---|---|
+| D somato | −0.373 | 0.191 | 0.019 | **STALE** |
+| D expression | −0.245 | 0.524 | 0.053 | UNRESOLVED |
+| D central | −0.245 | 0.175 | 0.018 | UNRESOLVED |
+| D auditory | −0.042 | 0.150 | 0.015 | OK |
+| P (the same six) | as D, within §95's margin | | | the same verdicts as D |
+| P comparator | seed-mean far above its one-seed 0.47 target, with a very wide SD | | ~0.25 | UNRESOLVED or STALE |
+
+**So the predicted outcome is: default FAILS the seed-mean `calibrate` (somato STALE), and P fails
+for the same reason.** The run tests that prediction on fresh seeds.
+
+### GATES
+
+  - G-N: all 96 seeds read on both genomes.
+  - G-AWAKE: no creature asleep in 120k ticks.
+  - G-PREFIX: as §95.
+
+### BRANCHES (read in this order)
+
+  1. **VOID:** a gate fails.
+  2. **DEFAULT PASSES** (no module STALE or UNRESOLVED). This contradicts §95's means. If it
+     happens, `calmean` can replace `calibrate` in `verify` with no target change. That is the
+     owner's call, and P's verdict is read the same way.
+  3. **DEFAULT FAILS** (any module STALE or UNRESOLVED). A seed-mean `calibrate` cannot enter
+     `verify` without re-deriving default's targets. **`calmean` is kept as an instrument,
+     reported and not gated.** The next registration, if the owner wants it, is **target
+     re-derivation as a change to the shipped creature:**
+     - targets taken from a DERIVATION seed set (§95's 0–767);
+     - checked by `calmean` on this held-out set;
+     - priced on the full battery for every tract the targets touch.
+
+     P's row is printed beside default's. The comparator's target goes with that registration.
+  4. **P DIFFERS FROM D** on a shared module (one OK where the other is STALE). That is reported
+     beside branches 2 and 3, not as a branch. §95 says the shift is under 0.05 Hz, so a
+     difference can only come from a module sitting at a verdict boundary.
+
+**COST.** 2 × 96 calibrate creatures, a few minutes. Nothing ships.
+
+**Credit:** Galton (1886) for why a one-seed target regresses; Schuirmann (1987) for the margin
+verdict. Both are in the README References. The derivation-set / held-out-set split is ordinary
+cross-validation practice and is credited with Stone (1974) if the next registration uses it to
+set targets.
