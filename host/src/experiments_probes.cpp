@@ -27084,8 +27084,11 @@ ScRow sc_row(const SdOut& o, double wall_s) {
   return r;
 }
 
-bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
-  (void)verbose;
+// The body takes the candidate file and rep offset so §94's candidate can re-enter
+// §92 stage 2 (`shipcost_op`) on the same code path; `shipcost` itself passes
+// §92's registered values and is unchanged.
+static bool shipcost_on(const std::vector<uint8_t>& blob, uint64_t ticks, const char* kScShip,
+                        uint32_t kScRepOff, const char* stage) {
   std::vector<uint8_t> blob_d, blob_s;
   std::string err;
   if (!compile_dna_toml(kScDefault, blob_d, err) || !compile_dna_toml(kScShip, blob_s, err)) {
@@ -27104,7 +27107,8 @@ bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
                 prefix ? "holds" : "FAILS");
     return false;
   }
-  std::printf("\n  §92 STAGE 2 — WHAT DOES SHIPPING THE COMPARATOR COST THE CREATURE?\n\n"
+  std::printf("\n  %s — WHAT DOES SHIPPING THE COMPARATOR COST THE CREATURE?\n\n", stage);
+  std::printf(
               "  genomes     D %s, S %s (D is an exact text prefix)\n"
               "  creatures   %u per arm, the SAME rep numbers, rep_off %u, NO patch on either\n"
               "  session     samediff, probe OFF, silent tail %llu ms; S's comparator is read\n"
@@ -27272,6 +27276,19 @@ bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
               W[kD].m > 0 ? W[kS].m / W[kD].m : 0.0);
   std::printf("\n    Nothing ships.\n");
   return gates && g_sleepers;
+}
+
+bool run_shipcost(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return shipcost_on(blob, ticks, kScShip, kScRepOff, "§92 STAGE 2");
+}
+
+// §94 branch 2's registered consequence: the operating-point genome re-enters §92
+// stage 2 with §92's gates and branches unchanged, on fresh rep numbers.
+bool run_shipcost_op(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return shipcost_on(blob, ticks, "dna/comparator_op.toml", 1918,  // past §94's 1822-1917
+                     "§94 -> §92 STAGE 2 ON P");
 }
 
 // --- calcmp (§93 stage 1): does the comparator keep the relation once its target is calibrated?

@@ -588,6 +588,9 @@ const Spec kSpecs[] = {
     {"shipcost", 1680000, Expect::kGuard, Tier::kLong,
      "§92 stage 2: what shipping the comparator costs — sleep onset, asleep"
      " fraction and the answer, default vs candidate. Run on dna/comparator_ship.toml"},
+    {"shipcost_op", 1680000, Expect::kGuard, Tier::kLong,
+     "§94 -> §92 stage 2: the same price, on the operating-point candidate."
+     " Run on dna/comparator_op.toml"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2052,6 +2055,7 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "novans") ok = run_novans(dna_blob, ticks, verbose);
   else if (name == "novonset") ok = run_novonset(dna_blob, ticks, verbose);
   else if (name == "shipcost") ok = run_shipcost(dna_blob, ticks, verbose);
+  else if (name == "shipcost_op") ok = run_shipcost_op(dna_blob, ticks, verbose);
   else if (name == "calcmp") ok = run_calcmp(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);

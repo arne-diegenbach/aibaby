@@ -22916,3 +22916,33 @@ clean candidate.
   - All are in the README References.
 
 **Nothing ships.**
+
+### §94 → §92 STAGE 2 ON P — REGISTERED BEFORE THE RUN (2026-11-25)
+
+This is branch 2's registered consequence: P (`dna/comparator_op.toml`) re-enters §92 at stage 2.
+**Everything is §92 stage 2's own, unchanged:**
+  - arms D (default, vocal read) and S (the candidate, comparator read);
+  - 96 creatures per arm at 1.68M ticks, no patches, samediff with the silent tail;
+  - readouts: first sleep (sleepers only), the answer, and the asleep fraction (printed, NOT READ:
+    a constant by construction, §92);
+  - gates: G-PATCH, G-SCORED, G-REL (S spike cell − 2 SE > 0.5), G-LIVE, and G-SLEEPERS (≥ 80
+    slept per arm);
+  - branches as registered in §92 stage 2, read with Welch unpaired SE, two-tailed at 2 SE.
+
+**The only changes:**
+  - the candidate file is P;
+  - rep_off is **1918**, past §94's 1822–1917, so the creatures are fresh.
+
+The instrument is the same code path. `shipcost`'s body now takes the candidate file and rep_off
+as arguments, `shipcost` passes §92's registered values, and the new entry `shipcost_op` passes P
+and 1918.
+
+**Prediction, derived and NOT a gate (§92's own dilution arithmetic):** P's comparator fires at
+about half the §92 candidate's rate (§94: 0.000318 vs 0.000631 per neuron per tick), so it dilutes
+fatigue slightly MORE. P should sleep a little later than the §92 candidate did against D
+(+101k ticks, 1.092×). By §94's R−P gap that is about +10k ticks more, so roughly +111k against D.
+§94's derived sign for P was wrong once already, so this is printed beside the result and not
+read.
+
+**Credit:** the fatigue arithmetic this prices is §83's and §92's. The papers behind the
+comparator are as in §94.

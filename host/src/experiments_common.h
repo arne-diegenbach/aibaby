@@ -2474,6 +2474,7 @@ bool run_novpre(const std::vector<uint8_t>&, uint64_t, bool);         // §90 st
 bool run_novans(const std::vector<uint8_t>&, uint64_t, bool);         // §90 stage 1
 bool run_novonset(const std::vector<uint8_t>&, uint64_t, bool);       // §91
 bool run_shipcost(const std::vector<uint8_t>&, uint64_t, bool);       // §92
+bool run_shipcost_op(const std::vector<uint8_t>&, uint64_t, bool);    // §94 -> §92 s2
 bool run_calcmp(const std::vector<uint8_t>&, uint64_t, bool);         // §93
 bool run_calop(const std::vector<uint8_t>&, uint64_t, bool);          // §94
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
