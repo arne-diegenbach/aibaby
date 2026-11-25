@@ -23503,3 +23503,33 @@ C is default with **only** `target_rate_hz` edited, on the modules re-derived by
 All four are in the README References.
 
 **Nothing ships.**
+
+### §97 AMENDMENT BEFORE THE FULL RUN — THE PASS CAP GOES FROM 4 TO 8 (2026-11-25)
+
+The `calderive` smoke ran at 3,000 ticks, far below first sleep. It is another creature, and **none
+of its numbers is a result.** It exercised every code path: per-pass genome files, edits scoped to
+each module, the VOID branch, and `default.toml`'s md5 unchanged. It also showed a STRUCTURAL
+behaviour the registration predicted in kind but did not size: **central's free-running rate follows
+its own target downward.**
+
+| | central target (Hz) | central's rate fell by |
+|---|---|---|
+| pass 1 | 6.81 | (start) |
+| pass 2 | 6.24 | 0.27 |
+| pass 3 | 5.97 | 0.13 |
+| pass 4 | 5.85 | 0.06 |
+
+Each drop is about 0.47 of the one before. That is item 3's normalisation loop: a contraction, so a
+fixed point exists. At that ratio, steps fall under the 0.01 Hz stop rule only at about pass 7.
+4 passes would make the run VOID **by arithmetic, not by the absence of a fixed point**, and branch 1
+would then read wrongly.
+
+**Amendment:**
+  - The cap is now **8 passes** (worst case about 1.6 h).
+  - Every other rule stands.
+  - Branch 1's "no fixed point" now means 8 passes.
+
+**This is a prediction the registration did not make, and it bears on the price.** If the full run
+contracts the same way, central's target ends well below the one-pass 6.57 Hz. The critic's feature
+scale then moves by much more than 3.6%. Stage 2 and the owner's stage-3 decision must quote the
+FINAL central target, not the first-pass one.

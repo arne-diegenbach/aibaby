@@ -600,6 +600,11 @@ const Spec kSpecs[] = {
     {"calmean", 120000, Expect::kGuard, Tier::kLong,
      "§96: a seed-mean calibrate on 96 held-out seeds, margin verdict against +-0.25 Hz."
      " Reported, not gated; any genome"},
+    {"calmeanfresh", 120000, Expect::kGuard, Tier::kLong,
+     "§97 stage 1: calmean on FRESH held-out seeds r = 3000..3095. Any genome"},
+    {"calderive", 120000, Expect::kGuard, Tier::kLong,
+     "§97 stage 0: seed-mean targets by fixed-point iteration on 768 derivation seeds;"
+     " writes dna/default_seedmean.toml. Run on dna/default.toml"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2069,6 +2074,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "calseedspre") ok = run_calseedspre(dna_blob, ticks, verbose);
   else if (name == "calseeds") ok = run_calseeds(dna_blob, ticks, verbose);
   else if (name == "calmean") ok = run_calmean(dna_blob, ticks, verbose);
+  else if (name == "calmeanfresh") ok = run_calmeanfresh(dna_blob, ticks, verbose);
+  else if (name == "calderive") ok = run_calderive(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});

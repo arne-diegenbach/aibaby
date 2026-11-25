@@ -3720,8 +3720,9 @@ bool run_calseeds_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pr
 // |d| + 2 SE <= 0.25, STALE iff |d| - 2 SE > 0.25, else UNRESOLVED, which counts
 // AGAINST a pass. Vocal and sensory-driven modules are exempt with calibrate's
 // reasons; the in-degree sweep is calibrate's. NOT in verify (§96).
-bool run_calmean(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
-  constexpr uint32_t kCmnFrom = 2000, kCmnN = 96;
+static bool calmean_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
+                         uint32_t kCmnFrom) {
+  constexpr uint32_t kCmnN = 96;
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) {
     std::printf("  genome rejected\n");
@@ -3793,6 +3794,266 @@ bool run_calmean(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose)
               g_awake ? "" : "; VOID (a creature slept)");
   std::printf("  Reported, not gated (§96): calibrate in verify is unchanged.\n");
   return pass;
+}
+
+bool run_calmean(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return calmean_impl(blob, ticks, verbose, 2000);
+}
+
+// §97 stage 1: the same instrument on FRESH held-out seeds r = 3000..3095, which
+// no genome had been read on when §97 was registered.
+bool run_calmeanfresh(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  return calmean_impl(blob, ticks, verbose, 3000);
+}
+
+// --- calderive (§97 stage 0): seed-mean targets for the shipped genome.
+//
+// Measures calibrate's quiet free-running rates on the DERIVATION seeds r = 0..767
+// and sets each target in the re-derived set to its seed mean, rounded to 0.01 Hz.
+// The set starts {central, somato, expression}; a non-exempt module whose mean ends
+// more than 0.10 Hz from its target joins it. Central's normalisation reads its own
+// target, so the derivation iterates to a fixed point: stop when no proposed target
+// differs from the measured genome's by 0.01 Hz or more; at most 8 passes (§97 amended), else VOID.
+// Each pass's genome is written to dna/default_seedmean_pass<k>.toml; the fixed point
+// is copied to dna/default_seedmean.toml. Edits are scoped to each module's block, and
+// G-PREFIX-SCOPE asserts C differs from D on the set's target lines and nowhere else.
+namespace {
+constexpr uint32_t kCdN = 768, kCdMaxPass = 8;  // §97 amended 4 -> 8 before the full run
+constexpr double kCdJoin = 0.10, kCdStep = 0.01;
+
+std::vector<std::string> cd_lines(const std::string& t) {
+  std::vector<std::string> v;
+  size_t a = 0;
+  while (a <= t.size()) {
+    const size_t b = t.find('\n', a);
+    if (b == std::string::npos) {
+      if (a < t.size()) v.push_back(t.substr(a));
+      break;
+    }
+    v.push_back(t.substr(a, b - a));
+    a = b + 1;
+  }
+  return v;
+}
+
+// Index of the `target_rate_hz = ` line inside module `name`'s [[module]] block, or -1.
+int cd_target_line(const std::vector<std::string>& L, const std::string& name) {
+  bool in_module = false, mine = false;
+  for (size_t i = 0; i < L.size(); ++i) {
+    const std::string& l = L[i];
+    if (!l.empty() && l[0] == '[') {
+      in_module = l.rfind("[[module]]", 0) == 0;
+      mine = false;
+      continue;
+    }
+    if (in_module && l.rfind("name = \"", 0) == 0)
+      mine = l.compare(8, name.size() + 1, name + "\"") == 0 && l.size() >= 9 + name.size();
+    if (in_module && mine && l.rfind("target_rate_hz = ", 0) == 0) return int(i);
+  }
+  return -1;
+}
+
+// Replace the number on a `target_rate_hz = <num>  # ...` line, keeping the comment.
+bool cd_set_target(std::string& line, double hz) {
+  const size_t a = line.find('=');
+  if (a == std::string::npos) return false;
+  size_t b = a + 1;
+  while (b < line.size() && line[b] == ' ') ++b;
+  size_t e = b;
+  while (e < line.size() && (std::isdigit((unsigned char)line[e]) || line[e] == '.')) ++e;
+  if (e == b) return false;
+  char buf[32];
+  std::snprintf(buf, sizeof buf, "%.2f", hz);
+  line = line.substr(0, b) + buf + line.substr(e);
+  return true;
+}
+
+std::string cd_join(const std::vector<std::string>& L, bool trailing_nl) {
+  std::string o;
+  for (size_t i = 0; i < L.size(); ++i) {
+    o += L[i];
+    if (i + 1 < L.size() || trailing_nl) o += '\n';
+  }
+  return o;
+}
+
+bool cd_write(const std::string& path, const std::string& text) {
+  FILE* f = std::fopen(path.c_str(), "wb");
+  if (!f) return false;
+  const bool ok = std::fwrite(text.data(), 1, text.size(), f) == text.size();
+  return std::fclose(f) == 0 && ok;
+}
+}  // namespace
+
+bool run_calderive(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  std::vector<uint8_t> bd;
+  std::string err, td;
+  if (!compile_dna_toml(kCsD, bd, err) || !cs_text(kCsD, td)) {
+    std::printf("  REFUSED: %s does not compile: %s\n", kCsD, err.c_str());
+    return false;
+  }
+  if (blob != bd) {
+    std::printf("  REFUSED: run this on %s; the given genome does not match it.\n", kCsD);
+    return false;
+  }
+  aibaby::Dna d0;
+  if (d0.load(bd.data(), bd.size()) != aibaby::DnaStatus::kOk) return false;
+  const uint32_t nm = d0.module_count();
+  const int32_t vocal = d0.module_with_role(aibaby::ModuleRole::kVocal);
+  std::vector<bool> exempt(nm, false), inset(nm, false);
+  std::vector<std::string> names(nm);
+  for (uint32_t m = 0; m < nm; ++m) {
+    const aibaby::DnaModule& md = d0.module(m);
+    names[m] = md.name;
+    exempt[m] = (vocal >= 0 && uint32_t(vocal) == m) ||
+                md.role == uint32_t(aibaby::ModuleRole::kVisualCortex) ||
+                md.role == uint32_t(aibaby::ModuleRole::kVisualForm);
+    inset[m] = names[m] == "central" || names[m] == "somato" || names[m] == "expression";
+  }
+  const bool trailing_nl = !td.empty() && td.back() == '\n';
+  const std::vector<std::string> L0 = cd_lines(td);
+  std::vector<std::string> L = L0;
+  std::vector<double> tgt(nm);
+  for (uint32_t m = 0; m < nm; ++m) tgt[m] = double(d0.module(m).target_rate_hz);
+
+  std::printf("\n  §97 STAGE 0 — calderive: seed-mean targets, %u derivation seeds (r = 0..%u,\n"
+              "  seed = genome seed + r * 7919), calibrate's quiet settings, %llu ticks.\n"
+              "  Set starts {central, somato, expression}; join at > %.2f Hz; fixed point when no\n"
+              "  proposed target moves by >= %.2f Hz; at most %u passes.\n",
+              kCdN, kCdN - 1, (unsigned long long)ticks, kCdJoin, kCdStep, kCdMaxPass);
+
+  std::vector<uint8_t> cur = bd;
+  bool converged = false, g_n = true, g_awake = true, g_repro = true;
+  uint32_t final_pass = 0;
+  std::string final_text = td;
+  for (uint32_t pass = 1; pass <= kCdMaxPass; ++pass) {
+    std::vector<CsOut> rs = parallel_reps<CsOut>(kCdN, [&](uint32_t i) {
+      return cs_measure(cur, ticks, i);
+    });
+    uint32_t okn = 0, slept = 0;
+    for (const CsOut& o : rs) {
+      if (o.ok && o.rate.size() == nm) ++okn;
+      if (o.slept) ++slept;
+    }
+    if (okn != kCdN) g_n = false;
+    if (slept) g_awake = false;
+    if (!g_n) {
+      std::printf("  pass %u: G-N FAIL (%u of %u). VOID.\n", pass, okn, kCdN);
+      return false;
+    }
+    std::printf("\n  pass %u — measured genome: %s\n", pass,
+                pass == 1 ? kCsD : ("dna/default_seedmean_pass" + std::to_string(pass - 1) + ".toml").c_str());
+    std::printf("  %-12s %8s %9s %7s %7s %8s %10s   %s\n", "module", "target", "mean", "SD", "SE",
+                "median", "proposed", "");
+    std::vector<double> prop = tgt;
+    bool moved = false;
+    for (uint32_t m = 0; m < nm; ++m) {
+      std::vector<double> x;
+      for (const CsOut& o : rs) x.push_back(o.rate[m]);
+      double mean, sd, se;
+      cs_mse(x, mean, sd, se);
+      std::vector<double> srt = x;
+      std::sort(srt.begin(), srt.end());
+      const double med = 0.5 * (srt[srt.size() / 2 - 1] + srt[srt.size() / 2]);
+      const char* note = "";
+      if (!inset[m] && !exempt[m] && std::fabs(mean - tgt[m]) > kCdJoin) {
+        inset[m] = true;
+        note = "JOINS the set";
+      }
+      if (inset[m]) {
+        prop[m] = std::round(mean * 100.0) / 100.0;
+        if (std::fabs(prop[m] - tgt[m]) >= kCdStep - 1e-9) moved = true;
+        if (!*note) note = "re-derived";
+      } else if (exempt[m]) {
+        note = "exempt";
+      }
+      std::printf("  %-12s %5.2f Hz %6.3f Hz %7.3f %7.4f %8.3f %7.2f Hz   %s\n", names[m].c_str(),
+                  tgt[m], mean, sd, se, med, prop[m], note);
+    }
+    if (pass == 1) {
+      int32_t is = -1, ie = -1;
+      for (uint32_t m = 0; m < nm; ++m) {
+        if (names[m] == "somato") is = int32_t(m);
+        if (names[m] == "expression") ie = int32_t(m);
+      }
+      g_repro = is >= 0 && ie >= 0 && std::fabs(rs[0].rate[uint32_t(is)] - 4.450) <= 0.005 &&
+                std::fabs(rs[0].rate[uint32_t(ie)] - 7.244) <= 0.005;
+      std::printf("\n    G-REPRO    r = 0: somato %.3f (4.450), expression %.3f (7.244)   %s\n",
+                  is >= 0 ? rs[0].rate[uint32_t(is)] : -1.0, ie >= 0 ? rs[0].rate[uint32_t(ie)] : -1.0,
+                  g_repro ? "PASS" : "FAIL");
+    }
+    if (!moved) {
+      converged = true;
+      final_pass = pass - 1;
+      std::printf("\n  -> FIXED POINT at pass %u: no proposed target moves by >= %.2f Hz.\n", pass,
+                  kCdStep);
+      break;
+    }
+    // Write this pass's genome, edits scoped to each module's block.
+    for (uint32_t m = 0; m < nm; ++m) {
+      if (!inset[m]) continue;
+      const int li = cd_target_line(L, names[m]);
+      if (li < 0 || !cd_set_target(L[size_t(li)], prop[m])) {
+        std::printf("  module %s: target line not found. VOID.\n", names[m].c_str());
+        return false;
+      }
+    }
+    tgt = prop;
+    final_text = cd_join(L, trailing_nl);
+    const std::string path = "dna/default_seedmean_pass" + std::to_string(pass) + ".toml";
+    if (!cd_write(path, final_text) || !compile_dna_toml(path, cur, err)) {
+      std::printf("  %s: write or compile failed: %s. VOID.\n", path.c_str(), err.c_str());
+      return false;
+    }
+    std::printf("  wrote %s\n", path.c_str());
+  }
+  if (!converged) {
+    std::printf("\n  -> NO FIXED POINT in %u passes. VOID (branch 1).\n", kCdMaxPass);
+    return false;
+  }
+  if (final_pass == 0) {
+    std::printf("  pass 1 proposed no change: D already sits at its seed means. Nothing to build.\n");
+    return false;
+  }
+  if (!cd_write("dna/default_seedmean.toml", final_text)) return false;
+
+  // G-PREFIX-SCOPE: C differs from D only on the set's target lines.
+  std::string tc;
+  std::vector<uint8_t> bc;
+  bool g_scope = cs_text("dna/default_seedmean.toml", tc) &&
+                 compile_dna_toml("dna/default_seedmean.toml", bc, err);
+  const std::vector<std::string> LC = cd_lines(tc);
+  std::vector<int> allowed;
+  for (uint32_t m = 0; m < nm; ++m)
+    if (inset[m]) allowed.push_back(cd_target_line(L0, names[m]));
+  uint32_t ndiff = 0, nbad = 0;
+  if (LC.size() != L0.size()) g_scope = false;
+  for (size_t i = 0; g_scope && i < L0.size(); ++i) {
+    if (LC[i] == L0[i]) continue;
+    ++ndiff;
+    if (std::find(allowed.begin(), allowed.end(), int(i)) == allowed.end()) {
+      ++nbad;
+      std::printf("    unexpected diff at line %zu: %s\n", i + 1, LC[i].c_str());
+    }
+  }
+  if (nbad) g_scope = false;
+  std::string td_after;
+  const bool d_untouched = cs_text(kCsD, td_after) && td_after == td;
+  std::printf("\n  C = dna/default_seedmean.toml (pass %u's genome)\n", final_pass);
+  std::printf("    G-PREFIX-SCOPE  C differs from D on %u lines, all set target lines   %s\n",
+              ndiff, g_scope ? "PASS" : "FAIL");
+  std::printf("    G-N             %u of %u seeds every pass                       %s\n", kCdN, kCdN,
+              g_n ? "PASS" : "FAIL");
+  std::printf("    G-AWAKE         no creature asleep in any pass                 %s\n",
+              g_awake ? "PASS" : "FAIL");
+  std::printf("    G-REPRO         (pass 1, above)                                %s\n",
+              g_repro ? "PASS" : "FAIL");
+  std::printf("    D untouched     %s text unchanged                    %s\n", kCsD,
+              d_untouched ? "PASS" : "FAIL");
+  const bool ok = g_scope && g_n && g_awake && g_repro && d_untouched;
+  std::printf("\n  -> %s. Nothing ships.\n", ok ? "C BUILT; stage 1 next" : "VOID (branch 1)");
+  return ok;
 }
 
 bool run_calseedspre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
