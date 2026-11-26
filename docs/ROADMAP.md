@@ -23862,3 +23862,62 @@ contradict each other.
   - §78: the silenced floor 0.6767, the 1.8 SE gap, R1's O* = 0.6601 and 0.7053, and R3's between
     variance and 0.5786.
   - §79: 0.5230 against the bar, the 0.127 shortfall, and all three G-SELF anchors.
+
+### §97 STAGE 3a RESULT — BRANCH 1: ONE CASUALTY, `g3probe`. C IS NOT SHIPPABLE AS IS; THE 88 h TIER IS NOT RUN (2026-11-26)
+
+`results/n97-s3a-<exp>-{D,C}.log`: 8 instruments × 2 genomes, same binary, registry lengths. The
+first launch measured nothing (no `--ticks`; see the §97 audit) and is not part of this result.
+
+| instrument | D | C | the positive-control row, D → C |
+|---|---|---|---|
+| `quietecho` | PASS | PASS | **`artic` GUARD 0.790 → 0.790** (shipped arm), CONTROLS PASS on both |
+| `condprobe` | PASS | PASS | calibration echo 0.850 → 0.775; vocal "does it ARRIVE" 0.814 → 0.789 |
+| **`g3probe`** | PASS | **FAIL** | **calibration echo 0.725 → 0.675, bar 0.700 → UNDERPOWERED** |
+| `pairprobe` | PASS | PASS | calibration echo 0.850 → 0.775 (the same calibration sessions as `condprobe`) |
+| `eligprobe` | PASS | PASS | size-matched arcuate 0.812 → 0.792 |
+| `restate` | PASS | PASS | every pin ok; object at vision 0.960 → 0.933; one m3probe sub-run notes 0.840 < 0.850 |
+| `partprobe` | PASS | PASS | supervised groups 0.740 → 0.710; best unsupervised 0.670 → 0.680 |
+| `imitate` | PASS | PASS | M1b PASS on both |
+
+**THE REGISTERED READING: BRANCH 1.** `g3probe` fails on C and passes on D, so it is a CASUALTY.
+C is not shippable as is, and the remaining stage 3 is NOT run.
+
+**WHAT THE CASUALTY IS, AS NUMBERS (reported, not a re-reading of the branch).**
+  - `g3probe`'s positive control is the calibration echo: 5 creatures × 8 trials, the same seeds on
+    both genomes.
+  - Per creature, D reads 0.750 / 0.875 / 0.750 / 0.625 / 0.625 and C reads 0.875 / 0.750 /
+    0.750 / 0.500 / 0.500. The paired difference is **−0.050 ± 0.050, −1.0 SE**: two trials out of
+    40, across a bar D clears by 0.025.
+  - Under stage 3's MOVE rule it is not even WATCH. It is a verdict FLIP AT A BOUNDARY, and the
+    registered rule counts flips, so it fires.
+  - **But the direction is shared, and that is why it is not dismissed.** Every instrument that
+    reads the calibration echo falls on C. `condprobe`'s per-creature difference is −0.075 ± 0.050
+    (−1.5 SE); `pairprobe` shares `condprobe`'s sessions and is not independent. Pooled with
+    `g3probe` over 10 creature-pairs it is **−0.0625 ± 0.035, about −1.8 SE.** The drops sit in
+    creatures 3 and 4 on both instruments.
+  - So C lowers the voice readout's echo by about 0.06, with no instrument resolving it at 2 SE.
+    That is the §80 class of cost (v75 took the same echo to chance) at about a quarter of its size.
+
+**WHAT HOLDS.**
+  - **The `artic` guard is untouched**: 0.790 on both, the quietecho controls PASS, and the loud
+    arm even rises (0.714 → 0.737).
+  - `imitate`'s M1b, `restate`'s pins and `partprobe`'s unsupervised readout hold.
+  - The cost is in the calibration ECHO rows of the 5-creature probes, not in the articulator.
+
+**NOT READ:** `partprobe`'s wall time, 514 min on D against 32 on C. Both completed the same
+147-line table on 214 trials per creature, so neither refused. The machine load during D's run is
+not recorded, and §80's rule forbids reading wall time as speed.
+
+**WHAT THIS LEAVES FOR THE OWNER (nothing registered).**
+  - (a) Accept branch 1: C does not ship, and `calibrate`'s single-seed targets stay.
+    `calmean` remains a reported instrument (§96).
+  - (b) Register a powered echo test before deciding. The calibration echo on D against C, enough
+    creatures to resolve a 0.06 drop: about 4× the current 10 pairs for 2 SE at the pooled SD
+    (about 40 creature-pairs, roughly 25 min of `g3probe`/`condprobe` sessions). That would say
+    whether the casualty is a boundary draw or a real cost on the voice readout.
+  - (c) A narrower candidate that leaves central's target alone, since central's is the one change
+    that reaches the critic and the voice through normalisation (somato's and expression's do
+    not). It cannot pass `calmean` as is, because central stays UNRESOLVED, so it needs its own
+    registration.
+
+**Nothing ships. `dna/default.toml` is unchanged (md5 fb419735…).**

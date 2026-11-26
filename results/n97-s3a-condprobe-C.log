@@ -1,0 +1,80 @@
+experiment: condprobe
+  session           900.0 s of simulated life x 5 creatures x 2 arms
+  instrument        condprobe   trial seed 00000000013527c9   5 creatures x 2 arms
+                    another probe is another trial sequence: its numbers
+                    are not comparable with these (~0.05 at 300 trials)
+  the teacher is idealised: dense, immediate, and it says which
+  object this is. The targets are postures this creature was
+  observed to produce when it heard each word.
+
+  seed arm      voice     shuffled  echo    probes
+  0    taught   0.606     0.563     0.875   141
+  0    random   0.577     0.479     0.875   141
+  1    taught   0.676     0.451     1.000   141
+  1    random   0.549     0.465     1.000   141
+  2    taught   0.718     0.521     0.875   141
+  2    random   0.648     0.521     0.875   141
+  3    taught   0.746     0.479     0.625   141
+  3    random   0.606     0.535     0.625   141
+  4    taught   0.634     0.549     0.500   141
+  4    random   0.620     0.479     0.500   141
+
+  condition present, as a fraction of each scored window
+    teaching   object 0.00   word 1.00
+    probe      object 0.00   word 1.00
+
+  mean held-out accuracy on the probe voice
+    idealised teacher    0.676   <- the ceiling
+    random target        0.600   (dense reward, no object mapping)
+    labels shuffled      0.513   (must sit at chance)
+    calibration echo     0.775
+    at or above 0.75     0 of 5 creatures
+    beat its own control 5 of 5 creatures
+    vocal sum|w| / setpoint  1.041, outside the band 0.0% of samples
+
+  cube vs ball, read off the creature's own activity
+    vision, per neuron   0.479   (shuffled 0.468)  <- nothing is shown: chance is CORRECT
+    central, per neuron  0.848   (shuffled 0.524)  <- the condition
+    vocal,   per neuron  0.789   (shuffled 0.487)  <- positive control: does it ARRIVE
+    central, 16 bins     0.563   (pooled; kept because it reads lower —
+                                 pooling loses the code, see vision)
+
+  how that distinction is carried
+               |d'| > 0.5     mean |d'|    sparseness
+    vision     0.4           % 0.135        0.833
+    central    6.8           % 0.193        0.920
+    (sparseness: 1.0 = every neuron equally active, ->0 = few active)
+
+  the same, without the penalty a sparse code pays
+               active   |d'| active  r within   r between   corr-clf
+    vision     1.00     0.135        0.034      0.034       0.493
+    central    1.00     0.193        0.037      0.016       0.873
+    (pattern separation is r_within - r_between going UP, which a
+     centroid classifier on raw rates can miss entirely)
+
+  g3probe is a bound, not a criterion. It reads 0.68 against a 0.75 bar:
+  a perfect teacher cannot make this voice depend on what the creature
+  sees. Read that against the calibration echo above: the same features
+  and the same classifier take the word-driven voice at ~0.83, so the
+  readout is not the limit and the null is not a broken pipeline. What
+  is missing is a mechanism that can learn a *conditional* mapping from
+  what is in view to what the larynx does. Node perturbation cannot: a
+  per-neuron bias is a constant, not a function of the input. That
+  leaves reward-modulated STDP on central->vocal as the only candidate
+  in the creature, and this says it does not manage it even when the
+  reward is ideal.
+
+  But weigh that against the condition table above before charging the
+  learning rule for all of it. The teacher is ideal; what the mapping
+  has to key on is only partly so — read the two losses off the
+  condition table rather than assuming which one is larger. At 141
+  probes they are vision 0.927 -> central 0.724 (-0.203) and then
+  central -> voice (-0.237), so the larger loss is the downstream one,
+  which is where m3probe and projprobe both localise it. At the default
+  tick count this same table read central at 0.475 and pointed upstream
+  instead; that estimate was resolution-limited, not a finding.
+
+real	3m43.120s
+user	3m42.651s
+sys	0m0.408s
+exit=0
