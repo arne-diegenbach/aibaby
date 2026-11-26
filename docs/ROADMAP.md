@@ -23975,7 +23975,8 @@ long tier anyway. That decision stays the owner's. Nothing ships.
 
   - **Firing probabilities, from stage 3a's rough SD of about 0.11** (stage 0 replaces it):
     - At n = 384 the SE is about 0.0056.
-    - At true Δ = 0, P(NO MATERIAL COST) ≈ 0.99.
+    - At true Δ = 0, P(NO MATERIAL COST) ≈ 0.977 (U ≥ 0 binds: Φ(2.0)); about 0.016 reads a
+      false SMALL COST.
     - At true Δ = −0.06 (stage 3a's pooled point estimate), P(MATERIAL COST) ≈ 1.00.
     - SMALL COST needs 4 SE < 0.025, i.e. SE < 0.0063. So it is only just reachable at n = 384,
       and unreachable at 192.
