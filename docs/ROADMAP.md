@@ -23913,7 +23913,7 @@ not recorded, and §80's rule forbids reading wall time as speed.
     `calmean` remains a reported instrument (§96).
   - (b) Register a powered echo test before deciding. The calibration echo on D against C, enough
     creatures to resolve a 0.06 drop: about 4× the current 10 pairs for 2 SE at the pooled SD
-    (about 40 creature-pairs, roughly 25 min of `g3probe`/`condprobe` sessions). That would say
+    (about 40 creature-pairs; at the measured 4 min per 5 creatures per genome that is about 70 min on both genomes). That would say
     whether the casualty is a boundary draw or a real cost on the voice readout.
   - (c) A narrower candidate that leaves central's target alone, since central's is the one change
     that reaches the critic and the voice through normalisation (somato's and expression's do
