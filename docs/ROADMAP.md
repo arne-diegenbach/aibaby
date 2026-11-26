@@ -23921,3 +23921,86 @@ not recorded, and §80's rule forbids reading wall time as speed.
     registration.
 
 **Nothing ships. `dna/default.toml` is unchanged (md5 fb419735…).**
+
+### §97 STAGE 3b — A POWERED TEST OF THE CALIBRATION ECHO, D AGAINST C — REGISTERED BEFORE THE RUN (2026-11-26)
+
+The owner chose option (b) after stage 3a's branch 1.
+
+**THE QUESTION.** Stage 3a's casualty, `g3probe`'s calibration echo, fell 0.725 → 0.675 (−1.0 SE)
+across its 0.700 bar on 5 creatures. Every echo row fell the same way (pooled −1.8 SE). Is that
+a boundary draw, or does C really lower the voice readout's echo?
+
+**WHAT THIS DOES NOT DO.** Branch 1 has fired and this stage cannot un-fire it. A NO MATERIAL COST
+result would let the owner decide whether to re-register stage 3's casualty rule, or to run the
+long tier anyway. That decision stays the owner's. Nothing ships.
+
+**THE MEASUREMENT.**
+  - The quantity is the calibration echo exactly as `g3probe`/`condprobe` print it:
+    `run_g3probe_session(...).echo`, at the instruments' registry length, 900,000 ticks.
+  - It is a held-out linear decode of which word was heard, from the voice the creature produced
+    in the 8 calibration trials per word at the start of the session. That gives 8 test samples
+    and a step of 0.125.
+  - The taught arm only: the echo is measured before any teaching, so both arms share it.
+  - **PRIMARY:** `g3probe`'s protocol (mode 0), the casualty's own row.
+  - **CO-PRIMARY:** `condprobe`'s protocol (mode 1), the other instrument whose echo fell.
+    (`pairprobe` shares `condprobe`'s calibration and is not run.)
+  - **Paired by creature.** D and C at the same r share the seed. C differs only in three
+    `target_rate_hz` values, which draw no random numbers, so the pairing is exact.
+    Δ = echo(C) − echo(D), per pair.
+  - Sessions run in parallel (`parallel_reps`). The instrument is `echopow` (stage 1), with
+    `echopowpre` for stage 0.
+
+**STAGES.**
+  0. **PRE-FLIGHT (its numbers are never results):**
+     - r = 0…4: G-REPRO.
+     - r = 1000…1023: the SD of Δ per protocol.
+     - **n rule:** the smallest n in {192, 384, 768} with P(NO MATERIAL COST fires | true Δ = 0)
+       ≥ 0.95 on BOTH protocols. The SE is projected as 1.5 × SD / √n, buying headroom AGAINST
+       the projection (every SD projection here has come in low). The cap is 768.
+  1. **THE RUN:** n pairs per protocol, at r = 2000 … 2000 + n − 1. That seed set is used by no
+     `g3probe`-protocol run. One run reads both protocols.
+
+**THE DECISION RULE: AN EQUIVALENCE MARGIN (Schuirmann 1987), TWO-TAILED.**
+  - **Margin δ = 0.025.** That is D's clearance over `g3probe`'s own 0.700 bar (0.725 − 0.700): a
+    cost of that size flips the instrument on the average creature.
+  - With [L, U] = Δ ± 2 SE, per protocol, read in this order:
+
+| reading | condition |
+|---|---|
+| **MATERIAL COST** | U < −0.025 |
+| **SMALL COST** | U < 0 and L ≥ −0.025: resolved, inside the margin |
+| **C RAISES THE ECHO** | L > 0 (reported; not a cost) |
+| **NO MATERIAL COST** | L ≥ −0.025 and U ≥ 0 |
+| **NO VERDICT** | otherwise |
+
+  - **Firing probabilities, from stage 3a's rough SD of about 0.11** (stage 0 replaces it):
+    - At n = 384 the SE is about 0.0056.
+    - At true Δ = 0, P(NO MATERIAL COST) ≈ 0.99.
+    - At true Δ = −0.06 (stage 3a's pooled point estimate), P(MATERIAL COST) ≈ 1.00.
+    - SMALL COST needs 4 SE < 0.025, i.e. SE < 0.0063. So it is only just reachable at n = 384,
+      and unreachable at 192.
+
+**GATES.**
+  - **G-REPRO:** r = 0…4 reproduce stage 3a's per-creature echoes exactly.
+    - Mode 0: D 0.750 / 0.875 / 0.750 / 0.625 / 0.625 and C 0.875 / 0.750 / 0.750 / 0.500 / 0.500.
+    - Mode 1: D 0.875 / 1.000 / 0.875 / 0.875 / 0.625 and C 0.875 / 1.000 / 0.875 / 0.625 / 0.500.
+    - It fails if any differs. That proves the parallel instrument is the instruments' own
+      measurement.
+  - **G-N:** every session ok (echo computed on ≥ 8 samples) on both genomes.
+  - **G-GENOME:** D is `dna/default.toml` (md5 fb419735…), C is `dna/default_seedmean.toml`, and
+    they differ on exactly the three target lines.
+
+**BRANCHES (read in this order).**
+  1. **VOID:** a gate fails.
+  2. **MATERIAL COST on either protocol:** C really lowers the voice readout's echo. Stage 3a's
+     casualty is confirmed as a cost, and C does not ship. The next candidate, if wanted, is
+     option (c): leave central's target alone, its own registration.
+  3. **NO MATERIAL COST on BOTH protocols:** the casualty was a boundary draw, bounded by the
+     interval. Whether to proceed to the long tier is the owner's call.
+  4. **Anything else** (SMALL COST, NO VERDICT, or mixed): reported per protocol, with the
+     interval. A SMALL COST is a real but sub-margin cost and is named as such.
+
+**COST.** About 26 s per session single-threaded. At n = 384: 384 × 2 protocols × 2 genomes =
+1,536 sessions, plus 116 for stage 0. Parallel on this machine, that is about an hour.
+
+**Credit:** Schuirmann (1987), the margin rule, already in the README References.
