@@ -23550,7 +23550,7 @@ the 12 projected.
 | auditory, vision | 2.55, 2.54 | 2.508, 2.561 | unchanged (never joined) | 0 |
 | vocal | 5.00 | 3.933 | exempt | 0 |
 
-  - **The amendment was needed.** Central's steps were 0.12, 0.06, 0.03, 0.02, 0.01 and then 0.00,
+  - **The amendment was needed.** Central's steps were 0.12, 0.06, 0.03, 0.02 and then 0.00 (CORRECTED by the §97 audit; pass 7 was forced by EXPRESSION's last 0.01 step, 6.87 → 6.86),
     so the fixed point came at pass 7. Under the registered cap of 4 the run would have been VOID
     by arithmetic. The registered first-pass predictions held (6.57, 4.19, 6.98), and **the one-pass
     central target is 0.23 Hz above the fixed point.**
@@ -23625,7 +23625,7 @@ each).
     formants identical. This is one creature with no SE, so it is not a casualty under the
     registered rule. **But it is on the auditory → vocal side, the tract §80 showed a green fast
     tier cannot price, so stage 3 must read §80's tract instruments FIRST.** That means
-    `quietecho`'s `artic` guard and the 9 instruments of §80, about 52 min, which is a cheap
+    `quietecho`'s `artic` guard and the 8 auditory → vocal instruments of §80 (CORRECTED by the §97 audit from "9"), about 52 min, which is a cheap
     prefix of the 88 h.
 
 **BRANCH 4 (registered): FAST TIER CLEAN, LONG TIER NOT YET RUN.**
@@ -23666,3 +23666,57 @@ row (`babble`'s vocal module rate −27%, larynx output unchanged).
     `partprobe` showed in §80.
 
 **Nothing ships.**
+
+### §97 AUDIT OF §93–§97, ON THE OWNER'S REQUEST — WHAT WAS WRONG (2026-11-26, written while stage 3a runs)
+
+Every number quoted in §96–§97 was recomputed from its log, and every claim of disjointness and
+every instrument row was checked against the code that prints it.
+
+**1. THE STAGE-2 WATCH ROW WAS OVER-READ — WITHDRAWN AS A SIGNAL.** `babble`'s "vocal module rate"
+(5.37 → 3.91 Hz) and "auditory rate" (3.19 → 2.55 Hz) are `module.mean_rate` read ONCE, at the
+session's last tick (`experiments_milestones.cpp:763`, `:773`). That is a 1-second EMA:
+`rate_alpha_ = dt / 1000` (`network.cpp:213`).
+  - So each row is **one second of one creature**, in a vocal module that is on about half the time
+    (duty 0.50).
+  - That is not a session rate, and it has no SE. Calibrate's free-running vocal rate on the same
+    two genomes is 4.12 vs 4.16 Hz. Every SESSION-AVERAGED `babble` row (duty, vocalisations,
+    amplitude, formants) is unchanged.
+  - Calling it "the largest descriptive move in the tier" compared a snapshot against averages.
+  - **What survives:** stage 3a was still the right next step, because §80's rule runs the tract
+    instruments before any genome edit ships. Its justification is the rule, not this row.
+  - The same last-tick snapshot is what `calibrate`/`calmean` read. That is fine there: the quiet
+    free-run is stationary, and §95/§96 average it over hundreds of seeds.
+
+**2. Stage 0's step list was mis-transcribed.** Central's steps were 0.12, 0.06, 0.03, 0.02, 0.00,
+not "…0.02, 0.01, 0.00". Pass 7 was forced by expression's last 0.01 step (6.87 → 6.86), not by
+central's. Corrected inline.
+
+**3. "The 9 instruments of §80" is 8.** The auditory → vocal set has 8 instruments. The "9" is §80's
+count of failing instruments, a different list. Corrected inline.
+
+**4. Stage 3a's first launch measured nothing.** All 16 runs REFUSED in 2 ms, because `--ticks` was
+not passed and the binary defaults to 120k.
+  - This is the "deferral note's command is untested code" lesson again: I did not smoke the exact
+    loop.
+  - The refusal is loud, so nothing false was read. The relaunch passes each instrument's registry
+    length.
+
+**5. Already disclosed in the results, listed for completeness:**
+  - stage 0's cost projection, 12 min per pass vs 19 measured;
+  - stage 2's expression prediction, +0.26 vs +0.22 measured;
+  - the registered pass cap of 4, amended before the full run.
+
+**6. Process.** One C++ edit (`run_calmean` → `calmean_impl`) went in through a python heredoc
+against the readable-edits rule. It was asserted unique and is a one-line change. Noted, not
+repeated.
+
+**CHECKED AND FOUND SOUND:**
+  - The fresh seeds 3000–3095 collide with no other instrument. The only other 7919-stride offset
+    near them, `kHCSeedOffset`, is 288559, not a multiple of 7919.
+  - `calmean`/`calderive`'s exemptions use exactly `calibrate`'s role test.
+  - Every SE in §97's stage 2 comparison table (selfcode 1.03 SE, interoprobe 0.64 SE) recomputes.
+  - §96's comparator figures (1.03 Hz, SD 1.17) recompute.
+  - The stage 1 firing probability (expression 0.99) recomputes.
+  - The 3.5 SE family-wise figure recomputes: two-tailed p 4.7e-4 × 100 rows = 0.047.
+  - §94's zero-SE asleep fraction is the known §92 constant, already under a never-read rule. It is
+    not a new defect.
