@@ -23791,3 +23791,74 @@ numbers" rule failing in the other direction: the numbers were not archived eith
   - §92: the 58.8 SE first-sleep shift, and the DILUTION attribution. 1102 neurons + 126 at
     0.00061 predicts 0.00440 against 0.00441 measured; the text had skipped this step and it
     holds. Its "±0.00000" is print precision, not a zero SE.
+
+### AUDIT OF §70–§79, ON THE OWNER'S REQUEST (2026-11-26)
+
+**Method.** The same as the §80–§92 audit:
+  - every headline number recomputed from its archived log;
+  - every derived formula re-run (d′ conversions, XOR ceilings, bounds, power counts,
+    normalised ratios);
+  - every comparison checked for which arm and which SE it uses.
+
+**No verdict in §70–§79 changes.** Five statements are wrong or overreach, and two of them
+contradict each other.
+
+**1. §70 AND §75 MAKE OPPOSITE OVERSTATEMENTS ABOUT `drive-net` AGAINST `drive-exc`.**
+  - §70 says they are "the same number to within an SE at every dose". From §70's own ladder,
+    `net` − `exc` is +0.0251 (tau100), +0.0003 (tau300), +0.0271 (tau1000) and +0.0194 (tau3000),
+    with per-cell SEs of about 0.017. So two doses differ by about 1.5 SE (unpaired), and the sign
+    is positive at all four.
+  - §75 then uses the opposite as an argument: "`drive-net` beats `drive-exc` at every rung". That
+    overreaches the other way. At tau300 the gap is 0.0003, and on §75's own fresh 12 at tau3000
+    `net` is LOWER (0.8457 against 0.8552).
+  - **What the data say:** on §77's 196 creatures at tau3000, `net` exceeds `exc` by 0.021, about
+    3.6 SE unpaired. That is the only well-powered reading, and it is one dose.
+  - **§70's conclusion survives:** inhibitory cancellation would make `net` LOWER than `exc`, and it
+    is not lower. The conclusion stands on the sign, not on "the same number".
+
+**2. §77 BORROWED AN SE IT HAD PRINTED.**
+  - §77 compares its fresh 0.6734 with "§70 SELECTED 0.6686 ± 0.0169 (SE borrowed from §71's
+    reading of the same quantity; §70 printed none)". Yet §77's own ladder prints that exact cell,
+    `stp tau3000` (§70's 12 creatures, identical values), at **± 0.0282**: `n78` log line 603.
+  - The borrowed SE was tau1000's, 1.7× too small. The honest difference is +0.0048 ± 0.0288,
+    **0.17 SE, not 0.3.** §76's preface repeats the 0.3.
+  - "REPLICATES" stands, and more comfortably. The defect is quoting an anchor without its own
+    error ([[aibaby-anchor-carries-its-own-error]]) when the error was on the same screen.
+
+**3. §71's "all three replicate within 1–2 SE" is loose.**
+  - Drive and membrane replicate within 0.2 and 0.4 SE.
+  - The spike rung came in **2.1 SE lower** on fresh creatures (0.5469 against §70's selected
+    0.5940): the signature of a selected cell regressing.
+  - The VERDICT replicated (spikes under the bar, on an oracle above it), not the value.
+
+**4. §75's XOR arithmetic reasoned on word B alone.**
+  - "p = 0.6507 → assembled 0.5454" assumes BOTH words decode at B's 0.6507. A's trace in the same
+    space is 0.5447. The actual pair gives 0.5447 × 0.6507 + 0.4553 × 0.3493 = **0.513**, which
+    matches the measured 0.5179. The 0.5454 does not.
+  - So §75's "187 events, 1.68× short" bound, priced on B, is far too OPTIMISTIC. By §76's own
+    method A is the binding word and needs p = 0.998. The burst route is closed more firmly than
+    §75 said, and nothing reopens.
+
+**5. §74's cost table mislabels a row.**
+  - "STARVED 209 creatures for a 2-SE reading" is the n that would put the measured NEGATIVE slope
+    (−0.00552) 2 SE from flat. Rejecting flat there would establish a negative slope, which
+    supports neither hypothesis.
+  - The prose ("it would establish a slope near −0.005 whose sign flipped") reads it correctly.
+    The row label does not.
+
+**CHECKED AND FOUND SOUND (recomputed, matching their logs):**
+  - §70: 316 SE, +15.95%, 7.7% vs 20.4% depletion (2.6×), and the membrane 0.2 SE under the bar.
+  - §71: the probe refusal, G-EAR 28 SE, A1B1 − A0B0 at 2.1 SE, and the paired-index fix shown as
+    a byte-identical no-op.
+  - §72: 1.5 spikes per neuron, about 21 per group, and the same-arm 0.5339 (from the smoke log).
+  - §73: spikes per neuron per window, and the 16-creature figure (50% power, which §74 corrected).
+  - §74: the 1.6 SE sign flip, the 3.0 → 1.7 SE anchor correction, the 5000 ms bound (which also
+    holds the oracle at its 100 ms value in its own favour), and 209/422 as computed.
+  - §75: 36 SE under the bar, the d′ chain (0.7744 → 1.5035, 3.77×), the replication 0.8 SE, and
+    the 0.6459 prediction.
+  - §76: every row of the decision-moment table (checked on `vocal`: 0.5382, 0.6771, 16.5×).
+  - §77: 3.9 SE clearance, every normalised ratio (97.7% and 65.2%; 73.4% and 58.7%), and the
+    2.98× raw ask.
+  - §78: the silenced floor 0.6767, the 1.8 SE gap, R1's O* = 0.6601 and 0.7053, and R3's between
+    variance and 0.5786.
+  - §79: 0.5230 against the bar, the 0.127 shortfall, and all three G-SELF anchors.
