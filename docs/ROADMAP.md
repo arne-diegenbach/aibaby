@@ -23720,3 +23720,74 @@ repeated.
   - The 3.5 SE family-wise figure recomputes: two-tailed p 4.7e-4 × 100 rows = 0.047.
   - §94's zero-SE asleep fraction is the known §92 constant, already under a never-read rule. It is
     not a new defect.
+
+### AUDIT OF §80–§92, ON THE OWNER'S REQUEST (2026-11-26)
+
+**Method.**
+  - Every headline number in each RESULT section was recomputed from its archived log: SEs,
+    differences, bounds, ratios and cost projections.
+  - Every derived mechanism claim was re-run against the kernel's own constants.
+  - Each headline row was checked for how it is read (snapshot or average; paired or not).
+
+**1. §83's FATIGUE ARITHMETIC IS AN OVERCLAIM — IT EXPLAINS ABOUT HALF, NOT "THE EFFECT".**
+  - **The kernel.** Fatigue starts at 0 (`brain.h:25`) and accumulates `fatigue_rate` × activity
+    while awake (`brain.cpp:643`). So first sleep falls at exactly
+    T = 0.90 / (0.00017 × mean activity).
+  - **The formula is exact when activity is MEASURED.** §92's D creature at 0.00483 predicts
+    1,096k ticks against 1,100k measured (0.4%).
+  - **§83 used an ASSUMED "crude baseline" of 0.0060.** The kernel implies 0.00509 from the
+    shipped creature's own 1040 s. Adding the enteric module's neurons at their stated rates, with
+    1102 birth neurons, then gives:
+
+| enteric neurons | predicted speed-up | measured | share of the excess explained |
+|---|---|---|---|
+| 12 | ×1.09 (952 s) | ×1.18 (881.6 s) | 52% |
+| 40 | ×1.29 (804 s) | ×1.55 (671.4 s) | 53% |
+| 120 | ×1.85 (563 s) | ×2.40 (432.7 s) | 60% |
+
+  - The text said "same order and stronger than the arithmetic… so the mechanism accounts for the
+    effect". **It accounts for the direction and about half the size, at every module size.** The
+    rest is unexplained. Either the enteric module fires faster while AWAKE than its quoted
+    session rate, or something else rises with it. Neither was measured.
+  - The size result (SIZE IS FREE) and the dream-is-free rule are unaffected in direction.
+  - **The general rule "price every new module by its effect on the mean rate" is EXACT for a
+    quiet module (§92) and UNDER-PREDICTS a loud one by about 1.3×** (2.40 / 1.85). Any future
+    module must measure its awake activity, not assume it.
+
+**2. §83's sleep tables are NOT ARCHIVED.** The tables are fell-asleep 432.7 s, the threshold
+sweep and the size sweep. No log in `results/` holds them, and the section cites only
+"scratchpad", which is wiped between sessions. The genome, `dna/enteric.toml`, is archived, so they
+are reproducible but not checkable from the record. This is the "archive the genome, not the
+numbers" rule failing in the other direction: the numbers were not archived either.
+
+**3. §87 stage 2's "the dose costs no measurable waking life" was asserted without an SE.**
+  - The −310 ticks are a difference of two arm means; the log prints no SE, so this is not
+    "paired-by-arm". By §92's later measured spread (difference SE about 1,700 ticks at n = 96),
+    it is about −0.2 SE, so the claim survives.
+  - It also leaned on the slept fraction (0.1118 / 0.1120 / 0.1118). §92 showed that number is
+    constant by construction whenever one sleep fits in the session, so it carried no
+    information. The same holds for every "slept fraction unchanged" cost line in §84–§91. Those
+    lines are uninformative, not wrong, and the first-sleep columns beside them are what carried
+    the cost.
+
+**4. Nits.**
+  - §82's chase cost (1160 creatures in "13.7 h", 2274 in "26.8 h") is about 4% under the
+    measured rate of 4.32 h per 352 creatures: 14.2 h and 27.9 h.
+  - §82's "under a tenth of a d'²" is a 0.103 bound, about a tenth.
+
+**CHECKED AND FOUND SOUND (recomputed, matching their logs):**
+  - §80: the 8/8 v74 control, artic 0.790 vs 0.519 (from `n80-v74ctl-quietecho.log`), the
+    0.271 / 0.0009 price, and 43.97 h.
+  - §81: every ladder step and its SE (1.5, 6.9, 8.5, 13.4 SE); the 47.1 and 44.0 SE
+    replications (the quiet pair is 2.5227 − 2.3968); every smoke-to-full delta and derived
+    noise-SD figure; first sleep at 64.0% of the session.
+  - §82 stage 1: −1.1 SE, the 0.103 bound, the pooled −0.0674 ± 0.0481, and n = 1160 / 2274.
+  - §83: the 2.4× and 23-point figures as measured, and the 1% / 11% shares.
+  - §84–§86: every bound and SE, the silenced − heard difference of 0.0024 ± 0.0114, and the
+    echo's 0.23 to the bar.
+  - §87–§89: R3, the replication, the 19.6 SE mechanism, the spike-rung SE distances, F − C and
+    its 0.0175 bound, the 5.5× count ratio, and both sleep costs.
+  - §90–§91: every I_C / I_B, every bound (0.0081, 4.68 ms, 5.60 ms), and G-REL.
+  - §92: the 58.8 SE first-sleep shift, and the DILUTION attribution. 1102 neurons + 126 at
+    0.00061 predicts 0.00440 against 0.00441 measured; the text had skipped this step and it
+    holds. Its "±0.00000" is print precision, not a zero SE.
