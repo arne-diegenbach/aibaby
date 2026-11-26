@@ -1,0 +1,30 @@
+experiment: echopowpre
+
+  §97 STAGE 3b STAGE 0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS) — THE CALIBRATION ECHO, D AGAINST C, PAIRED
+
+  genomes     D dna/default.toml, C dna/default_seedmean.toml
+  creatures   24 pairs, r = 1000..1023, seed = genome seed + r * 7919, 900000 ticks,
+              taught arm, g3probe protocol (mode 0) and condprobe protocol (mode 1)
+  margin      0.025 (D's clearance over g3probe's 0.700 bar)
+
+    G-REPRO mode 0  D 0.750 0.875 0.750 0.625 0.625   C 0.875 0.750 0.750 0.500 0.500
+    G-REPRO mode 1  D 0.875 1.000 0.875 0.875 0.625   C 0.875 1.000 0.875 0.625 0.500
+
+    G-GENOME   C differs from D on 3 lines, all target_rate_hz   PASS
+    G-N        D 24 of 24, C 24 of 24 sessions ok                PASS
+    G-REPRO    r = 0..4 reproduce stage 3a's echoes exactly        PASS
+
+  protocol            D mean echo      C mean echo      Delta = C - D (paired)
+  g3probe  (mode 0)   0.8073 +- 0.0328  0.8021 +- 0.0291  -0.0052 +- 0.0315 (SD 0.1541)
+  condprobe (mode 1)  0.8333 +- 0.0316  0.8229 +- 0.0309  -0.0104 +- 0.0260 (SD 0.1272)
+
+  STAGE 0 RULE: smallest n in {192, 384, 768} with P(NO MATERIAL COST | true 0)
+  >= 0.95 on BOTH protocols, SE = 1.5 x SD / sqrt(n)
+
+    n  192:  mode 0 SE 0.0167 P(fires) 0.308  mode 1 SE 0.0138 P(fires) 0.427
+    n  384:  mode 0 SE 0.0118 P(fires) 0.547  mode 1 SE 0.0097 P(fires) 0.715
+    n  768:  mode 0 SE 0.0083 P(fires) 0.841  mode 1 SE 0.0069 P(fires) 0.948
+
+    -> stage 1 runs at n = 768 (the cap; print the firing probability with the result). Write it into kEpN. These numbers are NOT
+       results.
+exit=0

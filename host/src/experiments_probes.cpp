@@ -2414,6 +2414,261 @@ bool run_condprobe(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
   return run_g3probe_impl(blob, ticks, verbose, 1);
 }
 
+// --- echopow (§97 stage 3b): a powered, paired test of the calibration echo.
+//
+// The quantity is `run_g3probe_session(...).echo`, exactly the row g3probe (mode 0)
+// and condprobe (mode 1) print as "calibration echo": measured in the calibration
+// trials at the start of the session, before any teaching, so the taught arm alone
+// carries it. D = dna/default.toml, C = dna/default_seedmean.toml, paired by r
+// (same seed; C differs only in three target values, which draw no randoms).
+// Delta = echo(C) - echo(D). Verdict per protocol against the margin 0.025 (D's
+// clearance over g3probe's 0.700 bar), two-tailed, read in the registered order.
+namespace {
+constexpr const char* kEpD = "dna/default.toml";
+constexpr const char* kEpC = "dna/default_seedmean.toml";
+constexpr double kEpMargin = 0.025;
+constexpr uint32_t kEpPreFrom = 1000, kEpPreN = 24, kEpFrom = 2000;
+// Stage 1's n, fixed by stage 0's rule and written here AFTER stage 0. 0 = not yet
+// fixed, and `echopow` refuses.
+constexpr uint32_t kEpN = 768;  // fixed by stage 0 (results/n97-s3b-echopowpre.log): the cap; P(fires|0) 0.841 mode 0, 0.948 mode 1
+
+struct EchoPowOut {
+  bool ok = false;
+  double echo[2] = {0.0, 0.0};  // [mode 0 = g3probe, mode 1 = condprobe]
+};
+
+EchoPowOut ep_measure(const std::vector<uint8_t>& blob, uint64_t ticks, uint32_t r) {
+  EchoPowOut o;
+  std::vector<uint8_t> variant = blob;
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return o;
+  const uint64_t seed = dna.header().seed + uint64_t(r) * 7919ull;
+  std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+  for (int mode = 0; mode < 2; ++mode) {
+    const G3Probe p = run_g3probe_session(variant, ticks, true, 0x51E7u, mode);
+    if (!p.ok) return o;
+    o.echo[mode] = p.echo;
+  }
+  o.ok = true;
+  return o;
+}
+
+bool ep_text(const char* path, std::string& out) {
+  FILE* f = std::fopen(path, "rb");
+  if (!f) return false;
+  out.clear();
+  char buf[65536];
+  size_t k;
+  while ((k = std::fread(buf, 1, sizeof buf, f)) > 0) out.append(buf, k);
+  std::fclose(f);
+  return true;
+}
+
+double ep_phi(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
+
+void ep_mse(const std::vector<double>& x, double& m, double& sd, double& se) {
+  m = sd = se = 0.0;
+  if (x.empty()) return;
+  for (double v : x) m += v;
+  m /= double(x.size());
+  if (x.size() < 2) return;
+  double ss = 0.0;
+  for (double v : x) ss += (v - m) * (v - m);
+  sd = std::sqrt(ss / double(x.size() - 1));
+  se = sd / std::sqrt(double(x.size()));
+}
+
+bool run_echopow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  std::vector<uint8_t> bd, bc;
+  std::string err, td, tc;
+  if (!compile_dna_toml(kEpD, bd, err) || !compile_dna_toml(kEpC, bc, err)) {
+    std::printf("  REFUSED: a genome does not compile: %s\n", err.c_str());
+    return false;
+  }
+  if (blob != bd) {
+    std::printf("  REFUSED: run this on %s. Nothing was measured.\n", kEpD);
+    return false;
+  }
+  // G-GENOME: C differs from D on exactly three lines, each a target_rate_hz line.
+  uint32_t ndiff = 0, nbad = 0;
+  if (ep_text(kEpD, td) && ep_text(kEpC, tc)) {
+    size_t a = 0, b = 0;
+    while (a < td.size() || b < tc.size()) {
+      const size_t ea = td.find('\n', a), eb = tc.find('\n', b);
+      const std::string la = td.substr(a, ea == std::string::npos ? std::string::npos : ea - a);
+      const std::string lb = tc.substr(b, eb == std::string::npos ? std::string::npos : eb - b);
+      if (la != lb) {
+        ++ndiff;
+        if (la.rfind("target_rate_hz = ", 0) != 0 || lb.rfind("target_rate_hz = ", 0) != 0) ++nbad;
+      }
+      if (ea == std::string::npos || eb == std::string::npos) {
+        if ((ea == std::string::npos) != (eb == std::string::npos)) ++nbad;
+        break;
+      }
+      a = ea + 1;
+      b = eb + 1;
+    }
+  } else {
+    nbad = 1;
+  }
+  const bool g_genome = ndiff == 3 && nbad == 0;
+  if (!pre && kEpN == 0) {
+    std::printf("  REFUSED: stage 1's n is not fixed yet. Run `echopowpre` (stage 0), apply its\n"
+                "  rule, and write n into kEpN. Nothing was measured.\n");
+    return false;
+  }
+  const uint32_t n = pre ? kEpPreN : kEpN;
+  const uint32_t from = pre ? kEpPreFrom : kEpFrom;
+  std::printf("\n  §97 STAGE 3b %s — THE CALIBRATION ECHO, D AGAINST C, PAIRED\n\n"
+              "  genomes     D %s, C %s\n"
+              "  creatures   %u pairs, r = %u..%u, seed = genome seed + r * 7919, %llu ticks,\n"
+              "              taught arm, g3probe protocol (mode 0) and condprobe protocol (mode 1)\n"
+              "  margin      %.3f (D's clearance over g3probe's 0.700 bar)\n\n",
+              pre ? "STAGE 0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "STAGE 1",
+              kEpD, kEpC, n, from, from + n - 1, (unsigned long long)ticks, kEpMargin);
+
+  // G-REPRO on r = 0..4 (stage 0 only): stage 3a's per-creature echoes.
+  bool g_repro = true;
+  if (pre) {
+    const double want[2][2][5] = {
+        {{0.750, 0.875, 0.750, 0.625, 0.625}, {0.875, 0.750, 0.750, 0.500, 0.500}},
+        {{0.875, 1.000, 0.875, 0.875, 0.625}, {0.875, 1.000, 0.875, 0.625, 0.500}}};
+    std::vector<EchoPowOut> rd = parallel_reps<EchoPowOut>(5, [&](uint32_t i) {
+      return ep_measure(bd, ticks, i);
+    });
+    std::vector<EchoPowOut> rc = parallel_reps<EchoPowOut>(5, [&](uint32_t i) {
+      return ep_measure(bc, ticks, i);
+    });
+    for (int mode = 0; mode < 2; ++mode) {
+      std::printf("    G-REPRO mode %d  D", mode);
+      for (uint32_t i = 0; i < 5; ++i) {
+        std::printf(" %.3f", rd[i].echo[mode]);
+        if (!rd[i].ok || std::fabs(rd[i].echo[mode] - want[mode][0][i]) > 1e-9) g_repro = false;
+      }
+      std::printf("   C");
+      for (uint32_t i = 0; i < 5; ++i) {
+        std::printf(" %.3f", rc[i].echo[mode]);
+        if (!rc[i].ok || std::fabs(rc[i].echo[mode] - want[mode][1][i]) > 1e-9) g_repro = false;
+      }
+      std::printf("\n");
+    }
+  }
+
+  std::vector<EchoPowOut> rd = parallel_reps<EchoPowOut>(n, [&](uint32_t i) {
+    return ep_measure(bd, ticks, from + i);
+  });
+  std::vector<EchoPowOut> rc = parallel_reps<EchoPowOut>(n, [&](uint32_t i) {
+    return ep_measure(bc, ticks, from + i);
+  });
+  uint32_t okd = 0, okc = 0;
+  for (uint32_t i = 0; i < n; ++i) {
+    if (rd[i].ok) ++okd;
+    if (rc[i].ok) ++okc;
+  }
+  const bool g_n = okd == n && okc == n;
+  std::printf("\n    G-GENOME   C differs from D on %u lines, all target_rate_hz   %s\n"
+              "    G-N        D %u of %u, C %u of %u sessions ok                %s\n",
+              ndiff, g_genome ? "PASS" : "FAIL", okd, n, okc, n, g_n ? "PASS" : "FAIL");
+  if (pre)
+    std::printf("    G-REPRO    r = 0..4 reproduce stage 3a's echoes exactly        %s\n",
+                g_repro ? "PASS" : "FAIL");
+  if (!g_n) {
+    std::printf("\n    -> VOID (branch 1). Nothing was read.\n");
+    return false;
+  }
+
+  const char* pname[2] = {"g3probe  (mode 0)", "condprobe (mode 1)"};
+  double dm[2], dsd[2], dse[2];
+  std::printf("\n  %-19s %-16s %-16s %s\n", "protocol", "D mean echo", "C mean echo",
+              "Delta = C - D (paired)");
+  for (int mode = 0; mode < 2; ++mode) {
+    std::vector<double> xd, xc, dx;
+    for (uint32_t i = 0; i < n; ++i) {
+      xd.push_back(rd[i].echo[mode]);
+      xc.push_back(rc[i].echo[mode]);
+      dx.push_back(rc[i].echo[mode] - rd[i].echo[mode]);
+    }
+    double md, sdd, sed, mc, sdc, sec;
+    ep_mse(xd, md, sdd, sed);
+    ep_mse(xc, mc, sdc, sec);
+    ep_mse(dx, dm[mode], dsd[mode], dse[mode]);
+    std::printf("  %-19s %.4f +- %.4f  %.4f +- %.4f  %+.4f +- %.4f (SD %.4f)\n", pname[mode], md,
+                sed, mc, sec, dm[mode], dse[mode], dsd[mode]);
+  }
+
+  if (pre) {
+    std::printf("\n  STAGE 0 RULE: smallest n in {192, 384, 768} with P(NO MATERIAL COST | true 0)\n"
+                "  >= 0.95 on BOTH protocols, SE = 1.5 x SD / sqrt(n)\n\n");
+    const uint32_t cand[3] = {192, 384, 768};
+    uint32_t chosen = 0;
+    for (uint32_t c : cand) {
+      double pmin = 1.0;
+      std::printf("    n %4u:", c);
+      for (int mode = 0; mode < 2; ++mode) {
+        const double se = 1.5 * dsd[mode] / std::sqrt(double(c));
+        // NO MATERIAL COST iff Dhat >= max(-2 SE, -margin + 2 SE).
+        const double z = se > 0.0 ? std::min(2.0, (kEpMargin - 2.0 * se) / se) : 0.0;
+        const double pf = ep_phi(z);
+        pmin = std::min(pmin, pf);
+        std::printf("  mode %d SE %.4f P(fires) %.3f", mode, se, pf);
+      }
+      std::printf("\n");
+      if (chosen == 0 && pmin >= 0.95) chosen = c;
+    }
+    if (chosen == 0) chosen = 768;
+    std::printf("\n    -> stage 1 runs at n = %u%s. Write it into kEpN. These numbers are NOT\n"
+                "       results.\n",
+                chosen, chosen == 768 ? " (the cap; print the firing probability with the result)" : "");
+    return g_genome && g_repro;
+  }
+
+  std::printf("\n  THE REGISTERED READING ([L, U] = Delta +- 2 SE, margin %.3f)\n\n", kEpMargin);
+  int material = 0, nomat = 0;
+  for (int mode = 0; mode < 2; ++mode) {
+    const double L = dm[mode] - 2.0 * dse[mode], U = dm[mode] + 2.0 * dse[mode];
+    const char* v;
+    if (U < -kEpMargin) {
+      v = "MATERIAL COST";
+      ++material;
+    } else if (U < 0.0 && L >= -kEpMargin) {
+      v = "SMALL COST (resolved, inside the margin)";
+    } else if (L > 0.0) {
+      v = "C RAISES THE ECHO";
+    } else if (L >= -kEpMargin && U >= 0.0) {
+      v = "NO MATERIAL COST";
+      ++nomat;
+    } else {
+      v = "NO VERDICT";
+    }
+    std::printf("    %-19s [%+.4f, %+.4f]  -> %s\n", pname[mode], L, U, v);
+  }
+  if (!g_genome) {
+    std::printf("\n    -> VOID (branch 1): G-GENOME failed.\n");
+  } else if (material > 0) {
+    std::printf("\n    -> BRANCH 2: MATERIAL COST. C lowers the voice readout's echo; stage 3a's\n"
+                "       casualty is a cost, not a draw. C does not ship.\n");
+  } else if (nomat == 2) {
+    std::printf("\n    -> BRANCH 3: NO MATERIAL COST on both protocols. Stage 3a's casualty was a\n"
+                "       boundary draw, bounded by the intervals above. The long tier is the\n"
+                "       owner's call.\n");
+  } else {
+    std::printf("\n    -> BRANCH 4: reported per protocol above.\n");
+  }
+  std::printf("\n    Nothing ships.\n");
+  return g_genome;
+}
+}  // namespace
+
+bool run_echopowpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_echopow_impl(blob, ticks, true);
+}
+
+bool run_echopow(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_echopow_impl(blob, ticks, false);
+}
+
 bool run_g3probe_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose,
                       int mode) {
   aibaby::Dna dna;

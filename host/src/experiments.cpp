@@ -605,6 +605,12 @@ const Spec kSpecs[] = {
     {"calderive", 120000, Expect::kGuard, Tier::kLong,
      "§97 stage 0: seed-mean targets by fixed-point iteration on 768 derivation seeds;"
      " writes dna/default_seedmean.toml. Run on dna/default.toml"},
+    {"echopowpre", 900000, Expect::kGuard, Tier::kLong,
+     "§97 stage 3b, stage 0: G-REPRO on r 0-4, SD of the paired echo difference on 24"
+     " pairs, and the n stage 1 runs at. Never results. Run on dna/default.toml"},
+    {"echopow", 900000, Expect::kGuard, Tier::kLong,
+     "§97 stage 3b: the calibration echo, D against C, paired, margin 0.025, two"
+     " protocols. Run on dna/default.toml"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2076,6 +2082,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "calmean") ok = run_calmean(dna_blob, ticks, verbose);
   else if (name == "calmeanfresh") ok = run_calmeanfresh(dna_blob, ticks, verbose);
   else if (name == "calderive") ok = run_calderive(dna_blob, ticks, verbose);
+  else if (name == "echopowpre") ok = run_echopowpre(dna_blob, ticks, verbose);
+  else if (name == "echopow") ok = run_echopow(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});

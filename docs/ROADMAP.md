@@ -24005,3 +24005,21 @@ long tier anyway. That decision stays the owner's. Nothing ships.
 1,536 sessions, plus 116 for stage 0. Parallel on this machine, that is about an hour.
 
 **Credit:** Schuirmann (1987), the margin rule, already in the README References.
+
+### §97 STAGE 3b, STAGE 0 — n FIXED AT 768 (THE CAP); THE SD CAME IN HIGH AGAIN; THE COST IS ABOUT 6 h, NOT 1 h (2026-11-26)
+
+`results/n97-s3b-echopowpre.log`, 16.8 min. **Every gate PASSES:**
+  - G-GENOME: 3 lines, all of them `target_rate_hz`.
+  - G-N: 24 of 24 on both genomes.
+  - **G-REPRO: r = 0…4 reproduce all 20 of stage 3a's per-creature echoes exactly**, on both
+    protocols and both genomes. The parallel instrument is the instruments' own measurement.
+
+  - **The SD of Δ is 0.154 (mode 0) and 0.127 (mode 1),** against stage 3a's rough 0.11: +40%, in
+    the direction every SD projection here has gone.
+  - **The rule fixes n = 768, the cap.** P(NO MATERIAL COST fires | true 0) at 768 is **0.841
+    (mode 0) and 0.948 (mode 1)**, under the 0.95 the rule asks for, so both are printed with the
+    result as registered.
+  - The pre-flight Δs (−0.005 and −0.010 on 24 pairs) are NOT results.
+  - **The registered cost was wrong.** A session costs about 98 CPU-s, not 26: the 26 s was
+    `g3probe`'s per-session wall time, misread. 3,072 sessions on 14 cores is about **6 h**, not
+    the registered hour. Reported to the owner as the run started.
