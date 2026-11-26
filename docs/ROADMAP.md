@@ -23640,3 +23640,29 @@ each).
 `calderive` and are not kept.
 
 **Nothing ships.**
+
+### §97 STAGE 3a — §80's AUDITORY → VOCAL INSTRUMENTS FIRST, ON BOTH GENOMES — REGISTERED BEFORE THE RUN (2026-11-26)
+
+The owner asked for the cheap prefix of stage 3 before the 88 h battery, because of stage 2's WATCH
+row (`babble`'s vocal module rate −27%, larynx output unchanged).
+
+  - **Instruments:** §80's auditory → vocal set: `quietecho`, `condprobe`, `g3probe`, `pairprobe`,
+    `eligprobe`, `restate`, `partprobe`, `imitate`.
+  - **Runs:** each at its registry length, on D (`dna/default.toml`) and on C
+    (`dna/default_seedmean.toml`), same binary. Logs go to `results/n97-s3a-<exp>-{D,C}.log`.
+  - **Rules are stage 3's, unchanged:**
+    - **CASUALTY:** an instrument fails on C and passes on D. A failure on both is PRE-EXISTING.
+    - Each primary is compared two-tailed, C − D. **MOVE** past 3.5 SE; **WATCH** between 2 and
+      3.5 SE.
+    - Compare positive-control rows, not only verdicts.
+    - **`quietecho`'s `artic` row is a GUARD** (§80: any change on this tract carries it).
+  - **Branches:**
+    1. **A casualty or a MOVE:** STOP. The 88 h tier is not run. C is not shippable as is, and the
+       row is the finding.
+    2. **Clean, WATCH rows allowed and printed:** the auditory → vocal side does not refuse C.
+       The remaining stage 3 (`verify-long` + `verify-teach` on both, about 88 h) is again the
+       owner's go.
+  - **Do NOT read wall time as speed.** A cheap run can mean a creature that refused early, as
+    `partprobe` showed in §80.
+
+**Nothing ships.**
