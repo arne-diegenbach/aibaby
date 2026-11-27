@@ -24469,3 +24469,55 @@ owner's go.
 
 That is the pattern the amendment's clause names. **It is read only on r = 6000–6023, the owner's
 go**, at about 20 min.
+
+### §98 STAGE 1 RESULT — ABSENT: WHEN THE CREATURE ACTS, NO NEURON IN THE NETWORK HOLDS THE WORD. THE AMENDMENT'S PATTERN CLAUSE DID NOT FIRE (2026-11-27)
+
+`results/n98-s1-g2pool-24.log`, exit 0, `dna/default.toml` md5 fb419735…, 24 fresh creatures
+(r = 6000…6023).
+  - **Gates PASS:** G-N 24/24, G-CTRL 1.000, G-NULL 0.493 ± 0.011.
+  - **The registered prediction (PRESENT) was wrong.**
+
+| quantity, 200–600 ms after the word unless stated | value |
+|---|---|
+| **PRIMARY W_pool, vocal spikes outside F1** | **0.5152 ± 0.0138** (SD 0.067), [0.488, 0.543] |
+| W_f1, the F1 slice's spikes (printed) | 0.511 ± 0.015 |
+| W_aud, the ear (printed) | 0.559 ± 0.015 |
+| W_cen, central (printed) | 0.479 ± 0.012 |
+| X_pool / X_f1, word XOR own F1 (printed) | 0.504 / 0.496 |
+| W_pwrd, the pool's spikes WHILE the word plays (amendment) | 0.933 ± 0.010 |
+| W_grp, the 9 smoothed group readings (amendment) | 0.748 ± 0.020 (SD 0.099) |
+
+**→ ABSENT** (Hi 0.543 ≤ 0.60). The F1 group's plastic afferents carry the heard word at 0.93
+while it plays and at chance 200–600 ms later, when g2cond scores the act and reward arrives.
+
+**THE PATTERN CLAUSE DID NOT FIRE, AND THE CLAIM IS SCOPED TO THAT.** It needed
+W_grp − 2 SE ≥ 0.75; the value is 0.748 − 0.041 = 0.707. So this run does **not** license "the
+scored posture carries the word through the decoder's inertia" at M1b's bar. What it does show is
+narrower:
+  - The smoothed posture reads the word at 0.748 ± 0.020, +12 SE above chance (printed, not read).
+  - The spikes it is computed from read 0.515 in the same window.
+  - Some of what g2cond scores as the act is therefore word-dependent through `smoothing_ms`'s
+    800 ms inertia, outside the network. How much is not measured here.
+
+Two more things are disclosed:
+  - W_grp came in at 0.748 against the pre-flight's 0.821, with an SD of 0.099 against 0.044
+    (2.2×). That is the fifth SD projection in a row to come in high.
+  - The cost was 1270 s per session against 688 s, an unrelated machine load.
+
+**WHAT ABSENT MEANS FOR §98.** The premise holds, and it is sharper than the line assumed. Nothing
+in the network (vocal, the ear or central) carries the word when the creature acts. This is
+`ctxsrc`'s "a **transient** context has nowhere to be held" again, now measured on the F1 group's
+own afferents and inside g2cond's protocol. Two consequences, neither registered:
+  1. **Stage 1b cannot be a plain read-only mixing module.** Fed by these modules, it would mix
+     signals that no longer carry the word. A mixing population must also HOLD the word past
+     offset. That is persistence, the obstruction the archive named and never solved for the ear.
+     Its registration has to say where the persistence comes from.
+  2. **An alternative reading the data allows.** The act is scored on an 800 ms low-pass of the
+     groups, so part of it is set while the word still plays and the pool carries it at 0.93. Credit
+     assignment then turns on whether the eligibility trace spans from the word to the reward. That
+     is a credit-timing question, not a representation one, and it is not tested here.
+
+**Runs used toward the abandonment count: 1 of 3.**
+
+**Credit:** Fiete & Seung (2006); Werfel, Xie & Seung (2005); Rigotti et al. (2013); Fusi, Miller &
+Rigotti (2016); Schuirmann (1987). All are already in the README References.
