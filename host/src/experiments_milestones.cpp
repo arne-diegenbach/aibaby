@@ -45432,6 +45432,235 @@ bool run_g2cond(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) 
   return false;
 }
 
+// --- §98 stage 0/1: g2cond AT POWER, WITH THE ECHO TERM REMOVED --------------
+//
+// `run_g2cond_session` UNCHANGED, run in parallel over (seed, arm). The voice
+// echoes the heard word, so with no learning at all the hit rates after word A
+// and word B differ by a per-seed echo term E_r, and heard ~ +E + L, swap ~
+// -E + L. g2cond's "best of heard/swap" keeps |E| (biased up, and E's spread is
+// its +-0.153). The registered primary cancels E exactly:
+//
+//     L_r = (heard_r + swap_r) / 2 - random_r      paired on seed
+//
+// Readings, two-tailed, margin 0.05, in this order: CONDITIONAL (Lo > 0),
+// ANTI-CONDITIONAL (Hi < 0), NOT CONDITIONAL (Hi < 0.05 and Lo > -0.05),
+// NO VERDICT. Gates: G-POS (fixed arm's G2 measure mean - 2 SE > 0.05) and G-N
+// (>= 90% of seeds complete). ROADMAP §98.
+namespace {
+
+constexpr double kG2pMargin = 0.05;
+constexpr uint32_t kG2pPreN = 12;
+constexpr uint32_t kG2pFrom = 5000;
+// Fixed by stage 0's rule (smallest of 24/48/96 with P(NOT CONDITIONAL | 0)
+// >= 0.95 at SE = 1.5 SD / sqrt n). 0 = not yet fixed: stage 1 refuses.
+constexpr uint32_t kG2pN = 0;
+
+struct G2pJob {
+  GcRun g;
+  double secs = 0.0;
+};
+
+void g2p_mse(const std::vector<double>& x, double& m, double& sd, double& se) {
+  m = sd = se = 0.0;
+  if (x.empty()) return;
+  for (double v : x) m += v;
+  m /= double(x.size());
+  if (x.size() < 2) return;
+  double ss = 0.0;
+  for (double v : x) ss += (v - m) * (v - m);
+  sd = std::sqrt(ss / double(x.size() - 1));
+  se = sd / std::sqrt(double(x.size()));
+}
+
+double g2p_phi(double z) { return 0.5 * std::erfc(-z / std::sqrt(2.0)); }
+
+// P(NOT CONDITIONAL fires | true L = 0) at standard error s, and P(CONDITIONAL
+// fires | 0). NOT CONDITIONAL is L in [max(-2s, -m + 2s), min(2s, m - 2s)].
+void g2p_fire(double s, double& p_not, double& p_cond) {
+  p_not = p_cond = 0.0;
+  if (s <= 0.0) return;
+  const double lo = std::max(-2.0 * s, -kG2pMargin + 2.0 * s);
+  const double hi = std::min(2.0 * s, kG2pMargin - 2.0 * s);
+  if (hi > lo) p_not = g2p_phi(hi / s) - g2p_phi(lo / s);
+  p_cond = 1.0 - g2p_phi(2.0);
+}
+
+uint64_t g2p_fnv(const std::vector<uint8_t>& b) {
+  uint64_t h = 1469598103934665603ull;
+  for (uint8_t c : b) { h ^= c; h *= 1099511628211ull; }
+  return h;
+}
+
+bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const uint32_t n = pre ? kG2pPreN : kG2pN;
+  const uint32_t from = pre ? 0u : kG2pFrom;
+  std::printf("\n  §98 STAGE %s — g2cond AT POWER, ECHO TERM REMOVED\n\n",
+              pre ? "0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "0 MEASUREMENT (stage 1)");
+  if (n == 0) {
+    std::printf("  REFUSED: n is not fixed yet. Run g2condpowpre and set kG2pN by the\n"
+                "  registered rule first.\n");
+    return false;
+  }
+  std::printf("  genome      blob FNV-1a %016llx (record the file's md5 in the log)\n"
+              "  creatures   %u seeds, r = %u..%u, seed = genome seed + r * 7919, %llu ticks,\n"
+              "              4 arms each (fixed, heard, swap, random), run_g2cond_session unchanged\n"
+              "  primary     L_r = (heard_r + swap_r)/2 - random_r, paired on seed; margin %.2f\n\n",
+              (unsigned long long)g2p_fnv(blob), n, from, from + n - 1,
+              (unsigned long long)ticks, kG2pMargin);
+
+  const GcArm arms[4] = {{"fixed", 0}, {"heard", 1}, {"swap", 2}, {"random", 3}};
+  std::vector<G2pJob> jobs = parallel_reps<G2pJob>(n * 4, [&](uint32_t i) {
+    G2pJob j;
+    const uint32_t r = from + i / 4;
+    const int a = int(i % 4);
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const auto t0 = std::chrono::steady_clock::now();
+    j.g = run_g2cond_session(variant, ticks, arms[a].mode, reg);
+    j.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    return j;
+  });
+
+  // The archived g2cond per-seed values (README), printed beside r = 0..2 as a
+  // comparison only: the genome has changed since they were taken.
+  const double arch_h[3] = {+0.252, -0.335, +0.097};
+  const double arch_s[3] = {-0.124, +0.352, -0.074};
+
+  std::vector<double> L, E, g2m, old, hv, sv, rv, secs;
+  uint32_t complete = 0;
+  std::printf("  %-5s %-8s %-8s %-8s %-8s %-8s %-8s %s\n", "r", "fixedG2", "heard", "swap",
+              "random", "E", "L", "praise/scold (heard)");
+  for (uint32_t k = 0; k < n; ++k) {
+    const G2pJob* jr = &jobs[k * 4];
+    for (int a = 0; a < 4; ++a) secs.push_back(jr[a].secs);
+    bool ok = true;
+    for (int a = 0; a < 4; ++a) ok = ok && jr[a].g.ok;
+    const uint32_t r = from + k;
+    if (!ok) {
+      std::printf("  %-5u incomplete:", r);
+      for (int a = 0; a < 4; ++a)
+        std::printf(" %s %s(%llu ev, %llu/%llu)", arms[a].name, jr[a].g.ok ? "ok" : "NOT ok",
+                    (unsigned long long)jr[a].g.events, (unsigned long long)jr[a].g.praises,
+                    (unsigned long long)jr[a].g.scolds);
+      std::printf("\n");
+      continue;
+    }
+    ++complete;
+    auto c = [&](int a) { return jr[a].g.hit_when_want - jr[a].g.hit_when_not; };
+    const double h = c(1), s = c(2), rnd = c(3);
+    const double fx = jr[0].g.test_hit - jr[0].g.baseline_hit;
+    const double e = 0.5 * (h - s), l = 0.5 * (h + s) - rnd;
+    hv.push_back(h); sv.push_back(s); rv.push_back(rnd);
+    E.push_back(e); L.push_back(l); g2m.push_back(fx);
+    old.push_back((h > s ? h : s) - rnd);
+    std::printf("  %-5u %+-8.3f %+-8.3f %+-8.3f %+-8.3f %+-8.3f %+-8.3f %llu/%llu", r, fx, h, s,
+                rnd, e, l, (unsigned long long)jr[1].g.praises,
+                (unsigned long long)jr[1].g.scolds);
+    if (pre && r < 3)
+      std::printf("   archived heard %+.3f swap %+.3f", arch_h[r], arch_s[r]);
+    std::printf("\n");
+  }
+
+  double sm = 0.0, ssd = 0.0, sse = 0.0, smax = 0.0;
+  g2p_mse(secs, sm, ssd, sse);
+  for (double v : secs) smax = std::max(smax, v);
+  std::printf("\n  cost        %.1f s per session (mean wall, sd %.1f, max %.1f), %u sessions\n",
+              sm, ssd, smax, n * 4);
+
+  const bool g_n = complete * 10 >= n * 9;
+  double m_g2 = 0, sd_g2 = 0, se_g2 = 0;
+  g2p_mse(g2m, m_g2, sd_g2, se_g2);
+  const bool g_pos = complete >= 2 && m_g2 - 2.0 * se_g2 > kG2pMargin;
+  std::printf("\n    G-N     %u of %u seeds complete (need 90%%)                       %s\n",
+              complete, n, g_n ? "PASS" : "FAIL");
+  std::printf("    G-POS   fixed arm G2 measure %+.4f +- %.4f, mean - 2 SE %+.4f > %.2f   %s\n",
+              m_g2, se_g2, m_g2 - 2.0 * se_g2, kG2pMargin, g_pos ? "PASS" : "FAIL");
+
+  double mL = 0, sdL = 0, seL = 0, mE = 0, sdE = 0, seE = 0, mo = 0, sdo = 0, seo = 0;
+  g2p_mse(L, mL, sdL, seL);
+  g2p_mse(E, mE, sdE, seE);
+  g2p_mse(old, mo, sdo, seo);
+  double mh = 0, sdh = 0, seh = 0, ms = 0, sds = 0, ses = 0, mr = 0, sdr = 0, ser = 0;
+  g2p_mse(hv, mh, sdh, seh);
+  g2p_mse(sv, ms, sds, ses);
+  g2p_mse(rv, mr, sdr, ser);
+  std::printf("\n  per arm (hit|want - hit|not)   heard %+.4f +- %.4f   swap %+.4f +- %.4f"
+              "   random %+.4f +- %.4f\n", mh, seh, ms, ses, mr, ser);
+  std::printf("  PRINTED, NOT READ   E = (heard - swap)/2   %+.4f +- %.4f (SD %.4f)\n"
+              "                      old estimator (best of heard/swap - random) %+.4f +- %.4f\n",
+              mE, seE, sdE, mo, seo);
+  std::printf("  PRIMARY             L = %+.4f +- %.4f (SD %.4f), [Lo, Hi] = [%+.4f, %+.4f]\n",
+              mL, seL, sdL, mL - 2.0 * seL, mL + 2.0 * seL);
+
+  if (pre && complete < 4) {
+    std::printf("\n  THE n RULE CANNOT BE APPLIED: %u complete seeds, need at least 4 for an SD.\n",
+                complete);
+    return false;
+  }
+  if (pre) {
+    std::printf("\n  THE n RULE (SE = 1.5 x SD / sqrt n, SD %.4f)\n", sdL);
+    uint32_t pick = 0;
+    for (uint32_t cand : {24u, 48u, 96u}) {
+      double pn = 0, pc = 0;
+      g2p_fire(1.5 * sdL / std::sqrt(double(cand)), pn, pc);
+      std::printf("    n = %-3u  SE %.4f  P(NOT CONDITIONAL | 0) %.3f  P(CONDITIONAL | 0) %.3f"
+                  "  cost %.1f h on 14 cores\n", cand, 1.5 * sdL / std::sqrt(double(cand)),
+                  pn, pc, sm * 4.0 * cand / 14.0 / 3600.0);
+      if (!pick && pn >= 0.95) pick = cand;
+    }
+    if (!pick) {
+      pick = 96;
+      std::printf("    no n reaches 0.95: n = 96, and P is printed with the result\n");
+    }
+    std::printf("    -> n = %u. THE PRE-FLIGHT's L, E AND PER-SEED VALUES ARE NOT RESULTS.\n",
+                pick);
+    return g_n;
+  }
+
+  double pn = 0, pc = 0;
+  g2p_fire(seL, pn, pc);
+  std::printf("  at the realised SE: P(NOT CONDITIONAL | 0) %.3f, P(CONDITIONAL | 0) %.3f\n",
+              pn, pc);
+  if (!g_n || !g_pos) {
+    std::printf("\n  -> VOID: a gate failed. Nothing is read.\n");
+    return g_n;
+  }
+  const double lo = mL - 2.0 * seL, hi = mL + 2.0 * seL;
+  std::printf("\n  THE REGISTERED READING\n");
+  if (lo > 0.0) {
+    std::printf("    -> CONDITIONAL (%s): the shipped creature learns which class to\n"
+                "       produce from the word it heard. THIS CHANGES §98's PREMISE.\n",
+                mL > kG2pMargin ? "material, L > 0.05" : "below the 0.05 margin");
+  } else if (hi < 0.0) {
+    std::printf("    -> ANTI-CONDITIONAL: training moves the echo against the praised\n"
+                "       class. A finding, not a pass.\n");
+  } else if (hi < kG2pMargin && lo > -kG2pMargin) {
+    std::printf("    -> NOT CONDITIONAL: the shipped creature cannot learn this contingency\n"
+                "       beyond a margin of 0.05, while G2 itself reproduces (G-POS).\n");
+  } else {
+    std::printf("    -> NO VERDICT.\n");
+  }
+  return true;
+}
+
+}  // namespace
+
+bool run_g2condpowpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2condpow_impl(blob, ticks, true);
+}
+
+bool run_g2condpow(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2condpow_impl(blob, ticks, false);
+}
+
 
 // --- coderprobe: is the AUDITORY front end the bottleneck, or is it not? -----
 //

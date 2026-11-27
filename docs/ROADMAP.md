@@ -24132,3 +24132,107 @@ that the cost quoted in every §97 section was wrong.
   - **D keeps its seed-0 targets.** `calibrate` stays a seed-0 check, and `calmean` stays in the
     battery to report the seed-mean mismatch, which is known and bounded.
   - Re-opening it needs the owner's go on the re-priced cost and the `kLong` exclusion above.
+
+## §98 — LEARNING THE CONTEXT: A LINE, REGISTERED BEFORE ANY RUN (2026-11-27)
+
+**THE LINE (the goal file's rule: what it advances, what would refuse it, and when it stops).**
+  1. **What it advances.** "Builds intelligence from what it hears and is told", which
+     `docs/CONCLUSION.md` reduces to one finding: *this architecture can learn a bias per
+     context; it cannot learn the context.*
+     - Naming works today only through a hand-built, non-plastic index.
+     - The literature route is a population that mixes the heard word with the creature's own
+       state nonlinearly and diversely, so that a plain reward-modulated readout can learn a
+       conditional map (Rigotti et al. 2013; Fusi, Miller & Rigotti 2016, both already in the
+       README References).
+     - §67 called this "the expensive route" and took the cheap one (depression), which §80–§96
+       closed short of behaviour. §87–§94 showed an appended, read-only module can carry a
+       conjunction in its spikes without harming the voice.
+  2. **Stages, each with its own registration:**
+     - stage 0: the baseline, below;
+     - stage 1: a read-only mixing module. Are word × state conjunctions decodable in its
+       spikes? Absent → the line closes.
+     - stage 2: a plastic mixing → vocal projection, on `g2cond`'s contingency.
+  3. **Abandonment:** after **3 runs past stage 0** if no stage clears its bar, whatever the
+     outcome.
+
+### STAGE 0 — `g2cond` AT POWER, WITH THE ECHO TERM REMOVED
+
+**WHY, AND A DEFECT FOUND BEFORE ANY RUN.** `g2cond` (README, "the wall is not the readout. It is
+conditionality") reports **+0.022 ± 0.153 on 3 seed families**, and the README later calls this
+"g2cond's 12σ closure". The 12σ is the POSITIVE CONTROL (+0.369 ± 0.031), not the null.
+
+**The estimator carries the creature's echo.** The voice echoes the heard word (M1b), so the
+hit rates after word A and after word B differ with no learning at all. Call that per-seed echo
+term E_r. With a learning effect L:
+
+    heard_r ≈ +E_r + L        swap_r ≈ −E_r + L
+
+The archived per-seed values show exactly that mirror: `heard` +0.252 / −0.335 / +0.097 and `swap`
+−0.124 / +0.352 / −0.074. So:
+  - **"Best of heard/swap" keeps |E|.** It is biased upward, and E's seed-to-seed spread is what
+    made the SE ±0.153.
+  - **(heard + swap)/2 cancels E exactly.** On the archived seeds it reads +0.064 / +0.009 /
+    +0.012: mean +0.028 ± 0.018, against `random` at +0.029 ± 0.025. That is about −0.001 ± 0.031
+    unpaired, and it is exploratory: three points, on an old genome.
+  - The re-analysis says the archived null is likely TIGHTER than published, not looser. But at
+    n = 3 it cannot carry a closure, and it was never measured on the current genome.
+
+**THE INSTRUMENT.** `g2condpow` runs `run_g2cond_session` UNCHANGED: same contingency, windows,
+criterion, feedback and arms. It runs in parallel over (seed, arm) on the genome given by
+`--dna`. The shipped genome is `dna/default.toml` (md5 fb419735…), at 3,400,000 ticks (g2cond's
+registry length).
+
+**PRIMARY**, paired on seed, over seeds where all four arms are ok:
+
+    L_r = (heard_r + swap_r) / 2 − random_r
+
+Mean ± SE over seeds, with [Lo, Hi] = L ± 2 SE. **Read two-tailed, in this order, margin 0.05**
+(the instrument's own materiality threshold, about 1/7 of the positive control):
+
+| reading | condition |
+|---|---|
+| **CONDITIONAL** | Lo > 0. Reported with whether L > 0.05 (material). It CHANGES §98's premise and is reported before anything else. |
+| **ANTI-CONDITIONAL** | Hi < 0. A finding (it would mean training moves the echo), reported, not a pass. |
+| **NOT CONDITIONAL** | Hi < 0.05 and Lo > −0.05, and neither of the above: the shipped creature cannot learn this contingency beyond a margin of 0.05. |
+| **NO VERDICT** | otherwise. |
+
+**PRINTED, NOT READ:**
+  - E = (heard − swap)/2 mean and SD. This is the diagnosis's own check: its SD should dwarf
+    L's.
+  - The old estimator (best of heard/swap, minus random).
+  - Per-arm means, and the fixed arm's G2 measure.
+
+**GATES (any failure → VOID).**
+  - **G-POS:** the `fixed` arm's G2 measure (test hit − baseline hit) has mean − 2 SE > 0.05.
+    G2 must reproduce, or nothing here is readable. This is the instrument's own UNDERPOWERED
+    rule, made 2 SE.
+  - **G-N:** at least 90% of seeds have all four arms ok (≥ 40 test events, ≥ 8 baseline values,
+    praise and scold both > 0).
+  - **G-GENOME:** the `--dna` file's md5 is recorded in the log by the shell, and the compiled
+    blob's FNV-1a is printed by the instrument. Stage 1 must run on the same file as the
+    pre-flight.
+
+**STAGE 0 = PRICING PRE-FLIGHT; ITS NUMBERS ARE NEVER RESULTS.**
+  - Run on 12 seeds, r = 0…11, which include the archived seeds 0…2. Their per-seed values are
+    printed beside the README's, as a comparison, not a gate: the genome has changed since.
+  - It measures the wall time per session and SD(L_r).
+  - **The n rule:** the smallest n ∈ {24, 48, 96} with P(NOT CONDITIONAL fires | true L = 0) ≥
+    0.95, computed with SE = 1.5 × SD/√n. That headroom exists because every SD projection here
+    has come in low. If n = 96 still misses 0.95, run 96 and print P with the result.
+  - **The cost** is then measured seconds per session × 4n sessions over the 14 cores, carrying
+    the record that three §97 cost estimates came in low. It is reported to the owner before
+    stage 1 starts.
+
+**STAGE 1 (the measurement)** runs on fresh seeds r = 5000 … 5000 + n − 1, disjoint from the
+pre-flight and the archive.
+
+**A rough cost before the pre-flight,** so it can be checked against:
+  - one 3.4M-tick session at about 160 CPU-s per 900k ticks is about 10 CPU-min;
+  - the pre-flight is 48 sessions, about 45–60 min;
+  - stage 1 is about 2 h at n = 24 and about 7 h at n = 96.
+
+**Credit:**
+  - Rigotti et al. (2013) and Fusi, Miller & Rigotti (2016), for the line;
+  - Miconi (2017), that reward-modulated rules can be conditional;
+  - Schuirmann (1987), for the margin.
+  All are already in the README References.
