@@ -45214,6 +45214,15 @@ inline bool gc_want_hit(int mode, uint32_t label, uint32_t trial) {
 // after every step and at the end of every trial and writes nothing back, so a
 // session run with a tap is the session run without one. `g2poolpre` checks
 // that by reproducing stage 0's per-seed `random` values to the printed digit.
+// §98 timing stage T. Where in the trial the act is scored and which acts earn
+// feedback. The defaults ARE g2cond's constants, so every existing caller runs
+// the session it always ran; `g2nowpre` re-proves that by reproducing stage 0's
+// pre-flight values before anything else is read.
+struct GcWindows {
+  uint64_t score_from = kVLEchoFrom, score_to = kVLEchoTo;
+  uint64_t reward_from = kVLRewardFrom, reward_to = kVLRewardTo;
+};
+
 struct GcTap {
   virtual ~GcTap() = default;
   virtual void on_tick(const Session& s, uint32_t trial, uint64_t t) = 0;
@@ -45221,7 +45230,8 @@ struct GcTap {
 };
 
 GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int mode,
-                         const Regime& regime, GcTap* tap = nullptr) {
+                         const Regime& regime, GcTap* tap = nullptr,
+                         const GcWindows& win = GcWindows()) {
   GcRun out;
   std::string error;
   Session s;
@@ -45273,8 +45283,8 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
       // bracket on G2's own clock, because a reward delivered only inside the
       // scoring window is 14% of a trial and G2 earned its milestone at
       // nineteen times that density.
-      const bool in_score = t >= kVLEchoFrom && t < kVLEchoTo;
-      const bool in_reward = t >= kVLRewardFrom && t < kVLRewardTo;
+      const bool in_score = t >= win.score_from && t < win.score_to;
+      const bool in_reward = t >= win.reward_from && t < win.reward_to;
       if (!in_score && !in_reward) continue;
 
       const aibaby::VocalParams& v = s.brain.voice();
@@ -45503,15 +45513,38 @@ uint64_t g2p_fnv(const std::vector<uint8_t>& b) {
   return h;
 }
 
-bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+// §98 timing stage T: the same instrument with the act scored and rewarded
+// WHILE THE WORD PLAYS, when the voice module carries it at 0.93 (stage 1).
+// Same widths as g2cond's windows (400 ms scored, 800 ms of feedback-earning
+// acts), same 500 ms praise delay and density. Fresh seeds r 8000+.
+constexpr uint32_t kGnFrom = 8000;
+// Fixed by g2nowpre's rule (the stage 0 rule). 0 = not yet fixed: refuses.
+constexpr uint32_t kGnN = 0;
+constexpr GcWindows kGnWindows{500, 900, 100, 900};
+
+bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre,
+                        bool now = false) {
   aibaby::Dna dna;
   if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
-  const uint32_t n = pre ? kG2pPreN : kG2pN;
-  const uint32_t from = pre ? 0u : kG2pFrom;
-  std::printf("\n  §98 STAGE %s — g2cond AT POWER, ECHO TERM REMOVED\n\n",
-              pre ? "0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "0 MEASUREMENT (stage 1)");
+  const GcWindows win = now ? kGnWindows : GcWindows();
+  const uint32_t n = pre ? kG2pPreN : (now ? kGnN : kG2pN);
+  const uint32_t from = pre ? 0u : (now ? kGnFrom : kG2pFrom);
+  if (now) {
+    std::printf("\n  §98 TIMING STAGE T %s — g2cond WITH THE ACT SCORED WHILE THE WORD PLAYS\n\n",
+                pre ? "PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "MEASUREMENT");
+    std::printf("  windows     scored %llu-%llu ms, feedback-earning acts %llu-%llu ms, of a\n"
+                "              %llu ms word (g2cond: %llu-%llu and %llu-%llu, after it)\n",
+                (unsigned long long)win.score_from, (unsigned long long)win.score_to,
+                (unsigned long long)win.reward_from, (unsigned long long)win.reward_to,
+                (unsigned long long)kVLWordTicks, (unsigned long long)kVLEchoFrom,
+                (unsigned long long)kVLEchoTo, (unsigned long long)kVLRewardFrom,
+                (unsigned long long)kVLRewardTo);
+  } else {
+    std::printf("\n  §98 STAGE %s — g2cond AT POWER, ECHO TERM REMOVED\n\n",
+                pre ? "0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "0 MEASUREMENT (stage 1)");
+  }
   if (n == 0) {
-    std::printf("  REFUSED: n is not fixed yet. Run g2condpowpre and set kG2pN by the\n"
+    std::printf("  REFUSED: n is not fixed yet. Run the pre-flight and set n by the\n"
                 "  registered rule first.\n");
     return false;
   }
@@ -45534,7 +45567,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
     reg.praise = kPraiseValue;
     reg.scold = kScoldValue;
     const auto t0 = std::chrono::steady_clock::now();
-    j.g = run_g2cond_session(variant, ticks, arms[a].mode, reg);
+    j.g = run_g2cond_session(variant, ticks, arms[a].mode, reg, nullptr, win);
     j.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     return j;
   });
@@ -45574,7 +45607,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
     std::printf("  %-5u %+-8.3f %+-8.3f %+-8.3f %+-8.3f %+-8.3f %+-8.3f %llu/%llu", r, fx, h, s,
                 rnd, e, l, (unsigned long long)jr[1].g.praises,
                 (unsigned long long)jr[1].g.scolds);
-    if (pre && r < 3)
+    if (pre && r < 3 && !now)
       std::printf("   archived heard %+.3f swap %+.3f", arch_h[r], arch_s[r]);
     std::printf("\n");
   }
@@ -45639,7 +45672,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
     }
     std::printf("    -> n = %u. THE PRE-FLIGHT's L, E AND PER-SEED VALUES ARE NOT RESULTS.\n",
                 pick);
-    return g_n;
+    return true;  // kRead: G-N's verdict is the printed gate line
   }
 
   double pn = 0, pc = 0;
@@ -45648,7 +45681,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
               pn, pc);
   if (!g_n || !g_pos) {
     std::printf("\n  -> VOID: a gate failed. Nothing is read.\n");
-    return g_n;
+    return true;  // kRead: VOID is a reading
   }
   const double lo = mL - 2.0 * seL, hi = mL + 2.0 * seL;
   std::printf("\n  THE REGISTERED READING\n");
@@ -45678,6 +45711,16 @@ bool run_g2condpowpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
 bool run_g2condpow(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_g2condpow_impl(blob, ticks, false);
+}
+
+bool run_g2nowpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2condpow_impl(blob, ticks, true, true);
+}
+
+bool run_g2now(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2condpow_impl(blob, ticks, false, true);
 }
 
 
@@ -46026,12 +46069,14 @@ bool run_g2pool_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre)
     if (pick == 0) pick = 96;
     std::printf("    -> n = %u%s. THE PRE-FLIGHT's DECODABILITIES ARE NOT RESULTS.\n", pick,
                 repro ? "" : " -- BUT G-REPRO FAILED: THE TAP IS NOT READ-ONLY, DO NOT RUN");
-    return repro;
+    // kRead: a completed run returns true whatever it read; G-REPRO's verdict
+    // is the printed line above.
+    return true;
   }
 
   if (!(gn && gctrl && gnull)) {
     std::printf("\n  VOID: a gate failed; nothing below is read.\n");
-    return false;
+    return true;  // kRead: VOID is a reading, not an infrastructure failure
   }
   const double lo = mp - 2.0 * sep, hi = mp + 2.0 * sep;
   std::printf("\n  THE REGISTERED READING\n");
@@ -46097,8 +46142,9 @@ constexpr uint32_t kGmPreN = 12;
 constexpr uint32_t kGmFrom = 7000;
 constexpr double kGmMaxHz = 50.0;  // a reservoir above this is runaway, not memory
 // Fixed by the pre-flight's rule. -1 / 0 = not yet fixed: the measurement refuses.
-constexpr int kGmSel = -1;
-constexpr uint32_t kGmN = 0;
+// g2mixpre 2026-11-27: dose L300W24 by the rule; SD(D) 0.1232 -> n = 96 (SE 0.0189).
+constexpr int kGmSel = 5;
+constexpr uint32_t kGmN = 96;
 
 bool g2mix_readonly(const aibaby::Dna& d, int32_t mm, std::string& why) {
   if (mm < 0) { why = "no `comparator`-role module"; return false; }
@@ -46283,7 +46329,7 @@ bool run_g2mix_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) 
               s.d + 2.0 * s.dse);
   if (!(gn && gctrl && gnull)) {
     std::printf("\n  VOID: a gate failed; nothing below is read.\n");
-    return false;
+    return true;  // a reading; the instrument's false is kept for a wrong genome
   }
   const double lo = s.w - 2.0 * s.wse, hi = s.w + 2.0 * s.wse;
   const bool dpos = s.d - 2.0 * s.dse > 0.0;

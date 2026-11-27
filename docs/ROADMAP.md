@@ -24630,3 +24630,161 @@ its estimate under load.
   - Fiete & Seung (2006), for the rule stage 2 would use;
   - Schuirmann (1987), for the margins.
   All are in the README References.
+
+### §98 STAGE 1b PRE-FLIGHT COST, RE-STATED WHILE IT RUNS (2026-11-27)
+
+The registered "about 1 h" was low, the sixth low cost estimate in this stretch.
+  - It scaled stage 1's 12-session pre-flight (689 s per session). But per-session wall time
+    depends on concurrency: stage 1's 24-session measurement ran at 1270 s per session with 14
+    in parallel.
+  - 72 sessions is six waves of up to 14, so about 2 h, more if the reservoir's compute adds.
+  - The measurement at n = 24 (48 sessions, four waves) is about 1.4 h, not 40 min.
+  - **Rule going forward: price a parallel run from a measured run AT THE SAME CONCURRENCY.**
+
+### CLEANUP: THE kLONG BATTERY DEFECT IS FIXED; THE §98 INSTRUMENTS KEEP THEIR kRead CONTRACT (2026-11-27)
+
+  - **New `Tier::kManual`: run by name only, never inside any `verify*` battery.** It is for
+    powered, pre-registered measurements that pin their own genome, seeds or n.
+  - **Moved there:**
+    - `calderive`, `echopowpre`, `echopow`: §97's recorded defect. On D, calderive ran about
+      13 h and rewrote dna/ files; on C, the other two refused.
+    - `g2condpowpre`, `g2condpow`, `g2poolpre`, `g2pool`: about 8 h of verify-teach that
+      re-run registered measurements.
+    - `g2mixpre`, `g2mix`: these need dna/mixing.toml, and are now `Expect::kGuard`, because
+      they refuse by design on the shipped genome (§80 s8's convention for an absent module).
+  - **kRead's contract** ("the only top-level return is an unconditional `return true`") was
+    broken by my own §98 code.
+    - `g2condpow` returned its G-N gate, `g2pool` returned false on VOID, and `g2poolpre`
+      returned its G-REPRO verdict. Each now prints the verdict and returns true.
+    - False is kept only for infrastructure: an unloadable genome, n not yet fixed, fewer than 4
+      complete seeds, and G-RO on the wrong genome.
+  - No verdict, number or log changes. The running pre-flight uses the binary built before these
+    edits, and none of them touches its code path.
+
+## §98 TIMING STAGE T — PREPARED AND REGISTERED BEFORE ANY RUN: CAN THE CREATURE LEARN THE MAP WHEN THE WORD IS STILL THERE AT THE ACT? (2026-11-27)
+
+**WHY THIS IS THE LINE'S MISSING POSITIVE CONTROL.** Stage 1 found that the word is gone from every
+population a synapse can read 200–600 ms after it ends, which is when g2cond scores and rewards
+the act. Two accounts of stage 0's NOT CONDITIONAL fit that:
+  - **(H) holding.** The rule could learn the map if the word were present at the act. It is not
+    present, so nothing is learned. Stages 1b and 2 (a holding module, then a plastic projection
+    out of it) are aimed at this.
+  - **(R) the rule.** Even with the word present at the act, reward-gated plasticity on this
+    creature cannot make the act depend on it. The archive's own diagnosis is variance, not
+    expressiveness (the README's Werfel, Xie & Seung table). Under (R) no holding module helps,
+    and stages 1b and 2 have no premise.
+
+They are told apart by removing the delay, not by building anything. **Score and reward the act
+WHILE THE WORD PLAYS**, when stage 1 measured the voice module carrying the word at 0.933.
+
+**WHAT THE KERNEL SAYS ABOUT TIMING, READ BEFORE DESIGNING.**
+  - Synaptic eligibility is STDP pairing (`accumulate_eligibility`). It decays with
+    `tau_elig_ms = 2000`, and reward multiplies it.
+  - So a trace laid down while the word plays keeps about e^(−0.5…−0.75) ≈ 50–60% of its size
+    when g2cond's praise arrives. A short trace is NOT the obvious culprit.
+  - The act g2cond scores, though, is the F1 group's posture through `smoothing_ms = 800`. So
+    under g2cond's windows the act and its word-carrying cause sit about a second apart, and
+    under these windows they coincide.
+  - Stage T asks the clean version: with act, word and pairing all concurrent, does the map
+    get learned?
+
+**THE INSTRUMENT: `g2nowpre` / `g2now`.** This is stage 0's `g2condpow` with exactly one
+difference: the windows.
+  - The session takes a `GcWindows` struct whose DEFAULTS ARE g2cond's constants, so every
+    existing caller is unchanged.
+  - **G-INERT:** the old and new binaries print identical rows for `g2poolpre` on the default
+    windows. This is checked before the registration is committed, and the check and its result
+    are recorded below.
+
+| | g2cond / stage 0 | stage T |
+|---|---|---|
+| act scored (ms into the 2800 ms trial; word 0–900) | 1100–1500 | **500–900** |
+| acts that earn feedback | 900–1700 | **100–900** |
+| widths | 400 / 800 | 400 / 800, the same |
+| praise delay, period, values, criterion, arms, estimator | — | unchanged (500 ms, 150 ms, ±0.5, own baseline median, fixed/heard/swap/random) |
+
+**The caution in g2cond's own source,** "scoring while the word plays would score the
+caregiver," is answered by construction, not waived. Concurrent with the word, the F1 posture
+carries the ear-to-voice pass-through, so the per-creature echo term E is expected to be LARGER.
+E enters heard and swap with opposite signs, and the primary cancels it exactly. E is printed,
+and its SD is expected to exceed stage 0's 0.229.
+
+**PRIMARY, READINGS AND GATES: STAGE 0's, VERBATIM.**
+  - **Primary:** L_r = (heard_r + swap_r)/2 − random_r, paired on seed, margin 0.05, read
+    two-tailed.
+  - **G-POS:** the fixed arm's G2 measure, mean − 2 SE > 0.05. **This is also the test that
+    reward can move the act in this window at all.** If it fails, the reading is VOID and the
+    timing route cannot be tested this way.
+  - **G-N:** at least 90% of seeds complete, which includes ≥ 40 test events. The creature must
+    vocalise while hearing, and the pre-flight measures whether it does.
+
+**What each reading means:**
+
+| reading | what it means for §98 |
+|---|---|
+| **CONDITIONAL** (Lo > 0; material if L > 0.05) | **(H) holds.** The rule learns the map when the word is present, so g2cond's wall is HOLDING. Stages 1b and 2 are aimed right, and a stage-2 bar can be set against this L. |
+| **NOT CONDITIONAL** (Hi < 0.05 and Lo > −0.05), with G-POS passing | **(R) holds.** Even with the word present and reward demonstrably moving the act, the map is not learned beyond 0.05. **Stages 1b's measurement and 2 lose their premise.** The line re-aims at the rule (the parameterisation; Werfel, Xie & Seung), as a new registration, or closes. |
+| **ANTI-CONDITIONAL** (Hi < 0) | Reported, not a pass. |
+| **NO VERDICT** | Reported. Not re-run bigger. |
+
+**PRE-FLIGHT `g2nowpre`: r = 0…11, the seeds of stage 0's pre-flight. ITS NUMBERS ARE NEVER
+RESULTS.**
+  - The n rule is stage 0's: the smallest n ∈ {24, 48, 96} with P(NOT CONDITIONAL fires | true
+    L = 0) ≥ 0.95 at SE = 1.5 × SD/√n.
+  - Per-seed values sit on the same seeds as stage 0's pre-flight. A side-by-side comparison may
+    be printed but is not read.
+
+**MEASUREMENT `g2now`: fresh r = 8000 … 8000 + n − 1.** These are disjoint from every earlier §98
+sample (0–11, 5000s, 6000s, 7000s).
+
+**COST, PRICED AT THE SAME CONCURRENCY (the rule written into memory tonight).**
+  - Stage 0's pre-flight was 48 sessions in 44 min, and its measurement was 384 sessions in
+    5.66 h, both on 14 cores with this session length.
+  - So stage T's pre-flight is about 45 min, and the measurement is about 1.4 h at n = 24,
+    2.8 h at n = 48 and 5.7 h at n = 96.
+  - The concurrent window may change voicing, and so the event counts and the speed. The
+    pre-flight measures that.
+
+**ORDER AND THE ABANDONMENT COUNT, FOR THE OWNER.**
+  - Runs used past stage 0: 1 of 3. Stage T's measurement and stage 1b's measurement would be
+    runs 2 and 3.
+  - **Recommended order: stage T first.** Under (R), stage 1b's measurement buys nothing for the
+    line, and T decides that. Under (H), 1b runs as registered.
+  - Stage 1b's pre-flight (running now) is not a run toward the count, so it is not wasted
+    either way.
+
+**Credit:**
+  - Gerstner, Lehmann, Liakoni, Corneil & Brea (2018), for eligibility on behavioural time
+    scales;
+  - Fiete & Seung (2006), node perturbation;
+  - Werfel, Xie & Seung (2005), for account (R);
+  - Schuirmann (1987), the margin.
+  All are in the README References.
+
+### §98 TIMING STAGE T — G-INERT PASSES (2026-11-27)
+
+The old binary (before `GcWindows`) and the new one ran `g2poolpre` at 300k ticks, one job each.
+**All 12 per-seed rows are IDENTICAL**, every printed column included, so the session at its
+default windows is the session it was. At the owner's request ("automatically run it after this is
+finished") the stage T pre-flight started at 23:51, chained behind stage 1b's pre-flight, as
+`results/n98-T-g2nowpre.log`. The measurement follows with n set by the registered rule.
+
+### §98 STAGE 1b PRE-FLIGHT — DOSE L300W24, n = 96. A SEARCH; ITS NUMBERS ARE NEVER RESULTS (2026-11-27)
+
+`results/n98-s1b-g2mixpre.log`, exit 0. md5s: `dna/mixing.toml` 1fa6c621…, `dna/default.toml`
+fb419735…
+  - **Gates:** G-RO PASS; every arm 12 of 12 complete. Every dose is eligible: the reservoir runs
+    at 2.8–4.7 Hz, nowhere near the 50 Hz runaway limit.
+  - **Selection rule → L300W24** (leak 300 ms, weight 0.24, index 5).
+  - **n rule:** SD of D 0.1232 (it binds; SD of W_mix is 0.0935). That gives SE 0.0377 at 24 and
+    0.0267 at 48, so **n = 96** (SE 0.0189, not inside the 0.025 target). Cost about 2.8 h at
+    734.7 s per session and 14-way concurrency. The pre-flight itself took 70 min, inside the
+    re-priced 2 h.
+  - `kGmSel = 5` and `kGmN = 96` are written into the instrument.
+  - **Disclosed pattern, NOT RESULTS and never quoted as them:** the doses that lengthen the
+    membrane time constant are the ones that separate from base. Recurrent weight alone does not.
+    The winner's W_mix is a maximum of five and biased upward.
+  - First sleep moves later on the slow-membrane doses (about +28–35k ticks), the dilution
+    direction of discoveries §11.1. Printed, not read.
+  - **The measurement (run 3 of 3 if stage T is run 2) waits for stage T's answer, as
+    recommended.** Under (R) it buys nothing for the line.

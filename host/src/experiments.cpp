@@ -55,6 +55,13 @@ enum class Tier {
   // being run. Split out so `verify-long` is still something you run before a
   // commit, and `verify-teach` is something you start and walk away from.
   kTeach,
+  // Run BY NAME ONLY, never inside any `verify*` battery. For powered,
+  // pre-registered measurements that pin their own genome, seed range or n
+  // (hours each, and some refuse or rewrite dna/ files on the wrong genome).
+  // §97 found three of them in kLong: on the shipped genome `calderive` ran
+  // ~13 h and rewrote dna/ files, and on another genome they refused. A battery
+  // is for regressions, and re-running a registered measurement is not one.
+  kManual,
 };
 
 // The shortest run whose scored output is a measurement rather than a rumour.
@@ -602,33 +609,39 @@ const Spec kSpecs[] = {
      " Reported, not gated; any genome"},
     {"calmeanfresh", 120000, Expect::kGuard, Tier::kLong,
      "§97 stage 1: calmean on FRESH held-out seeds r = 3000..3095. Any genome"},
-    {"calderive", 120000, Expect::kGuard, Tier::kLong,
+    {"calderive", 120000, Expect::kGuard, Tier::kManual,
      "§97 stage 0: seed-mean targets by fixed-point iteration on 768 derivation seeds;"
      " writes dna/default_seedmean.toml. Run on dna/default.toml"},
-    {"echopowpre", 900000, Expect::kGuard, Tier::kLong,
+    {"echopowpre", 900000, Expect::kGuard, Tier::kManual,
      "§97 stage 3b, stage 0: G-REPRO on r 0-4, SD of the paired echo difference on 24"
      " pairs, and the n stage 1 runs at. Never results. Run on dna/default.toml"},
-    {"echopow", 900000, Expect::kGuard, Tier::kLong,
+    {"echopow", 900000, Expect::kGuard, Tier::kManual,
      "§97 stage 3b: the calibration echo, D against C, paired, margin 0.025, two"
      " protocols. Run on dna/default.toml"},
-    {"g2condpowpre", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2condpowpre", 3400000, Expect::kRead, Tier::kManual,
      "§98 stage 0 pre-flight: g2cond on 12 seeds (r 0-11), echo term removed; the"
      " SD of L and the cost per session fix stage 0's n. Never results"},
-    {"g2condpow", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2condpow", 3400000, Expect::kRead, Tier::kManual,
      "§98 stage 0: g2cond at power on fresh seeds r 5000+, L = (heard+swap)/2 -"
      " random paired on seed, margin 0.05, two-tailed"},
-    {"g2poolpre", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2poolpre", 3400000, Expect::kRead, Tier::kManual,
      "§98 stage 1 pre-flight: g2cond's random arm on r 0-11 with a read-only tap;"
      " G-REPRO proves the tap changes nothing, the SD fixes n. Never results"},
-    {"g2pool", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2pool", 3400000, Expect::kRead, Tier::kManual,
      "§98 stage 1: is the heard word on the F1 group's plastic afferents (vocal"
      " outside F1) at action time? PRESENT/WEAK/ABSENT against M1b's 0.75"},
-    {"g2mixpre", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2mixpre", 3400000, Expect::kGuard, Tier::kManual,
      "§98 stage 1b pre-flight: six reservoir doses on r 0-11, a registered rule picks"
      " one and n. Never results. Run on dna/mixing.toml"},
-    {"g2mix", 3400000, Expect::kRead, Tier::kTeach,
+    {"g2mix", 3400000, Expect::kGuard, Tier::kManual,
      "§98 stage 1b: does a read-only reservoir hold the word to action time? W_mix"
      " and D vs the baseline dose, paired. Run on dna/mixing.toml"},
+    {"g2nowpre", 3400000, Expect::kRead, Tier::kManual,
+     "§98 timing stage T pre-flight: g2cond with the act scored and rewarded while the"
+     " word plays, r 0-11; SD and cost fix n. Never results"},
+    {"g2now", 3400000, Expect::kRead, Tier::kManual,
+     "§98 timing stage T: can the creature learn the word-dependent map when the word"
+     " is present at the act? L paired, margin 0.05, two-tailed"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2108,6 +2121,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g2pool") ok = run_g2pool(dna_blob, ticks, verbose);
   else if (name == "g2mixpre") ok = run_g2mixpre(dna_blob, ticks, verbose);
   else if (name == "g2mix") ok = run_g2mix(dna_blob, ticks, verbose);
+  else if (name == "g2nowpre") ok = run_g2nowpre(dna_blob, ticks, verbose);
+  else if (name == "g2now") ok = run_g2now(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
@@ -2254,6 +2269,7 @@ bool run_verify(const std::vector<uint8_t>& dna_blob, bool long_tier, bool teach
   for (const Spec& s : kSpecs) {
     if (s.tier == Tier::kLong && !long_tier) continue;
     if (s.tier == Tier::kTeach && !teach_tier) continue;
+    if (s.tier == Tier::kManual) continue;  // by name only, never in a battery
     if (std::strcmp(s.name, "determinism") == 0) continue;
     std::printf("\n  --- %s, %llu ticks ---\n", s.name, (unsigned long long)s.min_ticks);
     // Timed, because a tier can only be curated on evidence. `verify-long` is
