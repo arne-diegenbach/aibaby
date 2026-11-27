@@ -24451,3 +24451,21 @@ stage 1b, or for how g2cond's action relates to its credit) is its own registrat
 The amended tap reads only const accessors. The pre-flight is re-run once on the amended binary to
 re-prove G-REPRO and to smoke the new columns at full length. The measurement (r 6000–6023) is the
 owner's go.
+
+### §98 STAGE 1 AMENDED PRE-FLIGHT — G-REPRO PASSES AGAIN; THE NEW COLUMNS SCORE (2026-11-27)
+
+`results/n98-s1-g2poolpre-amended.log`, exit 0, md5 fb419735…
+  - **The run reproduces the first pre-flight exactly:** the same gates, and every original
+    column matches to the digit.
+  - **G-REPRO 0 of 12.** The amended tap is read-only.
+  - **n = 24 stands.** Cost 688 s per session, about 0.33 h.
+  - **The pre-flight's columns, which are NEVER RESULTS:**
+
+    | quantity (r = 0…11) | value |
+    |---|---|
+    | W_pwrd, the pool's spikes WHILE the word plays | 0.946 |
+    | W_grp, the smoothed posture in 200–600 ms | 0.821 |
+    | W_pool, the pool's spikes in 200–600 ms | 0.528 |
+
+That is the pattern the amendment's clause names. **It is read only on r = 6000–6023, the owner's
+go**, at about 20 min.

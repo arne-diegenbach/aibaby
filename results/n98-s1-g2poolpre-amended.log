@@ -1,0 +1,53 @@
+fb419735526b1fe189be8264a63f5d95  dna/default.toml
+experiment: g2poolpre (amended tap)
+experiment: g2poolpre
+
+  §98 STAGE 1 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS) — IS THE WORD ON THE F1 GROUP'S PLASTIC AFFERENTS AT ACTION TIME?
+
+  genome      blob FNV-1a f67d7725f1bbc415 (record the file's md5 in the log)
+  creatures   12 seeds, r = 0..11, seed = genome seed + r * 7919, 3400000 ticks,
+              g2cond's `random` arm, run_g2cond_session + a read-only tap
+  primary     W_pool: heard word from `vocal` OUTSIDE the F1 slice, spikes in
+              200-600 ms after the word, test-window trials, awake trials only,
+              holdout nearest centroid (first half train)
+  readings    PRESENT Lo >= 0.75 | ABSENT Hi <= 0.60 | WEAK Lo > 0.60 and Hi < 0.75
+
+  r     trials W_pool  W_f1    W_aud   W_cen   ctrl    shuf    X_pool  X_f1    W_grp   W_pwrd  random (hit|want - hit|not)
+  0     175    0.466   0.455   0.580   0.477   1.000   0.409   0.477   0.545   0.841   0.909   -0.013   stage 0 -0.013 same
+  1     176    0.489   0.557   0.648   0.545   1.000   0.489   0.523   0.534   0.909   0.989   +0.075   stage 0 +0.075 same
+  2     175    0.500   0.523   0.489   0.420   1.000   0.455   0.523   0.500   0.807   0.932   +0.026   stage 0 +0.026 same
+  3     175    0.614   0.648   0.545   0.409   1.000   0.523   0.455   0.534   0.830   0.943   +0.038   stage 0 +0.038 same
+  4     175    0.568   0.455   0.614   0.557   1.000   0.568   0.580   0.477   0.761   0.943   -0.081   stage 0 -0.081 same
+  5     175    0.523   0.534   0.636   0.545   1.000   0.477   0.591   0.477   0.864   0.920   +0.044   stage 0 +0.044 same
+  6     176    0.477   0.466   0.625   0.398   1.000   0.500   0.443   0.545   0.807   0.977   -0.075   stage 0 -0.075 same
+  7     175    0.580   0.523   0.670   0.466   1.000   0.511   0.489   0.511   0.841   0.977   -0.001   stage 0 -0.001 same
+  8     176    0.568   0.432   0.670   0.420   1.000   0.511   0.625   0.614   0.852   0.977   -0.096   stage 0 -0.096 same
+  9     175    0.557   0.523   0.659   0.500   1.000   0.580   0.580   0.636   0.795   0.864   -0.000   stage 0 -0.000 same
+  10    176    0.511   0.477   0.500   0.500   1.000   0.534   0.534   0.523   0.795   0.966   -0.020   stage 0 -0.020 same
+  11    175    0.477   0.500   0.523   0.420   1.000   0.466   0.534   0.432   0.750   0.955   +0.062   stage 0 +0.062 same
+
+  cost        688.5 s per session (mean wall, sd 38.0), 12 sessions
+
+    G-N     12 of 12 seeds complete (need 90%)                              PASS
+    G-CTRL  ear while the word plays 1.0000 +- 0.0000, mean - 2 SE >= 0.90  PASS
+    G-NULL  shuffled labels on the pool 0.5019 +- 0.0138, within 0.03 of 0.5  PASS
+    G-REPRO tap read-only: 0 of 12 `random` values differ from stage 0  PASS
+
+  PRINTED, NOT READ
+    W_f1   (the F1 slice itself)       0.5076 +- 0.0169 (SD 0.0584)
+    W_aud  (ear, same window)          0.5966 +- 0.0194 (SD 0.0671)
+    W_cen  (central, same window)      0.4716 +- 0.0168 (SD 0.0580)
+    X_pool (word XOR own F1, pool)     0.5294 +- 0.0164 (SD 0.0568)
+    X_f1   (word XOR own F1, F1 slice) 0.5275 +- 0.0163 (SD 0.0566)
+  AMENDMENT BEFORE THE MEASUREMENT, PRINTED, NOT READ
+    W_grp  (9 smoothed groups, window) 0.8210 +- 0.0128 (SD 0.0444)
+    W_pwrd (pool spikes WHILE the word) 0.9460 +- 0.0104 (SD 0.0360)
+  PRIMARY
+    W_pool = 0.5275 +- 0.0139 (SD 0.0483), [Lo, Hi] = [0.4996, 0.5554]
+
+  THE n RULE (SE = 1.5 x SD / sqrt n <= 0.025, SD 0.0483)
+    n = 24  SE 0.0148  cost 0.33 h on 14 cores
+    n = 48  SE 0.0105  cost 0.66 h on 14 cores
+    n = 96  SE 0.0074  cost 1.31 h on 14 cores
+    -> n = 24. THE PRE-FLIGHT's DECODABILITIES ARE NOT RESULTS.
+exit 0
