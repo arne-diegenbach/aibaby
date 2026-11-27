@@ -24277,3 +24277,37 @@ so G2 reproduces on the current genome.
 "about 7 h at n = 96". Reported to the owner before stage 1, as registered.
 
 **The pre-flight's L (+0.022 ± 0.024), E and per-seed values are NOT results.**
+
+### §98 STAGE 0 RESULT — NOT CONDITIONAL: THE SHIPPED CREATURE CANNOT LEARN THE WORD-DEPENDENT CONTINGENCY, BOUNDED AT 0.027 AGAINST G2's 0.332. §98's PREMISE HOLDS (2026-11-27)
+
+`results/n98-s0-g2condpow-96.log`, exit 0, `dna/default.toml` md5 fb419735…, 96 fresh seeds
+(r = 5000…5095).
+  - **G-N PASS:** 96 of 96 seeds complete, 0 incomplete.
+  - **G-POS PASS:** G2 measure +0.332 ± 0.010.
+
+| quantity | value |
+|---|---|
+| **PRIMARY L = (heard + swap)/2 − random** | **+0.0107 ± 0.0079** (SD 0.078), [Lo, Hi] = [−0.0052, +0.0266] |
+| per arm: heard / swap / random | −0.032 ± 0.024 / +0.048 ± 0.024 / −0.003 ± 0.006 |
+| E = (heard − swap)/2 (printed, not read) | −0.040 ± 0.023 (SD 0.229) |
+| P(NOT CONDITIONAL fires \| true 0), at the realised SE | 0.954 |
+
+**→ NOT CONDITIONAL.**
+  - G2's own contingency is still learned at +0.332.
+  - Making the praised class depend on the heard word is learned at most +0.027, which is **under 8% of the unconditional effect**, at 2 SE.
+  - The point estimate is +1.4 SE and is not read.
+  - **This replaces `g2cond`'s +0.022 ± 0.153 as the measurement of CONCLUSION.md's "it cannot learn the context".** It is now a powered, echo-free bound on the shipped creature. §98's premise holds, so stage 1 is justified.
+
+**AND `g2cond`'s OWN ESTIMATOR WOULD HAVE LIED AT POWER.**
+  - On these 96 seeds, "best of the arm MEANS − random" reads **+0.0506 ± 0.0248**.
+  - `g2cond`'s own verdict rule is d > 0.05 AND d > 2 SE. Both hold, by 0.0006 and 0.0010, so it **would have printed "CONDITIONAL ON G2'S OWN CONTINGENCY".**
+  - The cause is the echo. E's population mean is −0.040, not zero: word B lands above the criterion more often. So `swap` ≈ −E + L inherits +0.040, and "best of" picks it.
+  - At n = 3 the bias hid inside ±0.153. At power it would have become a false positive.
+  - The registered echo-cancelling primary reads +0.011 on the same data.
+  - **Lesson: a "best of two mirrored arms" estimator is a maximum, and a maximum of two arms carrying ±E is biased by |E|. Cancel the term by construction (average the mirror pair); never select between them.**
+
+**The cost came in UNDER for the first time:** 339.5 min (5.66 h) against 5.9 h projected. SD(L) was 0.078 against the pre-flight's 0.082.
+
+**NEXT, NOT REGISTERED, the owner's call: §98 stage 1.** A read-only mixing module. Do its spikes carry word × state conjunctions that a linear readout can separate, where the vocal module's do not? It is the cheapest refusal of the line. Runs used toward the abandonment count: 0 of 3 (stage 0 does not count).
+
+**Credit:** Rigotti et al. (2013), Fusi, Miller & Rigotti (2016), Schuirmann (1987), all already in the README References.
