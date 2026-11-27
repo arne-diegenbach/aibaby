@@ -24077,3 +24077,58 @@ reading).**
     instrument before acting on it.
 
 **Credit:** Schuirmann (1987), for the margin rule (already in the README References).
+
+### §97 STAGE 3, RE-PRICED BEFORE LAUNCH — THE "88 h" WAS THE LONG TIER ALONE; THE REGISTERED STAGE IS ABOUT 2–4 WEEKS. NOT LAUNCHED (2026-11-27)
+
+The owner gave a conditional go ("if you think that is the best option"). Pricing it first showed
+that the cost quoted in every §97 section was wrong.
+
+**WHAT THE 88 h LEFT OUT.**
+  1. **The teach tier.** Stage 3 is registered as `verify-long` AND `verify-teach` on both genomes.
+     The 88 h is §80's measured `verify-long` (2638.0 min, `results/n80-verify-long.log`), doubled.
+     - **`verify-teach` has never run to completion here.** §80's `&&` ate it, and no
+       verify-teach log exists.
+     - §80 sized it at **2.4 to 10 days per genome** (214.6 Mticks at the long tier's measured
+       968–3983 s per Mtick).
+  2. **24 long-tier instruments added since §80** (§82–§97), most at 1.68M ticks.
+     - The eight with a measured wall time in `results/` sum to about 14 h: `comnoise` 206 min,
+       `comcount` 138, `novonset` 135, `novans` 134, `comquiet` 97, `shipcost` 89, `calseeds` 24,
+       `novpre` 13.
+     - About a dozen more are untimed; at roughly 1–2 h each, that is about 15 h.
+     - `echopow` is 10.3 h on its own, and `calderive` is about 2.5 h.
+  3. **Three consecutive §97 cost estimates came in low** (25 min → 70 min → 6 h → 10.3 h measured).
+
+**THE ESTIMATE, CARRYING THAT RECORD:**
+  - long tier: about 85 h per genome, so about 7 days for both;
+  - teach tier: 5 to 20 days for both;
+  - **stage 3 in all: about 2 to 4 weeks of the whole 14-core machine.**
+
+**TWO DEFECTS IN THE BATTERY ITSELF, FOUND WHILE PRICING. Neither is fixed here.**
+  - **`calderive`, `echopowpre` and `echopow` are registered `kLong`.** All three pin their own
+    genomes and refuse any other `--dna`.
+    - On D, `verify-long` would run them in full: about 13 h, and `calderive` re-writes
+      `dna/default_seedmean.toml` and the `dna/default_seedmean_pass<k>.toml` files.
+    - On C, they refuse in seconds.
+    - So they price nothing about the genome under test, and they make the D/C wall times
+      incomparable. **A future stage 3 must exclude them, or move them out of `kLong`, before it
+      runs.**
+  - **Branch 5 requires both tiers.** The registration's own reasoning (central feeds the critic,
+    so "every taught instrument runs through a re-derived target, and there is no smaller honest
+    list") makes the teach tier the half that matters most. A long-tier-only run could not license
+    C.
+
+**THE DECISION, AND WHY.** Stage 3 is not launched. I judge it not the best use of the machine:
+  - **What shipping C buys is calibration hygiene.** `calibrate` would test a seed-mean property
+    instead of a seed-0 one.
+  - **On the one readout measured at power,** stage 3b bounds C's effect on the voice's
+    calibration echo to under 0.017 in either direction.
+  - **No creature-level improvement is predicted or measured.**
+  - Two to four weeks of the whole machine, to license a change with no expected effect, is poor
+    value against work aimed at the creature.
+
+**§97 CLOSES HERE.**
+  - **C is an archived candidate.** It is NOT shipped and NOT refused: the long and teach tiers are
+    UNRUN, and that is the only reason it is not shippable.
+  - **D keeps its seed-0 targets.** `calibrate` stays a seed-0 check, and `calmean` stays in the
+    battery to report the seed-mean mismatch, which is known and bounded.
+  - Re-opening it needs the owner's go on the re-priced cost and the `kLong` exclusion above.
