@@ -24521,3 +24521,112 @@ own afferents and inside g2cond's protocol. Two consequences, neither registered
 
 **Credit:** Fiete & Seung (2006); Werfel, Xie & Seung (2005); Rigotti et al. (2013); Fusi, Miller &
 Rigotti (2016); Schuirmann (1987). All are already in the README References.
+
+## §98 STAGE 1b — REGISTERED BEFORE ANY RUN: CAN A READ-ONLY RESERVOIR HOLD THE WORD TO ACTION TIME? (2026-11-27)
+
+**WHY THE HOLDING SOURCE HAS TO BE NAMED.** Stage 1 read ABSENT. The F1 group's afferents
+carry the word at 0.93 while it plays and at chance 200–600 ms later, and so do the ear and
+central. A plain mixing module fed by those modules would mix signals that no longer carry the
+word. So stage 1b's module must also HOLD it.
+
+**THE HOLDING SOURCE: the module's own random recurrence, a reservoir's fading memory**
+(Maass, Natschläger & Markram 2002; Jaeger 2001; both added to the README References today).
+  - A fixed random recurrent circuit keeps a fading trace of recent input in its transient state,
+    and a linear readout can recover it.
+  - Memory length grows with the recurrent gain and with the units' time constants.
+  - Here those are two existing module fields: `weight_init` (recurrent weight) and
+    `leak_tau_ms` (membrane). **No kernel change.**
+  - A random nonlinear expansion is also Rigotti's mixing, so stage 1b is still the line's mixing
+    module. It now has a holding source.
+
+**SCOPE OF TWO OLD PROHIBITIONS, ARGUED RATHER THAN IGNORED.**
+  - §65 ("a combiner, not a store") and §69 ("the next build is a readout, never another
+    mechanism") are both rules for the M6 same/different line.
+  - §65's "M6's failure is not storage" rested on `artic9` carrying A at 0.77. `artic9` is
+    articulator posture, which stage 1 has now shown is partly the decoder's `smoothing_ms`
+    800 ms inertia. That remark does not re-open M6. It is why those rules are not applied
+    here: §98 is a different task, and stage 1 measured storage ABSENT in the network itself.
+
+**THE GENOME, `dna/mixing.toml`.** `dna/default.toml` as an exact byte prefix, plus:
+  - **one module `mixing`, 126 neurons.**
+    - It uses role `comparator`, which no kernel path reads, only so the instruments can find it.
+    - It is read-only: no outgoing projection, `syn_*_scale` 0, `explore_scale` 0, noise 0 (§87
+      stage 3).
+    - Threshold 1.0, target 5.0 Hz and IP on, as vocal's. The homeostat finds the operating point.
+    - The rest of the neuron block is §94's comparator block.
+  - **Three tracts into it:**
+    - the two auditory → vocal tracts copied exactly, for the word;
+    - vocal → mixing at the same 0.15 / 0.12, for the creature's own state, so the conjunction
+      can be measured.
+  - The file's dose is the BASELINE: leak 20 ms, weight 0.12. `dna/default.toml` is untouched
+    (md5 fb419735…).
+
+**THE INSTRUMENT.**
+  - `g2mixpre` / `g2mix` run g2cond's `random`-arm session with stage 1's read-only tap, extended
+    to bin the reservoir's spikes. On default.toml the extension is inert, because the role is
+    absent.
+  - The dose is patched at hatch into the reservoir's `leak_tau_ms` and `weight_init`. Neither
+    moves the wiring RNG, so arms on one seed are the same creature but for the dose.
+  - **G-RO** checks read-only by construction: the reservoir is the last module, has no outgoing
+    projection, and has plasticity and exploration at 0.
+
+**PRE-FLIGHT, `g2mixpre`: six doses on r = 0…11. ITS NUMBERS ARE NEVER RESULTS, AND IT IS A
+SEARCH.**
+
+    base (20 ms, 0.12)   L100 (100, 0.12)   L300 (300, 0.12)
+    W24  (20, 0.24)      W36  (20, 0.36)    L300W24 (300, 0.24)
+
+**Selection rule:** among the five doses with at least 90% of creatures complete and a mean
+reservoir rate ≤ 50 Hz (above that is runaway, not memory), take the highest mean W_mix.
+  - The winner's pre-flight W_mix is biased upward (a maximum of five). It is never quoted.
+  - If no dose is eligible, stage 1b's build fails at the pre-flight. That is reported as a build
+    failure, not a result.
+
+**n rule:** the smallest n ∈ {24, 48, 96} with 1.5 × max(SD of W_mix, SD of D)/√n ≤ 0.025.
+
+**MEASUREMENT, `g2mix`:** the picked dose against `base`, on fresh r = 7000 … 7000 + n − 1.
+These are disjoint from every earlier §98 sample.
+  - **PRIMARY W_mix:** the heard word from the reservoir's spikes, 200–600 ms after the word, on
+    the same trials, decoder and windows as stage 1.
+  - **D = W_mix(dose) − W_mix(base)**, paired on seed.
+  - Read two-tailed, in this order:
+
+| reading | condition | consequence |
+|---|---|---|
+| **HOLDS** | Lo(W_mix) ≥ 0.75 and Lo(D) > 0 | A read-only reservoir holds the word to action time above M1b's bar, and the dose is what holds it. **Stage 2 is licensed** (a plastic reservoir → vocal projection on g2cond), as its own registration. |
+| **ABSENT** | Hi(W_mix) ≤ 0.60 | This dose does not hold the word to 200–600 ms. |
+| **WEAK** | Lo > 0.60, Hi < 0.75, Lo(D) > 0 | It holds the word, but below the bar. Stage 2 is the owner's call, since it would be the last run. |
+| **NO VERDICT** | otherwise, including W_mix at the bar with D not > 0 (carried, but not by the holding dose) | Reported. Not re-run bigger. |
+
+  - **Gates (VOID on any failure):**
+    - G-RO;
+    - G-N: at least 90% complete on both arms;
+    - G-CTRL: the ear while the word plays, dose arm, ≥ 0.90 at 2 SE;
+    - G-NULL: shuffled labels on the reservoir, dose arm, within 0.03 of 0.5;
+    - G-GENOME: the shell records the md5 and the instrument prints the FNV-1a.
+  - **Printed, not read:**
+    - W_mix while the word plays;
+    - X_mix (word XOR own F1, Rigotti's quantity);
+    - the reservoir's rate;
+    - first sleep, since an appended module shifts sleep by dilution (§92);
+    - W_pool. Appending re-rolls the noise, so W_pool is not comparable with stage 1's
+      creatures.
+  - **Runs toward abandonment:** the measurement is run 2 of 3. The pre-flight does not count, as
+    stage 0's and stage 1's did not.
+
+**A smoke at 300k ticks** (below first sleep, so it is not quotable) ran every path:
+  - G-RO PASS;
+  - all six doses hatch, and the reservoir fires at 2–3 Hz on every dose (the homeostat holds it);
+  - the no-eligible-dose refusal fires correctly, since nothing at 300k ticks has 80 scored
+    trials.
+
+**Cost:** 72 sessions at about 690 s over 14 cores, about 1 h, for the pre-flight. The measurement
+at n = 24 is 48 sessions, about 40 min. Both are stated against stage 1, whose measurement ran 2×
+its estimate under load.
+
+**Credit:**
+  - Maass, Natschläger & Markram (2002) and Jaeger (2001), for the holding source;
+  - Rigotti et al. (2013) and Fusi, Miller & Rigotti (2016), for mixing;
+  - Fiete & Seung (2006), for the rule stage 2 would use;
+  - Schuirmann (1987), for the margins.
+  All are in the README References.

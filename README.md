@@ -22013,6 +22013,25 @@ built and none is a claim.
   memory into the motor pattern that reproduces it. It bears on THE GOAL (imitation),
   not on M6.
 
+### Checked 2026-11-27: the holding source for §98 stage 1b (REGISTERED, NOT RUN)
+
+§98 stage 1 measured that nothing in the network carries the heard word when the creature
+acts, 200–600 ms after the word. Stage 1b asks whether a read-only module's own random
+recurrence can hold it there. These papers are where that idea comes from.
+
+- Maass, W., Natschläger, T. & Markram, H. (2002). *Real-time computing without stable
+  states: a new framework for neural computation based on perturbations.* Neural
+  Computation 14(11):2531–2560. doi:10.1162/089976602760407955 — the liquid state machine.
+  A recurrent spiking circuit with fixed random wiring keeps a fading memory of its recent
+  input in its transient state, and a trained linear readout can recover it. This is why
+  stage 1b's module is read-only and untrained, and why its readout is a linear decoder.
+- Jaeger, H. (2001). *The "echo state" approach to analysing and training recurrent neural
+  networks.* GMD Report 148, GMD – German National Research Center for Information
+  Technology (corrected version 2010, with a note on Definition 3:
+  <https://www.ai.rug.nl/minds/uploads/EchoStatesTechRep.pdf>) — the rate-network form of
+  the same idea. Memory length depends on the recurrent gain and on the units' time
+  constants. Those are the two doses stage 1b varies: `weight_init` and `leak_tau_ms`.
+
 ### Checked 2026-11-23: infant habituation, the target of §90 (design, NOT RUN)
 
 §90 asks whether the creature answers a new word differently from a repeat. The question

@@ -45729,6 +45729,9 @@ struct GpRow {
   double w_pool = 0.0, w_f1 = 0.0, w_aud = 0.0, w_cen = 0.0;
   double w_ctrl = 0.0, w_shuf = 0.0, x_pool = 0.0, x_f1 = 0.0;
   double w_grp = 0.0, w_pool_word = 0.0;  // amendment before the measurement
+  // §98 stage 1b: the appended read-only reservoir, when the genome has one.
+  double w_mix = 0.0, w_mix_word = 0.0, x_mix = 0.0, mix_hz = 0.0;
+  uint64_t first_sleep = 0;
   double secs = 0.0;
 };
 
@@ -45738,13 +45741,26 @@ class GpTap : public GcTap {
     vm_ = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
     am_ = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
     cm_ = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+    mm_ = s.dna.module_with_role(aibaby::ModuleRole::kComparator);  // -1 on default.toml
     reset();
   }
+  bool has_mix() const { return mm_ >= 0; }
   bool valid() const { return vm_ >= 0 && am_ >= 0 && cm_ >= 0; }
 
   void on_tick(const Session& s, uint32_t trial, uint64_t t) override {
-    (void)trial;
-    if (s.brain.asleep()) awake_ = false;
+    if (s.brain.asleep()) {
+      awake_ = false;
+      if (first_sleep_ == 0) first_sleep_ = uint64_t(trial) * kVLTrialTicks + t;
+    }
+    if (mm_ >= 0) {
+      // The reservoir's rate over the whole session, every tick, awake or not.
+      const aibaby::Network& netm = s.brain.network();
+      const aibaby::ModuleState& msm = netm.module(uint32_t(mm_));
+      const uint32_t* fm = netm.spikes();
+      for (uint32_t k = 0; k < netm.spike_count(); ++k)
+        if (fm[k] >= msm.begin && fm[k] < msm.begin + msm.count) mix_spikes_ += 1.0;
+      mix_neuron_ticks_ += double(msm.count);
+    }
     const bool in_word = t < kVLWordTicks;
     const bool in_score = t >= kVLEchoFrom && t < kVLEchoTo;
     if (!in_word && !in_score) return;
@@ -45760,6 +45776,14 @@ class GpTap : public GcTap {
     const uint32_t* fired = net.spikes();
     for (uint32_t k = 0; k < net.spike_count(); ++k) {
       const uint32_t n = fired[k];
+      if (mm_ >= 0) {
+        const aibaby::ModuleState& xs = net.module(uint32_t(mm_));
+        if (n >= xs.begin && n < xs.begin + xs.count) {
+          const uint32_t b = ((n - xs.begin) * kFeatureBins) / xs.count;
+          (in_word ? mix_word_ : mix_)[b] += 1.0;
+          continue;
+        }
+      }
       if (in_word) {
         if (n >= as.begin && n < as.begin + as.count) {
           word_[((n - as.begin) * kFeatureBins) / as.count] += 1.0;
@@ -45803,6 +45827,7 @@ class GpTap : public GcTap {
       pool_x_.push_back(pool_); f1_x_.push_back(f1_); aud_x_.push_back(aud_);
       cen_x_.push_back(cen_); word_x_.push_back(word_);
       grp_x_.push_back(grp_); pool_word_x_.push_back(pool_word_);
+      mix_x_.push_back(mix_); mix_word_x_.push_back(mix_word_);
       word_y_.push_back(int(label)); f1_mean_.push_back(f1sum_ / double(f1n_));
     }
     reset();
@@ -45810,6 +45835,9 @@ class GpTap : public GcTap {
 
   void score(GpRow& row) const {
     row.trials = uint32_t(word_y_.size());
+    row.first_sleep = first_sleep_;
+    // Spikes per neuron per tick -> Hz, at 1 ms per tick.
+    row.mix_hz = mix_neuron_ticks_ > 0.0 ? 1000.0 * mix_spikes_ / mix_neuron_ticks_ : 0.0;
     if (row.trials < 80) return;
     const size_t train = word_y_.size() / 2;
     row.w_pool = holdout_accuracy(pool_x_, word_y_, train);
@@ -45837,6 +45865,14 @@ class GpTap : public GcTap {
       xy.push_back((word_y_[i] != 0) != (f1_mean_[i] > med) ? 1 : 0);
     row.x_pool = holdout_accuracy(pool_x_, xy, train);
     row.x_f1 = holdout_accuracy(f1_x_, xy, train);
+    if (mm_ >= 0) {
+      row.w_mix = holdout_accuracy(mix_x_, word_y_, train);
+      row.w_mix_word = holdout_accuracy(mix_word_x_, word_y_, train);
+      row.x_mix = holdout_accuracy(mix_x_, xy, train);
+      // On a reservoir genome the shuffled null is taken on the reservoir's
+      // own features, since that is the primary there.
+      row.w_shuf = holdout_accuracy(mix_x_, ys, train);
+    }
     row.ok = true;
   }
 
@@ -45845,17 +45881,20 @@ class GpTap : public GcTap {
     pool_.assign(kFeatureBins, 0.0); aud_.assign(kFeatureBins, 0.0);
     cen_.assign(kFeatureBins, 0.0); word_.assign(kFeatureBins, 0.0);
     pool_word_.assign(kFeatureBins, 0.0); grp_.assign(aibaby::kVocalGroups, 0.0);
+    mix_.assign(kFeatureBins, 0.0); mix_word_.assign(kFeatureBins, 0.0);
     std::fill(f1_.begin(), f1_.end(), 0.0);
     f1sum_ = 0.0; f1n_ = 0; awake_ = true;
   }
   uint64_t seed_;
-  int32_t vm_ = -1, am_ = -1, cm_ = -1;
-  std::vector<double> pool_, f1_, aud_, cen_, word_, pool_word_, grp_;
+  int32_t vm_ = -1, am_ = -1, cm_ = -1, mm_ = -1;
+  std::vector<double> pool_, f1_, aud_, cen_, word_, pool_word_, grp_, mix_, mix_word_;
   double f1sum_ = 0.0;
   uint32_t f1n_ = 0;
   bool awake_ = true;
+  uint64_t first_sleep_ = 0;
+  double mix_spikes_ = 0.0, mix_neuron_ticks_ = 0.0;
   std::vector<std::vector<double>> pool_x_, f1_x_, aud_x_, cen_x_, word_x_, grp_x_,
-      pool_word_x_;
+      pool_word_x_, mix_x_, mix_word_x_;
   std::vector<int> word_y_;
   std::vector<double> f1_mean_;
 };
@@ -46023,6 +46062,257 @@ bool run_g2poolpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbos
 bool run_g2pool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_g2pool_impl(blob, ticks, false);
+}
+
+
+// --- g2mix: §98 stage 1b — can a read-only reservoir HOLD the word to action time?
+//
+// Stage 1 read ABSENT: the F1 group's plastic afferents carry the word at 0.93
+// while it plays and at chance 200-600 ms later, and so do the ear and central.
+// A plain mixing module fed by them would mix signals that no longer carry the
+// word, so stage 1b names its holding source: the module's OWN random
+// recurrence, a reservoir's fading memory (Maass, Natschlager & Markram 2002;
+// Jaeger 2001), dosed by two existing module fields -- recurrent weight
+// `weight_init` and membrane `leak_tau_ms` -- patched at hatch on the appended
+// `mixing` module of dna/mixing.toml. No kernel change.
+//
+// Pre-flight: six doses on r 0..11, one of them the baseline (no holding). A
+// registered rule picks one; its numbers are never results. Measurement: the
+// picked dose against the baseline on fresh r 7000+, paired on seed (the dose
+// does not move the wiring RNG, so the two arms are the same creature but for
+// the dose). Primary W_mix, plus D = W_mix(dose) - W_mix(baseline) paired.
+// ROADMAP §98 stage 1b.
+namespace {
+
+struct GmArm {
+  const char* name;
+  float leak_ms, weight;
+};
+constexpr GmArm kGmArms[] = {
+    {"base", 20.0f, 0.12f},  {"L100", 100.0f, 0.12f}, {"L300", 300.0f, 0.12f},
+    {"W24", 20.0f, 0.24f},   {"W36", 20.0f, 0.36f},   {"L300W24", 300.0f, 0.24f},
+};
+constexpr uint32_t kGmArmCount = sizeof(kGmArms) / sizeof(kGmArms[0]);
+constexpr uint32_t kGmPreN = 12;
+constexpr uint32_t kGmFrom = 7000;
+constexpr double kGmMaxHz = 50.0;  // a reservoir above this is runaway, not memory
+// Fixed by the pre-flight's rule. -1 / 0 = not yet fixed: the measurement refuses.
+constexpr int kGmSel = -1;
+constexpr uint32_t kGmN = 0;
+
+bool g2mix_readonly(const aibaby::Dna& d, int32_t mm, std::string& why) {
+  if (mm < 0) { why = "no `comparator`-role module"; return false; }
+  if (uint32_t(mm) + 1 != d.module_count()) { why = "the reservoir is not the last module"; return false; }
+  for (uint32_t p = 0; p < d.projection_count(); ++p)
+    if (d.projection(p).src == uint32_t(mm)) { why = "the reservoir has an outgoing projection"; return false; }
+  const aibaby::DnaModule& m = d.module(uint32_t(mm));
+  if (m.syn_wake_scale != 0.0f || m.syn_sleep_scale != 0.0f || m.explore_scale != 0.0f) {
+    why = "the reservoir is plastic or exploring";
+    return false;
+  }
+  return true;
+}
+
+bool run_g2mix_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t mm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  std::printf("\n  §98 STAGE 1b %s — CAN A READ-ONLY RESERVOIR HOLD THE WORD TO ACTION TIME?\n\n",
+              pre ? "PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "MEASUREMENT");
+  std::string why;
+  const bool ro = g2mix_readonly(dna, mm, why);
+  std::printf("    G-RO    the reservoir is read-only by construction%30s%s%s\n",
+              ro ? "PASS" : "FAIL", ro ? "" : " -- ", ro ? "" : why.c_str());
+  if (!ro) {
+    std::printf("  REFUSED: run on dna/mixing.toml.\n");
+    return false;
+  }
+  std::vector<uint32_t> arms;
+  if (pre) {
+    for (uint32_t a = 0; a < kGmArmCount; ++a) arms.push_back(a);
+  } else {
+    if (kGmSel < 1 || kGmN == 0) {
+      std::printf("  REFUSED: the dose and n are not fixed yet. Run g2mixpre and set\n"
+                  "  kGmSel and kGmN by the registered rule first.\n");
+      return false;
+    }
+    arms = {0u, uint32_t(kGmSel)};
+  }
+  const uint32_t n = pre ? kGmPreN : kGmN;
+  const uint32_t from = pre ? 0u : kGmFrom;
+  const uint32_t na = uint32_t(arms.size());
+  std::printf("  genome      blob FNV-1a %016llx (record the file's md5 in the log)\n"
+              "  creatures   %u seeds, r = %u..%u, seed = genome seed + r * 7919, %llu ticks,\n"
+              "              g2cond's `random` arm, run_g2cond_session + the read-only tap\n"
+              "  arms        ", (unsigned long long)g2p_fnv(blob), n, from, from + n - 1,
+              (unsigned long long)ticks);
+  for (uint32_t a : arms)
+    std::printf("%s (leak %.0f ms, w %.2f)  ", kGmArms[a].name, double(kGmArms[a].leak_ms),
+                double(kGmArms[a].weight));
+  std::printf("\n  primary     W_mix: heard word from the reservoir's spikes, 200-600 ms after\n"
+              "              the word; D = W_mix(dose) - W_mix(base), paired on seed\n\n");
+
+  const size_t mod_base = sizeof(aibaby::DnaHeader);
+  std::vector<GpRow> rows = parallel_reps<GpRow>(n * na, [&](uint32_t i) {
+    GpRow row;
+    const uint32_t r = from + i / na;
+    const GmArm& arm = kGmArms[arms[i % na]];
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const size_t mbase = mod_base + sizeof(aibaby::DnaModule) * size_t(mm);
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, leak_tau_ms), &arm.leak_ms,
+                sizeof(float));
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, weight_init), &arm.weight,
+                sizeof(float));
+    Session probe;
+    std::string error;
+    if (!probe.init(variant, error)) return row;
+    GpTap tap(probe, seed);
+    if (!tap.valid() || !tap.has_mix()) return row;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const auto t0 = std::chrono::steady_clock::now();
+    row.g = run_g2cond_session(variant, ticks, 3, reg, &tap);
+    row.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    tap.score(row);
+    row.ok = row.ok && row.g.ok;
+    return row;
+  });
+
+  std::printf("  %-5s %-8s %-6s %-7s %-7s %-7s %-7s %-7s %-7s %-8s %s\n", "r", "arm", "trials",
+              "W_mix", "W_mixwd", "X_mix", "shuf", "ctrl", "W_pool", "mix Hz", "first sleep");
+  std::vector<double> secs;
+  for (uint32_t k = 0; k < n; ++k) {
+    for (uint32_t a = 0; a < na; ++a) {
+      const GpRow& w = rows[k * na + a];
+      secs.push_back(w.secs);
+      std::printf("  %-5u %-8s %-6u %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-8.2f %llu%s\n",
+                  from + k, kGmArms[arms[a]].name, w.trials, w.w_mix, w.w_mix_word, w.x_mix,
+                  w.w_shuf, w.w_ctrl, w.w_pool, w.mix_hz, (unsigned long long)w.first_sleep,
+                  w.ok ? "" : "   NOT ok");
+    }
+  }
+  double ms, sds, ses;
+  g2p_mse(secs, ms, sds, ses);
+  std::printf("\n  cost        %.1f s per session (mean wall, sd %.1f), %u sessions\n\n", ms, sds,
+              n * na);
+
+  // Per-arm summaries over that arm's complete seeds, and D over seeds where
+  // the arm AND the base are both complete.
+  struct Sum { uint32_t complete = 0; double w, wse, wsd, hz, ctrl, ctrlse, shuf, d, dse, dsd, xm, wword, sleep; };
+  std::vector<Sum> sum(na);
+  for (uint32_t a = 0; a < na; ++a) {
+    std::vector<double> w, hz, ct, sh, d, xm, ww, sl;
+    for (uint32_t k = 0; k < n; ++k) {
+      const GpRow& x = rows[k * na + a];
+      const GpRow& b = rows[k * na + 0];
+      if (!x.ok) continue;
+      w.push_back(x.w_mix); hz.push_back(x.mix_hz); ct.push_back(x.w_ctrl);
+      sh.push_back(x.w_shuf); xm.push_back(x.x_mix); ww.push_back(x.w_mix_word);
+      sl.push_back(double(x.first_sleep));
+      if (b.ok) d.push_back(x.w_mix - b.w_mix);
+    }
+    Sum& s = sum[a];
+    s.complete = uint32_t(w.size());
+    double t1, t2;
+    g2p_mse(w, s.w, s.wsd, s.wse);
+    g2p_mse(hz, s.hz, t1, t2);
+    g2p_mse(ct, s.ctrl, t1, s.ctrlse);
+    g2p_mse(sh, s.shuf, t1, t2);
+    g2p_mse(d, s.d, s.dsd, s.dse);
+    g2p_mse(xm, s.xm, t1, t2);
+    g2p_mse(ww, s.wword, t1, t2);
+    g2p_mse(sl, s.sleep, t1, t2);
+  }
+  std::printf("  %-8s %-9s %-17s %-17s %-8s %-8s %-8s %-8s %s\n", "arm", "complete",
+              "W_mix", "D vs base", "W_mixwd", "X_mix", "shuf", "mix Hz", "first sleep");
+  for (uint32_t a = 0; a < na; ++a) {
+    const Sum& s = sum[a];
+    std::printf("  %-8s %2u of %-3u  %.4f +- %.4f  %+.4f +- %.4f  %-8.3f %-8.3f %-8.3f %-8.2f %.0f\n",
+                kGmArms[arms[a]].name, s.complete, n, s.w, s.wse, s.d, s.dse, s.wword, s.xm,
+                s.shuf, s.hz, s.sleep);
+  }
+
+  if (pre) {
+    std::printf("\n  THE SELECTION RULE: among doses (not base) with >= 90%% complete and mean\n"
+                "  reservoir rate <= %.0f Hz, the highest mean W_mix.\n", kGmMaxHz);
+    int pick = -1;
+    for (uint32_t a = 1; a < na; ++a) {
+      const Sum& s = sum[a];
+      const bool elig = s.complete * 10 >= n * 9 && s.hz <= kGmMaxHz;
+      std::printf("    %-8s %s\n", kGmArms[arms[a]].name, elig ? "eligible" : "NOT eligible");
+      if (elig && (pick < 0 || s.w > sum[uint32_t(pick)].w)) pick = int(a);
+    }
+    if (pick < 0) {
+      std::printf("    -> NO DOSE IS ELIGIBLE. Stage 1b's build fails at the pre-flight; the\n"
+                  "       measurement does not run. A build failure, not a result.\n");
+      return false;
+    }
+    const Sum& s = sum[uint32_t(pick)];
+    const double sdmax = std::max(s.wsd, s.dsd);
+    std::printf("    -> dose %s (index %d). THE n RULE: 1.5 x max(SD W_mix %.4f, SD D %.4f) / sqrt n <= 0.025\n",
+                kGmArms[arms[uint32_t(pick)]].name, pick, s.wsd, s.dsd);
+    uint32_t pn = 0;
+    for (uint32_t cand : {24u, 48u, 96u}) {
+      const double se = 1.5 * sdmax / std::sqrt(double(cand));
+      std::printf("    n = %-3u SE %.4f  cost %.2f h on 14 cores (2 arms)\n", cand, se,
+                  ms * double(cand) * 2.0 / 14.0 / 3600.0);
+      if (pn == 0 && se <= kGpSeTarget) pn = cand;
+    }
+    if (pn == 0) pn = 96;
+    std::printf("    -> n = %u. THE PRE-FLIGHT's DECODABILITIES ARE NOT RESULTS.\n", pn);
+    return true;
+  }
+
+  const Sum& b = sum[0];
+  const Sum& s = sum[1];
+  const bool gn = b.complete * 10 >= n * 9 && s.complete * 10 >= n * 9;
+  const bool gctrl = s.ctrl - 2.0 * s.ctrlse >= kGpCtrl;
+  const bool gnull = std::fabs(s.shuf - 0.5) <= 0.03;
+  std::printf("\n    G-N     base %u, dose %u of %u complete (need 90%% each)%20s\n", b.complete,
+              s.complete, n, gn ? "PASS" : "FAIL");
+  std::printf("    G-CTRL  ear while the word plays (dose arm) %.4f +- %.4f >= %.2f at 2 SE  %s\n",
+              s.ctrl, s.ctrlse, kGpCtrl, gctrl ? "PASS" : "FAIL");
+  std::printf("    G-NULL  shuffled labels on the reservoir (dose arm) %.4f, within 0.03  %s\n",
+              s.shuf, gnull ? "PASS" : "FAIL");
+  std::printf("  PRIMARY     W_mix(dose) = %.4f +- %.4f, [%.4f, %.4f]\n"
+              "              D = %+.4f +- %.4f, [%+.4f, %+.4f]\n",
+              s.w, s.wse, s.w - 2.0 * s.wse, s.w + 2.0 * s.wse, s.d, s.dse, s.d - 2.0 * s.dse,
+              s.d + 2.0 * s.dse);
+  if (!(gn && gctrl && gnull)) {
+    std::printf("\n  VOID: a gate failed; nothing below is read.\n");
+    return false;
+  }
+  const double lo = s.w - 2.0 * s.wse, hi = s.w + 2.0 * s.wse;
+  const bool dpos = s.d - 2.0 * s.dse > 0.0;
+  std::printf("\n  THE REGISTERED READING\n");
+  if (lo >= kGpBar && dpos) {
+    std::printf("    -> HOLDS: the reservoir carries the heard word at action time above\n"
+                "       M1b's bar, and the holding dose is what puts it there. Stage 2 (a\n"
+                "       plastic reservoir -> vocal projection on g2cond) is licensed, its own\n"
+                "       registration.\n");
+  } else if (hi <= kGpAbsent) {
+    std::printf("    -> ABSENT: within 0.10 of chance at this dose.\n");
+  } else if (lo > kGpAbsent && hi < kGpBar && dpos) {
+    std::printf("    -> WEAK: held, below M1b's bar, and by the dose.\n");
+  } else {
+    std::printf("    -> NO VERDICT. Not re-run bigger.\n");
+  }
+  return true;
+}
+
+}  // namespace
+
+bool run_g2mixpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2mix_impl(blob, ticks, true);
+}
+
+bool run_g2mix(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2mix_impl(blob, ticks, false);
 }
 
 

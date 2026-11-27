@@ -623,6 +623,12 @@ const Spec kSpecs[] = {
     {"g2pool", 3400000, Expect::kRead, Tier::kTeach,
      "§98 stage 1: is the heard word on the F1 group's plastic afferents (vocal"
      " outside F1) at action time? PRESENT/WEAK/ABSENT against M1b's 0.75"},
+    {"g2mixpre", 3400000, Expect::kRead, Tier::kTeach,
+     "§98 stage 1b pre-flight: six reservoir doses on r 0-11, a registered rule picks"
+     " one and n. Never results. Run on dna/mixing.toml"},
+    {"g2mix", 3400000, Expect::kRead, Tier::kTeach,
+     "§98 stage 1b: does a read-only reservoir hold the word to action time? W_mix"
+     " and D vs the baseline dose, paired. Run on dna/mixing.toml"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2100,6 +2106,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g2condpow") ok = run_g2condpow(dna_blob, ticks, verbose);
   else if (name == "g2poolpre") ok = run_g2poolpre(dna_blob, ticks, verbose);
   else if (name == "g2pool") ok = run_g2pool(dna_blob, ticks, verbose);
+  else if (name == "g2mixpre") ok = run_g2mixpre(dna_blob, ticks, verbose);
+  else if (name == "g2mix") ok = run_g2mix(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});
