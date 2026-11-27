@@ -45453,7 +45453,7 @@ constexpr uint32_t kG2pPreN = 12;
 constexpr uint32_t kG2pFrom = 5000;
 // Fixed by stage 0's rule (smallest of 24/48/96 with P(NOT CONDITIONAL | 0)
 // >= 0.95 at SE = 1.5 SD / sqrt n). 0 = not yet fixed: stage 1 refuses.
-constexpr uint32_t kG2pN = 0;
+constexpr uint32_t kG2pN = 96;  // stage 0 pre-flight 2026-11-27: SD(L) 0.0821 -> 96, P 0.952
 
 struct G2pJob {
   GcRun g;
@@ -45592,9 +45592,16 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
   g2p_mse(rv, mr, sdr, ser);
   std::printf("\n  per arm (hit|want - hit|not)   heard %+.4f +- %.4f   swap %+.4f +- %.4f"
               "   random %+.4f +- %.4f\n", mh, seh, ms, ses, mr, ser);
+  // g2cond's own estimator takes the best of the two arm MEANS; the per-seed
+  // best-of is a different (more biased) quantity. The §98 pre-flight printed
+  // only the per-seed one under g2cond's name -- corrected before stage 1.
+  const bool h_best = mh > ms;
+  const double g2c = (h_best ? mh : ms) - mr;
+  const double g2c_se = std::sqrt((h_best ? seh * seh : ses * ses) + ser * ser);
   std::printf("  PRINTED, NOT READ   E = (heard - swap)/2   %+.4f +- %.4f (SD %.4f)\n"
-              "                      old estimator (best of heard/swap - random) %+.4f +- %.4f\n",
-              mE, seE, sdE, mo, seo);
+              "                      g2cond's estimator (best of the arm MEANS - random) %+.4f +- %.4f\n"
+              "                      per-seed best of heard/swap - random (NOT g2cond's) %+.4f +- %.4f\n",
+              mE, seE, sdE, g2c, g2c_se, mo, seo);
   std::printf("  PRIMARY             L = %+.4f +- %.4f (SD %.4f), [Lo, Hi] = [%+.4f, %+.4f]\n",
               mL, seL, sdL, mL - 2.0 * seL, mL + 2.0 * seL);
 

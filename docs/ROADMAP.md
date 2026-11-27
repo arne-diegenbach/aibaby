@@ -24236,3 +24236,44 @@ pre-flight and the archive.
   - Miconi (2017), that reward-modulated rules can be conditional;
   - Schuirmann (1987), for the margin.
   All are already in the README References.
+
+### §98 STAGE 0 PRE-FLIGHT — n FIXED AT 96; THE ARCHIVE REPRODUCES EXACTLY; ABOUT 6 h (2026-11-27)
+
+`results/n98-s0-g2condpowpre.log`, 44.0 min, exit 0, `dna/default.toml` md5 fb419735…
+**G-N PASS** (12 of 12 complete). **G-POS PASS:** the fixed arm's G2 measure is +0.355 ± 0.018,
+so G2 reproduces on the current genome.
+
+**THE ARCHIVE REPRODUCES TO THE PRINTED DIGIT.**
+  - r = 0, 1, 2 read heard +0.252 / −0.335 / +0.097 and swap −0.124 / +0.352 / −0.074.
+  - These are exactly the README's `g2cond` per-seed values.
+  - So the published null is a measurement of THIS creature, not an older genome's. It was
+    registered as a comparison, not a gate; it is reported because it holds.
+
+**THE n RULE.** SD(L) is 0.0821, against the exploratory 0.053 from the archive's three seeds:
++55%, the fourth SD projection in a row to come in high.
+
+| n | P(NOT CONDITIONAL fires, true L = 0) |
+|---|---|
+| 24 | 0.000 |
+| 48 | 0.584 |
+| 96 | 0.952 |
+
+  - **n = 96**, r = 5000…5095, so `kG2pN = 96`.
+  - P(CONDITIONAL fires, true L = 0) is 0.023.
+
+**THE ECHO DIAGNOSIS HOLDS (printed, not read).**
+  - E = (heard − swap)/2 has an SD of 0.291, against L's 0.082.
+  - The mirror holds on all 12 seeds.
+
+**A MISLABEL IN MY INSTRUMENT, FIXED BEFORE STAGE 1.** The pre-flight printed "old estimator
++0.2645 ± 0.0520".
+  - That is the PER-SEED best of heard/swap. `g2cond` takes the best of the two arm MEANS, which
+    on these 12 seeds is swap +0.0453 − random −0.0034 = **+0.049 ± 0.085**.
+  - Stage 1 prints both, labelled.
+  - The per-seed figure is not `g2cond`'s and is never quoted as such.
+
+**COST.** 689 s per session (wall, under a 14-way load). 384 sessions, scaled from the measured
+44.0 min for 48, is **about 5.9 h**, against the registered 5.3 h projection and the rough
+"about 7 h at n = 96". Reported to the owner before stage 1, as registered.
+
+**The pre-flight's L (+0.022 ± 0.024), E and per-seed values are NOT results.**

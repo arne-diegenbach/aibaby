@@ -1,0 +1,44 @@
+fb419735526b1fe189be8264a63f5d95  dna/default.toml
+experiment: g2condpowpre
+
+  §98 STAGE 0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS) — g2cond AT POWER, ECHO TERM REMOVED
+
+  genome      blob FNV-1a f67d7725f1bbc415 (record the file's md5 in the log)
+  creatures   12 seeds, r = 0..11, seed = genome seed + r * 7919, 3400000 ticks,
+              4 arms each (fixed, heard, swap, random), run_g2cond_session unchanged
+  primary     L_r = (heard_r + swap_r)/2 - random_r, paired on seed; margin 0.05
+
+  r     fixedG2  heard    swap     random   E        L        praise/scold (heard)
+  0     +0.413   +0.252   -0.124   -0.013   +0.188   +0.078   1510/1281   archived heard +0.252 swap -0.124
+  1     +0.385   -0.335   +0.352   +0.075   -0.344   -0.066   1035/1768   archived heard -0.335 swap +0.352
+  2     +0.310   +0.097   -0.074   +0.026   +0.086   -0.014   1419/1359   archived heard +0.097 swap -0.074
+  3     +0.310   -0.030   +0.140   +0.038   -0.085   +0.017   1362/1379
+  4     +0.290   -0.328   +0.449   -0.081   -0.388   +0.141   1071/1711
+  5     +0.472   +0.376   -0.409   +0.044   +0.392   -0.061   1897/892
+  6     +0.307   -0.041   +0.000   -0.075   -0.021   +0.054   1205/1481
+  7     +0.366   -0.256   +0.273   -0.001   -0.265   +0.009   1112/1647
+  8     +0.362   +0.556   -0.436   -0.096   +0.496   +0.156   2024/780
+  9     +0.285   -0.252   +0.306   -0.000   -0.279   +0.027   1003/1809
+  10    +0.446   +0.155   -0.110   -0.020   +0.132   +0.042   1610/1173
+  11    +0.311   -0.300   +0.176   +0.062   -0.238   -0.124   1070/1684
+
+  cost        689.1 s per session (mean wall, sd 93.4, max 796.7), 48 sessions
+
+    G-N     12 of 12 seeds complete (need 90%)                       PASS
+    G-POS   fixed arm G2 measure +0.3549 +- 0.0182, mean - 2 SE +0.3185 > 0.05   PASS
+
+  per arm (hit|want - hit|not)   heard -0.0089 +- 0.0865   swap +0.0453 +- 0.0830   random -0.0034 +- 0.0163
+  PRINTED, NOT READ   E = (heard - swap)/2   -0.0271 +- 0.0841 (SD 0.2912)
+                      old estimator (best of heard/swap - random) +0.2645 +- 0.0520
+  PRIMARY             L = +0.0216 +- 0.0237 (SD 0.0821), [Lo, Hi] = [-0.0258, +0.0690]
+
+  THE n RULE (SE = 1.5 x SD / sqrt n, SD 0.0821)
+    n = 24   SE 0.0251  P(NOT CONDITIONAL | 0) 0.000  P(CONDITIONAL | 0) 0.023  cost 1.3 h on 14 cores
+    n = 48   SE 0.0178  P(NOT CONDITIONAL | 0) 0.584  P(CONDITIONAL | 0) 0.023  cost 2.6 h on 14 cores
+    n = 96   SE 0.0126  P(NOT CONDITIONAL | 0) 0.952  P(CONDITIONAL | 0) 0.023  cost 5.3 h on 14 cores
+    -> n = 96. THE PRE-FLIGHT's L, E AND PER-SEED VALUES ARE NOT RESULTS.
+
+real	44m0.854s
+user	541m36.163s
+sys	0m8.291s
+exit=0
