@@ -22032,6 +22032,34 @@ recurrence can hold it there. These papers are where that idea comes from.
   the same idea. Memory length depends on the recurrent gain and on the units' time
   constants. Those are the two doses stage 1b varies: `weight_init` and `leak_tau_ms`.
 
+Leads found the same evening, while stage 1b's pre-flight ran. They bear on what comes
+after it. None is built and none is a claim.
+
+- Hoerzer, G. M., Legenstein, R. & Maass, W. (2014). *Emergence of complex computational
+  structures from chaotic neural networks through reward-modulated Hebbian learning.*
+  Cerebral Cortex 24:677–690. <https://igi-web.tugraz.at/PDF/214.pdf> — a generic random
+  recurrent network whose readout learns by trial and error with an exploratory
+  three-factor rule (Legenstein et al. 2010's). Working memory appears in it when the task
+  needs it. **This is §98 stage 2's design almost exactly**: a reservoir, plus a
+  reward-modulated readout into the voice. Its stated limit is that the rule wants a
+  continuous reward signal, while g2cond's praise is sparse and arrives late.
+- Gerstner, W., Lehmann, M., Liakoni, V., Corneil, D. & Brea, J. (2018). *Eligibility
+  traces and plasticity on behavioral time scales: experimental support of NeoHebbian
+  three-factor learning rules.* Frontiers in Neural Circuits 12:53.
+  doi:10.3389/fncir.2018.00053 — the experimental case for synaptic eligibility traces
+  lasting seconds. That bears on the credit-timing route stage 1 left open: the act is an
+  800 ms low-pass, partly set while the word still plays, so does the trace reach the
+  reward?
+- Lim, S. & Goldman, M. S. (2013). *Balanced cortical microcircuitry for maintaining
+  information in working memory.* Nature Neuroscience 16(9):1306–1314.
+  doi:10.1038/nn.3492 — persistence by **negative-derivative feedback**. Recurrent excitation
+  and inhibition are balanced in strength but offset in time, so any drift produces a
+  corrective signal, and the circuit holds what it integrated. It is robust where
+  positive-feedback attractors are fragile. If stage 1b's reservoir dose does not hold, this
+  is the principled next holding source. It is about time constants and not gain, so it
+  may need per-cell-type synaptic time constants, a kernel question that would need its
+  own argument.
+
 ### Checked 2026-11-23: infant habituation, the target of §90 (design, NOT RUN)
 
 §90 asks whether the creature answers a new word differently from a repeat. The question
