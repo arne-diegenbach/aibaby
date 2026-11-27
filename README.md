@@ -20873,6 +20873,16 @@ audit of names cited in the text against names appearing here (2026-10-09).**
   and fails ±0.25 Hz at 76% of 768 other seeds on somato (69% on expression).
   That is why P's seed-0 failure was a draw, not a shift.
 
+- **A maximum over noisy estimates is biased upward (§98 stage 0).** Capen, E. C.,
+  Clapp, R. V. & Campbell, W. M. (1971). *Competitive bidding in high-risk
+  situations.* Journal of Petroleum Technology 23(6), 641-653.
+  <https://doi.org/10.2118/2993-PA> — the winner's curse. `g2cond` took the better
+  of two mirrored arms, each carrying the echo term ±E, so its estimate was a maximum
+  biased by |E|. At power it would have printed a false CONDITIONAL (+0.0506 ±
+  0.0248, its rule cleared by 0.0006) where the averaged, echo-free estimator reads
+  +0.011. The bias is theirs; the consequence here is the project's (discoveries
+  §2.19).
+
 - **Derive on one sample, judge on another (§97).** Stone, M. (1974).
   *Cross-validatory choice and assessment of statistical predictions.* Journal
   of the Royal Statistical Society, Series B 36(2), 111-147.

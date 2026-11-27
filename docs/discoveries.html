@@ -33,7 +33,7 @@
 <p class="subtitle">Original findings from a grown spiking creature, with no external antecedent</p>
 <p class="author">Arne Diegenbach</p>
 <p class="affil">The <span class="id">aibaby</span> project &mdash; a C++17 spiking neural creature grown from a DNA/genome file</p>
-<p class="date">31 October 2026 (revised)</p>
+<p class="date">27 November 2026 (revised; &sect;&sect;2.19&ndash;2.21 and 10&ndash;12 are new)</p>
 
 <div class="abstract">
 <p class="lab">Abstract</p>
@@ -451,6 +451,52 @@ read 0.115 and 0.305. <strong>To compare content across two quantities one needs
 not another decoder</strong> &mdash; an oracle, or an exact decomposition with no free
 parameters. The within-column comparison that holds one quantity fixed and varies the
 <em>rule</em> remains sound, and that is where the same run's usable result came from.</p>
+
+<h3>2.19 Choosing the better of two mirrored arms keeps the term the mirror was built to cancel</h3>
+<p>The conditional version of a met milestone (&sect;12.1) has two arms that mirror each other:
+praise a high voice after word A and a low one after word B, or the reverse. The voice
+already echoes the word it heard, so with no learning at all the two arms read about
++<em>E</em>&nbsp;+&nbsp;<em>L</em> and &minus;<em>E</em>&nbsp;+&nbsp;<em>L</em>, where
+<em>E</em> is a per-creature echo term and <em>L</em> is the learning. The archived scoring
+took the better of the two arm means, minus a matched control. <strong>A maximum of two arms
+that carry &plusmn;<em>E</em> is biased by |<em>E</em>|</strong>, and on three creatures the
+bias hid inside an interval of &plusmn;0.153.</p>
+<p>At power it would have printed a false positive. On 96 fresh creatures the echo&rsquo;s
+population mean is not zero (&minus;0.040&nbsp;&plusmn;&nbsp;0.023), so one arm inherits
++0.040. The archived estimator reads <strong>+0.0506&nbsp;&plusmn;&nbsp;0.0248</strong> and
+clears its own rule (more than 0.05 and more than 2&nbsp;SE) by 0.0006. The estimator registered
+in advance, (<em>heard</em>&nbsp;+&nbsp;<em>swap</em>)/2 minus the control, paired on seed, cancels
+<em>E</em> by construction. It reads <strong>+0.0107&nbsp;&plusmn;&nbsp;0.0079</strong> on the same
+data. <strong>When two arms mirror each other, average them. Never select between them.</strong>
+What would have refused this: the averaged estimator agreeing with the best-of estimator, which
+it would do only if the echo had no population mean.</p>
+
+<h3>2.20 A set point copied from one creature fails three creatures in four</h3>
+<p>The calibration test compares each module&rsquo;s free-running rate with a target written
+into the genome, and every target had been written from one creature: the genome&rsquo;s own
+seed. On 768 seeds of the shipped genome, the test&rsquo;s &plusmn;0.25&nbsp;Hz tolerance fails
+<strong>somato at 583 of 768 seeds (76%)</strong>, expression at 531 (69%) and central at 391
+(51%). Somato&rsquo;s seed mean is 4.187&nbsp;Hz against its target of 4.56. On 96 held-out
+seeds, chosen in advance, every predicted verdict held: somato
+&minus;0.372&nbsp;&plusmn;&nbsp;0.020&nbsp;Hz off target, central and expression about 0.2&nbsp;Hz
+off but not provably outside the tolerance. <strong>The single-seed test passes on the shipped
+genome only at the seed its targets were read from, so it cannot certify any other genome</strong>,
+and an appended module&rsquo;s apparent miscalibration at that seed (&minus;0.46&nbsp;Hz) turned
+out to be one draw: paired over 768 seeds the shift is +0.024&nbsp;&plusmn;&nbsp;0.009&nbsp;Hz.
+Regression to the mean is Galton&rsquo;s (Appendix A); what is this project&rsquo;s is that its
+own regression test had been built on it. Re-deriving the targets from a seed mean cost no
+material echo on 768 paired creatures, with a margin of 0.025.</p>
+
+<h3>2.21 A green regression suite does not price a change to the genome</h3>
+<p>One genome edit (DNA v75: synaptic depression on the ear-to-voice tract, the dose of
+&sect;10.1) passed all 24 fast checks and drove the creature&rsquo;s articulator echo of a
+heard word <strong>from 0.790&nbsp;&plusmn;&nbsp;0.008 to 0.519&nbsp;&plusmn;&nbsp;0.007 on 36
+creatures</strong>, with a shuffled control at 0.50. That is chance in every arm. Eight
+instruments failed on it and passed on the previous genome, with the same binary and the same
+lengths. It was reverted. The fast tier is built to catch broken code, not a changed creature.
+<strong>Choose the instruments by the tract the edit touches, before shipping</strong>, and
+compare their positive-control rows rather than their verdicts. Here that was 52 minutes of
+instruments, not the 44-hour long tier.</p>
 
 <h2>3. Credit assignment and interference</h2>
 <p>Teaching a second, conflicting vowel target destroys the first. The surviving fraction
@@ -2006,10 +2052,113 @@ plausible mechanism from consideration.</p>
 <tr><td>Per-neuron spread of the membrane leak</td><td>Nothing either way, learned or imposed; bound 31%</td></tr>
 <tr><td>Per-neuron spread of the refractory period</td><td>Structurally inert: the creature runs 46&ndash;81&times; below the ceiling the constant sets, so it governs about 1.5% of each neuron&rsquo;s input. &minus;1.6% per 0.1&nbsp;sigma against the threshold&rsquo;s &minus;20%, and a spread holds the operating point to sigma 0.60 where the threshold broke it at 0.04</td></tr>
 <tr><td>Pooling the rate regulator across an articulator group</td><td>Improves the transfer (0.34&nbsp;&rarr;&nbsp;0.51) and halves the learned bias, and the two offset: &minus;0.90&nbsp;SE. Every neuron receives the slice mean, so the common threshold is pushed back 3&times; harder and the gradient is noisier to estimate in</td></tr>
-<tr class="last"><td>Exempting the readout&rsquo;s own coordinate from the regulator</td><td>One direction of fourteen rather than thirteen. The mechanism prediction was confirmed and the outcome did not follow: threshold push 1.02&times; against pooling&rsquo;s 3.3&times;, and the learned bias 0.957&times; with its own control falling too. The regulator&rsquo;s coordinate system is not what binds</td></tr>
+<tr><td>Exempting the readout&rsquo;s own coordinate from the regulator</td><td>One direction of fourteen rather than thirteen. The mechanism prediction was confirmed and the outcome did not follow: threshold push 1.02&times; against pooling&rsquo;s 3.3&times;, and the learned bias 0.957&times; with its own control falling too. The regulator&rsquo;s coordinate system is not what binds</td></tr>
+<tr><td>Facilitation on the ear-to-voice tract</td><td>The membrane comparison gains 4.0&nbsp;SE, twice, and the gain survives silencing the self-voice; the spikes do not move, and the echo that depression killed (&sect;2.21) is not given back</td></tr>
+<tr><td>A wire from the comparator module (&sect;10.2) into the voice, at the copy weight</td><td>The relation is present upstream and the voice&rsquo;s answer to a new word is not different from its answer to a repeat: |effect| &lt; 0.0081 on the answer and &lt; 4.7&nbsp;ms on its onset. The wire raises answering overall, which is drive, not novelty</td></tr>
+<tr><td>An interoceptive &ldquo;second brain&rdquo; module driven by hunger, comfort and fatigue</td><td>Driven, not pacemaking, and legible as a rate shift but carrying no decodable information (1.4&ndash;1.8&nbsp;SE at n&nbsp;=&nbsp;24); quiet and informative do not coexist in it, and loud it costs waking life (&sect;11.1)</td></tr>
+<tr class="last"><td>Replaying the creature&rsquo;s own voice during sleep (a dream mode)</td><td>Live, and inert when switched off. Both its readouts closed by bounds rather than verdicts, the second with no verdict on 352 creatures; it costs nothing, because it spikes only asleep (&sect;11.1)</td></tr>
 </table>
 
-<h2>10. Provenance</h2>
+<h2>10. Holding one word and comparing it with the next</h2>
+<p>The task: present a word, leave a gap, present a second word, and ask whether the
+creature&rsquo;s own activity reports whether the two were the same. Every quantity below is read
+by the project&rsquo;s standard held-out linear classifier from one module&rsquo;s population
+activity, against a bar of 0.650. Each is read against <em>its own oracle</em>, meaning the
+best that space can do on that comparison. A bar above a space&rsquo;s oracle cannot be passed
+there, so it says nothing.</p>
+
+<h3>10.1 The comparison survives to the membrane, and is lost after it</h3>
+<p>With synaptic depression on the ear-to-voice tract, the voice module&rsquo;s membrane
+potential reports same versus different at <strong>0.6734&nbsp;&plusmn;&nbsp;0.0060 on 196
+creatures that no earlier run had selected on</strong> (own oracle 0.7623, null 0.5056). That is 3.9&nbsp;SE over the bar, and it replicates an earlier selected value to
+0.3&nbsp;SE. <strong>With the creature&rsquo;s own voice silenced it reads
+0.6886&nbsp;&plusmn;&nbsp;0.0060 on 196 more</strong>, so the comparison is not fed by the
+acoustic loop. That is the milestone met in a scoped form, and four deviations travel with the
+claim or it is not made:</p>
+<p>(a) the window is the first 400&nbsp;ms of the second word, not that word&rsquo;s end;
+(b) the mechanism is a depression dose (recovery time constant 3000&nbsp;ms) that the shipped
+creature does not carry; (c) it is met <em>at the membrane</em>: at this dose the spike
+code&rsquo;s own oracle is 0.617, under the bar, so the spike rung cannot be tested and is void;
+(d) shipping that dose was tried and withdrawn (&sect;2.21).</p>
+<p>So the chain is intact through the membrane, and whatever is lost is lost after it. That is
+narrower than &ldquo;the threshold destroys it&rdquo;, which an untestable rung cannot show. What
+would have refused it: the fresh 196 failing to replicate the selected value, or the silenced arm
+falling below the bar.</p>
+
+<h3>10.2 Moved to a module of its own, the comparison reaches the spikes</h3>
+<p>The dose that carried the comparison on the voice&rsquo;s own tract killed the voice&rsquo;s
+echo (&sect;2.21), because one depleted synapse cannot starve the second word&rsquo;s input
+without also starving the echo. The same dose, on two exact copies of that tract into an
+appended, read-only module, forms the conjunction at the membrane: 0.7181&nbsp;&plusmn;&nbsp;0.0085.
+Paired on 96 creatures, the dosed module minus its undosed twin is
+<strong>+0.1982&nbsp;&plusmn;&nbsp;0.0101 (+19.6&nbsp;SE)</strong>, and the voice&rsquo;s tract is
+untouched.</p>
+<p>With the module&rsquo;s noise set to zero, <strong>its spikes report the relation at
+0.6753&nbsp;&plusmn;&nbsp;0.0068 on 96 creatures no earlier run had scored, and at
+0.6830&nbsp;&plusmn;&nbsp;0.0070 with the self-voice silenced</strong>. Its undosed twin reads
+0.5231, and the dose adds +15.2&nbsp;SE. The claim travels only with all its clauses: met at a
+read-only comparator module, <em>under a relation criterion fixed before the run and not the
+classifier oracle</em>, with that module&rsquo;s noise at zero, on a genome that does not ship,
+in the window of (a) at a 200&nbsp;ms gap. The classifier oracle on that space reads 0.584,
+<em>below</em> the cell. That is disclosed rather than explained: a relation read off the
+population can beat the best decode-then-compare readout, because that oracle bounds only
+decode-then-compare.</p>
+
+<h2>11. The price of a module</h2>
+
+<h3>11.1 Sleep reads a mean rate, so a module&rsquo;s cost is its firing rate relative to the
+creature&rsquo;s</h3>
+<p>The creature tires by the network&rsquo;s mean spikes per <em>live neuron</em> while awake,
+and recovers at a fixed rate while asleep. So appending a module re-prices sleep, whether or not
+the module does anything. A read-only module firing at about an eighth of the creature&rsquo;s mean
+rate lowers that mean. <strong>The predicted delay of first sleep is
+&times;1.095. The measured delay is &times;1.092: +101,218&nbsp;&plusmn;&nbsp;1,723 ticks (+58.8&nbsp;SE),
+on 96 creatures per arm.</strong> The same arithmetic predicted a second candidate at
++111k ticks, and it measured +110,664.</p>
+<p>The rule runs both ways. A loud module (120 neurons at 48.94&nbsp;Hz, severed from
+everything) pulled first sleep from 1040.0&nbsp;s to 432.7&nbsp;s and the asleep share of life from
+11.5% to 34.5%. The effect followed that module&rsquo;s own rate monotonically, and it vanished
+when the module was silenced: 1010.4 and 1161.4&nbsp;s bracket the unmodified 1040.0. These are
+single runs with no SE, quoted for the shape.</p>
+<p><strong>So a population that spikes while awake pays a global tax set by how much it moves
+the mean rate. One that spikes only while asleep pays nothing</strong>, which is why replaying
+the creature&rsquo;s own voice during sleep was free. Size is not the price; rate relative to the
+mean is. What would have refused it: a measured delay away from the dilution prediction, or a
+silent module still moving sleep.</p>
+
+<h2>12. Learning the context, measured at power</h2>
+
+<h3>12.1 The creature cannot make a learned act depend on the word it heard</h3>
+<p>Take a met milestone, rewarded vocalisation (praise one class of the creature&rsquo;s own F1
+output, against its own baseline median), and change one thing: which class is praised depends on
+the word just heard. On 96 fresh creatures the unconditional contingency is still learned at
+<strong>+0.332&nbsp;&plusmn;&nbsp;0.010</strong>. The conditional one, scored by the echo-cancelling
+estimator of &sect;2.19 against a matched-marginal random control, reads
+<strong>+0.0107&nbsp;&plusmn;&nbsp;0.0079</strong>, with the 2&nbsp;SE interval [&minus;0.005,&nbsp;+0.027].
+Read two-tailed against a margin of 0.05, fixed in advance, that is <strong>not conditional: at most
+8% of the unconditional effect</strong>. It replaces a three-creature figure whose interval was
+&plusmn;0.153. What would have refused it: a lower bound above zero.</p>
+
+<h3>12.2 When the creature acts, nothing in its network still holds the word</h3>
+<p>The act in &sect;12.1 is scored 200&ndash;600&nbsp;ms after the word ends, and reward arrives
+in the same stretch. The F1 group&rsquo;s plastic afferents (the rest of the voice module, whose
+recurrent synapses the reward rule updates) carry the heard word at
+<strong>0.933&nbsp;&plusmn;&nbsp;0.010 while it plays and at 0.5152&nbsp;&plusmn;&nbsp;0.0138 in that
+window</strong>, on 24 fresh creatures. The ear reads 0.559 there, the association module 0.479, and
+a shuffled null 0.493. The prediction registered beforehand was the opposite: that the voice would
+still carry the word, because an earlier milestone reads it from the voice at 0.890 in exactly that
+window.</p>
+<p>That earlier reading is taken from the voice&rsquo;s <em>parameters</em>. They come from the
+spikes through an 800&nbsp;ms articulator smoothing that lives in the decoder, outside the network,
+and the smoothed posture still reads the word at <strong>0.748&nbsp;&plusmn;&nbsp;0.020</strong>,
+12&nbsp;SE above chance, while the spikes it is computed from read 0.515. The clause registered
+for the stronger claim, that the echo past offset <em>is</em> that smoothing, required the posture to
+clear 0.75 at 2&nbsp;SE, and it did not (lower bound 0.707). So that claim is not made. What is
+established is that <strong>the word the creature acts on is gone from every population a synapse can
+read</strong>, which is why a module that only mixes what these populations carry cannot supply it.
+It would also have to hold it.</p>
+
+<h2>13. Provenance</h2>
 <p>Every number above comes from a run of the project&rsquo;s own experiment binary, gated
 before execution on <span class="id">--experiment verify</span> reporting
 <span class="sc">pass</span> with the pinned hash
@@ -2022,6 +2171,19 @@ alone and independent of the arm &mdash; verified by a shared baseline arm repro
 bit-identically across three separate multi-hour runs, and by a direct cross-run check of
 that arm against itself returning
 +0.0000&nbsp;&plusmn;&nbsp;0.0000 over 32 creatures.</p>
+<p><strong>For &sect;&sect;2.19&ndash;2.21 and 10&ndash;12, added on 27 November 2026, the gate is
+different and is stated plainly.</strong> Not every one of those runs was preceded by a
+<span class="id">verify</span> pass. Instead:</p>
+<ul>
+<li>each was pre-registered with its readings and refusal branches written before any number;</li>
+<li>each log records the genome file&rsquo;s md5, and the shipped genome&rsquo;s is unchanged
+throughout;</li>
+<li>each instrument prints and passes its own registered gates: sample completion, a positive
+control, a label-destroyed or shuffled null, and, where an instrument taps a session, a
+bit-identity reproduction of an earlier run proving the tap read-only.</li>
+</ul>
+<p>The pinned determinism hash above is unchanged, because the one genome edit in that period was
+reverted (&sect;2.21).</p>
 <p>Retention figures are a ratio of sums with a leave-one-out jackknife standard error,
 swept over a floor on per-creature learning, and are reported only where the effect holds at
 every floor retaining at least three creatures in both arms. Section 2.8 explains why the
@@ -2082,7 +2244,11 @@ twenty-five.</p>
 <tr><td>A uniform cluster prior helping on balanced data and hurting on imbalanced data</td><td>Assran et al. (2023)</td></tr>
 <tr><td>Fast associative plasticity and slow homeostatic feedback being unable to stabilise each other, and factorising the two onto separate variables as the remedy</td><td>Toyoizumi, Kaneko, Stryker &amp; Miller (2014); Zenke &amp; Gerstner</td></tr>
 <tr><td>Intrinsic plasticity as adaptation of a neuron&rsquo;s own output distribution, derived by information maximisation</td><td>Triesch (2005); Savin, Joshi &amp; Triesch (2010)</td></tr>
-<tr class="last"><td>The online prototype update whose rate is 1/wins, and the win-balance penalty beside it</td><td>MacQueen (1967); DeSieno (1988)</td></tr>
+<tr><td>The online prototype update whose rate is 1/wins, and the win-balance penalty beside it</td><td>MacQueen (1967); DeSieno (1988)</td></tr>
+<tr><td>A maximum over noisy estimates being biased upward (&sect;2.19&rsquo;s mechanism, not its consequence here)</td><td>Capen, Clapp &amp; Campbell (1971), the winner&rsquo;s curse</td></tr>
+<tr><td>A value chosen because of where it was read regressing elsewhere (&sect;2.20&rsquo;s mechanism)</td><td>Galton (1886)</td></tr>
+<tr><td>The depression recursion used in &sect;10, and pairwise same/different from feedforward synaptic depression because each channel depletes its own synapses</td><td>Tsodyks &amp; Markram (1997); Mill, Coath, Wennekers &amp; Denham (2011)</td></tr>
+<tr class="last"><td>That a conditional map needs a population mixing its inputs nonlinearly, the motivation for &sect;12</td><td>Rigotti et al. (2013)</td></tr>
 </table>
 
 <h2>Appendix B. References</h2>
@@ -2102,6 +2268,10 @@ plasticity result. Both are given with their titles and DOIs in the root
 <p class="bib">Assran, M., Balestriero, R., Duval, Q., Bordes, F., Misra, I., Bojanowski, P.,
 Vincent, P., Rabbat, M. &amp; Ballas, N. (2023). The hidden uniform cluster prior in
 self-supervised learning. <i>ICLR 2023</i>. arXiv:2210.07277.</p>
+
+<p class="bib">Capen, E. C., Clapp, R. V. &amp; Campbell, W. M. (1971). Competitive bidding in
+high-risk situations. <i>Journal of Petroleum Technology</i> 23(6), 641&ndash;653.
+doi:10.2118/2993-PA.</p>
 
 <p class="bib">Carpenter, G. A. &amp; Grossberg, S. (1987). A massively parallel architecture
 for a self-organizing neural pattern recognition machine. <i>Computer Vision, Graphics, and
@@ -2126,6 +2296,10 @@ doi:10.1016/j.neuron.2010.02.003.</p>
 &amp; Goldberg, J. H. (2016). Dopamine neurons encode performance error in singing birds.
 <i>Science</i> 354(6317), 1278&ndash;1282. doi:10.1126/science.aah6837.</p>
 
+<p class="bib">Galton, F. (1886). Regression towards mediocrity in hereditary stature.
+<i>Journal of the Anthropological Institute of Great Britain and Ireland</i> 15, 246&ndash;263.
+doi:10.2307/2841583.</p>
+
 <p class="bib">Heald, J. B., Lengyel, M. &amp; Wolpert, D. M. (2023). Contextual inference in
 learning and memory. <i>Trends in Cognitive Sciences</i> 27(1), 43&ndash;64.
 doi:10.1016/j.tics.2022.10.004.</p>
@@ -2149,12 +2323,20 @@ Statistics and Probability</i>, Vol. 1, 281&ndash;297. University of California 
 catastrophic forgetting using context-dependent gating and synaptic stabilization.
 <i>PNAS</i> 115(44), E10467&ndash;E10475. doi:10.1073/pnas.1803839115.</p>
 
+<p class="bib">Mill, R., Coath, M., Wennekers, T. &amp; Denham, S. L. (2011). A neurocomputational
+model of stimulus-specific adaptation to oddball and Markov sequences. <i>PLoS Computational
+Biology</i> 7(8), e1002117. doi:10.1371/journal.pcbi.1002117.</p>
+
 <p class="bib">Munkres, J. (1957). Algorithms for the assignment and transportation problems.
 <i>Journal of the Society for Industrial and Applied Mathematics</i> 5(1), 32&ndash;38.
 doi:10.1137/0105003.</p>
 
 <p class="bib">Quenouille, M. H. (1949). Problems in plane sampling. <i>Annals of
 Mathematical Statistics</i> 20(3), 355&ndash;375.</p>
+
+<p class="bib">Rigotti, M., Barak, O., Warden, M. R., Wang, X.-J., Daw, N. D., Miller, E. K. &amp;
+Fusi, S. (2013). The importance of mixed selectivity in complex cognitive tasks.
+<i>Nature</i> 497(7451), 585&ndash;590. doi:10.1038/nature12160.</p>
 
 <p class="bib">Savin, C., Joshi, P. &amp; Triesch, J. (2010). Independent component analysis
 in spiking neurons. <i>PLoS Computational Biology</i> 6(4), e1000757.
@@ -2167,6 +2349,10 @@ Modeling the dynamic interaction of Hebbian and homeostatic plasticity. <i>Neuro
 <p class="bib">Triesch, J. (2005). A gradient rule for the plasticity of a neuron's
 intrinsic excitability. <i>ICANN 2005</i>, Lecture Notes in Computer Science 3696,
 65&ndash;70. doi:10.1007/11550822_11.</p>
+
+<p class="bib">Tsodyks, M. &amp; Markram, H. (1997). The neural code between neocortical pyramidal
+neurons depends on neurotransmitter release probability. <i>Proceedings of the National
+Academy of Sciences</i> 94(2), 719&ndash;723. doi:10.1073/pnas.94.2.719.</p>
 
 <p class="bib">Tukey, J. W. (1958). Bias and confidence in not-quite-large samples
 (abstract). <i>Annals of Mathematical Statistics</i> 29(2), 614.</p>
