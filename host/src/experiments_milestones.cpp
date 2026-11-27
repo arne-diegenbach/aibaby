@@ -45210,8 +45210,18 @@ inline bool gc_want_hit(int mode, uint32_t label, uint32_t trial) {
   return (r & 1u) != 0;
 }
 
+// §98 stage 1. A READ-ONLY tap on the session below: it is handed the brain
+// after every step and at the end of every trial and writes nothing back, so a
+// session run with a tap is the session run without one. `g2poolpre` checks
+// that by reproducing stage 0's per-seed `random` values to the printed digit.
+struct GcTap {
+  virtual ~GcTap() = default;
+  virtual void on_tick(const Session& s, uint32_t trial, uint64_t t) = 0;
+  virtual void on_trial_end(uint32_t trial, uint32_t label, bool scored) = 0;
+};
+
 GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int mode,
-                         const Regime& regime) {
+                         const Regime& regime, GcTap* tap = nullptr) {
   GcRun out;
   std::string error;
   Session s;
@@ -45252,6 +45262,7 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
                        sounding ? 0.5f : 0.0f, pcm.data(), spt);
       ear.tick(s.brain, pcm.data(), spt);
       s.brain.step();
+      if (tap) tap->on_tick(s, trial, t);
 
       if (s.brain.vocal_frame() == last_frame) continue;
       last_frame = s.brain.vocal_frame();
@@ -45305,6 +45316,7 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
         else { ++not_events; if (hit) ++not_hits; }
       }
     }
+    if (tap) tap->on_trial_end(trial, label, trial >= train_end_trial);
   }
 
   uint64_t base_hits = 0;
@@ -45666,6 +45678,326 @@ bool run_g2condpowpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool ver
 bool run_g2condpow(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_g2condpow_impl(blob, ticks, false);
+}
+
+
+// --- g2pool: §98 stage 1 — is the word already where the rule can use it? ---
+//
+// Stage 0 bounded word-dependent learning at 0.027. The line's sketch for
+// stage 1 was a mixing module. Before building one, the premise it rests on is
+// measured, because the kernel already offers the rule a candidate code:
+//
+//   * apply_reward_impl updates EVERY synapse onto a rewarded module, the
+//     vocal module's own recurrent synapses included (it gates on the target
+//     only), so the F1 group's plastic afferents include the rest of `vocal`;
+//   * M1b reads the heard word out of the voice at 0.890 in EXACTLY g2cond's
+//     scoring window (200-600 ms after the word), with the ear at 0.534;
+//   * and the g2cond map (F1 up after A, down after B) is LINEAR in the word,
+//     so node perturbation needs presynaptic activity that differs by word at
+//     action time -- not a conjunction. Rigotti's mixed selectivity is needed
+//     when the map is nonlinear in what is carried.
+//
+// So the primary is the heard word, decoded from `vocal` OUTSIDE the F1 slice
+// (group 2, what g2cond scores) in g2cond's scoring window, on test-window
+// trials of the `random` arm (feedback at g2cond's density, no word
+// contingency). PRESENT means the representation the map needs is already on
+// the F1 group's plastic afferents, and a mixing module cannot supply it.
+// ROADMAP §98 stage 1.
+//
+// Printed, not read: F1-slice, auditory and central decodability in the same
+// window; the conjunction word XOR own-F1 (Rigotti's quantity); a shuffled null.
+namespace {
+
+constexpr uint32_t kGpPreN = 12;
+constexpr uint32_t kGpFrom = 6000;
+constexpr double kGpBar = 0.75;     // M1b's own bar, the one G3 is scored against
+constexpr double kGpAbsent = 0.60;  // absence margin: within 0.10 of chance
+constexpr double kGpCtrl = 0.90;    // G-CTRL: the ear reads the word while it plays
+constexpr double kGpSeTarget = 0.025;
+// Fixed by the pre-flight's rule (smallest of 24/48/96 with 1.5 SD / sqrt n <=
+// 0.025). 0 = not yet fixed: the measurement refuses.
+constexpr uint32_t kGpN = 0;
+// Stage 0 pre-flight's `random` column, r = 0..11 (results/n98-s0-g2condpowpre.log).
+// The tap is read-only iff these reproduce.
+constexpr double kGpReproRandom[kGpPreN] = {-0.013, +0.075, +0.026, +0.038, -0.081, +0.044,
+                                            -0.075, -0.001, -0.096, -0.000, -0.020, +0.062};
+
+struct GpRow {
+  GcRun g;
+  bool ok = false;
+  uint32_t trials = 0;
+  double w_pool = 0.0, w_f1 = 0.0, w_aud = 0.0, w_cen = 0.0;
+  double w_ctrl = 0.0, w_shuf = 0.0, x_pool = 0.0, x_f1 = 0.0;
+  double secs = 0.0;
+};
+
+class GpTap : public GcTap {
+ public:
+  GpTap(const Session& s, uint64_t seed) : seed_(seed) {
+    vm_ = s.dna.module_with_role(aibaby::ModuleRole::kVocal);
+    am_ = s.dna.module_with_role(aibaby::ModuleRole::kAuditory);
+    cm_ = s.dna.module_with_role(aibaby::ModuleRole::kAssociation);
+    reset();
+  }
+  bool valid() const { return vm_ >= 0 && am_ >= 0 && cm_ >= 0; }
+
+  void on_tick(const Session& s, uint32_t trial, uint64_t t) override {
+    (void)trial;
+    if (s.brain.asleep()) awake_ = false;
+    const bool in_word = t < kVLWordTicks;
+    const bool in_score = t >= kVLEchoFrom && t < kVLEchoTo;
+    if (!in_word && !in_score) return;
+    const aibaby::Network& net = s.brain.network();
+    const aibaby::ModuleState& vs = net.module(uint32_t(vm_));
+    const aibaby::ModuleState& as = net.module(uint32_t(am_));
+    const aibaby::ModuleState& cs = net.module(uint32_t(cm_));
+    const uint32_t f1b = aibaby::slice_begin(vs.count, aibaby::kVocalGroups, 2);
+    const uint32_t f1e = aibaby::slice_begin(vs.count, aibaby::kVocalGroups, 3);
+    const uint32_t f1w = f1e - f1b;
+    if (f1_.size() != f1w) f1_.assign(f1w, 0.0);
+    const uint32_t pool_n = vs.count - f1w;
+    const uint32_t* fired = net.spikes();
+    for (uint32_t k = 0; k < net.spike_count(); ++k) {
+      const uint32_t n = fired[k];
+      if (in_word) {
+        if (n >= as.begin && n < as.begin + as.count)
+          word_[((n - as.begin) * kFeatureBins) / as.count] += 1.0;
+        continue;
+      }
+      if (n >= vs.begin && n < vs.begin + vs.count) {
+        const uint32_t o = n - vs.begin;
+        if (o >= f1b && o < f1e) {
+          f1_[o - f1b] += 1.0;
+        } else if (pool_n > 0) {
+          const uint32_t c = o < f1b ? o : o - f1w;
+          pool_[(c * kFeatureBins) / pool_n] += 1.0;
+        }
+      } else if (n >= as.begin && n < as.begin + as.count) {
+        aud_[((n - as.begin) * kFeatureBins) / as.count] += 1.0;
+      } else if (n >= cs.begin && n < cs.begin + cs.count) {
+        cen_[((n - cs.begin) * kFeatureBins) / cs.count] += 1.0;
+      }
+    }
+    if (in_score) { f1sum_ += double(s.brain.vocal_groups()[2]); ++f1n_; }
+  }
+
+  void on_trial_end(uint32_t trial, uint32_t label, bool scored) override {
+    (void)trial;
+    if (scored && awake_ && f1n_ > 0) {
+      pool_x_.push_back(pool_); f1_x_.push_back(f1_); aud_x_.push_back(aud_);
+      cen_x_.push_back(cen_); word_x_.push_back(word_);
+      word_y_.push_back(int(label)); f1_mean_.push_back(f1sum_ / double(f1n_));
+    }
+    reset();
+  }
+
+  void score(GpRow& row) const {
+    row.trials = uint32_t(word_y_.size());
+    if (row.trials < 80) return;
+    const size_t train = word_y_.size() / 2;
+    row.w_pool = holdout_accuracy(pool_x_, word_y_, train);
+    row.w_f1 = holdout_accuracy(f1_x_, word_y_, train);
+    row.w_aud = holdout_accuracy(aud_x_, word_y_, train);
+    row.w_cen = holdout_accuracy(cen_x_, word_y_, train);
+    row.w_ctrl = holdout_accuracy(word_x_, word_y_, train);
+    std::vector<int> ys = word_y_;
+    aibaby::Rng sh;
+    sh.seed(seed_ ^ 0x98B1u);
+    for (size_t i = ys.size(); i > 1; --i) {
+      const size_t j = size_t(sh.next() % i);
+      std::swap(ys[i - 1], ys[j]);
+    }
+    row.w_shuf = holdout_accuracy(pool_x_, ys, train);
+    // Own F1 class by THIS creature's median over the scored trials, so the
+    // XOR label is balanced by construction.
+    std::vector<double> sorted = f1_mean_;
+    std::sort(sorted.begin(), sorted.end());
+    const double med = sorted[sorted.size() / 2];
+    std::vector<int> xy;
+    for (size_t i = 0; i < word_y_.size(); ++i)
+      xy.push_back((word_y_[i] != 0) != (f1_mean_[i] > med) ? 1 : 0);
+    row.x_pool = holdout_accuracy(pool_x_, xy, train);
+    row.x_f1 = holdout_accuracy(f1_x_, xy, train);
+    row.ok = true;
+  }
+
+ private:
+  void reset() {
+    pool_.assign(kFeatureBins, 0.0); aud_.assign(kFeatureBins, 0.0);
+    cen_.assign(kFeatureBins, 0.0); word_.assign(kFeatureBins, 0.0);
+    std::fill(f1_.begin(), f1_.end(), 0.0);
+    f1sum_ = 0.0; f1n_ = 0; awake_ = true;
+  }
+  uint64_t seed_;
+  int32_t vm_ = -1, am_ = -1, cm_ = -1;
+  std::vector<double> pool_, f1_, aud_, cen_, word_;
+  double f1sum_ = 0.0;
+  uint32_t f1n_ = 0;
+  bool awake_ = true;
+  std::vector<std::vector<double>> pool_x_, f1_x_, aud_x_, cen_x_, word_x_;
+  std::vector<int> word_y_;
+  std::vector<double> f1_mean_;
+};
+
+bool run_g2pool_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const uint32_t n = pre ? kGpPreN : kGpN;
+  const uint32_t from = pre ? 0u : kGpFrom;
+  std::printf("\n  §98 STAGE 1 %s — IS THE WORD ON THE F1 GROUP'S PLASTIC AFFERENTS AT ACTION TIME?\n\n",
+              pre ? "PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "MEASUREMENT");
+  if (n == 0) {
+    std::printf("  REFUSED: n is not fixed yet. Run g2poolpre and set kGpN by the\n"
+                "  registered rule first.\n");
+    return false;
+  }
+  std::printf("  genome      blob FNV-1a %016llx (record the file's md5 in the log)\n"
+              "  creatures   %u seeds, r = %u..%u, seed = genome seed + r * 7919, %llu ticks,\n"
+              "              g2cond's `random` arm, run_g2cond_session + a read-only tap\n"
+              "  primary     W_pool: heard word from `vocal` OUTSIDE the F1 slice, spikes in\n"
+              "              200-600 ms after the word, test-window trials, awake trials only,\n"
+              "              holdout nearest centroid (first half train)\n"
+              "  readings    PRESENT Lo >= %.2f | ABSENT Hi <= %.2f | WEAK Lo > %.2f and Hi < %.2f\n\n",
+              (unsigned long long)g2p_fnv(blob), n, from, from + n - 1,
+              (unsigned long long)ticks, kGpBar, kGpAbsent, kGpAbsent, kGpBar);
+
+  std::vector<GpRow> rows = parallel_reps<GpRow>(n, [&](uint32_t i) {
+    GpRow row;
+    const uint32_t r = from + i;
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    Session probe;
+    std::string error;
+    if (!probe.init(variant, error)) return row;
+    GpTap tap(probe, seed);
+    if (!tap.valid()) return row;
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const auto t0 = std::chrono::steady_clock::now();
+    row.g = run_g2cond_session(variant, ticks, 3, reg, &tap);
+    row.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    tap.score(row);
+    row.ok = row.ok && row.g.ok;
+    return row;
+  });
+
+  std::printf("  %-5s %-6s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n", "r", "trials",
+              "W_pool", "W_f1", "W_aud", "W_cen", "ctrl", "shuf", "X_pool", "X_f1",
+              "random (hit|want - hit|not)");
+  std::vector<double> wp, wf, wa, wc, wk, ws, xp, xf, secs;
+  uint32_t complete = 0, repro_bad = 0;
+  for (uint32_t k = 0; k < n; ++k) {
+    const GpRow& w = rows[k];
+    secs.push_back(w.secs);
+    const double rnd = w.g.hit_when_want - w.g.hit_when_not;
+    std::printf("  %-5u %-6u %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %+.3f%s",
+                from + k, w.trials, w.w_pool, w.w_f1, w.w_aud, w.w_cen, w.w_ctrl, w.w_shuf,
+                w.x_pool, w.x_f1, rnd, w.ok ? "" : "   NOT ok");
+    if (pre) {
+      const bool same = std::fabs(rnd - kGpReproRandom[k]) < 0.0005 + 1e-12;
+      if (!same) ++repro_bad;
+      std::printf("   stage 0 %+.3f %s", kGpReproRandom[k], same ? "same" : "DIFFERENT");
+    }
+    std::printf("\n");
+    if (!w.ok) continue;
+    ++complete;
+    wp.push_back(w.w_pool); wf.push_back(w.w_f1); wa.push_back(w.w_aud);
+    wc.push_back(w.w_cen); wk.push_back(w.w_ctrl); ws.push_back(w.w_shuf);
+    xp.push_back(w.x_pool); xf.push_back(w.x_f1);
+  }
+
+  double ms, sds, ses;
+  g2p_mse(secs, ms, sds, ses);
+  std::printf("\n  cost        %.1f s per session (mean wall, sd %.1f), %u sessions\n\n", ms, sds, n);
+
+  const bool gn = complete * 10 >= n * 9;
+  std::printf("    G-N     %u of %u seeds complete (need 90%%)%34s\n", complete, n,
+              gn ? "PASS" : "FAIL");
+  if (complete < 4) {
+    std::printf("\n  REFUSED: fewer than 4 complete seeds, nothing to read.\n");
+    return false;
+  }
+  double m, sd, se;
+  g2p_mse(wk, m, sd, se);
+  const bool gctrl = m - 2.0 * se >= kGpCtrl;
+  std::printf("    G-CTRL  ear while the word plays %.4f +- %.4f, mean - 2 SE >= %.2f  %s\n",
+              m, se, kGpCtrl, gctrl ? "PASS" : "FAIL");
+  g2p_mse(ws, m, sd, se);
+  const bool gnull = std::fabs(m - 0.5) <= 0.03;
+  std::printf("    G-NULL  shuffled labels on the pool %.4f +- %.4f, within 0.03 of 0.5  %s\n",
+              m, se, gnull ? "PASS" : "FAIL");
+  if (pre) {
+    std::printf("    G-REPRO tap read-only: %u of %u `random` values differ from stage 0  %s\n",
+                repro_bad, n, repro_bad == 0 ? "PASS" : "FAIL");
+  }
+
+  auto line = [&](const char* name, const std::vector<double>& v) {
+    double a, b, c;
+    g2p_mse(v, a, b, c);
+    std::printf("    %-34s %.4f +- %.4f (SD %.4f)\n", name, a, c, b);
+  };
+  std::printf("\n  PRINTED, NOT READ\n");
+  line("W_f1   (the F1 slice itself)", wf);
+  line("W_aud  (ear, same window)", wa);
+  line("W_cen  (central, same window)", wc);
+  line("X_pool (word XOR own F1, pool)", xp);
+  line("X_f1   (word XOR own F1, F1 slice)", xf);
+  double mp, sdp, sep;
+  g2p_mse(wp, mp, sdp, sep);
+  std::printf("  PRIMARY\n    W_pool = %.4f +- %.4f (SD %.4f), [Lo, Hi] = [%.4f, %.4f]\n", mp, sep,
+              sdp, mp - 2.0 * sep, mp + 2.0 * sep);
+
+  if (pre) {
+    const bool repro = repro_bad == 0;
+    std::printf("\n  THE n RULE (SE = 1.5 x SD / sqrt n <= %.3f, SD %.4f)\n", kGpSeTarget, sdp);
+    uint32_t pick = 0;
+    for (uint32_t cand : {24u, 48u, 96u}) {
+      const double s = 1.5 * sdp / std::sqrt(double(cand));
+      std::printf("    n = %-3u SE %.4f  cost %.2f h on 14 cores\n", cand, s,
+                  ms * double(cand) / 14.0 / 3600.0);
+      if (pick == 0 && s <= kGpSeTarget) pick = cand;
+    }
+    if (pick == 0) pick = 96;
+    std::printf("    -> n = %u%s. THE PRE-FLIGHT's DECODABILITIES ARE NOT RESULTS.\n", pick,
+                repro ? "" : " -- BUT G-REPRO FAILED: THE TAP IS NOT READ-ONLY, DO NOT RUN");
+    return repro;
+  }
+
+  if (!(gn && gctrl && gnull)) {
+    std::printf("\n  VOID: a gate failed; nothing below is read.\n");
+    return false;
+  }
+  const double lo = mp - 2.0 * sep, hi = mp + 2.0 * sep;
+  std::printf("\n  THE REGISTERED READING\n");
+  if (lo >= kGpBar) {
+    std::printf("    -> PRESENT: the F1 group's plastic afferents carry the heard word at\n"
+                "       action time above M1b's bar. A mixing module cannot supply a code\n"
+                "       that is already there; stage 2 as sketched is refused, and the\n"
+                "       line re-aims at the learning rule (a new registration).\n");
+  } else if (hi <= kGpAbsent) {
+    std::printf("    -> ABSENT: within 0.10 of chance. The premise holds; stage 1b (a\n"
+                "       read-only mixing module) is next, its own registration.\n");
+  } else if (lo > kGpAbsent && hi < kGpBar) {
+    std::printf("    -> WEAK: carried, below M1b's bar. Stage 1b is next, with the pool's\n"
+                "       figure as the bar a mixing module must beat.\n");
+  } else {
+    std::printf("    -> NO VERDICT. Not re-run bigger.\n");
+  }
+  return true;
+}
+
+}  // namespace
+
+bool run_g2poolpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2pool_impl(blob, ticks, true);
+}
+
+bool run_g2pool(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2pool_impl(blob, ticks, false);
 }
 
 

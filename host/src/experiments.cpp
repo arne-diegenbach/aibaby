@@ -617,6 +617,12 @@ const Spec kSpecs[] = {
     {"g2condpow", 3400000, Expect::kRead, Tier::kTeach,
      "§98 stage 0: g2cond at power on fresh seeds r 5000+, L = (heard+swap)/2 -"
      " random paired on seed, margin 0.05, two-tailed"},
+    {"g2poolpre", 3400000, Expect::kRead, Tier::kTeach,
+     "§98 stage 1 pre-flight: g2cond's random arm on r 0-11 with a read-only tap;"
+     " G-REPRO proves the tap changes nothing, the SD fixes n. Never results"},
+    {"g2pool", 3400000, Expect::kRead, Tier::kTeach,
+     "§98 stage 1: is the heard word on the F1 group's plastic afferents (vocal"
+     " outside F1) at action time? PRESENT/WEAK/ABSENT against M1b's 0.75"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"
      " Three genomes, paired. Run on dna/comparator_ship.toml"},
@@ -2092,6 +2098,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "echopow") ok = run_echopow(dna_blob, ticks, verbose);
   else if (name == "g2condpowpre") ok = run_g2condpowpre(dna_blob, ticks, verbose);
   else if (name == "g2condpow") ok = run_g2condpow(dna_blob, ticks, verbose);
+  else if (name == "g2poolpre") ok = run_g2poolpre(dna_blob, ticks, verbose);
+  else if (name == "g2pool") ok = run_g2pool(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);
   else if (name == "g4") ok = run_g4(dna_blob, ticks, verbose);
   else if (name == "g2") ok = run_g2(dna_blob, ticks, verbose, Regime{});

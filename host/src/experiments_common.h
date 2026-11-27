@@ -2486,6 +2486,8 @@ bool run_echopowpre(const std::vector<uint8_t>&, uint64_t, bool);     // §97 st
 bool run_echopow(const std::vector<uint8_t>&, uint64_t, bool);        // §97 stage 3b, stage 1
 bool run_g2condpowpre(const std::vector<uint8_t>&, uint64_t, bool);   // §98 stage 0 pre-flight
 bool run_g2condpow(const std::vector<uint8_t>&, uint64_t, bool);      // §98 stage 0 measurement
+bool run_g2poolpre(const std::vector<uint8_t>&, uint64_t, bool);      // §98 stage 1 pre-flight
+bool run_g2pool(const std::vector<uint8_t>&, uint64_t, bool);         // §98 stage 1 measurement
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);
 bool run_g4(const std::vector<uint8_t>&, uint64_t, bool);
 bool run_calibrate(const std::vector<uint8_t>&, uint64_t, bool);

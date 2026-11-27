@@ -24311,3 +24311,99 @@ so G2 reproduces on the current genome.
 **NEXT, NOT REGISTERED, the owner's call: §98 stage 1.** A read-only mixing module. Do its spikes carry word × state conjunctions that a linear readout can separate, where the vocal module's do not? It is the cheapest refusal of the line. Runs used toward the abandonment count: 0 of 3 (stage 0 does not count).
 
 **Credit:** Rigotti et al. (2013), Fusi, Miller & Rigotti (2016), Schuirmann (1987), all already in the README References.
+
+### §98 STAGE 1 — REGISTERED BEFORE ANY RUN: IS THE WORD ALREADY ON THE F1 GROUP'S PLASTIC AFFERENTS WHEN THE CREATURE ACTS? (2026-11-27)
+
+**WHY THIS IS NOT THE SKETCHED MIXING MODULE YET.** The line sketched stage 1 as a read-only
+mixing module with word × state conjunctions in its spikes. Writing it down exposed a premise that
+is cheaper to measure than to build around:
+  - **The map g2cond asks for is linear in the word.** "F1 up after A, F1 down after B" needs
+    presynaptic activity that differs by word at action time. Node perturbation (Fiete & Seung 2006)
+    credits pre × own-noise × centred reward, so over trials each afferent moves by its (A − B)
+    activity difference. Mixed selectivity (Rigotti et al. 2013) is what you need when the map is
+    NONLINEAR in what is carried. Here it is not.
+  - **The kernel already offers the rule a candidate code.** `apply_reward_impl` updates every
+    synapse onto a rewarded module and gates only on the target, so the vocal module's own recurrent
+    synapses are among the F1 group's plastic afferents.
+  - **M1b reads the heard word out of the voice at 0.890 in exactly g2cond's scoring window**
+    (200–600 ms after the word), with the ear at 0.534.
+  - **If that code is on the F1 group's afferents and reward still cannot use it, a mixing module is
+    not what is missing.** The archive already points the other way: "expressiveness was never the
+    problem, variance is" (README, the Werfel, Xie & Seung 2005 table). A mixing module adds
+    synapses, which by Werfel's scaling law makes the variance worse, not better.
+
+So stage 1 measures the premise first. The mixing module becomes stage 1b, built only if the word is
+absent or weak.
+
+**THE INSTRUMENT, `g2pool`.**
+  - g2cond's own session, `run_g2cond_session`, on the `random` arm: feedback at g2cond's density,
+    with no word contingency.
+  - It gains a READ-ONLY tap: an optional pointer, null everywhere else, that is handed the brain
+    after each step and writes nothing back. **G-REPRO** checks this, below.
+  - Per test-window trial (the last 20%, where g2cond scores), kept only if the creature is awake
+    for the whole trial, it bins spikes (32 bins) in 200–600 ms after the word:
+    - **pool**: `vocal` outside the F1 slice (`slice_begin(count, 9, 2..3)`, the group g2cond
+      scores), 112 of 126 neurons;
+    - **F1**: the slice itself, per neuron;
+    - **auditory** and **central**.
+    It also bins the ear's spikes WHILE the word plays, as the positive control.
+  - The decoder is `holdout_accuracy`: nearest centroid on standardised features, first half train,
+    second half test. It is the project's weakest readout, on purpose.
+  - Genome `dna/default.toml` (md5 fb419735…), 3,400,000 ticks.
+  - Fresh seeds for the measurement: r = 6000 … 6000 + n − 1. They are disjoint from stage 0
+    (5000+), the pre-flights (0–11) and the archive.
+
+**PRIMARY:** W_pool, the heard word decoded from the pool, mean ± SE over creatures,
+[Lo, Hi] = W_pool ± 2 SE. **Read two-tailed, in this order:**
+
+| reading | condition | what it means for §98 |
+|---|---|---|
+| **PRESENT** | Lo ≥ 0.75 (M1b's own bar) | The F1 group's plastic afferents carry the word at action time, and reward still cannot use it (stage 0). **A mixing module cannot supply a code that is already there.** Stage 2 as sketched is REFUSED. The line re-aims at the learning rule, in a new registration (the owner's call). Counts as run 1 of 3. |
+| **ABSENT** | Hi ≤ 0.60 (within 0.10 of chance) | The premise holds strongly. M1b's code does not reach the pool under g2cond's protocol. Stage 1b (the read-only mixing module) is next, with its own registration. Run 1 of 3. |
+| **WEAK** | Lo > 0.60 and Hi < 0.75 | Carried, below the bar. Stage 1b is next, and the pool's figure is the bar a mixing module must beat. Run 1 of 3. |
+| **NO VERDICT** | otherwise | Reported. Not re-run bigger. Run 1 of 3. |
+
+**PRINTED, NOT READ:**
+  - W_f1, W_aud and W_cen in the same window.
+  - X_pool and X_f1: the conjunction "word XOR own F1 class", with F1 class split at this
+    creature's median over its scored trials. This is Rigotti's quantity, recorded for stage 1b.
+  - The `random` arm's hit|want − hit|not.
+
+**GATES (any failure → VOID):**
+  - **G-N:** at least 90% of creatures have ≥ 80 kept trials and g2cond's own `ok`.
+  - **G-CTRL:** the ear while the word plays, mean − 2 SE ≥ 0.90. The decoder must work where the
+    word certainly is (`coderprobe` 0.981).
+  - **G-NULL:** shuffled word labels on the pool's own features, mean within 0.03 of 0.5.
+  - **G-GENOME:** the shell records the md5 and the instrument prints the blob's FNV-1a.
+  - **G-REPRO (pre-flight only):** the `random` arm's hit|want − hit|not on r = 0…11 equals
+    stage 0 pre-flight's column (`results/n98-s0-g2condpowpre.log`) to the printed digit. Same
+    seeds and same session, so any difference means the tap is not read-only, and the measurement
+    does not run.
+
+**PREDICTION, REGISTERED SO IT CAN BE WRONG: PRESENT.** M1b's 0.890 is this window. Three things
+could break it:
+  - M1b read the whole voice on 5 creatures, passive, on an older genome;
+  - the pool excludes F1;
+  - g2cond's feedback and its alternating words are not M1b's shuffled order.
+And a caveat: the pool is "vocal outside F1", not the exact synapse-level presynaptic set of the F1
+neurons. Vocal connects within `conn_radius` 0.4 at density 0.5. **Decodability is necessary, not
+sufficient, for the rule to use a code**, so PRESENT refuses the mixing module's premise. It does
+not explain the failure.
+
+**PRE-FLIGHT, `g2poolpre`; ITS NUMBERS ARE NEVER RESULTS.**
+  - r = 0…11, the same 3.4M ticks, the same tap.
+  - It measures the cost and SD(W_pool), and it is G-REPRO's run.
+  - **n rule:** the smallest n ∈ {24, 48, 96} with 1.5 × SD/√n ≤ 0.025. That keeps the 2 SE
+    interval inside ±0.05, narrower than either band (0.15 and 0.10). If 96 misses, run 96 and
+    print the SE.
+  - Expected cost: about 689 s per session (stage 0's) × 12 over 14 cores, about 13 min. The
+    measurement at n = 24 is about 20 min. A smoke at 1.2M ticks (226 s per session) ran the
+    refusal path only: 43–50 kept trials, under the 80 needed. So the full-length pre-flight is the
+    scoring path's smoke.
+
+**Credit:**
+  - Fiete & Seung (2006), node perturbation;
+  - Werfel, Xie & Seung (2005), variance scales with parameter count;
+  - Rigotti et al. (2013) and Fusi, Miller & Rigotti (2016), mixed selectivity;
+  - Schuirmann (1987), the margins.
+  All are already in the README References.
