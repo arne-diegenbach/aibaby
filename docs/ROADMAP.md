@@ -24023,3 +24023,57 @@ long tier anyway. That decision stays the owner's. Nothing ships.
   - **The registered cost was wrong.** A session costs about 98 CPU-s, not 26: the 26 s was
     `g3probe`'s per-session wall time, misread. 3,072 sessions on 14 cores is about **6 h**, not
     the registered hour. Reported to the owner as the run started.
+
+### §97 STAGE 3b RESULT — BRANCH 3: NO MATERIAL COST ON EITHER PROTOCOL. STAGE 3a's CASUALTY WAS A BOUNDARY DRAW; THE LONG TIER IS THE OWNER'S CALL (2026-11-27)
+
+`results/n97-s3b-echopow-768.log`, exit 0. 768 pairs, r = 2000…2767, disjoint from stage 3a's
+creatures. **G-GENOME and G-N PASS** (768 of 768 sessions ok on both genomes); G-REPRO passed in
+stage 0.
+
+| protocol | D mean echo | C mean echo | Δ = C − D (paired) | [L, U] | reading |
+|---|---|---|---|---|---|
+| `g3probe` (mode 0) | 0.8011 ± 0.0055 | 0.7987 ± 0.0055 | −0.0024 ± 0.0061 (SD 0.168) | [−0.0146, +0.0097] | **NO MATERIAL COST** |
+| `condprobe` (mode 1) | 0.8369 ± 0.0054 | 0.8309 ± 0.0055 | −0.0060 ± 0.0051 (SD 0.142) | [−0.0163, +0.0042] | **NO MATERIAL COST** |
+
+**→ BRANCH 3.** If C costs the calibration echo anything, the cost is under 0.015 (`g3probe`)
+and 0.017 (`condprobe`). Stage 3a's pooled −0.0625 ± 0.035 came from 5 creatures, and this run
+bounds the population effect to under a third of it. The casualty was a boundary draw.
+**Nothing ships.** Whether to run the long tier is the owner's call.
+
+**What this does NOT say.**
+  - **Both point estimates are negative.** `condprobe`'s is at −1.2 SE. Neither interval excludes
+    zero, so this is NO MATERIAL COST, not "no cost". It is not pooled: pooling was not
+    registered.
+  - **It covers the calibration echo only.** C's other open items still stand:
+    - it fails single-seed `calibrate` (stage 2, by design: its targets are seed-mean);
+    - the 88 h long tier has not run.
+  - **The firing probabilities registered for this run were 0.841 (mode 0) and 0.948 (mode 1).**
+    They were projected with the rule's 1.5 × SE headroom. Quote them with the result.
+    - At the SE actually measured (no headroom), the same formula gives Φ(2) = 0.977 on both,
+      because U ≥ 0 binds.
+    - That is arithmetic on the realised SE, not a re-registration.
+
+**WHAT CAME IN WRONG — disclosed.**
+  1. **The SD came in high a third time:** 0.168 and 0.142, against stage 0's 0.154 and 0.127
+     (+9% and +12%). The 1.5 × headroom absorbed it.
+  2. **The cost was wrong a third time.** The run took 620.8 min wall (10.3 h), not the ~6 h
+     reported at launch.
+     - It used 8,015 CPU-min over 3,072 sessions: about **157 CPU-s per session**, against stage
+       0's measured 98.
+     - The parallel efficiency was about 12.9 of 14 cores, so the miss is per-session cost, not
+       scheduling.
+     - Stage 0's 24-pair sample under-priced the session. ANCHOR COST ON A MEASURED SAMPLE OF THE
+       SAME n-SCALE, OR CARRY ITS ERROR: three consecutive estimates here (25 min, 70 min,
+       6 h) all came in low.
+
+**A FACT ABOUT `g3probe`'s OWN GATE (approximate, normal approximation, not a registered
+reading).**
+  - D's population echo on `g3probe` is 0.801, and the per-creature SD is about 0.15. So a
+    5-creature mean has an SE of about 0.068.
+  - On D itself, the chance that the 5-creature mean falls under the 0.700 bar is therefore about
+    Φ(−1.49) ≈ 0.07 per genome.
+  - Stage 3a's D (r = 0…4) read 0.725, already 1.1 SE under the population.
+  - **A `g3probe`-only casualty is therefore weak evidence by itself.** Settle it with this paired
+    instrument before acting on it.
+
+**Credit:** Schuirmann (1987), for the margin rule (already in the README References).

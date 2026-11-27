@@ -1,0 +1,32 @@
+experiment: echopow
+
+  §97 STAGE 3b STAGE 1 — THE CALIBRATION ECHO, D AGAINST C, PAIRED
+
+  genomes     D dna/default.toml, C dna/default_seedmean.toml
+  creatures   768 pairs, r = 2000..2767, seed = genome seed + r * 7919, 900000 ticks,
+              taught arm, g3probe protocol (mode 0) and condprobe protocol (mode 1)
+  margin      0.025 (D's clearance over g3probe's 0.700 bar)
+
+
+    G-GENOME   C differs from D on 3 lines, all target_rate_hz   PASS
+    G-N        D 768 of 768, C 768 of 768 sessions ok                PASS
+
+  protocol            D mean echo      C mean echo      Delta = C - D (paired)
+  g3probe  (mode 0)   0.8011 +- 0.0055  0.7987 +- 0.0055  -0.0024 +- 0.0061 (SD 0.1680)
+  condprobe (mode 1)  0.8369 +- 0.0054  0.8309 +- 0.0055  -0.0060 +- 0.0051 (SD 0.1420)
+
+  THE REGISTERED READING ([L, U] = Delta +- 2 SE, margin 0.025)
+
+    g3probe  (mode 0)   [-0.0146, +0.0097]  -> NO MATERIAL COST
+    condprobe (mode 1)  [-0.0163, +0.0042]  -> NO MATERIAL COST
+
+    -> BRANCH 3: NO MATERIAL COST on both protocols. Stage 3a's casualty was a
+       boundary draw, bounded by the intervals above. The long tier is the
+       owner's call.
+
+    Nothing ships.
+
+real	620m46.775s
+user	8015m30.502s
+sys	23m41.162s
+exit=0
