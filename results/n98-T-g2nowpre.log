@@ -1,0 +1,39 @@
+fb419735526b1fe189be8264a63f5d95  dna/default.toml
+experiment: g2nowpre
+
+  §98 TIMING STAGE T PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS) — g2cond WITH THE ACT SCORED WHILE THE WORD PLAYS
+
+  windows     scored 500-900 ms, feedback-earning acts 100-900 ms, of a
+              900 ms word (g2cond: 1100-1500 and 900-1700, after it)
+  genome      blob FNV-1a f67d7725f1bbc415 (record the file's md5 in the log)
+  creatures   12 seeds, r = 0..11, seed = genome seed + r * 7919, 3400000 ticks,
+              4 arms each (fixed, heard, swap, random), run_g2cond_session unchanged
+  primary     L_r = (heard_r + swap_r)/2 - random_r, paired on seed; margin 0.05
+
+  r     fixedG2  heard    swap     random   E        L        praise/scold (heard)
+  0     incomplete: fixed NOT ok(31 ev, 181/151) heard NOT ok(27 ev, 173/147) swap NOT ok(30 ev, 160/175) random NOT ok(31 ev, 177/176)
+  1     incomplete: fixed NOT ok(24 ev, 176/147) heard NOT ok(19 ev, 141/169) swap NOT ok(25 ev, 175/117) random NOT ok(27 ev, 159/135)
+  2     incomplete: fixed NOT ok(8 ev, 107/79) heard NOT ok(7 ev, 82/81) swap NOT ok(14 ev, 90/80) random NOT ok(11 ev, 91/79)
+  3     incomplete: fixed NOT ok(26 ev, 172/146) heard NOT ok(32 ev, 147/155) swap NOT ok(28 ev, 156/147) random NOT ok(26 ev, 123/175)
+  4     incomplete: fixed NOT ok(17 ev, 265/63) heard NOT ok(17 ev, 118/195) swap NOT ok(18 ev, 188/115) random NOT ok(16 ev, 136/161)
+  5     incomplete: fixed NOT ok(24 ev, 193/88) heard NOT ok(32 ev, 130/148) swap NOT ok(17 ev, 143/120) random NOT ok(27 ev, 156/135)
+  6     -0.017   -0.417   -0.121   +0.055   -0.148   -0.324   331/201
+  7     incomplete: fixed NOT ok(4 ev, 90/112) heard NOT ok(6 ev, 96/100) swap NOT ok(8 ev, 108/86) random NOT ok(7 ev, 93/103)
+  8     incomplete: fixed NOT ok(30 ev, 274/181) heard NOT ok(32 ev, 252/191) swap NOT ok(33 ev, 255/181) random NOT ok(36 ev, 221/237)
+  9     incomplete: fixed NOT ok(28 ev, 239/184) heard NOT ok(27 ev, 202/238) swap NOT ok(29 ev, 228/194) random NOT ok(32 ev, 222/194)
+  10    incomplete: fixed NOT ok(7 ev, 23/150) heard NOT ok(10 ev, 93/69) swap NOT ok(6 ev, 65/102) random NOT ok(10 ev, 88/103)
+  11    incomplete: fixed NOT ok(26 ev, 234/108) heard NOT ok(31 ev, 168/186) swap NOT ok(33 ev, 186/153) random NOT ok(31 ev, 178/157)
+
+  cost        713.1 s per session (mean wall, sd 100.8, max 882.7), 48 sessions
+
+    G-N     1 of 12 seeds complete (need 90%)                       FAIL
+    G-POS   fixed arm G2 measure -0.0172 +- 0.0000, mean - 2 SE -0.0172 > 0.05   FAIL
+
+  per arm (hit|want - hit|not)   heard -0.4167 +- 0.0000   swap -0.1207 +- 0.0000   random +0.0553 +- 0.0000
+  PRINTED, NOT READ   E = (heard - swap)/2   -0.1480 +- 0.0000 (SD 0.0000)
+                      g2cond's estimator (best of the arm MEANS - random) -0.1760 +- 0.0000
+                      per-seed best of heard/swap - random (NOT g2cond's) -0.1760 +- 0.0000
+  PRIMARY             L = -0.3240 +- 0.0000 (SD 0.0000), [Lo, Hi] = [-0.3240, -0.3240]
+
+  THE n RULE CANNOT BE APPLIED: 1 complete seeds, need at least 4 for an SD.
+exit 1

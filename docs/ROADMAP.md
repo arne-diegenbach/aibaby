@@ -24788,3 +24788,37 @@ fb419735…
     direction of discoveries §11.1. Printed, not read.
   - **The measurement (run 3 of 3 if stage T is run 2) waits for stage T's answer, as
     recommended.** Under (R) it buys nothing for the line.
+
+### §98 TIMING STAGE T PRE-FLIGHT — REFUSED BY ITS OWN G-N: THE CREATURE BARELY VOCALISES WHILE IT HEARS. THE MEASUREMENT IS NOT RUN (2026-11-28)
+
+`results/n98-T-g2nowpre.log`, md5 fb419735…, r = 0…11, 48 sessions, 713 s per session, about 45 min.
+  - **G-N: 1 of 12 seeds complete.** Every other seed falls short of the ≥ 40 scored test events
+    (the windows are 500–900 ms, inside the word). Counts were 4–36 per arm, and three seeds had 4–14.
+  - **G-POS cannot be read** (n = 1). The n rule refuses: fewer than 4 complete seeds. **So `g2now`
+    is NOT launched**, although the owner's go covered it. The registered rule cannot fix its n.
+  - Feedback does happen (praise and scold both in the hundreds per arm). What is missing is
+    VOICED, scored acts while the word plays.
+  - That is what M1d's turn-taking predicts. The creature answers after the caregiver stops
+    (`rebound_gain`, the answering burst), so concurrent acts are rare by design.
+  - The registration named this risk ("the creature must vocalise while hearing, and the
+    pre-flight measures whether it does"), and it measured it.
+  - **This is a failed design, not evidence for (H) or (R).** The one complete seed's numbers are
+    not read. Runs used toward abandonment: still 1 of 3, because a pre-flight does not count.
+
+**WHAT A REDESIGN WOULD HAVE TO DO, NOT REGISTERED (the owner's call):**
+  - **More acts per creature, without moving the act out of the word.** Options:
+    - score every voiced frame in 100–900 ms rather than refractory-spaced events in 500–900;
+    - score the last 40% of the session rather than 20%;
+    - double the session length.
+    Each roughly doubles or more the events. The three quiet seeds (4–14 events) say even a 5×
+    gain leaves some below 40, so G-N would need its own pre-flight again.
+  - **Or answer (H) against (R) from what is already measured.**
+    - §49/§50: a self-derived VISUAL index, which persists through the reward window (0.840),
+      drove a per-context bias table to 59% of the separation its teacher asked for, against 2%
+      with the table off. That is conditional learning working when the context IS present at
+      reward, which leans toward (H).
+    - But it ran through v51's indexed bias, not through weights, and §51 showed the separation
+      is motor, not vowel. So it is not this contingency's answer, and it is cited, not
+      substituted.
+  - Stage 1b's measurement (dose L300W24, n = 96, about 2.8 h) is ready either way. It is the
+    owner's call whether it runs now, as run 2, without T's answer.
