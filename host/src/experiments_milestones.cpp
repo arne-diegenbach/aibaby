@@ -45716,7 +45716,7 @@ constexpr double kGpCtrl = 0.90;    // G-CTRL: the ear reads the word while it p
 constexpr double kGpSeTarget = 0.025;
 // Fixed by the pre-flight's rule (smallest of 24/48/96 with 1.5 SD / sqrt n <=
 // 0.025). 0 = not yet fixed: the measurement refuses.
-constexpr uint32_t kGpN = 0;
+constexpr uint32_t kGpN = 24;  // pre-flight 2026-11-27: SD(W_pool) 0.0483 -> SE 0.0148 at 24
 // Stage 0 pre-flight's `random` column, r = 0..11 (results/n98-s0-g2condpowpre.log).
 // The tap is read-only iff these reproduce.
 constexpr double kGpReproRandom[kGpPreN] = {-0.013, +0.075, +0.026, +0.038, -0.081, +0.044,
@@ -45728,6 +45728,7 @@ struct GpRow {
   uint32_t trials = 0;
   double w_pool = 0.0, w_f1 = 0.0, w_aud = 0.0, w_cen = 0.0;
   double w_ctrl = 0.0, w_shuf = 0.0, x_pool = 0.0, x_f1 = 0.0;
+  double w_grp = 0.0, w_pool_word = 0.0;  // amendment before the measurement
   double secs = 0.0;
 };
 
@@ -45760,8 +45761,16 @@ class GpTap : public GcTap {
     for (uint32_t k = 0; k < net.spike_count(); ++k) {
       const uint32_t n = fired[k];
       if (in_word) {
-        if (n >= as.begin && n < as.begin + as.count)
+        if (n >= as.begin && n < as.begin + as.count) {
           word_[((n - as.begin) * kFeatureBins) / as.count] += 1.0;
+        } else if (n >= vs.begin && n < vs.begin + vs.count && pool_n > 0) {
+          // Amendment before the measurement: the pool WHILE the word plays.
+          const uint32_t o = n - vs.begin;
+          if (o < f1b || o >= f1e) {
+            const uint32_t c = o < f1b ? o : o - f1w;
+            pool_word_[(c * kFeatureBins) / pool_n] += 1.0;
+          }
+        }
         continue;
       }
       if (n >= vs.begin && n < vs.begin + vs.count) {
@@ -45778,7 +45787,14 @@ class GpTap : public GcTap {
         cen_[((n - cs.begin) * kFeatureBins) / cs.count] += 1.0;
       }
     }
-    if (in_score) { f1sum_ += double(s.brain.vocal_groups()[2]); ++f1n_; }
+    if (in_score) {
+      f1sum_ += double(s.brain.vocal_groups()[2]);
+      ++f1n_;
+      // Amendment: the 9 smoothed group readings (the posture g2cond scores,
+      // through VocalDecoder's smoothing_ms inertia), summed over the window.
+      for (uint32_t g = 0; g < aibaby::kVocalGroups; ++g)
+        grp_[g] += double(s.brain.vocal_groups()[g]);
+    }
   }
 
   void on_trial_end(uint32_t trial, uint32_t label, bool scored) override {
@@ -45786,6 +45802,7 @@ class GpTap : public GcTap {
     if (scored && awake_ && f1n_ > 0) {
       pool_x_.push_back(pool_); f1_x_.push_back(f1_); aud_x_.push_back(aud_);
       cen_x_.push_back(cen_); word_x_.push_back(word_);
+      grp_x_.push_back(grp_); pool_word_x_.push_back(pool_word_);
       word_y_.push_back(int(label)); f1_mean_.push_back(f1sum_ / double(f1n_));
     }
     reset();
@@ -45800,6 +45817,8 @@ class GpTap : public GcTap {
     row.w_aud = holdout_accuracy(aud_x_, word_y_, train);
     row.w_cen = holdout_accuracy(cen_x_, word_y_, train);
     row.w_ctrl = holdout_accuracy(word_x_, word_y_, train);
+    row.w_grp = holdout_accuracy(grp_x_, word_y_, train);
+    row.w_pool_word = holdout_accuracy(pool_word_x_, word_y_, train);
     std::vector<int> ys = word_y_;
     aibaby::Rng sh;
     sh.seed(seed_ ^ 0x98B1u);
@@ -45825,16 +45844,18 @@ class GpTap : public GcTap {
   void reset() {
     pool_.assign(kFeatureBins, 0.0); aud_.assign(kFeatureBins, 0.0);
     cen_.assign(kFeatureBins, 0.0); word_.assign(kFeatureBins, 0.0);
+    pool_word_.assign(kFeatureBins, 0.0); grp_.assign(aibaby::kVocalGroups, 0.0);
     std::fill(f1_.begin(), f1_.end(), 0.0);
     f1sum_ = 0.0; f1n_ = 0; awake_ = true;
   }
   uint64_t seed_;
   int32_t vm_ = -1, am_ = -1, cm_ = -1;
-  std::vector<double> pool_, f1_, aud_, cen_, word_;
+  std::vector<double> pool_, f1_, aud_, cen_, word_, pool_word_, grp_;
   double f1sum_ = 0.0;
   uint32_t f1n_ = 0;
   bool awake_ = true;
-  std::vector<std::vector<double>> pool_x_, f1_x_, aud_x_, cen_x_, word_x_;
+  std::vector<std::vector<double>> pool_x_, f1_x_, aud_x_, cen_x_, word_x_, grp_x_,
+      pool_word_x_;
   std::vector<int> word_y_;
   std::vector<double> f1_mean_;
 };
@@ -45883,18 +45904,18 @@ bool run_g2pool_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre)
     return row;
   });
 
-  std::printf("  %-5s %-6s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n", "r", "trials",
-              "W_pool", "W_f1", "W_aud", "W_cen", "ctrl", "shuf", "X_pool", "X_f1",
+  std::printf("  %-5s %-6s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %-7s %s\n", "r", "trials",
+              "W_pool", "W_f1", "W_aud", "W_cen", "ctrl", "shuf", "X_pool", "X_f1", "W_grp", "W_pwrd",
               "random (hit|want - hit|not)");
-  std::vector<double> wp, wf, wa, wc, wk, ws, xp, xf, secs;
+  std::vector<double> wp, wf, wa, wc, wk, ws, xp, xf, wg, wpw, secs;
   uint32_t complete = 0, repro_bad = 0;
   for (uint32_t k = 0; k < n; ++k) {
     const GpRow& w = rows[k];
     secs.push_back(w.secs);
     const double rnd = w.g.hit_when_want - w.g.hit_when_not;
-    std::printf("  %-5u %-6u %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %+.3f%s",
+    std::printf("  %-5u %-6u %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %-7.3f %+.3f%s",
                 from + k, w.trials, w.w_pool, w.w_f1, w.w_aud, w.w_cen, w.w_ctrl, w.w_shuf,
-                w.x_pool, w.x_f1, rnd, w.ok ? "" : "   NOT ok");
+                w.x_pool, w.x_f1, w.w_grp, w.w_pool_word, rnd, w.ok ? "" : "   NOT ok");
     if (pre) {
       const bool same = std::fabs(rnd - kGpReproRandom[k]) < 0.0005 + 1e-12;
       if (!same) ++repro_bad;
@@ -45906,6 +45927,7 @@ bool run_g2pool_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre)
     wp.push_back(w.w_pool); wf.push_back(w.w_f1); wa.push_back(w.w_aud);
     wc.push_back(w.w_cen); wk.push_back(w.w_ctrl); ws.push_back(w.w_shuf);
     xp.push_back(w.x_pool); xf.push_back(w.x_f1);
+    wg.push_back(w.w_grp); wpw.push_back(w.w_pool_word);
   }
 
   double ms, sds, ses;
@@ -45944,6 +45966,9 @@ bool run_g2pool_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre)
   line("W_cen  (central, same window)", wc);
   line("X_pool (word XOR own F1, pool)", xp);
   line("X_f1   (word XOR own F1, F1 slice)", xf);
+  std::printf("  AMENDMENT BEFORE THE MEASUREMENT, PRINTED, NOT READ\n");
+  line("W_grp  (9 smoothed groups, window)", wg);
+  line("W_pwrd (pool spikes WHILE the word)", wpw);
   double mp, sdp, sep;
   g2p_mse(wp, mp, sdp, sep);
   std::printf("  PRIMARY\n    W_pool = %.4f +- %.4f (SD %.4f), [Lo, Hi] = [%.4f, %.4f]\n", mp, sep,

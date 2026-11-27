@@ -24407,3 +24407,47 @@ not explain the failure.
   - Rigotti et al. (2013) and Fusi, Miller & Rigotti (2016), mixed selectivity;
   - Schuirmann (1987), the margins.
   All are already in the README References.
+
+### §98 STAGE 1 PRE-FLIGHT — n FIXED AT 24; THE TAP IS READ-ONLY; AND THE REGISTERED PREDICTION LOOKS WRONG (2026-11-27)
+
+`results/n98-s1-g2poolpre.log`, exit 0, `dna/default.toml` md5 fb419735…, r = 0…11.
+  - **All gates PASS:**
+    - G-N 12/12, with 175–176 kept trials each.
+    - G-CTRL: the ear while the word plays reads 1.0000 on every creature.
+    - G-NULL 0.502 ± 0.014.
+    - **G-REPRO: 0 of 12 `random` values differ from stage 0**, so the tap is read-only.
+  - **n rule:** SD(W_pool) is 0.0483, which gives SE 0.0148 at n = 24, so **n = 24**. Cost 621 s
+    per session, about 0.30 h on 14 cores.
+  - **NOT RESULTS, BUT DISCLOSED BECAUSE THEY BEAR ON THE PREDICTION:**
+    - W_pool reads 0.5275 ± 0.0139, near chance, not the ~0.89 predicted from M1b.
+    - W_f1 0.508, W_cen 0.472, and the ear 0.597 in the same window.
+
+**WHAT THE PREDICTION MISSED, FOUND BY READING THE GENOME, NOT THE DATA.** M1b's 0.890 is read
+off the VOICE: `m3_vocal_features`, the vocal parameters. Those come from `VocalDecoder`'s group
+readings through a one-pole articulator inertia, **`smoothing_ms = 800`** (dna/default.toml). That
+inertia sits in the decoder, outside the network.
+  - 200–600 ms after the word, the posture still holds e^(−0.4/0.8) ≈ 60% of what the groups read
+    during it.
+  - g2cond scores that same smoothed posture (`vocal_groups()[2]`).
+  - So the hypothesis is that **the echo past offset is articulator inertia, not neural
+    persistence, and no synapse can read it.** The pre-flight is consistent with that. It is not
+    evidence for it: these numbers are never results.
+
+### §98 STAGE 1 AMENDMENT BEFORE THE MEASUREMENT — TWO PRINTED, NOT READ COLUMNS (2026-11-27)
+
+The amendment is motivated by the pre-flight's low W_pool, and says so. **The primary, the
+readings, the bands, the gates and n = 24 are unchanged.** It adds two printed-not-read columns
+that say where M1b's code lives:
+  - **W_grp:** the word from the 9 smoothed group readings, summed over 200–600 ms. This is the
+    posture g2cond scores.
+  - **W_pwrd:** the word from the pool's spikes WHILE the word plays. Do the vocal spikes carry it
+    at all?
+
+**A pattern clause, registered now and printed, not read.** Suppose W_grp − 2 SE ≥ 0.75 while
+W_pool's reading is ABSENT. Then the result section records that **the scored posture carries the
+word through the decoder's 800 ms inertia, outside the network.** Any consequence of that (for
+stage 1b, or for how g2cond's action relates to its credit) is its own registration.
+
+The amended tap reads only const accessors. The pre-flight is re-run once on the amended binary to
+re-prove G-REPRO and to smoke the new columns at full length. The measurement (r 6000–6023) is the
+owner's go.
