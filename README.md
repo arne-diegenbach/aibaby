@@ -22070,6 +22070,93 @@ after it. None is built and none is a claim.
   may need per-cell-type synaptic time constants, a kernel question that would need its
   own argument.
 
+### Checked 2026-11-28: the learning rule for §98 stage 2 (leads, NONE BUILT, NONE A CLAIM)
+
+Stage 2 would train a plastic reservoir → vocal projection on g2cond. Stage T closed without
+deciding whether holding (H) or the rule (R) is the wall. So these were read for what a
+reward-modulated readout needs in order to learn a STIMULUS-DEPENDENT map. Every entry was
+checked against Crossref.
+
+**The lead: the expected reward must be computed per stimulus.**
+- Frémaux, N., Sprekeler, H. & Gerstner, W. (2010). *Functional requirements for
+  reward-modulated spike-timing-dependent plasticity.* Journal of Neuroscience
+  30(40):13326–13337. doi:10.1523/JNEUROSCI.6249-09.2010
+  - Every rule in this class splits into a reward–activity covariance term plus an
+    unsupervised term that is "in general, detrimental". Subtracting the expected reward
+    suppresses that term "only if the expected reward is calculated for each task and
+    stimulus separately". To learn several tasks at once you need a critic that predicts
+    reward per stimulus. Block-based paradigms are the exception.
+  - **This creature's baseline is one global EMA** (`reward_baseline_tau_ms` 8000,
+    `Brain::update_drives`). It spans about three 2.8 s trials whose word alternates. And
+    **g2cond's criterion is one median across both words**, unlike `vocallearn`'s and
+    `areax`'s per-word criteria. That is where the between-context share of reward was
+    measured at 0.0000 and a per-context baseline was priced as buying nothing (above, in
+    the Gadagkar section). So in g2cond, whether the two words differ in mean reward is
+    **unmeasured**. With the echo, the heard word moves F1 and hence the hit rate, so they
+    plausibly do.
+  - **Priced read-only before anything is built**, by `areax`'s own decomposition,
+    R − b = (mean_word − b) + (R − mean_word). The paper's block-design remark also gives a
+    no-kernel test: blocks of one word make a running baseline word-specific.
+- Frémaux, N., Sprekeler, H. & Gerstner, W. (2013). *Reinforcement learning using a
+  continuous time actor-critic framework with spiking neurons.* PLoS Computational Biology
+  9(4):e1003024. doi:10.1371/journal.pcbi.1003024 — the critic the 2010 paper asks for, as a
+  spiking TD-error network.
+
+**The rule class and its conditions.**
+- Legenstein, R., Pecevski, D. & Maass, W. (2008). *A learning theory for reward-modulated
+  spike-timing-dependent plasticity with application to biofeedback.* PLoS Computational
+  Biology 4(10):e1000180. doi:10.1371/journal.pcbi.1000180 — when reward-modulated STDP
+  provably learns, in terms of the correlation between reward and the eligibility it
+  multiplies.
+- Legenstein, R., Chase, S. M., Schwartz, A. B. & Maass, W. (2010). *A reward-modulated
+  Hebbian learning rule can explain experimentally observed network reorganization in a
+  brain control task.* Journal of Neuroscience 30(25):8400–8410.
+  doi:10.1523/JNEUROSCI.4284-09.2010 — the exploratory-Hebbian (EH) rule Hoerzer et al. 2014
+  build on, credited here directly. Both factors are centred: reward minus its running mean,
+  and activity minus its own running mean.
+- Izhikevich, E. M. (2007). *Solving the distal reward problem through linkage of STDP and
+  dopamine signaling.* Cerebral Cortex 17(10):2443–2452. doi:10.1093/cercor/bhl152 — an
+  eligibility tag bridging a delayed reward. g2cond's 500 ms praise delay sits well inside
+  `tau_elig_ms` 2000.
+- Florian, R. V. (2007). *Reinforcement learning through modulation of spike-timing-dependent
+  synaptic plasticity.* Neural Computation 19(6):1468–1502. doi:10.1162/neco.2007.19.6.1468
+  — R-STDP derived as a policy gradient.
+- Loewenstein, Y. & Seung, H. S. (2006). *Operant matching is a generic outcome of synaptic
+  plasticity based on the covariance between reward and neural activity.* PNAS
+  103(41):15224–15229. doi:10.1073/pnas.0505220103 — covariance rules; what they converge
+  to is matching, not maximisation.
+
+**Variance: account (R)'s other half.**
+- Urbanczik, R. & Senn, W. (2009). *Reinforcement learning in populations of spiking
+  neurons.* Nature Neuroscience 12(3):250–252. doi:10.1038/nn.2264 — one global reward
+  shared by many neurons learns ever more slowly as the population grows, and feedback about
+  the population's decision fixes it. This is Werfel, Xie & Seung's scaling, from the
+  spiking side.
+- Vasilaki, E., Frémaux, N., Urbanczik, R., Senn, W. & Gerstner, W. (2009). *Spike-based
+  reinforcement learning in continuous state and action space: when policy gradient methods
+  fail.* PLoS Computational Biology 5(12):e1000586. doi:10.1371/journal.pcbi.1000586 —
+  where pure policy-gradient spiking rules fail and what rescues them.
+
+**Reviews and the readout side.**
+- Frémaux, N. & Gerstner, W. (2016). *Neuromodulated spike-timing-dependent plasticity, and
+  theory of three-factor learning rules.* Frontiers in Neural Circuits 9:85.
+  doi:10.3389/fncir.2015.00085.
+- Kuśmierz, Ł., Isomura, T. & Toyoizumi, T. (2017). *Learning with three factors: modulating
+  Hebbian plasticity with errors.* Current Opinion in Neurobiology 46:170–177.
+  doi:10.1016/j.conb.2017.08.020.
+- Enel, P., Procyk, E., Quilodran, R. & Dominey, P. F. (2016). *Reservoir computing
+  properties of neural dynamics in prefrontal cortex.* PLoS Computational Biology
+  12(6):e1004967. doi:10.1371/journal.pcbi.1004967 — a fixed random recurrent network whose
+  mixed selectivity lets a trained readout solve a context-dependent task. Stage 2's premise,
+  in prefrontal data.
+- Sussillo, D. & Abbott, L. F. (2009). *Generating coherent patterns of activity from chaotic
+  neural networks.* Neuron 63(4):544–557. doi:10.1016/j.neuron.2009.07.018 — FORCE, the
+  supervised readout of a chaotic reservoir. Hoerzer et al. 2014 is its reward-based
+  counterpart, which is why that one, not this, is stage 2's design.
+- Miconi 2017 (eLife 6:e20899, doi:10.7554/eLife.20899), already credited above: a
+  reward-modulated Hebbian rule training a recurrent network on delayed context-dependent
+  tasks.
+
 ### Checked 2026-11-23: infant habituation, the target of §90 (design, NOT RUN)
 
 §90 asks whether the creature answers a new word differently from a repeat. The question
