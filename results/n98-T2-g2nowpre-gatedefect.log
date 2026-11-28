@@ -1,0 +1,41 @@
+fb419735526b1fe189be8264a63f5d95  dna/default.toml
+experiment: g2nowpre
+
+  §98 TIMING STAGE T2 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS) — g2cond WITH THE ACT SCORED WHILE THE WORD PLAYS
+
+  windows     scored 100-900 ms, feedback-earning acts 100-900 ms, of a
+              900 ms word (g2cond: 1100-1500 and 900-1700, after it)
+  scoring     EVERY voiced frame; baseline first 1/6, test last 1/3 of the trials
+  complete    >= 40 scored samples, >= 8 baseline, praise and scold > 0, >= 8 acts in EACH class
+  genome      blob FNV-1a f67d7725f1bbc415 (record the file's md5 in the log)
+  creatures   12 seeds, r = 0..11, seed = genome seed + r * 7919, 4080000 ticks,
+              4 arms each (fixed, heard, swap, random), run_g2cond_session unchanged
+  primary     L_r = (heard_r + swap_r)/2 - random_r, paired on seed; margin 0.05
+
+  r     fixedG2  heard    swap     random   E        L        praise/scold (heard)
+  0     incomplete: fixed NOT ok(621 ev, 161/173, acts 124/0) heard ok(702 ev, 167/155, acts 84/54) swap ok(585 ev, 161/173, acts 54/70) random ok(622 ev, 170/164, acts 63/56)
+  1     incomplete: fixed NOT ok(600 ev, 179/118, acts 123/0) heard ok(598 ev, 145/164, acts 86/38) swap ok(611 ev, 172/146, acts 39/87) random ok(584 ev, 157/145, acts 62/59)
+  2     incomplete: fixed NOT ok(333 ev, 32/141, acts 98/0) heard ok(394 ev, 82/95, acts 57/44) swap ok(365 ev, 81/81, acts 35/60) random ok(371 ev, 75/87, acts 54/42)
+  3     incomplete: fixed NOT ok(659 ev, 172/146, acts 150/0) heard ok(679 ev, 147/155, acts 38/102) swap ok(634 ev, 163/145, acts 95/38) random ok(667 ev, 123/175, acts 81/55)
+  4     incomplete: fixed NOT ok(457 ev, 235/74, acts 114/0) heard ok(496 ev, 110/173, acts 45/75) swap ok(430 ev, 171/126, acts 70/54) random ok(495 ev, 143/171, acts 59/60)
+  5     incomplete: fixed NOT ok(711 ev, 125/154, acts 138/0) heard ok(637 ev, 176/116, acts 31/89) swap ok(634 ev, 126/161, acts 102/27) random ok(654 ev, 151/137, acts 69/66)
+  6     incomplete: fixed NOT ok(1450 ev, 321/262, acts 220/0) heard ok(1467 ev, 337/229, acts 51/184) swap ok(1616 ev, 294/281, acts 203/42) random ok(1339 ev, 263/307, acts 116/112)
+  7     incomplete: fixed NOT ok(274 ev, 104/95, acts 83/0) heard ok(363 ev, 99/87, acts 71/21) swap ok(343 ev, 90/104, acts 27/68) random ok(322 ev, 98/95, acts 40/43)
+  8     incomplete: fixed NOT ok(919 ev, 272/181, acts 169/0) heard ok(968 ev, 261/174, acts 165/19) swap ok(1047 ev, 236/217, acts 26/157) random ok(1083 ev, 211/240, acts 111/79)
+  9     incomplete: fixed NOT ok(953 ev, 259/162, acts 179/0) heard ok(893 ev, 197/237, acts 119/33) swap ok(899 ev, 215/204, acts 26/146) random ok(802 ev, 209/217, acts 83/78)
+  10    incomplete: fixed NOT ok(386 ev, 67/115, acts 97/0) heard ok(347 ev, 108/73, acts 38/48) swap ok(384 ev, 79/89, acts 54/35) random ok(325 ev, 93/91, acts 34/49)
+  11    incomplete: fixed NOT ok(899 ev, 200/136, acts 190/0) heard ok(934 ev, 159/185, acts 37/142) swap ok(904 ev, 191/140, acts 134/36) random ok(996 ev, 167/196, acts 93/104)
+
+  cost        836.9 s per session (mean wall, sd 112.4, max 988.6), 48 sessions
+
+    G-N     0 of 12 seeds complete (need 90%)                       FAIL
+    G-POS   fixed arm G2 measure +0.0000 +- 0.0000, mean - 2 SE +0.0000 > 0.05   FAIL
+
+  per arm (hit|want - hit|not)   heard +0.0000 +- 0.0000   swap +0.0000 +- 0.0000   random +0.0000 +- 0.0000
+  PRINTED, NOT READ   E = (heard - swap)/2   +0.0000 +- 0.0000 (SD 0.0000)
+                      g2cond's estimator (best of the arm MEANS - random) +0.0000 +- 0.0000
+                      per-seed best of heard/swap - random (NOT g2cond's) +0.0000 +- 0.0000
+  PRIMARY             L = +0.0000 +- 0.0000 (SD 0.0000), [Lo, Hi] = [+0.0000, +0.0000]
+
+  THE n RULE CANNOT BE APPLIED: 0 complete seeds, need at least 4 for an SD.
+exit 1
