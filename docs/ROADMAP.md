@@ -24874,3 +24874,19 @@ NOT CONDITIONAL with G-POS passing → (R), the rule is the wall.
 `random` column is non-zero, so the check is narrower than "every column". On the default path the
 change is integer-identical (`n·1/5` for `n/5`), plus branches that are off by default. The
 pre-flight started as `results/n98-T2-g2nowpre.log`.
+
+### §98 STAGE T2 PRE-FLIGHT — REFUSED BY A DEFECT IN ITS OWN GATE, NOT BY THE CREATURE; GATE FIXED, RE-RUN (2026-11-28)
+
+`results/n98-T2-g2nowpre-gatedefect.log`, exit 1, G-N 0 of 12.
+  - **Every refusal is the fixed arm.** Mode 0 wants every act, so its "not" class is empty by
+    construction (acts N/0 on all 12 seeds). The registered "≥ 8 acts in EACH class" could never
+    pass for it. I wrote that defect, and a smoke of the exact command would have caught it.
+  - **The other 36 arm-sessions are all complete**, with 19–203 acts per class and 322–1,616
+    scored frames. The thing T2 was built to fix, too few acts inside the word, IS fixed.
+  - **So the registered closing clause ("if G-N refuses again, stage T is closed as
+    unmeasurable") does NOT fire.** It names a shortage of acts, and there is none.
+  - **Fix:** "≥ 8 acts in each class THE ARM HAS". The fixed arm's minimum is 83 acts. Nothing
+    else changes. Sessions are deterministic, so the re-run reproduces the same 48 sessions, and
+    only the completeness verdict, and what it lets through, can differ. Re-run as
+    `results/n98-T2-g2nowpre.log`.
+  - No per-seed L was printed (no row was complete), so nothing was seen before the fix.

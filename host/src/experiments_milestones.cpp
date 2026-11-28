@@ -45356,7 +45356,11 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
   // Frames inside one act are not independent: with frames scored, a session
   // also needs 8 refractory-spaced acts in EACH class (8 is the instrument's
   // own baseline minimum), so no per-seed contrast rests on one or two acts.
-  if (win.score_frames) out.ok = out.ok && out.acts_want >= 8 && out.acts_not >= 8;
+  // EACH CLASS THE ARM HAS: the fixed arm (mode 0) wants every act, so its
+  // "not" class is empty by construction. T2's first pre-flight required both
+  // classes of it and refused 12 of 12 on that defect alone.
+  if (win.score_frames)
+    out.ok = out.ok && out.acts_want >= 8 && (mode == 0 || out.acts_not >= 8);
   return out;
 }
 
@@ -45564,7 +45568,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
                 "  complete    >= 40 scored samples, >= 8 baseline, praise and scold > 0%s\n",
                 win.score_frames ? "EVERY voiced frame" : "refractory-spaced events",
                 win.base_den, win.test_num, win.test_den,
-                win.score_frames ? ", >= 8 acts in EACH class" : "");
+                win.score_frames ? ", >= 8 acts in each class the arm has" : "");
   } else {
     std::printf("\n  §98 STAGE %s — g2cond AT POWER, ECHO TERM REMOVED\n\n",
                 pre ? "0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "0 MEASUREMENT (stage 1)");
