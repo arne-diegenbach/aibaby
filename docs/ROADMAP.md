@@ -24910,9 +24910,14 @@ Pre-flight numbers are never results. What follows is what the GATES say about t
     0.933, stage 1). Either could stop G2 here. This pre-flight does not separate them, and it is
     not asked to.
   - **STAGE T IS CLOSED: the word-present positive control cannot be built on this creature by
-    moving the act.** (H) against (R) stays open. It moves to **stage 1b's measurement**, which
-    already separates them where the reservoir holds the word: W_mix holds and D > 0 means the
-    holding was the wall (H). W_mix holds and D ≈ 0 means held information is not used (R) --
-    this reading leans on 1b's registered branches, to be checked against them before the run.
+    moving the act.** (H) against (R) stays open.
+    - **Stage 1b does NOT decide it.** Its D is W_mix(dose) − W_mix(base), a difference in
+      DECODABILITY, not in learning. 1b answers only "can a read-only reservoir hold the word
+      to 200–600 ms?", the precondition.
+    - **What decides it is stage 2**, a plastic reservoir → vocal projection on g2cond, licensed
+      by 1b's HOLDS (or WEAK, the owner's call). With the word held at the act: CONDITIONAL means
+      holding was the wall (H); NOT CONDITIONAL with G-POS passing means the rule is (R).
+    - So the line's remaining runs are 1b (run 2) and then stage 2 (run 3), the last one.
+    - (Corrected before it was reported. The first wording said 1b's D separates (H) from (R).)
   - Runs used toward abandonment: still 1 of 3. Stage 1b's measurement (L300W24, n = 96, about
     2.8 h) is the owner's call.
