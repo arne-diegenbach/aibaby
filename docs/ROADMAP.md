@@ -24921,3 +24921,35 @@ Pre-flight numbers are never results. What follows is what the GATES say about t
     - (Corrected before it was reported. The first wording said 1b's D separates (H) from (R).)
   - Runs used toward abandonment: still 1 of 3. Stage 1b's measurement (L300W24, n = 96, about
     2.8 h) is the owner's call.
+
+### §98 STAGE 1b MEASUREMENT (RUN 2 OF 3) — WEAK: THE RESERVOIR HOLDS THE WORD TO ACTION TIME, BELOW M1b's BAR, AND THE DOSE IS WHAT HOLDS IT (2026-11-28)
+
+`results/n98-s1b-g2mix-96.log`, exit 0. md5 `dna/mixing.toml` 1fa6c621…, `dna/default.toml`
+fb419735…. Fresh r = 7000–7095, 192 sessions, 668 s per session.
+  - **Gates all PASS:** G-RO; G-N 96 of 96 on both arms; G-CTRL, the ear while the word plays,
+    1.000; G-NULL, shuffled labels on the reservoir, 0.505.
+  - **PRIMARY W_mix(L300W24) = 0.6870 ± 0.0086, [0.670, 0.704].** Base reads 0.5218 ± 0.0058.
+  - **D = +0.1652 ± 0.0087, [+0.148, +0.183]**, paired on seed.
+  - **Registered reading: WEAK.** Lo > 0.60, Hi < 0.75, Lo(D) > 0. A read-only reservoir with a
+    300 ms membrane holds the heard word 200–600 ms after it ends, well above chance and above
+    the base dose. It is below M1b's 0.75 bar. Stage 1 found nothing the rule could read at
+    action time; this is the first population that carries the word there.
+  - **Stage 2 is the owner's call, as registered, since it would be run 3 of 3, the last.**
+  - **Printed, not read:**
+    - W_mix while the word plays is 0.917 (base 0.957).
+    - X_mix (word XOR the creature's own F1 class) is 0.507, chance on both arms. That
+      conjunction is not what stage 2's readout needs: a word → F1-bias map is linear in the
+      word.
+    - The reservoir runs at 2.42 Hz against base's 4.60.
+    - First sleep comes about 40k ticks later on the dose (1,151,506 vs 1,111,704), the dilution
+      direction of discoveries §11.1.
+  - **What stage 2 must carry because 1b is WEAK, not HOLDS:**
+    - At about 0.69 the decodable signal is a 19-point margin over chance. A readout trained by
+      sparse praise has less to work with than the stage 2 sketch assumed.
+    - A stage 2 NOT CONDITIONAL could then be "too little held" and not (R). So its refusal
+      clause must be written with that branch.
+    - The Frémaux, Sprekeler & Gerstner 2010 lead (README, Checked 2026-11-28) says a
+      stimulus-blind reward baseline can stop a stimulus-dependent map even with the
+      stimulus held. g2cond's baseline is one global EMA and its criterion one median. A
+      read-only per-word reward decomposition belongs in stage 2's pre-flight, so a stage 2
+      failure can be told apart from that.
