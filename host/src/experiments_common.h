@@ -2490,6 +2490,8 @@ bool run_g2poolpre(const std::vector<uint8_t>&, uint64_t, bool);      // §98 st
 bool run_g2pool(const std::vector<uint8_t>&, uint64_t, bool);         // §98 stage 1 measurement
 bool run_g2mixpre(const std::vector<uint8_t>&, uint64_t, bool);       // §98 stage 1b pre-flight
 bool run_g2mix(const std::vector<uint8_t>&, uint64_t, bool);          // §98 stage 1b measurement
+bool run_g2s2pre(const std::vector<uint8_t>&, uint64_t, bool);       // §98 stage 2 pre-flight
+bool run_g2s2(const std::vector<uint8_t>&, uint64_t, bool);          // §98 stage 2 measurement
 bool run_g2nowpre(const std::vector<uint8_t>&, uint64_t, bool);       // §98 timing stage T pre-flight
 bool run_g2now(const std::vector<uint8_t>&, uint64_t, bool);          // §98 timing stage T measurement
 bool run_g2(const std::vector<uint8_t>&, uint64_t, bool, const Regime&);

@@ -24953,3 +24953,87 @@ fb419735…. Fresh r = 7000–7095, 192 sessions, 668 s per session.
       stimulus held. g2cond's baseline is one global EMA and its criterion one median. A
       read-only per-word reward decomposition belongs in stage 2's pre-flight, so a stage 2
       failure can be told apart from that.
+
+## §98 STAGE 2 — REGISTERED BEFORE ANY RUN: WITH THE WORD HELD TO THE ACT, CAN THE RULE LEARN THE MAP? (2026-11-28)
+
+The owner's go: "yes, register stage 2". Stage 1b read WEAK: the read-only reservoir at L300W24
+carries the heard word 200–600 ms after it (W_mix 0.687, [0.670, 0.704]). That licenses stage 2
+as the owner's call. Stage T closed without deciding (H) against (R). **This is the run that
+decides it, within its scope. The measurement is RUN 3 OF 3, THE LAST.**
+
+**THE BUILD: `dna/stage2.toml` (md5 a307e535…), NO KERNEL CHANGE.**
+  - It is `dna/mixing.toml` as an exact prefix (checked with `cmp`), so it is `dna/default.toml`
+    too, plus ONE projection: mixing → vocal.
+  - The projection copies the excitatory auditory → vocal tract (either, density 0.15, weight
+    0.12, 5 ms). So the held word arrives at the larynx at the strength the heard word does.
+  - The kernel reward-gates every synapse onto `vocal` (eligibility × the centred external
+    channel × eta, `Network::apply_reward_impl`), so the tract is plastic as built. That is a
+    reservoir plus a reward-modulated readout into the voice: Hoerzer, Legenstein & Maass 2014.
+  - The reservoir module is 1b's byte for byte, including that its own afferents are
+    reward-plastic as they were in 1b. So the hold 1b measured is the hold given here.
+  - `dna/default.toml` is unchanged (fb419735…). Nothing ships.
+
+**THE INSTRUMENT: `g2s2pre` / `g2s2` (kGuard, kManual).**
+  - Each seed runs g2cond's four arms (fixed, heard, swap, random) on TWO reservoir doses,
+    patched at hatch exactly as `g2mix` does: **L300W24** (holds the word) and **base** (20 ms,
+    0.12, does not). That is 8 sessions per seed. The dose does not move the wiring RNG, so
+    the pair is one creature but for the dose.
+  - Sessions are `run_g2cond_session` unchanged, at stage 0's windows (the act scored 200–600 ms
+    after the word).
+  - **PRIMARY L = (heard + swap)/2 − random on the DOSE**, paired on seed. Margin 0.05,
+    two-tailed, as stage 0.
+  - **SECONDARY D_L = L(dose) − L(base)**, paired on seed: does any learning ride on the hold,
+    or on the tract alone?
+  - **G-HOLD:** a read-only tap (stage 1's `GpTap`) on each `random` session re-measures W_mix,
+    because the new tract changes the creature 1b measured.
+  - **FRÉMAUX:** the session's own praise ledger, read-only, summed per training trial by the
+    word that trial played, gives the word's share of the reward variance, between / total. Its
+    source is Frémaux, Sprekeler & Gerstner 2010: a stimulus-blind baseline leaves a detrimental
+    unsupervised term unless the expected reward is computed per stimulus. This creature's
+    baseline is one 8 s EMA, and g2cond's criterion is one median. The random arm's share is the
+    printed control.
+  - **G-INERT:** the session's new fields only accumulate. The pre-T2 binary and this one print
+    identical `g2poolpre` rows at 300k, 12 of 12.
+  - **Smoked before the pre-flight** (the T2 lesson): at 300k every path to the gates runs (all
+    sessions incomplete, as expected below 80 scored trials). The 1.7M smoke, which exercises
+    complete rows, is recorded below.
+
+**GATES (VOID on any failure):**
+  - **G-GENOME:** exactly one outgoing tract from the reservoir, to vocal, and the reservoir not
+    scaled or exploring.
+  - **G-N:** ≥ 90% of seeds complete on each dose. A seed-dose is complete when all four
+    sessions and the tap are.
+  - **G-POS:** the dose's fixed-arm G2, mean − 2 SE > 0.05. The base's is printed and is not a
+    gate.
+  - **G-HOLD:** the dose's W_mix, mean − 2 SE > 0.60 (1b's WEAK floor, the premise stage 2 is
+    licensed on).
+
+**READINGS, in this order, on L(dose)'s [Lo, Hi] = mean ± 2 SE:**
+
+| reading | condition | what it says |
+|---|---|---|
+| **CONDITIONAL** | Lo > 0 | The creature learns which class to produce from the word it heard. **With Lo(D_L) > 0: the hold is what it rides on, so (H): holding was the wall.** With D_L not > 0: not attributable to the hold, and (H) is not established. |
+| **ANTI-CONDITIONAL** | Hi < 0 | Training moves the act against the praised class. A finding, not a pass. |
+| **NOT CONDITIONAL** | −0.05 < Lo, Hi < 0.05 | **(R), SCOPED: at a hold of W_mix ≈ 0.69**, with the tract plastic and G2 learning (G-POS), the rule does not learn the map. A stronger hold is untested, so "too little held" stays open as a scope, not a verdict. **With the dose's heard/swap word share ≥ 0.05:** Frémaux et al.'s stimulus-blind term is LIVE, so (R) cannot be told from it, and a per-word baseline is the named next step (its own registration). **With share < 0.05:** the stimulus-blind baseline is ruled out as the cause. |
+| **NO VERDICT** | otherwise | Reported. Not re-run bigger. |
+
+The 0.05 share threshold is a convention, not derived. The share is printed either way.
+
+**PRE-FLIGHT `g2s2pre`: r = 0…11, 96 sessions. ITS NUMBERS ARE NEVER RESULTS.**
+  - It prints the gates, and stage 0's n rule on SD(L dose): the smallest n ∈ {24, 48, 96} with
+    P(NOT CONDITIONAL | 0) ≥ 0.95 at SE = 1.5 × SD/√n, else 96.
+  - Cost: about 1.3–1.6 h at 1b's 668 s per session.
+  - **Measurement `g2s2`: fresh r = 9000 + …**, 8 × n sessions: about 2.7 h at n = 24, 5.3 h at
+    48, 10.7 h at 96.
+  - **It is NOT chained.** It is the last run, so the owner sees the pre-flight's gates and n
+    first. If the pre-flight shows a gate that cannot pass at any n (as T2's G-POS did), the
+    measurement is not offered.
+
+**THE 1.7M SMOKE (`--allow-short`, exit 1 by design), before the pre-flight.** Every path ran:
+  - 24 of 24 seed-doses were complete rows;
+  - the three gates, the share, D_L and the n rule all printed;
+  - **the share's control works:** the random arm's word share is 0.0006 (base) and 0.0022
+    (dose), so the ledger does not invent a word effect where the contingency has none.
+A 1.7M smoke is half the training and another creature (`smoke-below-sleep`). Its L, G-POS,
+W_mix and share were SEEN and are NOT results. They are not quoted, and **nothing in the
+registration above was changed after seeing them.**

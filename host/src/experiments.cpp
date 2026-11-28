@@ -636,6 +636,12 @@ const Spec kSpecs[] = {
     {"g2mix", 3400000, Expect::kGuard, Tier::kManual,
      "§98 stage 1b: does a read-only reservoir hold the word to action time? W_mix"
      " and D vs the baseline dose, paired. Run on dna/mixing.toml"},
+    {"g2s2pre", 3400000, Expect::kGuard, Tier::kManual,
+     "§98 stage 2 pre-flight: reservoir -> vocal tract plastic, g2cond x {base, L300W24}"
+     " on r 0-11; SD fixes n. Never results. Run on dna/stage2.toml"},
+    {"g2s2", 3400000, Expect::kGuard, Tier::kManual,
+     "§98 stage 2: with the word held to the act, is the map learned? L(dose) paired,"
+     " D_L vs base, word reward share (Fremaux 2010). Run on dna/stage2.toml"},
     {"g2nowpre", 4080000, Expect::kRead, Tier::kManual,
      "§98 timing stage T2 pre-flight: every voiced frame in 100-900 ms scored, test 1/3; while the"
      " word plays, r 0-11; SD and cost fix n. Never results"},
@@ -2121,6 +2127,8 @@ bool run_experiment(const std::string& name, const std::vector<uint8_t>& dna_blo
   else if (name == "g2pool") ok = run_g2pool(dna_blob, ticks, verbose);
   else if (name == "g2mixpre") ok = run_g2mixpre(dna_blob, ticks, verbose);
   else if (name == "g2mix") ok = run_g2mix(dna_blob, ticks, verbose);
+  else if (name == "g2s2pre") ok = run_g2s2pre(dna_blob, ticks, verbose);
+  else if (name == "g2s2") ok = run_g2s2(dna_blob, ticks, verbose);
   else if (name == "g2nowpre") ok = run_g2nowpre(dna_blob, ticks, verbose);
   else if (name == "g2now") ok = run_g2now(dna_blob, ticks, verbose);
   else if (name == "calop") ok = run_calop(dna_blob, ticks, verbose);

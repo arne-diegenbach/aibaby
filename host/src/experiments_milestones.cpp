@@ -45199,6 +45199,13 @@ struct GcRun {
   uint64_t praises = 0, scolds = 0, events = 0;
   // Refractory-spaced acts in the test window, per class (stage T2's gate).
   uint64_t acts_want = 0, acts_not = 0;
+  // §98 stage 2, READ-ONLY: the caregiver's praise summed per TRAINING trial,
+  // by the word that trial played. Frémaux, Sprekeler & Gerstner 2010: a
+  // stimulus-blind baseline leaves an unsupervised term unless the expected
+  // reward is computed per stimulus, so the word's share of the reward is what
+  // a one-EMA baseline cannot remove.
+  double r_sum[2] = {0.0, 0.0}, r_sq[2] = {0.0, 0.0};
+  uint32_t r_n[2] = {0, 0};
   float criterion = 0.0f;
 };
 
@@ -45269,6 +45276,7 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
     const uint32_t label = trial % kVLWords;
     const Word& heard = kWords[label];
     const bool want = gc_want_hit(mode, label, trial);
+    double trial_reward = 0.0;  // read-only bookkeeping, §98 stage 2
 
     for (uint64_t t = 0; t < kVLTrialTicks; ++t) {
       const uint64_t now = uint64_t(trial) * kVLTrialTicks + t;
@@ -45328,6 +45336,7 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
           const float val = (hit == want) ? regime.praise : regime.scold;
           if (val > 0.0f) ++out.praises; else ++out.scolds;
           pending.push_back(Praise{now + regime.delay, val});
+          trial_reward += double(val);
         }
       } else if (sample && in_score) {
         ++test_events;
@@ -45336,6 +45345,11 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
         else { ++not_events; if (hit) ++not_hits; }
         if (new_event) { if (want) ++out.acts_want; else ++out.acts_not; }
       }
+    }
+    if (trial >= baseline_trials && trial < train_end_trial && label < 2) {
+      out.r_sum[label] += trial_reward;
+      out.r_sq[label] += trial_reward * trial_reward;
+      ++out.r_n[label];
     }
     if (tap) tap->on_trial_end(trial, label, trial >= train_end_trial);
   }
@@ -46397,6 +46411,304 @@ bool run_g2mixpre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose
 bool run_g2mix(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
   (void)verbose;
   return run_g2mix_impl(blob, ticks, false);
+}
+
+
+// --- g2s2: §98 stage 2 — with the word HELD to the act, can the rule learn it? --
+//
+// Stage 1b read WEAK: the read-only reservoir of dna/mixing.toml, at dose
+// L300W24, carries the heard word 200-600 ms after it (W_mix 0.687), where
+// nothing the rule could read did before. Stage 2 gives the reservoir ONE
+// outgoing tract, mixing -> vocal, a copy of the excitatory auditory -> vocal
+// tract. Every synapse onto `vocal` is already reward-gated (eligibility x
+// centred praise), so the tract is plastic with no kernel change (dna/stage2.toml).
+// Hoerzer, Legenstein & Maass 2014 is the design.
+//
+// Each seed runs g2cond's four arms on TWO reservoir doses: L300W24 (holds the
+// word) and base (does not), patched at hatch exactly as g2mix does, so the
+// pair is one creature but for the dose. Primary L on the dose; D_L = L(dose) -
+// L(base), paired, says whether the HOLD is what any learning rides on. A
+// read-only tap on each `random` session re-measures W_mix (G-HOLD). And the
+// session's own praise ledger gives the word's share of the reward (Frémaux,
+// Sprekeler & Gerstner 2010), the term a one-EMA baseline cannot remove.
+// ROADMAP §98 stage 2.
+namespace {
+
+constexpr uint32_t kS2PreN = 12;
+constexpr uint32_t kS2From = 9000;
+// Fixed by g2s2pre's rule. 0 = not yet fixed: the measurement refuses.
+constexpr uint32_t kS2N = 0;
+constexpr double kS2Hold = 0.60;   // 1b's WEAK floor: the premise stage 2 is licensed on
+constexpr double kS2Share = 0.05;  // the word's share of reward variance read as "live"
+
+struct S2Job {
+  GcRun g;
+  GpRow tap;
+  bool tapped = false;
+  double secs = 0.0;
+};
+
+// Between-word share of the per-trial reward variance, and the per-word gap.
+void s2_share(const GcRun& g, double& gap, double& share) {
+  gap = share = 0.0;
+  const double n0 = g.r_n[0], n1 = g.r_n[1], nn = n0 + n1;
+  if (n0 < 1 || n1 < 1) return;
+  const double m0 = g.r_sum[0] / n0, m1 = g.r_sum[1] / n1;
+  const double m = (g.r_sum[0] + g.r_sum[1]) / nn;
+  const double var = (g.r_sq[0] + g.r_sq[1]) / nn - m * m;
+  const double between = (n0 * (m0 - m) * (m0 - m) + n1 * (m1 - m) * (m1 - m)) / nn;
+  gap = m0 - m1;
+  share = var > 1e-12 ? between / var : 0.0;
+}
+
+bool s2_genome_ok(const aibaby::Dna& d, int32_t mm, int32_t vm, std::string& why) {
+  if (mm < 0 || vm < 0) { why = "no `comparator`-role reservoir or no vocal module"; return false; }
+  if (uint32_t(mm) + 1 != d.module_count()) { why = "the reservoir is not the last module"; return false; }
+  uint32_t out = 0;
+  for (uint32_t p = 0; p < d.projection_count(); ++p) {
+    if (d.projection(p).src != uint32_t(mm)) continue;
+    ++out;
+    if (d.projection(p).dst != uint32_t(vm)) { why = "a reservoir tract goes somewhere other than vocal"; return false; }
+  }
+  if (out != 1) { why = "the reservoir needs exactly one outgoing tract, mixing -> vocal"; return false; }
+  const aibaby::DnaModule& m = d.module(uint32_t(mm));
+  if (m.syn_wake_scale != 0.0f || m.syn_sleep_scale != 0.0f || m.explore_scale != 0.0f) {
+    why = "the reservoir is scaled or exploring (1b's reservoir was neither)";
+    return false;
+  }
+  return true;
+}
+
+bool run_g2s2_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre) {
+  aibaby::Dna dna;
+  if (dna.load(blob.data(), blob.size()) != aibaby::DnaStatus::kOk) return false;
+  const int32_t mm = dna.module_with_role(aibaby::ModuleRole::kComparator);
+  const int32_t vm = dna.module_with_role(aibaby::ModuleRole::kVocal);
+  std::printf("\n  §98 STAGE 2 %s — WITH THE WORD HELD TO THE ACT, CAN THE RULE LEARN IT?\n\n",
+              pre ? "PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "MEASUREMENT");
+  std::string why;
+  const bool gok = s2_genome_ok(dna, mm, vm, why);
+  std::printf("    G-GENOME  one plastic tract mixing -> vocal, reservoir otherwise 1b's%10s%s%s\n",
+              gok ? "PASS" : "FAIL", gok ? "" : " -- ", gok ? "" : why.c_str());
+  if (!gok) {
+    std::printf("  REFUSED: run on dna/stage2.toml.\n");
+    return false;
+  }
+  const uint32_t n = pre ? kS2PreN : kS2N;
+  const uint32_t from = pre ? 0u : kS2From;
+  if (n == 0) {
+    std::printf("  REFUSED: n is not fixed yet. Run g2s2pre and set kS2N by the registered\n"
+                "  rule first.\n");
+    return false;
+  }
+  const uint32_t ra[2] = {0u, uint32_t(kGmSel)};  // base, dose (1b's pick)
+  std::printf("  genome      blob FNV-1a %016llx (record the file's md5 in the log)\n"
+              "  creatures   %u seeds, r = %u..%u, seed = genome seed + r * 7919, %llu ticks\n"
+              "  arms        reservoir %s (leak %.0f, w %.2f) and %s (leak %.0f, w %.2f), each\n"
+              "              x g2cond's fixed, heard, swap, random; 8 sessions per seed\n"
+              "  primary     L = (heard + swap)/2 - random on the DOSE, paired on seed; margin %.2f\n"
+              "  secondary   D_L = L(dose) - L(base), paired on seed\n\n",
+              (unsigned long long)g2p_fnv(blob), n, from, from + n - 1,
+              (unsigned long long)ticks, kGmArms[ra[0]].name, double(kGmArms[ra[0]].leak_ms),
+              double(kGmArms[ra[0]].weight), kGmArms[ra[1]].name,
+              double(kGmArms[ra[1]].leak_ms), double(kGmArms[ra[1]].weight), kG2pMargin);
+
+  const size_t mod_base = sizeof(aibaby::DnaHeader);
+  std::vector<S2Job> jobs = parallel_reps<S2Job>(n * 8, [&](uint32_t i) {
+    S2Job j;
+    const uint32_t r = from + i / 8;
+    const GmArm& arm = kGmArms[ra[(i % 8) / 4]];
+    const int mode = int(i % 4);
+    std::vector<uint8_t> variant = blob;
+    const uint64_t seed = dna.header().seed + uint64_t(r) * 7919ull;
+    std::memcpy(variant.data() + offsetof(aibaby::DnaHeader, seed), &seed, sizeof(seed));
+    const size_t mbase = mod_base + sizeof(aibaby::DnaModule) * size_t(mm);
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, leak_tau_ms), &arm.leak_ms,
+                sizeof(float));
+    std::memcpy(variant.data() + mbase + offsetof(aibaby::DnaModule, weight_init), &arm.weight,
+                sizeof(float));
+    Regime reg;
+    reg.praise = kPraiseValue;
+    reg.scold = kScoldValue;
+    const auto t0 = std::chrono::steady_clock::now();
+    if (mode == 3) {
+      Session probe;
+      std::string error;
+      if (!probe.init(variant, error)) return j;
+      GpTap tap(probe, seed);
+      if (!tap.valid() || !tap.has_mix()) return j;
+      j.g = run_g2cond_session(variant, ticks, mode, reg, &tap);
+      tap.score(j.tap);
+      j.tapped = true;
+    } else {
+      j.g = run_g2cond_session(variant, ticks, mode, reg);
+    }
+    j.secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    return j;
+  });
+
+  // Per seed and reservoir arm: complete iff all four sessions are.
+  std::vector<double> L[2], FX[2], H[2], S[2], R[2], W[2], SH[2], SHR[2], GAP[2], SL[2];
+  std::vector<double> DL, secs;
+  uint32_t complete[2] = {0, 0};
+  std::printf("  %-5s %-8s %-8s %-8s %-8s %-8s %-8s %-7s %-7s %-7s %s\n", "r", "arm", "fixedG2",
+              "heard", "swap", "random", "L", "W_mix", "share", "gap", "first sleep (random)");
+  for (uint32_t k = 0; k < n; ++k) {
+    double lk[2] = {0, 0};
+    bool okk[2] = {false, false};
+    for (uint32_t a = 0; a < 2; ++a) {
+      const S2Job* jr = &jobs[k * 8 + a * 4];
+      for (int m = 0; m < 4; ++m) secs.push_back(jr[m].secs);
+      bool ok = jr[3].tapped && jr[3].tap.ok;
+      for (int m = 0; m < 4; ++m) ok = ok && jr[m].g.ok;
+      if (!ok) {
+        std::printf("  %-5u %-8s incomplete:", from + k, kGmArms[ra[a]].name);
+        for (int m = 0; m < 4; ++m)
+          std::printf(" %s(%llu ev)", jr[m].g.ok ? "ok" : "NOT ok",
+                      (unsigned long long)jr[m].g.events);
+        std::printf(" tap %s\n", jr[3].tapped && jr[3].tap.ok ? "ok" : "NOT ok");
+        continue;
+      }
+      auto c = [&](int m) { return jr[m].g.hit_when_want - jr[m].g.hit_when_not; };
+      const double h = c(1), s = c(2), rnd = c(3);
+      const double fx = jr[0].g.test_hit - jr[0].g.baseline_hit;
+      const double l = 0.5 * (h + s) - rnd;
+      double gh, shh, gs, shs;
+      s2_share(jr[1].g, gh, shh);
+      s2_share(jr[2].g, gs, shs);
+      double gr, shr;
+      s2_share(jr[3].g, gr, shr);
+      const double share = 0.5 * (shh + shs), gap = 0.5 * (std::fabs(gh) + std::fabs(gs));
+      std::printf("  %-5u %-8s %+-8.3f %+-8.3f %+-8.3f %+-8.3f %+-8.3f %-7.3f %-7.3f %-7.3f %llu\n",
+                  from + k, kGmArms[ra[a]].name, fx, h, s, rnd, l, jr[3].tap.w_mix, share, gap,
+                  (unsigned long long)jr[3].tap.first_sleep);
+      ++complete[a];
+      L[a].push_back(l); FX[a].push_back(fx); H[a].push_back(h); S[a].push_back(s);
+      R[a].push_back(rnd); W[a].push_back(jr[3].tap.w_mix); SH[a].push_back(share);
+      SHR[a].push_back(shr); GAP[a].push_back(gap);
+      SL[a].push_back(double(jr[3].tap.first_sleep));
+      lk[a] = l;
+      okk[a] = true;
+    }
+    if (okk[0] && okk[1]) DL.push_back(lk[1] - lk[0]);
+  }
+
+  double sm = 0, ssd = 0, sse = 0;
+  g2p_mse(secs, sm, ssd, sse);
+  std::printf("\n  cost        %.1f s per session (mean wall, sd %.1f), %u sessions\n", sm, ssd,
+              n * 8);
+
+  struct Sum { double m = 0, sd = 0, se = 0; };
+  auto ms = [](const std::vector<double>& v) { Sum s; g2p_mse(v, s.m, s.sd, s.se); return s; };
+  std::printf("\n  %-8s %-9s %-17s %-17s %-17s %-17s %-8s %-8s %s\n", "arm", "complete",
+              "fixed G2", "L", "W_mix (random)", "share (heard,swap)", "|gap|", "share rnd",
+              "first sleep");
+  Sum sl[2], sfx[2], sw[2], ssh[2];
+  for (uint32_t a = 0; a < 2; ++a) {
+    sl[a] = ms(L[a]); sfx[a] = ms(FX[a]); sw[a] = ms(W[a]); ssh[a] = ms(SH[a]);
+    const Sum sg = ms(GAP[a]), sr = ms(SHR[a]), ss = ms(SL[a]);
+    std::printf("  %-8s %2u of %-3u  %+.4f +- %.4f  %+.4f +- %.4f  %.4f +- %.4f  %.4f +- %.4f  %-8.4f %-8.4f %.0f\n",
+                kGmArms[ra[a]].name, complete[a], n, sfx[a].m, sfx[a].se, sl[a].m, sl[a].se,
+                sw[a].m, sw[a].se, ssh[a].m, ssh[a].se, sg.m, sr.m, ss.m);
+  }
+  const Sum sd_l = ms(DL);
+  const Sum sh0 = ms(H[1]), ss0 = ms(S[1]), sr0 = ms(R[1]);
+  std::printf("  dose arm, per g2cond arm (hit|want - hit|not): heard %+.4f +- %.4f  swap %+.4f +- %.4f"
+              "  random %+.4f +- %.4f\n", sh0.m, sh0.se, ss0.m, ss0.se, sr0.m, sr0.se);
+
+  const bool g_n = complete[0] * 10 >= n * 9 && complete[1] * 10 >= n * 9;
+  const bool g_pos = complete[1] >= 2 && sfx[1].m - 2.0 * sfx[1].se > kG2pMargin;
+  const bool g_hold = complete[1] >= 2 && sw[1].m - 2.0 * sw[1].se > kS2Hold;
+  std::printf("\n    G-N     base %u, dose %u of %u complete (need 90%% each)%22s\n", complete[0],
+              complete[1], n, g_n ? "PASS" : "FAIL");
+  std::printf("    G-POS   dose fixed-arm G2 %+.4f +- %.4f, mean - 2 SE %+.4f > %.2f       %s\n",
+              sfx[1].m, sfx[1].se, sfx[1].m - 2.0 * sfx[1].se, kG2pMargin, g_pos ? "PASS" : "FAIL");
+  std::printf("    G-HOLD  dose W_mix %.4f +- %.4f, mean - 2 SE %.4f > %.2f (1b's WEAK floor)   %s\n",
+              sw[1].m, sw[1].se, sw[1].m - 2.0 * sw[1].se, kS2Hold, g_hold ? "PASS" : "FAIL");
+  std::printf("    (printed, not a gate) base fixed-arm G2 %+.4f +- %.4f\n", sfx[0].m, sfx[0].se);
+  std::printf("  PRIMARY     L(dose) = %+.4f +- %.4f (SD %.4f), [Lo, Hi] = [%+.4f, %+.4f]\n"
+              "  SECONDARY   D_L = %+.4f +- %.4f (SD %.4f), [%+.4f, %+.4f], %zu paired seeds\n"
+              "  FRÉMAUX     word share of reward variance, dose heard/swap %.4f (live if >= %.2f)\n",
+              sl[1].m, sl[1].se, sl[1].sd, sl[1].m - 2.0 * sl[1].se, sl[1].m + 2.0 * sl[1].se,
+              sd_l.m, sd_l.se, sd_l.sd, sd_l.m - 2.0 * sd_l.se, sd_l.m + 2.0 * sd_l.se, DL.size(),
+              ssh[1].m, kS2Share);
+
+  if (pre) {
+    if (complete[1] < 4) {
+      std::printf("\n  THE n RULE CANNOT BE APPLIED: %u complete dose seeds, need at least 4.\n",
+                  complete[1]);
+      return true;  // kRead: the refusal is the printed line
+    }
+    std::printf("\n  THE n RULE (stage 0's: SE = 1.5 x SD(L dose) / sqrt n, SD %.4f)\n", sl[1].sd);
+    uint32_t pick = 0;
+    for (uint32_t cand : {24u, 48u, 96u}) {
+      double pn = 0, pc = 0;
+      g2p_fire(1.5 * sl[1].sd / std::sqrt(double(cand)), pn, pc);
+      std::printf("    n = %-3u  SE %.4f  P(NOT CONDITIONAL | 0) %.3f  P(CONDITIONAL | 0) %.3f"
+                  "  cost %.1f h on 14 cores\n", cand, 1.5 * sl[1].sd / std::sqrt(double(cand)),
+                  pn, pc, sm * 8.0 * cand / 14.0 / 3600.0);
+      if (!pick && pn >= 0.95) pick = cand;
+    }
+    if (!pick) {
+      pick = 96;
+      std::printf("    no n reaches 0.95: n = 96, and P is printed with the result\n");
+    }
+    std::printf("    -> n = %u. THE PRE-FLIGHT's L, D_L, W_mix AND SHARE ARE NOT RESULTS.\n", pick);
+    return true;
+  }
+
+  double pn = 0, pc = 0;
+  g2p_fire(sl[1].se, pn, pc);
+  std::printf("  at the realised SE: P(NOT CONDITIONAL | 0) %.3f, P(CONDITIONAL | 0) %.3f\n", pn, pc);
+  if (!(g_n && g_pos && g_hold)) {
+    std::printf("\n  -> VOID: a gate failed. Nothing is read.\n");
+    return true;  // kRead: VOID is a reading
+  }
+  const double lo = sl[1].m - 2.0 * sl[1].se, hi = sl[1].m + 2.0 * sl[1].se;
+  const bool d_pos = sd_l.m - 2.0 * sd_l.se > 0.0;
+  const bool live = ssh[1].m >= kS2Share;
+  std::printf("\n  THE REGISTERED READING\n");
+  if (lo > 0.0) {
+    std::printf("    -> CONDITIONAL (%s): with the reservoir -> vocal tract the creature learns\n"
+                "       which class to produce from the word it heard.\n",
+                sl[1].m > kG2pMargin ? "material, L > 0.05" : "below the 0.05 margin");
+    if (d_pos)
+      std::printf("       D_L > 0: the HOLD is what it rides on. (H): holding was the wall.\n");
+    else
+      std::printf("       D_L not > 0: NOT attributable to the hold; the tract alone may carry\n"
+                  "       it. (H) is not established.\n");
+  } else if (hi < 0.0) {
+    std::printf("    -> ANTI-CONDITIONAL: training moves the act against the praised class.\n"
+                "       A finding, not a pass.\n");
+  } else if (hi < kG2pMargin && lo > -kG2pMargin) {
+    std::printf("    -> NOT CONDITIONAL: with the word held at W_mix about %.2f and the tract\n"
+                "       plastic, the creature does not learn the map beyond 0.05 while G2 itself\n"
+                "       learns (G-POS). (R), SCOPED: at this hold; a stronger hold is untested.\n",
+                sw[1].m);
+    if (live)
+      std::printf("       The word's reward share is %.3f >= %.2f: Frémaux et al.'s stimulus-blind\n"
+                  "       baseline term is LIVE, so (R) here cannot be told from it. A per-word\n"
+                  "       baseline is the named next step, its own registration.\n",
+                  ssh[1].m, kS2Share);
+    else
+      std::printf("       The word's reward share is %.3f < %.2f: the stimulus-blind baseline\n"
+                  "       is ruled out as the cause.\n", ssh[1].m, kS2Share);
+  } else {
+    std::printf("    -> NO VERDICT. Not re-run bigger.\n");
+  }
+  return true;
+}
+
+}  // namespace
+
+bool run_g2s2pre(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2s2_impl(blob, ticks, true);
+}
+
+bool run_g2s2(const std::vector<uint8_t>& blob, uint64_t ticks, bool verbose) {
+  (void)verbose;
+  return run_g2s2_impl(blob, ticks, false);
 }
 
 
