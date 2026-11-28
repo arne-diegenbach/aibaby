@@ -24890,3 +24890,29 @@ pre-flight started as `results/n98-T2-g2nowpre.log`.
     only the completeness verdict, and what it lets through, can differ. Re-run as
     `results/n98-T2-g2nowpre.log`.
   - No per-seed L was printed (no row was complete), so nothing was seen before the fix.
+
+### §98 STAGE T2 PRE-FLIGHT — G-N PASSES, G-POS FAILS: THE ACT INSIDE THE WORD IS NOT TRAINABLE EVEN WITHOUT THE WORD. THE MEASUREMENT IS NOT LAUNCHED; STAGE T CLOSED (2026-11-28)
+
+`results/n98-T2-g2nowpre.log`, exit 0, md5 fb419735…, 48 sessions, 845 s per session, about 55 min.
+Pre-flight numbers are never results. What follows is what the GATES say about the instrument.
+  - **G-N PASS, 12 of 12**: 347–1,467 scored frames, at least 19 acts per class.
+  - **G-POS FAIL.** The fixed arm (plain G2, no word dependence) reads −0.019 ± 0.042 (SD 0.144).
+    Stage 0's pre-flight, with the act after the word, read +0.355 ± 0.018 with the same arm.
+  - **The n rule** gives n = 96 with P(NOT CONDITIONAL | 0) only 0.28, and the cost is 6.4 h or
+    more.
+  - **P(G-POS passes at n = 96) ≈ 0.01–0.02.** The gate needs a mean above 0.05 + 2 × 0.0147 =
+    0.079, which is 2.3 pre-flight SEs above the estimate. So the measurement would be VOID with
+    near certainty. **`g2now` is NOT launched.** The owner's chained go assumed a working
+    instrument. A near-certain VOID would spend run 2 of 3 for nothing.
+  - **Read as registered:** "this timing cannot be trained at this density", NOT (R). The creature
+    gets about a tenth of stage 0's feedback in the word window (about 300 vs 2,800 per arm). The
+    voice pool's F1 during the word is also driven by what it hears (it carries the word at
+    0.933, stage 1). Either could stop G2 here. This pre-flight does not separate them, and it is
+    not asked to.
+  - **STAGE T IS CLOSED: the word-present positive control cannot be built on this creature by
+    moving the act.** (H) against (R) stays open. It moves to **stage 1b's measurement**, which
+    already separates them where the reservoir holds the word: W_mix holds and D > 0 means the
+    holding was the wall (H). W_mix holds and D ≈ 0 means held information is not used (R) --
+    this reading leans on 1b's registered branches, to be checked against them before the run.
+  - Runs used toward abandonment: still 1 of 3. Stage 1b's measurement (L300W24, n = 96, about
+    2.8 h) is the owner's call.
