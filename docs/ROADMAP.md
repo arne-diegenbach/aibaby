@@ -24822,3 +24822,55 @@ fb419735…
       substituted.
   - Stage 1b's measurement (dose L300W24, n = 96, about 2.8 h) is ready either way. It is the
     owner's call whether it runs now, as run 2, without T's answer.
+
+### §98 TIMING STAGE T2 — REGISTERED: THE SAME QUESTION, MORE ACTS INSIDE THE WORD (2026-11-28)
+
+The owner picked the redesign ("1"). The question is unchanged: can the shipped creature learn the
+word-dependent map when the word is present at the act? CONDITIONAL → (H), holding is the wall.
+NOT CONDITIONAL with G-POS passing → (R), the rule is the wall.
+
+**What changes from T, and nothing else:**
+  - **Every voiced frame in 100–900 ms is scored**, not refractory-spaced events in 500–900. The
+    score window is now the feedback window. A frame is the voice's 16 ms hop. The criterion (the
+    baseline median) is taken from frames too.
+  - **The session is 4,080,000 ticks.** Baseline is the first 1/6 of trials, training the middle
+    1/2, test the last 1/3. That gives 242 baseline and 730 training trials, EXACTLY stage 0's
+    counts, and a 485-trial test, twice stage 0's.
+    - DEVIATION FROM THE OPTION AS OFFERED ("score the last 40%"): a 40% test on the same length
+      would cut training to 486 trials. T's log shows the word window already carries about a
+      tenth of stage 0's feedback (about 300 praise and scold per arm vs about 2,800). So the test
+      is lengthened and training is left alone.
+  - **Completeness:** ≥ 40 scored samples (now frames), ≥ 8 baseline samples, praise and scold
+    > 0, AND **≥ 8 refractory-spaced acts in EACH class** in the test. Frames inside one act are
+    not independent, and 8 is the instrument's own baseline minimum.
+  - Everything else is T's and stage 0's: arms (fixed, heard, swap, random); primary
+    L = (heard + swap)/2 − random, paired on seed; margin 0.05, two-tailed; G-POS (fixed arm's G2
+    measure, mean − 2 SE > 0.05); G-N (90% of seeds complete); n rule (smallest of 24/48/96 with
+    P(NOT CONDITIONAL | 0) ≥ 0.95 at SE = 1.5 × SD/√n, else 96); readings CONDITIONAL /
+    ANTI-CONDITIONAL / NOT CONDITIONAL / NO VERDICT. Pre-flight r 0–11; measurement fresh r 8000+.
+
+**Disclosed before the run:**
+  - **L is in frame-weighted hit-rate units.** It answers the same question, but its magnitude is
+    not stage 0's L, so only the verdicts are compared. Within-act correlation inflates the
+    per-seed noise, and the pre-flight SD and the n rule price that.
+  - **G-POS is the guard against under-training.** With a tenth of the feedback, a fixed-arm G2
+    that does not reproduce makes the run VOID, and it would be read as "this timing cannot be
+    trained at this density", not as (R).
+  - **G-N is NOT assured.** Projected from T's counts, acts grow about 4× (window 400 → 800 ms,
+    test 2×). The quietest seed (r 7: 4–8 events) projects to 16–32 acts, about 8–16 per class,
+    right at the floor. Every projection here has come in low or high by tens of per cent, so
+    **P(G-N passes) is put at 0.5.** If it refuses again, stage T is closed as unmeasurable on
+    this creature (it turn-takes), not redesigned a third time.
+  - **Cost:** about 860 s per session (1.2 × T's 713 s at 12-way). Pre-flight: 48 sessions, about
+    1 h. Measurement: n = 24 about 2 h, 48 about 4 h, 96 about 8 h.
+  - **Chained:** if the pre-flight's rule fixes n, `kGnN` is written and `g2now` starts. This is
+    the owner's standing go for stage T ("automatically run it after this is finished"), carried
+    to T2 by "1". The measurement is run 2 of 3.
+  - **G-INERT:** the old and new binaries must print identical `g2poolpre` rows at 300k ticks.
+    The result is below.
+
+**G-INERT PASSES (2026-11-28).** The old binary (cdb0f1d) and the new one ran `g2poolpre` at
+300k ticks (`--allow-short`), 7 jobs each. All 12 per-seed rows are IDENTICAL. At 300k only the
+`random` column is non-zero, so the check is narrower than "every column". On the default path the
+change is integer-identical (`n·1/5` for `n/5`), plus branches that are off by default. The
+pre-flight started as `results/n98-T2-g2nowpre.log`.

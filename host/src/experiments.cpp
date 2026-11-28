@@ -636,11 +636,11 @@ const Spec kSpecs[] = {
     {"g2mix", 3400000, Expect::kGuard, Tier::kManual,
      "§98 stage 1b: does a read-only reservoir hold the word to action time? W_mix"
      " and D vs the baseline dose, paired. Run on dna/mixing.toml"},
-    {"g2nowpre", 3400000, Expect::kRead, Tier::kManual,
-     "§98 timing stage T pre-flight: g2cond with the act scored and rewarded while the"
+    {"g2nowpre", 4080000, Expect::kRead, Tier::kManual,
+     "§98 timing stage T2 pre-flight: every voiced frame in 100-900 ms scored, test 1/3; while the"
      " word plays, r 0-11; SD and cost fix n. Never results"},
-    {"g2now", 3400000, Expect::kRead, Tier::kManual,
-     "§98 timing stage T: can the creature learn the word-dependent map when the word"
+    {"g2now", 4080000, Expect::kRead, Tier::kManual,
+     "§98 timing stage T2: can the creature learn the word-dependent map when the word"
      " is present at the act? L paired, margin 0.05, two-tailed"},
     {"calcmp", 1680000, Expect::kGuard, Tier::kLong,
      "§93: does the comparator keep the relation once its target is calibrated?"

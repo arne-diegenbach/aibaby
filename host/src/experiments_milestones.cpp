@@ -45197,6 +45197,8 @@ struct GcRun {
   double hit_when_want = 0.0, hit_when_not = 0.0;
   uint64_t n_want = 0, n_not = 0;
   uint64_t praises = 0, scolds = 0, events = 0;
+  // Refractory-spaced acts in the test window, per class (stage T2's gate).
+  uint64_t acts_want = 0, acts_not = 0;
   float criterion = 0.0f;
 };
 
@@ -45221,6 +45223,13 @@ inline bool gc_want_hit(int mode, uint32_t label, uint32_t trial) {
 struct GcWindows {
   uint64_t score_from = kVLEchoFrom, score_to = kVLEchoTo;
   uint64_t reward_from = kVLRewardFrom, reward_to = kVLRewardTo;
+  // §98 stage T2 (the redesign after T's G-N refused). Score EVERY voiced
+  // frame in the window instead of refractory-spaced events; the refractory
+  // events are still counted, per class, as the independent acts a session
+  // must have. And the phase split: baseline = first n/base_den trials, test
+  // = last n*test_num/test_den. Defaults are g2cond's 1/5 and 1/5.
+  bool score_frames = false;
+  uint32_t base_den = 5, test_num = 1, test_den = 5;
 };
 
 struct GcTap {
@@ -45245,8 +45254,8 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
 
   const uint32_t n_trials = uint32_t(ticks / kVLTrialTicks);
   if (n_trials < 40) return out;
-  const uint32_t baseline_trials = n_trials / 5;
-  const uint32_t train_end_trial = n_trials - n_trials / 5;
+  const uint32_t baseline_trials = n_trials / win.base_den;
+  const uint32_t train_end_trial = n_trials - n_trials * win.test_num / win.test_den;
 
   std::deque<Praise> pending;
   std::vector<float> baseline_values;
@@ -45292,10 +45301,11 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
       const float value = float(s.brain.vocal_groups()[2]);
       const bool new_event = now - last_event >= kEventRefractoryTicks;
       if (new_event) last_event = now;
+      const bool sample = win.score_frames || new_event;
 
       if (trial < baseline_trials) {
         // The criterion is measured in the window it will be applied in.
-        if (new_event && in_score) baseline_values.push_back(value);
+        if (sample && in_score) baseline_values.push_back(value);
         continue;
       }
       if (criterion < 0.0f) {
@@ -45319,11 +45329,12 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
           if (val > 0.0f) ++out.praises; else ++out.scolds;
           pending.push_back(Praise{now + regime.delay, val});
         }
-      } else if (new_event && in_score) {
+      } else if (sample && in_score) {
         ++test_events;
         if (hit) ++test_hits;
         if (want) { ++want_events; if (hit) ++want_hits; }
         else { ++not_events; if (hit) ++not_hits; }
+        if (new_event) { if (want) ++out.acts_want; else ++out.acts_not; }
       }
     }
     if (tap) tap->on_trial_end(trial, label, trial >= train_end_trial);
@@ -45342,6 +45353,10 @@ GcRun run_g2cond_session(const std::vector<uint8_t>& blob, uint64_t ticks, int m
   out.criterion = criterion;
   out.ok = test_events >= 40 && baseline_values.size() >= 8 &&
            out.praises > 0 && out.scolds > 0;
+  // Frames inside one act are not independent: with frames scored, a session
+  // also needs 8 refractory-spaced acts in EACH class (8 is the instrument's
+  // own baseline minimum), so no per-seed contrast rests on one or two acts.
+  if (win.score_frames) out.ok = out.ok && out.acts_want >= 8 && out.acts_not >= 8;
   return out;
 }
 
@@ -45520,7 +45535,13 @@ uint64_t g2p_fnv(const std::vector<uint8_t>& b) {
 constexpr uint32_t kGnFrom = 8000;
 // Fixed by g2nowpre's rule (the stage 0 rule). 0 = not yet fixed: refuses.
 constexpr uint32_t kGnN = 0;
-constexpr GcWindows kGnWindows{500, 900, 100, 900};
+// Stage T2 (2026-11-28), after T's pre-flight refused on G-N at {500, 900,
+// 100, 900} with events: every voiced frame in 100-900 ms is scored, and the
+// session is 4,080,000 ticks split 1/6 baseline, 1/2 training, 1/3 test --
+// 242 baseline and 730 training trials, EXACTLY stage 0's, and a test twice
+// as long. Training is not shortened: the word window already carries about a
+// tenth of stage 0's feedback.
+constexpr GcWindows kGnWindows{100, 900, 100, 900, true, 6, 1, 3};
 
 bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool pre,
                         bool now = false) {
@@ -45530,7 +45551,7 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
   const uint32_t n = pre ? kG2pPreN : (now ? kGnN : kG2pN);
   const uint32_t from = pre ? 0u : (now ? kGnFrom : kG2pFrom);
   if (now) {
-    std::printf("\n  §98 TIMING STAGE T %s — g2cond WITH THE ACT SCORED WHILE THE WORD PLAYS\n\n",
+    std::printf("\n  §98 TIMING STAGE T2 %s — g2cond WITH THE ACT SCORED WHILE THE WORD PLAYS\n\n",
                 pre ? "PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "MEASUREMENT");
     std::printf("  windows     scored %llu-%llu ms, feedback-earning acts %llu-%llu ms, of a\n"
                 "              %llu ms word (g2cond: %llu-%llu and %llu-%llu, after it)\n",
@@ -45539,6 +45560,11 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
                 (unsigned long long)kVLWordTicks, (unsigned long long)kVLEchoFrom,
                 (unsigned long long)kVLEchoTo, (unsigned long long)kVLRewardFrom,
                 (unsigned long long)kVLRewardTo);
+    std::printf("  scoring     %s; baseline first 1/%u, test last %u/%u of the trials\n"
+                "  complete    >= 40 scored samples, >= 8 baseline, praise and scold > 0%s\n",
+                win.score_frames ? "EVERY voiced frame" : "refractory-spaced events",
+                win.base_den, win.test_num, win.test_den,
+                win.score_frames ? ", >= 8 acts in EACH class" : "");
   } else {
     std::printf("\n  §98 STAGE %s — g2cond AT POWER, ECHO TERM REMOVED\n\n",
                 pre ? "0 PRE-FLIGHT (ITS NUMBERS ARE NEVER RESULTS)" : "0 MEASUREMENT (stage 1)");
@@ -45589,10 +45615,15 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
     const uint32_t r = from + k;
     if (!ok) {
       std::printf("  %-5u incomplete:", r);
-      for (int a = 0; a < 4; ++a)
-        std::printf(" %s %s(%llu ev, %llu/%llu)", arms[a].name, jr[a].g.ok ? "ok" : "NOT ok",
+      for (int a = 0; a < 4; ++a) {
+        std::printf(" %s %s(%llu ev, %llu/%llu", arms[a].name, jr[a].g.ok ? "ok" : "NOT ok",
                     (unsigned long long)jr[a].g.events, (unsigned long long)jr[a].g.praises,
                     (unsigned long long)jr[a].g.scolds);
+        if (win.score_frames)
+          std::printf(", acts %llu/%llu", (unsigned long long)jr[a].g.acts_want,
+                      (unsigned long long)jr[a].g.acts_not);
+        std::printf(")");
+      }
       std::printf("\n");
       continue;
     }
@@ -45609,6 +45640,9 @@ bool run_g2condpow_impl(const std::vector<uint8_t>& blob, uint64_t ticks, bool p
                 (unsigned long long)jr[1].g.scolds);
     if (pre && r < 3 && !now)
       std::printf("   archived heard %+.3f swap %+.3f", arch_h[r], arch_s[r]);
+    if (win.score_frames)
+      std::printf("   %llu frames, acts %llu/%llu", (unsigned long long)jr[1].g.events,
+                  (unsigned long long)jr[1].g.acts_want, (unsigned long long)jr[1].g.acts_not);
     std::printf("\n");
   }
 
